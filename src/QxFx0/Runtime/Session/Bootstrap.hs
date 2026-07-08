@@ -58,6 +58,8 @@ import QxFx0.Runtime.Gate
   , renderBootstrapGateFailure
   )
 import QxFx0.Runtime.Health (checkHealth)
+import QxFx0.Runtime.PGF (preloadDefaultPGF)
+import QxFx0.Lexicon.GfMap (preloadGfMap, GfMapLoadStatus(..))
 import QxFx0.Runtime.Mode (RuntimeMode(..), resolveRuntimeMode)
 import QxFx0.Runtime.Paths (resolveDbPath)
 import QxFx0.Runtime.Session.Types
@@ -122,6 +124,20 @@ bootstrapSession quiet sessionId = do
           unless quiet $ hPutStrLn stderr $ "[degraded] optional components unavailable: " ++ show failed
         _ ->
           pure ()
+  pgfPreloadResult <- preloadDefaultPGF
+  case pgfPreloadResult of
+    Left err ->
+      Log.logWarn "PGF grammar preload failed; runtime will degrade gracefully on PGF paths"
+        (Log.addContext "error" err Log.emptyContext)
+    Right _ ->
+      Log.logInfo "PGF grammar preloaded" Log.emptyContext
+  gfMapPreloadStatus <- preloadGfMap
+  case gfMapPreloadStatus of
+    GfMapLoaded _ ->
+      Log.logInfo "GF lexicon map preloaded" Log.emptyContext
+    GfMapLoadFailed reason ->
+      Log.logWarn "GF lexicon map preload failed; runtime will degrade gracefully on GF map paths"
+        (Log.addContext "reason" reason Log.emptyContext)
   schemaInitResult <- try (withDB dbPath $ \db -> do
     ensureSchemaMigrations db
     ts <- prepareTx db "bootstrap_runtime_session" "INSERT OR IGNORE INTO runtime_sessions(id, agency, tension, status) VALUES(?, 0.5, 0.3, 'active')"

@@ -29,6 +29,10 @@ semantic_rules.dl
 R5Verdict.csv
 ShadowAlert.csv
 
+# Corpus tuning output (generated; keep defaults in resources/config/*.json)
+resources/config/tuned_*.json
+resources/config/tuned_*.json.bak
+
 # GF compiled artifacts (regenerate via scripts/compile_gf_grammar.sh)
 spec/gf/*.pgf
 spec/gf/*.gfo

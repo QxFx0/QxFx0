@@ -8,11 +8,14 @@ module QxFx0.Bridge.StatePersistence
   , loadState
   , loadStateRevision
   , stateBlobDiagnostics
+  , canonicalizePersistedState
   -- Re-exported from QxFx0.Types.Persistence for backward compatibility
   , PersistenceDiagnostic(..)
   , PersistenceStage(..)
   , LoadStateResult(..)
   , renderPersistenceDiagnostics
+  -- * Database runner
+  , DbRunner
   ) where
 
 import QxFx0.Types.State (SystemState(..), emptySystemState, ssTurnCount)

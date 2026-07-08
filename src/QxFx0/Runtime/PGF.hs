@@ -22,6 +22,7 @@ module QxFx0.Runtime.PGF
   , parseClaimAstGf
   , parseClaimAstGfLang
   , gfExprToClaimAst
+  , preloadDefaultPGF
   ) where
 
 import Control.Exception (try, IOException)
@@ -356,6 +357,23 @@ parseClaimAstGfLang mPgfPath lang surface = do
       case result of
         Left (e :: IOException) ->
           pure (Left ("pgf_exception:" <> T.pack (show e)))
+        Right r -> pure r
+
+-- | Eagerly load and cache the default PGF grammar. Returns 'Right ()' on
+-- success or a human-readable diagnostic on failure. The cache is shared
+-- with 'cachedReadPGF', so this warms the grammar for subsequent
+-- linearization / parse calls without changing their semantics.
+preloadDefaultPGF :: IO (Either Text ())
+preloadDefaultPGF = do
+  exists <- doesFileExist defaultPgfPath
+  if not exists
+    then pure (Left ("PGF grammar not found at " <> T.pack defaultPgfPath))
+    else do
+      result <- try @IOException $ do
+        _ <- cachedReadPGF defaultPgfPath
+        pure (Right ())
+      case result of
+        Left e -> pure (Left ("PGF preload failed: " <> T.pack (show e)))
         Right r -> pure r
 
 

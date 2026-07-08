@@ -1,4 +1,6 @@
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Suite.StatePersistence
   ( statePersistenceFastTests
@@ -24,9 +26,15 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
-  ( Result(..)
+  ( Arbitrary(..)
+  , Property
+  , Result(..)
   , Testable
+  , chooseEnum
+  , elements
+  , ioProperty
   , quickCheckWithResult
+  , vectorOf
   )
 
 import QxFx0.Learning.KnowledgeTree
@@ -90,6 +98,7 @@ statePersistenceFastTests =
   , testPersistedStateCanonicalizeIsIdempotent
   , testPersistedStateEnvelopeRoundTrip
   , testPersistedStateBareRoundTrip
+  , testPersistedStatePropertyRoundTrip
   ]
 
 -- | Match both plain and structured RuntimeInitError variants.
@@ -716,6 +725,67 @@ testPersistedStateBareRoundTrip = TestCase $ do
           (ssTurnCount ss0)
           (ssTurnCount restored)
       other -> assertFailure ("expected bare round-trip success, got: " <> show other)
+
+-- | Property: canonicalizePersistedState -> JSON encode -> decode -> loadState
+-- preserves the identity/turn/truth-contract fields that must survive any
+-- persistence transformation.
+testPersistedStatePropertyRoundTrip :: Test
+testPersistedStatePropertyRoundTrip = TestCase $ do
+  args <- qcArgs
+  result <- quickCheckWithResult args propRoundTrip
+  case result of
+    Success{} -> pure ()
+    other -> assertFailure ("QuickCheck persisted-state round-trip failed: " <> show other)
+  where
+    propRoundTrip :: SessionState -> Property
+    propRoundTrip = ioProperty . withRuntimeEnv "qxfx0_test_property_roundtrip.db" . runOne . unSessionState
+
+    runOne :: SessionStateTuple -> IO Bool
+    runOne (sessionId, turnCount, truthStatus) = do
+      let ss0 = emptySystemState
+            { ssSessionId = sessionId
+            , ssDialogue = (ssDialogue emptySystemState) { dsTurnCount = turnCount }
+            , ssTruthContractStatus = truthStatus
+            }
+          canonical = StatePersistence.canonicalizePersistedState ss0
+          blob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ canonical
+      rt <- Runtime.sessRuntime <$> Runtime.bootstrapSession True sessionId
+      -- Write the canonicalized blob directly so the test exercises the
+      -- exact decode path used by loadState.
+      Runtime.withRuntimeDb rt $ \db -> do
+        mStmt <- NSQL.prepare db "INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))"
+        case mStmt of
+          Left sqlErr -> assertFailure ("prepare failed: " <> T.unpack sqlErr) >> fail "unreachable"
+          Right stmt -> do
+            _ <- NSQL.bindText stmt 1 sessionId
+            _ <- NSQL.bindText stmt 2 "__system_state__"
+            _ <- NSQL.bindText stmt 3 blob
+            _ <- NSQL.stepRow stmt
+            NSQL.finalize stmt
+            pure ()
+      loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) sessionId
+      pure $ case loaded of
+        LoadStateRestored restored ->
+             ssTruthContractStatus restored == truthStatus
+          && ssSessionId restored == sessionId
+          && ssTurnCount restored == turnCount
+        _ -> False
+
+instance Arbitrary TruthContractStatus where
+  arbitrary = chooseEnum (minBound, maxBound)
+
+newtype SessionState = SessionState { unSessionState :: SessionStateTuple }
+  deriving stock (Show)
+
+type SessionStateTuple = (T.Text, Int, TruthContractStatus)
+
+instance Arbitrary SessionState where
+  arbitrary = do
+    len <- elements [1 .. 32]
+    chars <- vectorOf len (elements (['a'..'z'] ++ ['0'..'9'] ++ "_-"))
+    turnCount <- elements [0 .. 100]
+    truthStatus <- arbitrary
+    pure (SessionState (T.pack chars, turnCount, truthStatus))
 
 testSaveStateWithProjectionFailureRollsBackTransaction :: Test
 testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do

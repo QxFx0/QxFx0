@@ -17,6 +17,7 @@ module QxFx0.Lexicon.GfMap
   , loadGfMapFromContent
   , loadGfMapStatusFromPath
   , gfMapData
+  , preloadGfMap
   ) where
 
 import Control.Applicative ((<|>))
@@ -141,6 +142,13 @@ loadGfMapStatusFromPath :: FilePath -> IO GfMapLoadStatus
 loadGfMapStatusFromPath path = do
   mContent <- catchIO (Just . T.pack <$> readFile path) (\e -> hPutStrLn stderr ("[gfmap] read failed: " ++ path ++ ": " ++ show e) >> pure Nothing)
   pure (snd (loadGfMapFromContent mContent))
+
+-- | Return the already-loaded GF lexicon map status. The map is loaded
+-- once per process via 'unsafePerformIO'; this function simply exposes
+-- that cached status so bootstrap can log warnings when the map failed
+-- to load or is empty.
+preloadGfMap :: IO GfMapLoadStatus
+preloadGfMap = pure gfMapLoadStatus
 
 readCanonicalFunmap :: IO (Maybe Text)
 readCanonicalFunmap = do
