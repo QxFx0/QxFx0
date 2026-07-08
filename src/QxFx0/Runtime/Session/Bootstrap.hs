@@ -75,6 +75,7 @@ import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
+import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph)
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
@@ -232,7 +233,10 @@ bootstrapSession quiet sessionId = do
       
       -- Initialize ContentSelector from seed network and definition corpus
       lemmaMap = buildLemmaMap morphology
-      seedNetwork = seedFromCorpus lemmaMap
+      useAtomGraphSeed = False
+      seedNetwork = if useAtomGraphSeed
+                      then buildNetworkFromAtomGraph seedGraph
+                      else seedFromCorpus lemmaMap
       topicAtoms = M.fromList
         [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList definitionCorpus

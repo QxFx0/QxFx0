@@ -20,6 +20,7 @@ module QxFx0.Semantic.Network.Ingest
   , loadRelations
   , loadRelationGraph
   , ingestExternalKnowledge
+  , buildNetworkFromAtomGraph
   ) where
 
 import Control.DeepSeq (NFData)
@@ -56,6 +57,7 @@ import QxFx0.Semantic.Network.Types
   , EdgeSource(..)
   , SemanticEdge(..)
   , SemanticNetwork(..)
+  , relationTypeWeight
   )
 import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), loadOntology)
 
@@ -342,6 +344,63 @@ semanticNetworkFromLoaded ont rawRels =
              if seWeight edge > seWeight old
              then M.insert key edge acc
              else acc
+
+-- | Build a 'SemanticNetwork' directly from an 'AtomGraph'. Each
+-- 'Relation' becomes an explicit edge whose endpoints are the display
+-- texts of the source and target atoms. Edge weight is derived from
+-- 'relationTypeWeight'. If multiple relations share the same
+-- @(from, to)@ pair, the edge with the higher weight is kept.
+buildNetworkFromAtomGraph :: AtomGraph -> SemanticNetwork
+buildNetworkFromAtomGraph g =
+  let edges = foldl' insertEdge M.empty (agRelations g)
+      nodes = foldl' insertNodes S.empty (M.elems edges)
+  in SemanticNetwork
+      { snNodes         = nodes
+      , snEdges         = edges
+      , snActivation    = M.empty
+      , snDecayRate     = 0.5
+      , snMaxHops       = 3
+      , snActivationLog = Seq.empty
+      }
+  where
+    insertNodes :: Set Text -> SemanticEdge -> Set Text
+    insertNodes acc e = S.insert (seFrom e) (S.insert (seTo e) acc)
+
+    insertEdge
+      :: Map (Text, Text) SemanticEdge
+      -> Relation
+      -> Map (Text, Text) SemanticEdge
+    insertEdge acc r =
+      let fromText = atomDisplayFor (relFrom r)
+          toText   = atomDisplayFor (relTo r)
+          key      = (fromText, toText)
+          w        = relationTypeWeight (relType r)
+          edge     = SemanticEdge
+            { seFrom         = fromText
+            , seTo           = toText
+            , seWeight       = w
+            , seCoOccurrence = 1
+            , seSource       = ExplicitEdge
+            , seRelationType = Just (relType r)
+            , seVerb         = relVerbText r
+            , seRationale    = relRationale r
+            , seCounter      = relCounter r
+            , seSynthesis    = relSynthesis r
+            , seConfidence   = w
+            , seProvenance   = ProvenanceCurated
+            }
+      in case M.lookup key acc of
+           Nothing -> M.insert key edge acc
+           Just old ->
+             if seWeight edge > seWeight old
+             then M.insert key edge acc
+             else acc
+
+    atomDisplayFor :: AtomId -> Text
+    atomDisplayFor aid =
+      case M.lookup aid atomStore of
+        Just a  -> atomDisplay a
+        Nothing -> case aid of AtomId t -> t
 
 -- | Ingest both the ontology and relation corpus, producing a
 -- 'SemanticNetwork'. Any error prints a warning to @stderr@ and

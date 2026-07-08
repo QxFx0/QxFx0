@@ -21,6 +21,7 @@ import QxFx0.Semantic.Content.AtomStore
   , relSource
   , relSynthesis
   , relType
+  , seedGraph
   )
 import QxFx0.Semantic.Network.Ingest
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeProvenance(..), snEdges, snNodes)
@@ -54,6 +55,9 @@ networkIngestTests =
   , TestLabel "loadRelationGraph preserves optional fields" testLoadRelationGraphOptionalFields
   , TestLabel "ingested edges preserve loaded relation fields" testIngestedEdgesPreserveLoadedFields
   , TestLabel "ingested edges include at least one fully-populated optional edge" testIngestedEdgeOptionalFieldsPopulated
+  , TestLabel "buildNetworkFromAtomGraph produces >600 nodes and edges" testBuildNetworkFromAtomGraphSize
+  , TestLabel "buildNetworkFromAtomGraph edges carry relation type and curated provenance" testBuildNetworkFromAtomGraphEdges
+  , TestLabel "buildNetworkFromAtomGraph contains свобода -> выбор with RelPresupposes" testBuildNetworkFromAtomGraphFreedomChoice
   ]
 
 testLoadRelations :: Test
@@ -212,3 +216,33 @@ testIngestedEdgeOptionalFieldsPopulated = TestCase $ do
           populatedEdges = filter populated (Map.elems (snEdges sn))
       assertBool "at least one ingested edge must have all optional fields populated"
         (not (null populatedEdges))
+
+-- | ADR-0052 Phase II: building a 'SemanticNetwork' directly from the
+-- curated atom graph.
+testBuildNetworkFromAtomGraphSize :: Test
+testBuildNetworkFromAtomGraphSize = TestCase $ do
+  let sn = buildNetworkFromAtomGraph seedGraph
+  assertBool "atom-graph network must contain more than 600 edges"
+    (Map.size (snEdges sn) > 600)
+  assertBool "atom-graph network must contain more than 100 nodes"
+    (Set.size (snNodes sn) > 100)
+
+testBuildNetworkFromAtomGraphEdges :: Test
+testBuildNetworkFromAtomGraphEdges = TestCase $ do
+  let sn = buildNetworkFromAtomGraph seedGraph
+      edges = Map.elems (snEdges sn)
+  assertBool "atom-graph network must have edges" (not (null edges))
+  assertBool "every edge must carry a relation type"
+    (all (\e -> seRelationType e /= Nothing) edges)
+  assertBool "every edge must have curated provenance"
+    (all (\e -> seProvenance e == ProvenanceCurated) edges)
+
+testBuildNetworkFromAtomGraphFreedomChoice :: Test
+testBuildNetworkFromAtomGraphFreedomChoice = TestCase $ do
+  let sn = buildNetworkFromAtomGraph seedGraph
+  case Map.lookup ("свобода", "выбор") (snEdges sn) of
+    Nothing -> assertFailure "свобода -> выбор edge must exist"
+    Just e  -> case seRelationType e of
+                 Nothing -> assertFailure "свобода -> выбор edge must have a relation type"
+                 Just rt -> assertEqual "свобода -> выбор must be RelPresupposes"
+                              RelPresupposes rt

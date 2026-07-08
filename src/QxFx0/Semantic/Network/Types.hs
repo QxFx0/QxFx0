@@ -11,6 +11,7 @@ module QxFx0.Semantic.Network.Types
   , EdgeProvenance(..)
   , semanticEdge
   , emptySemanticNetwork
+  , relationTypeWeight
   ) where
 
 import Control.DeepSeq (NFData)
@@ -33,7 +34,7 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import QxFx0.Semantic.Content.AtomStore (RelationType)
+import QxFx0.Semantic.Content.AtomStore (RelationType(..))
 
 -- | Provenance of a semantic edge, distinguishing curated, corpus,
 -- substrate, and externally-ingested origins.
@@ -145,3 +146,31 @@ emptySemanticNetwork = SemanticNetwork
   , snMaxHops = 3
   , snActivationLog = Seq.empty
   }
+
+-- | Base weight for a 'RelationType' in the range @[0.1, 1.0]@.
+-- Hierarchical and strong relations receive the highest weights;
+-- causal links are slightly lower; contrast/negation relations are
+-- moderate; weak associative relations are lower still. Any relation
+-- type not explicitly mapped defaults to 0.5.
+relationTypeWeight :: RelationType -> Double
+relationTypeWeight rt = case rt of
+  -- Hierarchical / strong relations
+  RelIsA            -> 1.0
+  RelRequires       -> 0.95
+  RelDetermines     -> 0.95
+  RelPresupposes    -> 1.0
+  -- Causal / strong links
+  RelEvokes         -> 0.85
+  RelDependsOn      -> 0.8
+  RelNecessaryFor   -> 0.9
+  -- Contrast / negation
+  RelNegates        -> 0.7
+  RelContrastsWith  -> 0.7
+  RelIsNot          -> 0.7
+  RelNotReducibleTo -> 0.75
+  -- Weak / associative
+  RelRelatedTo      -> 0.45
+  RelCanBe          -> 0.4
+  RelCapableOf      -> 0.4
+  -- Default for all remaining relation types
+  _                 -> 0.5
