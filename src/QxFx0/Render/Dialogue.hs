@@ -49,8 +49,9 @@ import QxFx0.Semantic.Content
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueContext(..))
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
-import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, emptyContentSelector, SelectedPredicate(..), csTopicPredicates)
-import QxFx0.Semantic.Network (SemanticNetwork)
+import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..), csTopicPredicates)
+import QxFx0.Semantic.Network (SemanticNetwork, spreadingActivationActive)
+import QxFx0.Semantic.SurfaceAccumulator (VerbalizationMode(..), accumulateSurface)
 import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
 import qualified Data.Set as Set
 import qualified Data.Map.Strict as M
@@ -440,6 +441,20 @@ appendSupplement base supplement =
            else (if any (`T.isSuffixOf` base) [".", "!", "?"]
                    then base <> " "
                    else base <> ". ") <> supplement
+
+-- | Frame-specific supplement builder for ADR-0050 Phase 2.
+-- When a semantic network is available and the spreading-activation feature flag
+-- is enabled, composes predicates via the network and verbalizes them with the
+-- requested mode; otherwise falls back to single-topic predicate selection.
+frameSupplement :: VerbalizationMode -> MorphologyData -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
+frameSupplement mode morph cs field topic mNetwork isEn =
+  case mNetwork of
+    Just network | spreadingActivationActive ->
+      let composed = composeFromActivation cs field topic network
+      in if null composed
+           then semanticSupplement cs field topic mNetwork isEn
+           else accumulateSurface morph field mode topic composed
+    _ -> semanticSupplement cs field topic mNetwork isEn
 
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
 structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
@@ -1903,9 +1918,7 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         isEn = isEnglishInput topic
         authorityText = renderFrameAuthority authority
         fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-        supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
-                       then ""
-                       else semanticSupplement cs field topic mNetwork isEn
+        supplement = frameSupplement VmDefinition morph cs field topic mNetwork isEn
     in appendSupplement fallback supplement
 
   FT.DistinctionFrame left right criteria ->
@@ -1918,12 +1931,8 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
                <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
-        leftSup = if T.null (T.strip left) || not (selectorHasTopic cs left)
-                    then ""
-                    else semanticSupplement cs field left mNetwork isEn
-        rightSup = if T.null (T.strip right) || not (selectorHasTopic cs right)
-                     then ""
-                     else semanticSupplement cs field right mNetwork isEn
+        leftSup = frameSupplement VmDistinction morph cs field left mNetwork isEn
+        rightSup = frameSupplement VmDistinction morph cs field right mNetwork isEn
         supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
     in appendSupplement base supplement
 
@@ -1939,9 +1948,7 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
-        supplement = if T.null (T.strip rawObj) || not (selectorHasTopic cs rawObj)
-                       then ""
-                       else semanticSupplement cs field rawObj mNetwork isEn
+        supplement = frameSupplement VmChallenge morph cs field rawObj mNetwork isEn
     in case strength of
          FT.Soft -> appendSupplement softFallback supplement
          FT.Firm -> appendSupplement firmFallback supplement
@@ -1965,9 +1972,7 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-        supplement = if T.null (T.strip topic) || not (selectorHasTopic cs topic)
-                       then ""
-                       else semanticSupplement cs field topic mNetwork isEn
+        supplement = frameSupplement VmReflection morph cs field topic mNetwork isEn
     in appendSupplement fallback supplement
 
   FT.LearnFrame topic depth ->

@@ -8,6 +8,7 @@ module QxFx0.Semantic.Network
   , activateTopic
   , getActivatedAtoms
   , contentDensityGate
+  , spreadingActivationActive
   ) where
 
 import Data.Map.Strict (Map)
@@ -123,3 +124,7 @@ contentDensityGate sn =
   let edgeCount = M.size (snEdges sn)
       nodeCount = S.size (snNodes sn)
   in edgeCount >= 50 && nodeCount >= 15
+
+-- | Feature flag for ADR-0050 Phase 2 spreading-activation surface generation.
+spreadingActivationActive :: Bool
+spreadingActivationActive = True

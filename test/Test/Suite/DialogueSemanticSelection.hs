@@ -17,6 +17,8 @@ import QxFx0.Render.Dialogue
   , appendSupplement
   )
 import QxFx0.Semantic.Content.Base (mkPred, PredicateRole(..))
+import QxFx0.Semantic.Network (emptySemanticNetwork, spreadingActivationActive)
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
 import QxFx0.Semantic.ContentSelector
   ( ContentSelector(..)
   , buildContentSelector
@@ -77,6 +79,54 @@ runFrame :: FT.SemanticFrame -> ContentSelector -> T.Text
 runFrame frame cs =
   generateFromFrame cs testField Nothing seedGraph emptySystemState frame emptyMorphologyData
 
+-- | Network with a single explicit edge used to exercise spreading activation.
+-- The edge connects the atom shared by the seed topic to the atom shared by a
+-- related topic, so composeFromActivation can surface the related predicate.
+testNetwork :: SemanticNetwork
+testNetwork = emptySemanticNetwork
+  { snNodes = S.fromList ["связана", "субъекта"]
+  , snEdges = M.singleton ("связана", "субъекта") (SemanticEdge "связана" "субъекта" 1.0 1 ExplicitEdge)
+  }
+
+-- | Run a frame with a supplied semantic network.
+runFrameWithNetwork :: FT.SemanticFrame -> ContentSelector -> SemanticNetwork -> T.Text
+runFrameWithNetwork frame cs net =
+  generateFromFrame cs testField (Just net) seedGraph emptySystemState frame emptyMorphologyData
+
+-- | Semantic space that matches the atoms used by mkTestSelector, reused for
+-- spreading-activation selectors so that predicate scoring succeeds.
+testSpace :: SemanticSpace
+testSpace =
+  emptySemanticSpace
+    { ssDimensionCount = 3
+    , ssAtomIndex = M.fromList [("связана", 0), ("субъекта", 1), ("действие", 2)]
+    , ssPrototypes = M.fromList
+        [ (FdResonance, DimensionPrototype FdResonance (S.fromList ["связана"]) (V.fromList [1.0, 0.0, 0.0]))
+        , (FdConfidence, DimensionPrototype FdConfidence (S.fromList ["субъекта"]) (V.fromList [0.0, 1.0, 0.0]))
+        , (FdConsolidation, DimensionPrototype FdConsolidation (S.fromList ["действие"]) (V.fromList [0.0, 0.0, 1.0]))
+        ]
+    }
+
+-- | Build a ContentSelector where the seed topic has no predicates but a
+-- network-connected topic does, so spreading activation can yield predicates.
+mkSpreadingSelector :: ContentSelector
+mkSpreadingSelector =
+  let atomsLogic = S.fromList ["связана"]
+      atomsThought = S.fromList ["субъекта"]
+      topicAtoms = M.fromList [("логика", atomsLogic), ("мышление", atomsThought)]
+      pThought = mkPred RoleProperty "связана с субъекта действие" "connected to subject action"
+      topicPreds = M.fromList [("мышление", [pThought])]
+  in buildContentSelector testSpace topicAtoms topicPreds M.empty
+
+-- | Build a ContentSelector with topic atoms but no predicates, so
+-- composeFromActivation returns an empty list and the fallback path is taken.
+mkEmptySpreadingSelector :: ContentSelector
+mkEmptySpreadingSelector =
+  let atomsLogic = S.fromList ["связана"]
+      atomsThought = S.fromList ["субъекта"]
+      topicAtoms = M.fromList [("логика", atomsLogic), ("мышление", atomsThought)]
+  in buildContentSelector testSpace topicAtoms M.empty M.empty
+
 dialogueSemanticSelectionTests :: [Test]
 dialogueSemanticSelectionTests =
   [ TestLabel "formatSelectedPredicates empty list returns empty text" testFormatSelectedPredicatesEmpty
@@ -108,6 +158,13 @@ dialogueSemanticSelectionTests =
   , TestLabel "ChallengeFrame Firm enriches with selected predicate" testChallengeFrameFirmEnriched
   , TestLabel "DistinctionFrame preserves template with empty selector" testDistinctionFrameEmpty
   , TestLabel "DistinctionFrame enriches with selected predicate" testDistinctionFrameEnriched
+  , TestLabel "spreading activation flag is enabled" testSpreadingActivationFlagEnabled
+  , TestLabel "DefinitionFrame uses spreading-activation supplement when network active" testDefinitionFrameSpreading
+  , TestLabel "ReflectFrame uses spreading-activation supplement when network active" testReflectFrameSpreading
+  , TestLabel "ChallengeFrame Soft uses spreading-activation supplement when network active" testChallengeFrameSoftSpreading
+  , TestLabel "DistinctionFrame uses spreading-activation supplement for both sides" testDistinctionFrameSpreading
+  , TestLabel "DefinitionFrame falls back to template when spreading activation yields no predicates" testDefinitionFrameSpreadingEmptyFallback
+  , TestLabel "DistinctionFrame falls back to template when spreading activation yields no predicates" testDistinctionFrameSpreadingEmptyFallback
   , dialogueSemanticSelectionRegressionTests
   ]
 
@@ -374,6 +431,47 @@ testContentSelectorNoMutation = TestCase $ do
   originalAtoms @=? csTopicAtoms cs
   originalPredicates @=? csTopicPredicates cs
   originalLemmas @=? csLemmaMap cs
+
+testSpreadingActivationFlagEnabled :: Test
+testSpreadingActivationFlagEnabled = TestCase $
+  assertBool "spreadingActivationActive should be True by default" spreadingActivationActive
+
+testDefinitionFrameSpreading :: Test
+testDefinitionFrameSpreading = TestCase $ do
+  let result = runFrameWithNetwork (FT.DefinitionFrame "логика" FT.GeneralScope FT.Known) mkSpreadingSelector testNetwork
+  assertBool "spreading DefinitionFrame should contain base template" (T.isInfixOf "логика — содержание не прошло проверку качества" result)
+  assertBool "spreading DefinitionFrame should contain predicate surfaced from connected topic" (T.isInfixOf "субъекта действие" result)
+
+testReflectFrameSpreading :: Test
+testReflectFrameSpreading = TestCase $ do
+  let result = runFrameWithNetwork (FT.ReflectFrame "логика") mkSpreadingSelector testNetwork
+  assertBool "spreading ReflectFrame should contain base template" (T.isInfixOf "Когда я думаю о логика" result)
+  assertBool "spreading ReflectFrame should contain predicate surfaced from connected topic" (T.isInfixOf "субъекта действие" result)
+
+testChallengeFrameSoftSpreading :: Test
+testChallengeFrameSoftSpreading = TestCase $ do
+  let result = runFrameWithNetwork (FT.ChallengeFrame "логика" "основание" FT.Soft "логика") mkSpreadingSelector testNetwork
+  assertBool "spreading ChallengeFrame Soft should contain base template" (T.isInfixOf "Слышу возражение" result)
+  assertBool "spreading ChallengeFrame Soft should contain predicate surfaced from connected topic" (T.isInfixOf "субъекта действие" result)
+
+testDistinctionFrameSpreading :: Test
+testDistinctionFrameSpreading = TestCase $ do
+  let result = runFrameWithNetwork (FT.DistinctionFrame "логика" "мышление" []) mkSpreadingSelector testNetwork
+  assertBool "spreading DistinctionFrame should contain base template" (T.isInfixOf "Различим логика и мышление" result)
+  assertBool "spreading DistinctionFrame left side should surface connected predicate" (T.isInfixOf "логика с субъекта" result)
+  assertBool "spreading DistinctionFrame right side should surface its own predicate" (T.isInfixOf "мышление с субъекта" result)
+
+testDefinitionFrameSpreadingEmptyFallback :: Test
+testDefinitionFrameSpreadingEmptyFallback = TestCase $ do
+  let result = runFrameWithNetwork (FT.DefinitionFrame "логика" FT.GeneralScope FT.Known) mkEmptySpreadingSelector testNetwork
+      expected = "Известно, что логика — содержание не прошло проверку качества и не может быть представлено без проверки."
+  assertEqual "empty spreading activation should preserve fallback template" expected result
+
+testDistinctionFrameSpreadingEmptyFallback :: Test
+testDistinctionFrameSpreadingEmptyFallback = TestCase $ do
+  let result = runFrameWithNetwork (FT.DistinctionFrame "логика" "мышление" []) mkEmptySpreadingSelector testNetwork
+      expected = "Различим логика и мышление в одной рамке критериев. логика и мышление различаются по набору признаков. Без явной рамки сравнение остаётся зависимым от принятых допущений."
+  assertEqual "empty spreading activation should preserve fallback template" expected result
 
 -- | Language surface gating: English vs Russian predicate text.
 testLanguageGating :: Test
