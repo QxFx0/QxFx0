@@ -15,6 +15,7 @@ module QxFx0.Semantic.Network
   , contentDensityGate
   , spreadingActivationActive
   , neutralField
+  , adjustEdge
   ) where
 
 import Data.Map.Strict (Map)
@@ -75,11 +76,17 @@ mergeSemanticNetworksWithProvenance base update =
             EQ -> updateEdge
 
     isAuthoritative e = case seProvenance e of
-      ProvenanceCurated   -> True
-      ProvenanceIngested  -> True
-      ProvenanceSelfPlay  -> True
-      ProvenanceCorpus    -> False
-      ProvenanceSubstrate -> False
+      ProvenanceCurated          -> True
+      ProvenanceIngested         -> True
+      ProvenanceSelfPlay         -> True
+      ProvenanceCorpus           -> False
+      ProvenanceSubstrate        -> False
+      ProvenanceDialogueFeedback -> False
+
+-- | Adjust an existing edge in the network by its endpoint key.
+-- If the key is not present, the network is returned unchanged.
+adjustEdge :: (Text, Text) -> (SemanticEdge -> SemanticEdge) -> SemanticNetwork -> SemanticNetwork
+adjustEdge key f sn = sn { snEdges = M.adjust f key (snEdges sn) }
 
 activate :: Text -> SemanticNetwork -> SemanticNetwork
 activate = activateWithField neutralField

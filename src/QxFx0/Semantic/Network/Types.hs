@@ -44,6 +44,7 @@ data EdgeProvenance
   | ProvenanceSubstrate
   | ProvenanceIngested
   | ProvenanceSelfPlay
+  | ProvenanceDialogueFeedback
   deriving stock (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 

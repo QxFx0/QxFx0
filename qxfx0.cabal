@@ -271,6 +271,7 @@ library
       QxFx0.Semantic.Network.Seed
       QxFx0.Semantic.Network.Substrate
       QxFx0.Semantic.Network.Ingest
+      QxFx0.Semantic.Network.Feedback
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
@@ -647,6 +648,7 @@ common test-common
     Test.Suite.SurfaceAccumulatorGolden
     Test.Suite.NetworkIngest
     Test.Suite.NetworkTypes
+    Test.Suite.NetworkFeedback
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
 
