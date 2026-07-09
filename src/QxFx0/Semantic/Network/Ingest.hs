@@ -28,7 +28,7 @@ module QxFx0.Semantic.Network.Ingest
 
 import Control.DeepSeq (NFData)
 import Control.Exception (SomeException, try)
-import Data.Aeson (FromJSON(parseJSON), eitherDecodeStrict, withObject, (.:), (.:?))
+import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), eitherDecodeStrict, object, withObject, (.:), (.:?), (.=))
 import Data.Foldable (foldl')
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
@@ -160,6 +160,21 @@ instance FromJSON LoadedRelation where
       <*> o .:  "confidence"
       <*> o .:  "author"
       <*> o .:  "version"
+
+instance ToJSON LoadedRelation where
+  toJSON lr =
+    object
+      [ "from"       .= lrFrom lr
+      , "to"         .= lrTo lr
+      , "type"       .= T.pack (show (lrType lr))
+      , "verb"       .= lrVerb lr
+      , "rationale"  .= lrRationale lr
+      , "counter"    .= lrCounter lr
+      , "synthesis"  .= lrSynthesis lr
+      , "confidence" .= lrConfidence lr
+      , "author"     .= lrAuthor lr
+      , "version"    .= lrVersion lr
+      ]
 
 -- ============================================================
 -- Loading raw relations

@@ -49,7 +49,9 @@ feedbackLoopEndToEndTests =
   , TestLabel "detect accept marker" testDetectAccept
   , TestLabel "detect clarify marker" testDetectClarify
   , TestLabel "no feedback for neutral input" testDetectNothing
+  , TestLabel "no false positives for embedded accept markers" testDetectNoFalsePositive
   , TestLabel "collect used edges from activation log" testCollectUsedEdges
+  , TestLabel "feedback loop disabled leaves network unchanged" testFeedbackLoopDisabled
   , TestLabel "challenge via pipeline lowers confidence and adds counter" testChallengePipeline
   , TestLabel "accept via pipeline raises confidence" testAcceptPipeline
   , TestLabel "clarify via pipeline updates rationale" testClarifyPipeline
@@ -79,14 +81,30 @@ testDetectNothing = TestCase $ do
     Nothing
     (detectUserFeedback "расскажи про свободу")
 
+testDetectNoFalsePositive :: Test
+testDetectNoFalsePositive = TestCase $ do
+  assertEqual "да inside загадка is not a marker"
+    Nothing
+    (detectUserFeedback "загадка")
+  assertEqual "да inside надо is not a marker"
+    Nothing
+    (detectUserFeedback "надо подумать")
+
 testCollectUsedEdges :: Test
 testCollectUsedEdges = TestCase $ do
   let used = collectUsedEdges sampleNetwork (F.toList (snActivationLog sampleNetwork))
   assertEqual "one used edge collected" [sampleEdge] used
 
+testFeedbackLoopDisabled :: Test
+testFeedbackLoopDisabled = TestCase $
+  let result = applyDetectedFeedback False "не согласен, потому что неверно" sampleNetwork sampleNetwork
+  in assertEqual "feedback loop disabled leaves network unchanged"
+       sampleNetwork
+       result
+
 testChallengePipeline :: Test
 testChallengePipeline = TestCase $ do
-  let result = applyDetectedFeedback "не согласен, потому что неверно" sampleNetwork sampleNetwork
+  let result = applyDetectedFeedback True "не согласен, потому что неверно" sampleNetwork sampleNetwork
   case Map.lookup ("a", "b") (snEdges result) of
     Nothing -> assertFailure "original edge must remain"
     Just e  -> assertEqual "challenge lowers confidence" 0.65 (seConfidence e)
@@ -99,15 +117,15 @@ testChallengePipeline = TestCase $ do
 
 testAcceptPipeline :: Test
 testAcceptPipeline = TestCase $ do
-  let challenged = applyDetectedFeedback "не согласен, потому что неверно" sampleNetwork sampleNetwork
-      result     = applyDetectedFeedback "да, согласен" challenged challenged
+  let challenged = applyDetectedFeedback True "не согласен, потому что неверно" sampleNetwork sampleNetwork
+      result     = applyDetectedFeedback True "да, согласен" challenged challenged
   case Map.lookup ("a", "b") (snEdges result) of
     Nothing -> assertFailure "original edge must remain"
     Just e  -> assertEqual "accept raises confidence after challenge" 0.75 (seConfidence e)
 
 testClarifyPipeline :: Test
 testClarifyPipeline = TestCase $ do
-  let result = applyDetectedFeedback "то есть именно это" sampleNetwork sampleNetwork
+  let result = applyDetectedFeedback True "то есть именно это" sampleNetwork sampleNetwork
   case Map.lookup ("a", "b") (snEdges result) of
     Nothing -> assertFailure "original edge must remain"
     Just e  -> assertEqual "clarify updates rationale" (Just "именно это") (seRationale e)

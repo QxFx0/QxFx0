@@ -146,9 +146,7 @@ import QxFx0.Semantic.AtomAccretion
   , resolveCollisions
   )
 import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate, snActivationLog)
-import QxFx0.Semantic.Network.Feedback (UserFeedback(..), applyFeedback)
-import QxFx0.Semantic.Network.Feedback.Collect (collectUsedEdges)
-import QxFx0.Semantic.Network.Feedback.Detect (detectUserFeedback)
+import QxFx0.Semantic.Network.Feedback.Collect (applyDetectedFeedback)
 import QxFx0.Semantic.Space (buildSemanticSpace, buildFactVectors)
 import QxFx0.Semantic.Space.Types (emptySemanticSpace, ssFactVectors)
 import QxFx0.Semantic.ContentSelector (buildContentSelector, buildTopicAtoms, tokenizePredicate)
@@ -571,18 +569,9 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
       , ssSemanticSpace = semanticSpace
       , ssContentSelector = contentSelector
       }
-      semanticNetwork = applyDetectedFeedback rawInput (ssSemanticNetwork ss) mergedSemanticNetwork
-        where
-          rawInput = ipfRawText (tiFrame ti)
-          mergedSemanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
-          applyDetectedFeedback raw previousNetwork baseNetwork
-            | not feedbackLoopActive = baseNetwork
-            | otherwise =
-                case detectUserFeedback raw of
-                  Nothing -> baseNetwork
-                  Just feedback ->
-                    let usedEdges = collectUsedEdges previousNetwork (F.toList (snActivationLog previousNetwork))
-                    in applyFeedback baseNetwork usedEdges feedback
+      rawInput = ipfRawText (tiFrame ti)
+      mergedSemanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
+      semanticNetwork = applyDetectedFeedback feedbackLoopActive rawInput (ssSemanticNetwork ss) mergedSemanticNetwork
       topicAtomsMap = M.fromList
         [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics

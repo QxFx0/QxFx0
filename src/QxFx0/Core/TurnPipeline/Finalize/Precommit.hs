@@ -60,16 +60,17 @@ import QxFx0.Core.TurnPipeline.Types (tiAtomSet)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
-import QxFx0.Semantic.Network.Feedback.Detect (detectUserFeedback)
 import QxFx0.Semantic.Network.Feedback.Persist (persistFeedbackNetwork)
 
 -- | Read the runtime feedback-loop flag.
--- Defaults to 'True' unless @QXFX0_FEEDBACK_LOOP@ is set to one of
--- @"0"@, @"false"@, @"no"@ or @"disable"@.
+--
+-- The feedback loop is now opt-in: it defaults to 'False' and is only
+-- enabled when @QXFX0_FEEDBACK_LOOP@ is set to one of @"1"@, @"true"@,
+-- @"yes"@ or @"enable"@. Any other value is treated as disabled.
 readFeedbackLoopActive :: IO Bool
 readFeedbackLoopActive = do
   mEnv <- lookupEnv "QXFX0_FEEDBACK_LOOP"
-  pure $ maybe True (\raw -> T.toLower (T.pack raw) `notElem` ["0", "false", "no", "disable"]) mEnv
+  pure $ maybe False (\raw -> T.toLower (T.pack raw) `elem` ["1", "true", "yes", "enable"]) mEnv
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
 planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =

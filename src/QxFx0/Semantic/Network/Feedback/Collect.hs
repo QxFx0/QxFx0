@@ -45,11 +45,14 @@ collectUsedEdges network steps =
 -- 'collectUsedEdges' and 'applyFeedback': it uses the /previous/ network's
 -- activation log as the source of used edges and applies the feedback to
 -- the /base/ network (typically the merged network for the new turn).  If
--- no feedback marker is found the base network is returned unchanged.
-applyDetectedFeedback :: Text -> SemanticNetwork -> SemanticNetwork -> SemanticNetwork
-applyDetectedFeedback raw previousNetwork baseNetwork =
-  case detectUserFeedback raw of
-    Nothing -> baseNetwork
-    Just feedback ->
-      let usedEdges = collectUsedEdges previousNetwork (F.toList (snActivationLog previousNetwork))
-      in applyFeedback baseNetwork usedEdges feedback
+-- the feedback loop is disabled or no marker is found, the base network is
+-- returned unchanged.
+applyDetectedFeedback :: Bool -> Text -> SemanticNetwork -> SemanticNetwork -> SemanticNetwork
+applyDetectedFeedback feedbackLoopActive raw previousNetwork baseNetwork
+  | not feedbackLoopActive = baseNetwork
+  | otherwise =
+      case detectUserFeedback raw of
+        Nothing -> baseNetwork
+        Just feedback ->
+          let usedEdges = collectUsedEdges previousNetwork (F.toList (snActivationLog previousNetwork))
+          in applyFeedback baseNetwork usedEdges feedback
