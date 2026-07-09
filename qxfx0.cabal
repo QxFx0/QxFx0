@@ -654,6 +654,7 @@ common test-common
     Test.Suite.NetworkTypes
     Test.Suite.NetworkFeedback
     Test.Suite.FeedbackLoopEndToEnd
+    Test.Suite.RelationWeightOverlay
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
     Test.Suite.VariantC

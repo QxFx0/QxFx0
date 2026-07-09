@@ -3,6 +3,7 @@
 module QxFx0.Semantic.Network.Seed
   ( seedFromCorpus
   , useAtomGraphSeed
+  , overlayConfidence
   ) where
 
 import Data.Map.Strict (Map)
@@ -15,6 +16,26 @@ import qualified Data.Sequence as Seq
 
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
+
+-- | Overlay persisted confidence values onto a freshly built semantic
+-- network.  For every edge that exists in both networks, the resulting
+-- confidence is a weighted blend of the fresh and restored values capped
+-- at 0.95.  Edges that only exist in the fresh network are kept as-is,
+-- and all non-edge fields are taken from the fresh network.  This closes
+-- the write-without-read feedback loop: the graph structure always comes
+-- from the current seed/build, while learned confidence is preserved
+-- across restarts.
+overlayConfidence :: SemanticNetwork -> SemanticNetwork -> SemanticNetwork
+overlayConfidence fresh restored =
+  fresh { snEdges = M.mapWithKey overlayEdge (snEdges fresh) }
+  where
+    restoredEdges = snEdges restored
+    overlayEdge key freshEdge =
+      case M.lookup key restoredEdges of
+        Nothing -> freshEdge
+        Just restoredEdge ->
+          let c = min 0.95 (0.3 * seConfidence freshEdge + 0.7 * seConfidence restoredEdge)
+          in freshEdge { seConfidence = c }
 
 -- | Compile-time feature flag for Variant C atom-graph seeding.
 -- P0.1 makes the atom-graph seed the default.

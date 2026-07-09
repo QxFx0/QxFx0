@@ -20,20 +20,25 @@ module QxFx0.Semantic.Network.Seed.Select
   , selectSeedNetworkIO
   , selectSeedNetworkFor
   , readUseAtomGraphSeed
+  , loadRelationWeightOverlay
   ) where
 
 import Control.Monad (when)
+import Data.Aeson (eitherDecodeStrict)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
+import qualified Data.Text.IO as TIO
+import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
 
 import QxFx0.Semantic.Content.AtomStore (AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Network (contentDensityGate)
 import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph)
-import QxFx0.Semantic.Network.Seed (seedFromCorpus)
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..))
+import QxFx0.Semantic.Network.Seed (overlayConfidence, seedFromCorpus)
+import QxFx0.Semantic.Network.Types (SemanticEdge(..), SemanticNetwork(..))
 
 -- | Read the test-harness override for atom-graph seeding.
 -- Defaults to 'True' (atom-graph seed).  Only values @"0"@, @"false"@,
@@ -67,3 +72,28 @@ selectSeedNetworkFor atomGraph lemmaMap =
   in if contentDensityGate atomSeed
        then atomSeed
        else seedFromCorpus lemmaMap
+
+-- | Load a JSONL weight-overlay file and apply it to the supplied network.
+--
+-- Each non-empty line must decode as a 'SemanticEdge'.  The file is keyed
+-- by @(from, to)@ and the resulting map is passed to 'overlayConfidence'.
+-- If the file does not exist the input network is returned unchanged, so
+-- callers can safely point this at a path that only exists after feedback
+-- has been persisted.
+loadRelationWeightOverlay :: FilePath -> SemanticNetwork -> IO SemanticNetwork
+loadRelationWeightOverlay path network = do
+  exists <- doesFileExist path
+  if not exists
+    then pure network
+    else do
+      contents <- TIO.readFile path
+      let rawLines = filter (not . T.null . T.strip) (T.lines contents)
+      edges <- traverse parseOverlayLine rawLines
+      let edgeMap = M.fromList [ ((seFrom e, seTo e), e) | e <- edges ]
+      pure $ overlayConfidence network (network { snEdges = edgeMap })
+  where
+    parseOverlayLine :: Text -> IO SemanticEdge
+    parseOverlayLine line =
+      case eitherDecodeStrict (TE.encodeUtf8 line) of
+        Left err  -> fail ("loadRelationWeightOverlay: failed to parse line: " ++ err)
+        Right edge -> pure edge

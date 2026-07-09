@@ -85,8 +85,9 @@ import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
-import QxFx0.Semantic.Network (mergeSemanticNetworks)
-import QxFx0.Semantic.Network.Seed.Select (selectSeedNetwork, selectSeedNetworkIO, readUseAtomGraphSeed)
+import QxFx0.Semantic.Network (contentDensityGate, mergeSemanticNetworks)
+import QxFx0.Semantic.Network.Seed.Select (loadRelationWeightOverlay, selectSeedNetwork, selectSeedNetworkIO, readUseAtomGraphSeed)
+import QxFx0.Semantic.Network.Seed (overlayConfidence)
 import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge, mergeSelfPlayRelations)
 import QxFx0.Semantic.Content.AtomStore (seedGraph)
 import Data.Maybe (fromMaybe)
@@ -96,7 +97,7 @@ import QxFx0.Semantic.Content.SubstrateCandidate
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, allAtomIds, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted, atomStore, Atom(..), AtomCategory(..))
 import QxFx0.Semantic.Content.AtomDiscovery (discoverAtoms, DiscoveredAtom(..))
 import qualified QxFx0.Semantic.Network.Types as NetTypes
-import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..), SemanticNetwork)
+import QxFx0.Semantic.Network.Types (SemanticEdge(..), EdgeSource(..), SemanticNetwork(..))
 import qualified Data.Set as S
 import qualified Data.Text as T
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrRglMorphologyActive)
@@ -446,6 +447,19 @@ bootstrapSession quiet sessionId = do
                          Left err -> throwQxFx0 $ mkRuntimeInitError "Bootstrap" "governance_rebuild" "GOVERNANCE_REBUILD_FAILED"
                            (M.fromList [("session_id", sessionId), ("error", err)])
                   else pure (RestoredOrigin, restored0)
+  -- P1.1: overlay persisted semantic-network confidence onto the freshly
+  -- built seed network, then load any tuned relation-weight overlay.
+  -- This closes the write-without-read feedback loop: graph structure
+  -- always comes from the current seed/build, while learned weights are
+  -- preserved across restarts and further tuned by the JSONL overlay file.
+  let restoredNetwork = ssSemanticNetwork restored
+      overlayedNetwork = case stateOrigin of
+        FreshOrigin -> finalNetwork
+        _           -> if not (S.null (snNodes restoredNetwork)) && contentDensityGate restoredNetwork
+                         then overlayConfidence finalNetwork restoredNetwork
+                         else finalNetwork
+  ssSemanticNetwork <- loadRelationWeightOverlay "resources/config/tuned_relation_weights.jsonl" overlayedNetwork
+  let restoredWithNetwork = restored { ssSemanticNetwork = ssSemanticNetwork }
   -- Phase 1: verify that the freshly bootstrapped state forms a
   -- structurally coherent self (see docs/THEORY.md §4.1 and
   -- docs/adr/0007-dual-mode-conatus.md). Some failures are recoverable
@@ -453,7 +467,7 @@ bootstrapSession quiet sessionId = do
   -- threaded back into 'restored' and 'sessionId' so the remainder of
   -- bootstrap uses the repaired values.
   (remainingVs, restored', sessionId') <-
-    recoverBootstrapBlanket morphology restored sessionId
+    recoverBootstrapBlanket morphology restoredWithNetwork sessionId
   case remainingVs of
     [] -> do
       if sessionId' /= sessionId || restored' /= restored

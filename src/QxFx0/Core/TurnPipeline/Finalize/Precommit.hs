@@ -2,7 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
-{-| Finalize-stage precommit planning/resolution before persistence commit. -}
+{-| Finalize-stage precommit planning/resolution before persistence commit.
+
+P1.1 note: the feedback write to @resources/config/tuned_relation_weights.jsonl@
+still happens below for offline analysis, but the runtime now also reads the
+same file as a weight overlay during session bootstrap (see
+'QxFx0.Semantic.Network.Seed.Select.loadRelationWeightOverlay').  Persisted
+'SystemState' is the authoritative carrier of learned weights; the JSONL file
+is a secondary, inspectable mirror. -}
 module QxFx0.Core.TurnPipeline.Finalize.Precommit
   ( planFinalizePrecommit
   , resolveFinalizePrecommit
@@ -183,6 +190,9 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
       nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
   when (feedbackLoopActive && ssSemanticNetwork nextSystemState /= ssSemanticNetwork systemState) $
+    -- P1.1: keep writing the JSONL mirror for offline analysis.  The
+    -- authoritative learned weights live in persisted 'SystemState' and are
+    -- reloaded via 'loadRelationWeightOverlay' in bootstrap.
     persistFeedbackNetwork
       "resources/config/tuned_relation_weights.jsonl"
       (ssSemanticNetwork systemState)
