@@ -84,6 +84,15 @@ defaultTestPipelineConfig = TestPipelineConfig
 -- The creation is tied to the incoming 'TestPipelineConfig' and the
 -- function is marked 'NOINLINE' so GHC does not float the thunks to a
 -- shared top-level CAF or duplicate them via inlining.
+--
+-- NOTE: This 'unsafePerformIO' is acceptable for a test-only double.
+-- The MVars are private to each constructed 'PipelineIO' ('NOINLINE'
+-- guarantees fresh allocation per call), are not observable outside the
+-- returned 'pioModifyConsciousLoop' / 'pioModifyIntuition' callbacks,
+-- and only hold deterministic initial values. A production 'PipelineIO'
+-- performs its stateful work in 'IO'; refactoring the test constructor to
+-- 'IO' would force every pure test fixture into 'IO' and is deferred as
+-- documented in @docs/singleton_register.md@.
 mkTestPipelineIO :: TestPipelineConfig -> PipelineIO
 mkTestPipelineIO cfg =
   let consciousState = unsafePerformIO (cfg `seq` newMVar initialLoop)

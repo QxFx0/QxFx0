@@ -11,6 +11,10 @@
     F-11: parseClaimAstGf uses PGF.parse to get a GF Expr, then calls
     gfExprToClaimAst (now in Semantic.Authority.GfExprParse) to recover
     ClaimAst. gfExprToClaimAst is re-exported for backward compatibility.
+
+    NOTE: This module does not use 'unsafePerformIO'. PGF grammars are
+    cached in an explicit 'IORef' created by 'newPgfCache' and passed to
+    the cache-aware functions, so mutation stays inside 'IO'.
 -}
 module QxFx0.Runtime.PGF
   ( -- * PGF cache

@@ -21,6 +21,14 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified PGF2 as PGF
 
 -- | Global PGF load result, computed once at module load time.
+--
+-- NOTE: This 'unsafePerformIO' is safe because the PGF grammar is a
+-- read-only, process-level resource. It is loaded exactly once (the CAF
+-- is guarded by 'NOINLINE'), the loaded value is never mutated, and any
+-- failure is captured in the returned 'Maybe Text' reason. The exported
+-- status predicates are pure; threading the result through callers would
+-- force impurity into Render and other layers that only need a static
+-- yes/no check.
 pgfLoadResult :: (Maybe PGF.PGF, Maybe Text)
 pgfLoadResult = unsafePerformIO loadPgfOnce
 {-# NOINLINE pgfLoadResult #-}

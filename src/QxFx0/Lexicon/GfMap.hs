@@ -99,6 +99,13 @@ normalizeText = T.toLower . T.replace "ё" "е" . T.strip
 -- | Read-only immutable GF lexicon map loaded once from the canonical
 -- GF lexicon funmap. The runtime surface remains pure while the load
 -- status stays explicit and operator-visible.
+--
+-- NOTE: This 'unsafePerformIO' is safe because the GF lexicon is a
+-- read-only, process-level constant. It is loaded exactly once (the CAF
+-- is guarded by 'NOINLINE'), is never mutated afterwards, and failure is
+-- captured in 'GfMapLoadStatus' rather than thrown. Threading the map as
+-- an explicit argument through every pure lookup would be invasive and
+-- would not remove the need to load the resource once at startup.
 gfMapLoadResult :: (GfMapData, GfMapLoadStatus)
 gfMapLoadResult = unsafePerformIO loadCanonicalGfMap
 {-# NOINLINE gfMapLoadResult #-}

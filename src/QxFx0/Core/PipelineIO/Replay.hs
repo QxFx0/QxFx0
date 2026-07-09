@@ -11,6 +11,14 @@ suitable for unit-test replay, not production replay of arbitrary turns.
 
 For the wide path (all resolved effects become replay inputs), grow
 'EffectSnapshot' fields and add 'TurnEffectRequest' cases here.
+
+NOTE: This module contains no 'unsafePerformIO'. 'mkReplayPipelineIO' is
+a pure function of the input 'TurnReplayTrace'; replay is stateless and
+reads recorded effect snapshots instead of sampling the live world. The
+two mutable cells used by the test harness ('consciousState' and
+'intuitionState' in 'QxFx0.Core.PipelineIO.Test') are deliberately not
+recreated here: replay does not persist consciousness/intuition evolution
+across modify calls, so determinism holds by construction.
 -}
 module QxFx0.Core.PipelineIO.Replay
   ( mkReplayPipelineIO
