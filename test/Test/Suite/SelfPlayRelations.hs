@@ -21,10 +21,16 @@ import QxFx0.Runtime.Session
   , minimalMorphologyFallback
   , readSelfPlayRelationsPath
   )
+import QxFx0.Semantic.Content.AtomStore
+  ( Atom(..)
+  , AtomId(..)
+  , atomStore
+  )
 import QxFx0.Semantic.Network.Ingest
   ( LoadedRelation(..)
   , loadSelfPlayRelations
   , mergeSelfPlayRelations
+  , normalizeRelationText
   )
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath)
 import QxFx0.Semantic.Network.Types
@@ -78,7 +84,7 @@ withSelfPlayEnabled action = do
 withoutSelfPlay :: IO a -> IO a
 withoutSelfPlay action = do
   old <- lookupEnv "QXFX0_USE_SELFPLAY"
-  bracket_ (unsetEnv "QXFX0_USE_SELFPLAY")
+  bracket_ (setEnv "QXFX0_USE_SELFPLAY" "0")
            (restore old)
            action
   where
@@ -117,10 +123,72 @@ testBootstrapWithSelfPlayDisabled = TestCase $ do
   assertBool "disabled selfplay must not add selfplay nodes"
     (S.null (S.filter isSelfPlayNode (snNodes network)))
 
+-- | Check whether a normalized relation endpoint is admitted by the
+-- atom store.  Matching uses the atom identifier, display text, or head
+-- noun.
+isAdmittedAtomText :: T.Text -> Bool
+isAdmittedAtomText t =
+  let normalized = normalizeRelationText t
+      byId    = M.lookup (AtomId normalized) atomStore
+      byDisplay = M.lookup normalized displayMap
+      byHead    = M.lookup normalized headMap
+  in not (T.null normalized) && (isJust byId || isJust byDisplay || isJust byHead)
+  where
+    displayMap = M.fromList [ (atomDisplay a, a) | (_, a) <- M.toList atomStore ]
+    headMap    = M.fromList [ (atomHead a, a) | (_, a) <- M.toList atomStore ]
+    isJust Nothing = False
+    isJust (Just _) = True
+
+-- | A prepositional LLM artifact must be rejected by the admission gate.
+testNormalizeRelationRejectsPrepositionalPhrase :: Test
+testNormalizeRelationRejectsPrepositionalPhrase = TestCase $ do
+  let result = normalizeRelationText "на возможность будущего"
+  assertBool "normalized text must not be admitted"
+    (not (isAdmittedAtomText "на возможность будущего"))
+  assertBool "normalization must strip the preposition"
+    (not ("на " `T.isPrefixOf` result))
+
+-- | A bare nominative atom must be accepted by the admission gate.
+testNormalizeRelationAcceptsNominative :: Test
+testNormalizeRelationAcceptsNominative = TestCase $ do
+  assertEqual "свобода must normalize to itself"
+    "свобода" (normalizeRelationText "свобода")
+  assertBool "свобода must be admitted"
+    (isAdmittedAtomText "свобода")
+
+-- | An internal preposition is stripped and the head noun is recovered.
+-- The phrase "вечность в мгновении" corresponds to the curated atom
+-- whose head noun is "вечность".
+testNormalizeRelationStripsPreposition :: Test
+testNormalizeRelationStripsPreposition = TestCase $ do
+  let result = normalizeRelationText "вечность в мгновении"
+  assertEqual "вечность в мгновении must normalize to its head noun"
+    "вечность" result
+  assertBool "вечность must be admitted as an atom head"
+    (isAdmittedAtomText "вечность в мгновении")
+
+-- | Loading the bundled self-play corpus and merging it must reject at
+-- least one relation because some endpoints are prepositional LLM
+-- artifacts not present in the atom store.
+testSelfPlayMergeRejectsAll :: Test
+testSelfPlayMergeRejectsAll = TestCase $ do
+  rawRels <- loadSelfPlayRelations selfPlayPath
+  merged <- mergeSelfPlayRelations selfPlayPath emptySemanticNetwork
+  let admittedCount = M.size (snEdges merged)
+      rejectedCount = length rawRels - admittedCount
+  assertBool "some selfplay relations must be rejected by the admission gate"
+    (rejectedCount > 0)
+  assertBool "some selfplay relations must be admitted"
+    (admittedCount > 0)
+
 selfPlayRelationsTests :: [Test]
 selfPlayRelationsTests =
   [ TestLabel "selfplay file has 80 relations" testSelfPlayFileHas80Relations
   , TestLabel "mergeSelfPlayRelations adds ProvenanceSelfPlay edges" testMergeSelfPlayRelationsAddsProvenance
   , TestLabel "bootstrap with selfplay enabled includes selfplay nodes" testBootstrapWithSelfPlayEnabled
   , TestLabel "bootstrap with selfplay disabled does not change network" testBootstrapWithSelfPlayDisabled
+  , TestLabel "normalize relation rejects prepositional phrase" testNormalizeRelationRejectsPrepositionalPhrase
+  , TestLabel "normalize relation accepts nominative" testNormalizeRelationAcceptsNominative
+  , TestLabel "normalize relation strips preposition" testNormalizeRelationStripsPreposition
+  , TestLabel "selfplay merge rejects some relations" testSelfPlayMergeRejectsAll
   ]

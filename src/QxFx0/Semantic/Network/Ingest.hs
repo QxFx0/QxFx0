@@ -24,8 +24,10 @@ module QxFx0.Semantic.Network.Ingest
   , semanticNetworkFromLoaded
   , loadSelfPlayRelations
   , mergeSelfPlayRelations
+  , normalizeRelationText
   ) where
 
+import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
 import Control.Exception (SomeException, try)
 import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), eitherDecodeStrict, object, withObject, (.:), (.:?), (.=))
@@ -33,7 +35,7 @@ import Data.Foldable (foldl')
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
@@ -55,6 +57,8 @@ import QxFx0.Semantic.Content.AtomStore
   , RelationType(..)
   , atomStore
   )
+import QxFx0.Semantic.Morphology (toNominative)
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import QxFx0.Semantic.Network
   ( mergeSemanticNetworks
   )
@@ -209,6 +213,70 @@ lookupAtomId displayIndex name =
 atomDisplayIndex :: Map Text AtomId
 atomDisplayIndex =
   M.fromList [ (atomDisplay a, atomId a) | (_, a) <- M.toList atomStore ]
+
+-- ============================================================
+-- Self-play relation admission gate
+-- ============================================================
+
+-- | Common Russian prepositions that LLM-generated relation endpoints
+-- often prepend/append, turning nominative atoms into prepositional
+-- phrases.  These are stripped before normalization.
+russianPrepositions :: Set Text
+russianPrepositions = S.fromList
+  [ "в", "на", "с", "по", "для", "к", "о", "об", "обо", "от"
+  , "до", "из", "за", "под", "над", "перед", "при", "про", "через"
+  , "между"
+  ]
+
+-- | Morphology data derived from the curated atom store.  Maps each
+-- atom's display text to its head noun so that 'toNominative' can
+-- recover the nominative atom from a display phrase.
+atomMorphologyData :: MorphologyData
+atomMorphologyData = MorphologyData
+  { mdPrepositional = M.empty
+  , mdGenitive = M.empty
+  , mdNominative = M.fromList
+      [ (atomDisplay a, atomHead a)
+      | (_, a) <- M.toList atomStore
+      ]
+  , mdFormsBySurface = M.empty
+  }
+
+-- | Strip leading and trailing Russian prepositions from a phrase.
+stripEndPrepositions :: Text -> Text
+stripEndPrepositions text =
+  let words' = T.words text
+      dropPrep = dropWhile (`S.member` russianPrepositions)
+      stripped = reverse . dropPrep . reverse . dropPrep $ words'
+  in T.unwords stripped
+
+-- | Normalize a relation endpoint: trim whitespace, strip leading/trailing
+-- prepositions, and convert to nominative using the atom-store morphology.
+-- The result is the candidate nominative form that the admission gate
+-- checks against the curated atom store.
+normalizeRelationText :: Text -> Text
+normalizeRelationText text =
+  let stripped = T.strip (stripEndPrepositions (T.strip text))
+  in T.strip (toNominative atomMorphologyData stripped)
+
+-- | Check whether a normalized relation endpoint corresponds to a known
+-- atom.  Matching uses the atom identifier, display text, or head noun.
+admitRelationEndpoint :: Text -> Maybe Atom
+admitRelationEndpoint text =
+  let normalized = normalizeRelationText text
+  in  M.lookup (AtomId normalized) atomStore
+      <|> M.lookup normalized atomDisplayAtomMap
+      <|> M.lookup normalized atomHeadAtomMap
+
+-- | Display-text -> atom lookup.
+atomDisplayAtomMap :: Map Text Atom
+atomDisplayAtomMap =
+  M.fromList [ (atomDisplay a, a) | (_, a) <- M.toList atomStore ]
+
+-- | Head-noun -> atom lookup.
+atomHeadAtomMap :: Map Text Atom
+atomHeadAtomMap =
+  M.fromList [ (atomHead a, a) | (_, a) <- M.toList atomStore ]
 
 -- ============================================================
 -- Relation graph
@@ -486,11 +554,37 @@ semanticNetworkFromSelfPlay rawRels =
             }
       in M.insert key edge acc
 
--- | Load self-play relations from a file and merge them into an
--- existing 'SemanticNetwork'. Merging uses 'mergeSemanticNetworks', so
--- collisions are resolved by provenance authority and confidence.
+-- | Admitted relation with the endpoint texts replaced by the matched
+-- atom display text.  This guarantees that self-play edges reference
+-- only nominative atoms already present in the curated atom graph.
+admitLoadedRelation :: LoadedRelation -> Maybe LoadedRelation
+admitLoadedRelation lr = do
+  fromAtom <- admitRelationEndpoint (lrFrom lr)
+  toAtom   <- admitRelationEndpoint (lrTo lr)
+  pure lr
+    { lrFrom = atomDisplay fromAtom
+    , lrTo   = atomDisplay toAtom
+    }
+
+-- | Emit a warning for a rejected self-play relation.
+warnRejectedRelation :: LoadedRelation -> IO ()
+warnRejectedRelation lr =
+  hPutStrLn stderr $
+    "Warning: rejecting self-play relation (not in atom store): "
+    ++ T.unpack (lrFrom lr) ++ " -> " ++ T.unpack (lrTo lr)
+
+-- | Load self-play relations from a file, apply the admission gate to
+-- each endpoint, and merge the admitted relations into an existing
+-- 'SemanticNetwork'.  Relations whose normalized endpoints are not in
+-- the curated atom store are skipped and logged.  Merging uses
+-- 'mergeSemanticNetworks', so collisions are resolved by provenance
+-- authority and confidence.
 mergeSelfPlayRelations :: FilePath -> SemanticNetwork -> IO SemanticNetwork
 mergeSelfPlayRelations path baseNetwork = do
   rawRels <- loadSelfPlayRelations path
-  let selfplayNetwork = semanticNetworkFromSelfPlay rawRels
+  let classified = map (\lr -> (lr, admitLoadedRelation lr)) rawRels
+      admitted   = mapMaybe snd classified
+      rejected   = [ lr | (lr, Nothing) <- classified ]
+  mapM_ warnRejectedRelation rejected
+  let selfplayNetwork = semanticNetworkFromSelfPlay admitted
   pure $ mergeSemanticNetworks baseNetwork selfplayNetwork

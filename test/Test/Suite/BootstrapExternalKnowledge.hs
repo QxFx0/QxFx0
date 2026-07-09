@@ -80,13 +80,27 @@ withAtomGraphSeed value action = do
 -- the default was changed to use the atom-graph seed, which happens to
 -- contain the external-only node @"выбор"@. Without the pin the disabled
 -- code path would still see that node and the assertion would fail.
+--
+-- We also disable self-play relations, because P2.1 turned them on by
+-- default and the bundled self-play corpus also references @"выбор"@.
 testDisabledLeavesNetworkUnchanged :: Test
 testDisabledLeavesNetworkUnchanged = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- withAtomGraphSeed "false" $
+  network <- withAtomGraphSeed "false" . withoutSelfPlay $
     bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
   assertBool "external-only node should not appear when disabled"
     (not (S.member externalNode (snNodes network)))
+
+-- | Temporarily disable the self-play relation feature for an 'IO' action.
+withoutSelfPlay :: IO a -> IO a
+withoutSelfPlay action = do
+  old <- lookupEnv "QXFX0_USE_SELFPLAY"
+  bracket_ (setEnv "QXFX0_USE_SELFPLAY" "0")
+           (restore old)
+           action
+  where
+    restore Nothing  = unsetEnv "QXFX0_USE_SELFPLAY"
+    restore (Just v) = setEnv "QXFX0_USE_SELFPLAY" v
 
 -- | With external knowledge enabled, the final network contains both
 -- seed nodes and external-only nodes.

@@ -142,19 +142,23 @@ readExternalKnowledgeEnabled = do
   pure (envEnabled || useExternalKnowledge)
 
 -- | Compile-time feature flag for ADR-0052 Phase III self-play relation
--- ingestion. Defaults to 'False' so runtime behavior is unchanged.
+-- ingestion. Defaults to 'True' as of P2.1 (selfplay admission gate +
+-- default-on); set @QXFX0_USE_SELFPLAY@ to @"0"@, @"false"@, @"no"@, or
+-- @"disable"@ to disable at runtime.
 useSelfPlay :: Bool
-useSelfPlay = False
+useSelfPlay = True
 
 -- | Read whether self-play relation ingestion should be enabled.
--- The compile-time 'useSelfPlay' flag can force it on; otherwise the
--- @QXFX0_USE_SELFPLAY@ environment variable enables it when set to
+-- The compile-time 'useSelfPlay' flag defaults it on; the
+-- @QXFX0_USE_SELFPLAY@ environment variable can disable it when set to
+-- @\"0\"@, @\"false\"@, @\"no\"@, or @\"disable\"@, or explicitly enable it with
 -- @\"1\"@, @\"true\"@, or @\"yes\"@.
 readSelfPlayEnabled :: IO Bool
 readSelfPlayEnabled = do
   mEnv <- lookupEnv "QXFX0_USE_SELFPLAY"
-  let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
-  pure (envEnabled || useSelfPlay)
+  let envDisabled = maybe False (`elem` ["0", "false", "no", "disable"]) mEnv
+      envEnabled  = maybe False (`elem` ["1", "true", "yes"]) mEnv
+  pure (not envDisabled && (useSelfPlay || envEnabled))
 
 -- | Resolve the path to the self-play relations file. The
 -- @QXFX0_SELFPLAY_RELATIONS_PATH@ environment variable overrides the
