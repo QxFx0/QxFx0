@@ -269,6 +269,7 @@ library
        QxFx0.Semantic.Network
       QxFx0.Semantic.Network.Types
       QxFx0.Semantic.Network.Seed
+      QxFx0.Semantic.Network.Seed.Select
       QxFx0.Semantic.Network.Substrate
       QxFx0.Semantic.Network.Ingest
       QxFx0.Semantic.Network.Feedback
@@ -656,6 +657,7 @@ common test-common
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
     Test.Suite.VariantC
+    Test.Suite.AtomGraphSeed
 
 test-suite qxfx0-test-unit
   import:        test-common

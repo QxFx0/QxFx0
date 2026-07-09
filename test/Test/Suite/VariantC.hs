@@ -18,10 +18,9 @@ import QxFx0.Runtime.Session
   ( bootstrapSemanticNetwork
   , buildNetworkFromAtomGraph
   , minimalMorphologyFallback
-  , readUseAtomGraphSeed
-  , useAtomGraphSeed
   )
 import QxFx0.Semantic.Content.AtomStore (RelationType(..), seedGraph)
+import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Network.Substrate (loadBrainKB, resolveBrainKBPath)
 import QxFx0.Semantic.Network.Types
   ( EdgeProvenance(..)
@@ -31,36 +30,22 @@ import QxFx0.Semantic.Network.Types
   , sweepRelationTypeWeights
   )
 
--- | The compile-time flag must keep atom-graph seeding off by default.
-testUseAtomGraphSeedDefaultOff :: Test
-testUseAtomGraphSeedDefaultOff = TestCase $
-  useAtomGraphSeed @?= False
-
--- | The environment-based reader must default to 'False' when the
--- variable is unset.
-testReadUseAtomGraphSeedDefaultsOff :: Test
-testReadUseAtomGraphSeedDefaultsOff = TestCase $ do
-  enabled <- readUseAtomGraphSeed
-  enabled @?= False
-
--- | Bootstrapping with 'useAtomGraphSeed = False' (the default) must not
--- introduce 'ProvenanceCurated' atom-graph edges into the semantic
--- network.
-testBootstrapDefaultNoCuratedEdges :: Test
-testBootstrapDefaultNoCuratedEdges = TestCase $ do
-  brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False False
-  let curatedEdges = filter ((== ProvenanceCurated) . seProvenance)
+-- | The definition-corpus seed must never carry the 'ProvenanceCurated'
+-- provenance that belongs to the atom-graph seed.
+testCorpusSeedHasNoCuratedEdges :: Test
+testCorpusSeedHasNoCuratedEdges = TestCase $ do
+  let network = seedFromCorpus M.empty
+      curatedEdges = filter ((== ProvenanceCurated) . seProvenance)
                             (M.elems (snEdges network))
-  assertBool "default bootstrap should not contain ProvenanceCurated edges"
+  assertBool "corpus seed should not contain ProvenanceCurated edges"
     (null curatedEdges)
 
--- | Bootstrapping with 'useAtomGraphSeed = True' must produce a network
--- that contains curated provenance edges from the atom graph.
+-- | Bootstrapping (now defaulting to the atom-graph seed) must produce a
+-- network that contains curated provenance edges from the atom graph.
 testBootstrapAtomGraphSeedCuratedEdges :: Test
 testBootstrapAtomGraphSeedCuratedEdges = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries True False
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
   let curatedEdges = filter ((== ProvenanceCurated) . seProvenance)
                             (M.elems (snEdges network))
   assertBool "atom-graph seed must add ProvenanceCurated edges"
@@ -142,9 +127,7 @@ testSweepEmpty = TestCase $ do
 
 variantCTests :: [Test]
 variantCTests =
-  [ TestLabel "useAtomGraphSeed defaults to False" testUseAtomGraphSeedDefaultOff
-  , TestLabel "readUseAtomGraphSeed defaults to False" testReadUseAtomGraphSeedDefaultsOff
-  , TestLabel "default bootstrap has no ProvenanceCurated edges" testBootstrapDefaultNoCuratedEdges
+  [ TestLabel "corpus seed has no ProvenanceCurated edges" testCorpusSeedHasNoCuratedEdges
   , TestLabel "atom-graph seed produces ProvenanceCurated edges" testBootstrapAtomGraphSeedCuratedEdges
   , TestLabel "buildNetworkFromAtomGraph seedGraph produces curated edges" testBuildNetworkFromAtomGraphProducesCurated
   , TestLabel "calibrate boosts high count and reduces low count" testCalibrateBoostsHighCountReducesLowCount

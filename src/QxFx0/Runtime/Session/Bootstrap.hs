@@ -15,8 +15,6 @@ module QxFx0.Runtime.Session.Bootstrap
   , readExternalKnowledgeEnabled
   , resolveKnowledgePath
   , bootstrapSemanticNetwork
-  , useAtomGraphSeed
-  , readUseAtomGraphSeed
   , buildNetworkFromAtomGraph
   , readSelfPlayEnabled
   , readSelfPlayRelationsPath
@@ -88,7 +86,7 @@ import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
 import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
 import QxFx0.Semantic.Network (mergeSemanticNetworks)
-import QxFx0.Semantic.Network.Seed (seedFromCorpus)
+import QxFx0.Semantic.Network.Seed.Select (selectSeedNetwork, selectSeedNetworkIO, readUseAtomGraphSeed)
 import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge, mergeSelfPlayRelations)
 import QxFx0.Semantic.Content.AtomStore (seedGraph)
 import Data.Maybe (fromMaybe)
@@ -142,23 +140,6 @@ readExternalKnowledgeEnabled = do
   let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
   pure (envEnabled || useExternalKnowledge)
 
--- | Compile-time feature flag for Variant C atom-graph seeding.
--- When 'True', 'bootstrapSemanticNetwork' builds the seed network from
--- the curated atom graph instead of the definition-corpus co-occurrence
--- heuristic. Defaults to 'False' so runtime behavior is unchanged.
-useAtomGraphSeed :: Bool
-useAtomGraphSeed = False
-
--- | Read whether atom-graph seeding should be enabled. The compile-time
--- 'useAtomGraphSeed' flag can force it on; otherwise the
--- @QXFX0_USE_ATOM_GRAPH_SEED@ environment variable enables it when set
--- to @"1"@, @"true"@, or @"yes"@.
-readUseAtomGraphSeed :: IO Bool
-readUseAtomGraphSeed = do
-  mEnv <- lookupEnv "QXFX0_USE_ATOM_GRAPH_SEED"
-  let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
-  pure (envEnabled || useAtomGraphSeed)
-
 -- | Compile-time feature flag for ADR-0052 Phase III self-play relation
 -- ingestion. Defaults to 'False' so runtime behavior is unchanged.
 useSelfPlay :: Bool
@@ -203,22 +184,20 @@ resolveKnowledgePath path = do
 
 -- | Build the bootstrapped semantic network from morphology and brain_kb
 -- substrate, optionally merging external ontology/relations.
-bootstrapSemanticNetwork :: MorphologyData -> [BrainKBEntry] -> Bool -> Bool -> IO SemanticNetwork
-bootstrapSemanticNetwork morphology brainKBEntries useAtomGraphSeedFlag useExternal =
+bootstrapSemanticNetwork :: MorphologyData -> [BrainKBEntry] -> Bool -> IO SemanticNetwork
+bootstrapSemanticNetwork morphology brainKBEntries useExternal =
   let lemmaMap = buildLemmaMap morphology
-      seedNetwork = if useAtomGraphSeedFlag
-                      then buildNetworkFromAtomGraph seedGraph
-                      else seedFromCorpus lemmaMap
       explicitTopicSet = S.fromList coveredTopics
       substrateEdges = buildSubstrateEdges brainKBEntries explicitTopicSet
-      seedEdges = NetTypes.snEdges seedNetwork
       substrateEdgeMap = M.fromList
         [ ((seiFrom e, seiTo e), NetTypes.semanticEdge (seiFrom e) (seiTo e) (seiWeight e) (seiCooc e) NetTypes.SubstrateEdge)
         | e <- substrateEdges
         ]
-      mergedEdges = M.union seedEdges substrateEdgeMap
-      mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
   in do
+      seedNetwork <- selectSeedNetworkIO lemmaMap
+      let seedEdges = NetTypes.snEdges seedNetwork
+          mergedEdges = M.union seedEdges substrateEdgeMap
+          mergedNetwork = seedNetwork { NetTypes.snEdges = mergedEdges }
       withExternal <- if not useExternal
         then pure mergedNetwork
         else do
@@ -368,8 +347,7 @@ bootstrapSession quiet sessionId = do
       pure ot
 
   externalEnabled <- readExternalKnowledgeEnabled
-  atomGraphSeedEnabled <- readUseAtomGraphSeed
-  finalNetwork <- bootstrapSemanticNetwork morphology brainKBEntries atomGraphSeedEnabled externalEnabled
+  finalNetwork <- bootstrapSemanticNetwork morphology brainKBEntries externalEnabled
 
   let firstScene = case (scenes ++ defaultScenes) of
         s : _ -> s

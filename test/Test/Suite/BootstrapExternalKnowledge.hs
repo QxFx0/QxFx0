@@ -9,10 +9,12 @@ module Test.Suite.BootstrapExternalKnowledge
   ( bootstrapExternalKnowledgeTests
   ) where
 
+import Control.Exception (bracket_)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
 import System.Directory (doesFileExist)
+import System.Environment (lookupEnv, setEnv, unsetEnv)
 import Test.HUnit (Test (..), (@?=), assertBool)
 
 import QxFx0.Runtime.Session
@@ -58,12 +60,31 @@ testResolveKnowledgePathFindsRelations = TestCase $ do
   exists <- doesFileExist resolved
   assertBool "resolved relations path should exist" exists
 
+-- | Temporarily set @QXFX0_USE_ATOM_GRAPH_SEED@ to the supplied value
+-- for the duration of an 'IO' action, restoring the previous value
+-- afterwards.
+withAtomGraphSeed :: String -> IO a -> IO a
+withAtomGraphSeed value action = do
+  old <- lookupEnv "QXFX0_USE_ATOM_GRAPH_SEED"
+  bracket_ (setEnv "QXFX0_USE_ATOM_GRAPH_SEED" value)
+           (restore old)
+           action
+  where
+    restore Nothing  = unsetEnv "QXFX0_USE_ATOM_GRAPH_SEED"
+    restore (Just v) = setEnv "QXFX0_USE_ATOM_GRAPH_SEED" v
+
 -- | With external knowledge disabled, the external-only node is not
 -- introduced into the semantic network.
+--
+-- We pin @QXFX0_USE_ATOM_GRAPH_SEED@ to @"false"@ for this test because
+-- the default was changed to use the atom-graph seed, which happens to
+-- contain the external-only node @"выбор"@. Without the pin the disabled
+-- code path would still see that node and the assertion would fail.
 testDisabledLeavesNetworkUnchanged :: Test
 testDisabledLeavesNetworkUnchanged = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False False
+  network <- withAtomGraphSeed "false" $
+    bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
   assertBool "external-only node should not appear when disabled"
     (not (S.member externalNode (snNodes network)))
 
@@ -72,7 +93,7 @@ testDisabledLeavesNetworkUnchanged = TestCase $ do
 testEnabledMergesExternalNodes :: Test
 testEnabledMergesExternalNodes = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False True
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries True
   assertBool "seed node should be present"
     (S.member seedNode (snNodes network))
   assertBool "external-only node should be present"
@@ -83,7 +104,7 @@ testEnabledMergesExternalNodes = TestCase $ do
 testExternalEdgeHasIngestedProvenance :: Test
 testExternalEdgeHasIngestedProvenance = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False True
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries True
   case M.lookup (seedNode, externalNode) (snEdges network) of
     Nothing ->
       assertBool "expected edge свобода -> выбор to be present" False

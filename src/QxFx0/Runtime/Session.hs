@@ -16,8 +16,6 @@ module QxFx0.Runtime.Session
   , readExternalKnowledgeEnabled
   , resolveKnowledgePath
   , bootstrapSemanticNetwork
-  , useAtomGraphSeed
-  , readUseAtomGraphSeed
   , buildNetworkFromAtomGraph
   , readSelfPlayEnabled
   , readSelfPlayRelationsPath

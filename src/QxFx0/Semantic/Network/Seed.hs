@@ -2,6 +2,7 @@
 
 module QxFx0.Semantic.Network.Seed
   ( seedFromCorpus
+  , useAtomGraphSeed
   ) where
 
 import Data.Map.Strict (Map)
@@ -10,9 +11,15 @@ import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
 import qualified Data.Sequence as Seq
+
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
+
+-- | Compile-time feature flag for Variant C atom-graph seeding.
+-- P0.1 makes the atom-graph seed the default.
+useAtomGraphSeed :: Bool
+useAtomGraphSeed = True
 
 -- | Seed a SemanticNetwork from definitionCorpus.
 -- Creates edges between topics that share atoms in their predicates.
@@ -24,10 +31,10 @@ seedFromCorpus lemmaMap =
         [ (topic, S.unions [tokenizePredicate lemmaMap (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList definitionCorpus
         ]
-      
+
       allNodes :: Set Text
       allNodes = S.unions [atoms | (_, atoms) <- topicAtoms]
-      
+
       corpusEdges :: [SemanticEdge]
       corpusEdges =
         [ semanticEdge t1 t2 (fromIntegral sharedCount / 10.0) sharedCount ExplicitEdge
@@ -38,7 +45,7 @@ seedFromCorpus lemmaMap =
               sharedCount = S.size shared
         , sharedCount > 0
         ]
-      
+
       edgeMap :: Map (Text, Text) SemanticEdge
       edgeMap = M.fromList [((seFrom e, seTo e), e) | e <- corpusEdges]
   in SemanticNetwork
