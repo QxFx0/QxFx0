@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 module QxFx0.Types.TurnProjection
   ( ParserStatus(..)
@@ -38,7 +39,7 @@ import QxFx0.Memory.Episodic
   , EpisodicId
   , ReuseAnnotation
   )
-import Data.Aeson (ToJSON, FromJSON)
+import Data.Aeson (ToJSON, FromJSON, parseJSON, withObject, (.:), (.:?), (.!=))
 import Data.Text (Text)
 import GHC.Generics (Generic)
 import QxFx0.Runtime.Mode (RuntimeMode(..))
@@ -428,8 +429,162 @@ data TurnReplayTrace = TurnReplayTrace
     --   via node, hop number, and weight.
   , trcSubstrateHops :: !Int
     -- ^ Activation Trace: count of steps that used SubstrateEdge.
+  , trcActivatedConcepts :: ![Text]
+    -- ^ P0.2: concepts whose spreading-activation value exceeded the
+    --   reporting threshold on this turn.
+  , trcMissingPredicates :: ![Text]
+    -- ^ P0.2: subset of 'trcActivatedConcepts' that have no surface
+    --   predicate ('SemanticPredicate') in the definition corpus.
   } deriving stock (Show, Eq, Generic)
-    deriving anyclass (ToJSON, FromJSON)
+    deriving anyclass (ToJSON)
+
+instance FromJSON TurnReplayTrace where
+  parseJSON = withObject "TurnReplayTrace" $ \o -> do
+    -- Backward-compatible decoding: the new dogfooding fields default to
+    -- the empty list when absent, so persisted traces remain readable.
+    activated <- o .:? "trcActivatedConcepts" .!= []
+    missing   <- o .:? "trcMissingPredicates" .!= []
+    TurnReplayTrace
+      <$> o .: "trcRequestId"
+      <*> o .: "trcSessionId"
+      <*> o .: "trcRuntimeMode"
+      <*> o .: "trcShadowPolicy"
+      <*> o .: "trcLocalRecoveryPolicy"
+      <*> o .:? "trcRecoveryCause"
+      <*> o .:? "trcRecoveryStrategy"
+      <*> o .:? "trcRecoveryEvidence" .!= []
+      <*> o .: "trcSemanticIntrospectionEnabled"
+      <*> o .: "trcWarnMorphologyFallbackEnabled"
+      <*> o .: "trcRequestedFamily"
+      <*> o .:? "trcStrategyFamily"
+      <*> o .:? "trcNarrativeHint"
+      <*> o .:? "trcIntuitionHint"
+      <*> o .: "trcPreShadowFamily"
+      <*> o .: "trcShadowSnapshotId"
+      <*> o .: "trcShadowStatus"
+      <*> o .: "trcShadowDivergenceKind"
+      <*> o .: "trcShadowDivergenceSeverity"
+      <*> o .: "trcShadowResolvedFamily"
+      <*> o .: "trcFinalFamily"
+      <*> o .: "trcFinalForce"
+      <*> o .: "trcDecisionDisposition"
+      <*> o .: "trcLegitimacyReason"
+      <*> o .: "trcParserConfidence"
+      <*> o .: "trcParserBackend"
+      <*> o .: "trcParserStatus"
+      <*> o .:? "trcParserDegradationReason"
+      <*> o .: "trcParserLatencyMs"
+      <*> o .: "trcEmbeddingQuality"
+      <*> o .:? "trcClaimAst"
+      <*> o .: "trcPreSafetyRenderedRaw"
+      <*> o .: "trcRenderedAfterRebind"
+      <*> o .:? "trcLinearizationLang"
+      <*> o .: "trcLinearizationOk"
+      <*> o .:? "trcFallbackReason"
+      <*> o .:? "trcContractProvenance"
+      <*> o .:? "trcSurfaceProvenance"
+      <*> o .:? "trcAuthorityClass"
+      <*> o .: "trcTruthContractStatus"
+      <*> o .:? "trcResponseSurfaceKind"
+      <*> o .:? "trcAssemblyPath"
+      <*> o .:? "trcArtifactManifest"
+      <*> o .: "trcReplayProvenanceStatus"
+      <*> o .:? "trcDerivationTags" .!= []
+      <*> o .: "trcSalienceDriver"
+      <*> o .: "trcSalienceHolisticBias"
+      <*> o .: "trcSalienceConfidence"
+      <*> o .:? "trcDeliberationRule"
+      <*> o .:? "trcDeliberationAgreement"
+      <*> o .:? "trcDeliberationDivergence"
+      <*> o .:? "trcDeliberationNarrativeTone"
+      <*> o .:? "trcEssenceMode"
+      <*> o .:? "trcEssenceCommitted"
+      <*> o .:? "trcEssenceAngstLevel"
+      <*> o .:? "trcEssenceTrigger"
+      <*> o .:? "trcLearningQueryType"
+      <*> o .:? "trcExternalTool"
+      <*> o .:? "trcLearningValidationStatus"
+      <*> o .:? "trcLearningSandboxResult"
+      <*> o .:? "trcLearningGraftTurn"
+      <*> o .:? "trcLearningRejectReason"
+      <*> o .:? "trcExternalActionReason"
+      <*> o .:? "trcExternalActionNeed"
+      <*> o .:? "trcPreActorFailureEvent"
+      <*> o .: "trcSenseAnchor"
+      <*> o .:? "trcSenseOperator"
+      <*> o .:? "trcSensePreservedAxes" .!= []
+      <*> o .: "trcDialogueFocus"
+      <*> o .: "trcDialogueFocusBefore"
+      <*> o .: "trcDialogueFocusAfter"
+      <*> o .: "trcDialoguePhase"
+      <*> o .: "trcDialoguePhaseBefore"
+      <*> o .: "trcDialoguePhaseAfter"
+      <*> o .: "trcDialogueCommitmentCount"
+      <*> o .: "trcDialogueCommitmentCountBefore"
+      <*> o .: "trcDialogueCommitmentCountAfter"
+      <*> o .:? "trcMicroPlanMoves" .!= []
+      <*> o .: "trcMicroPlanExplicitness"
+      <*> o .:? "trcDreamPressureDatalogClass"
+      <*> o .:? "trcDreamPressureIntuitionClass"
+      <*> o .:? "trcDreamPressureAgreement"
+      <*> o .:? "trcDreamPressureStrength"
+      <*> o .:? "trcDreamPressureCandidateThresholdFired"
+      <*> o .:? "trcDreamPressureCandidateKinds" .!= []
+      <*> o .:? "trcDreamPressureBiasApplied"
+      <*> o .:? "trcDreamPressureDecisionReasons" .!= []
+      <*> o .:? "trcDreamCandidateLifecycleStatuses" .!= []
+      <*> o .:? "trcDreamCandidateApplied"
+      <*> o .:? "trcPerspectiveProjection"
+      <*> o .:? "trcPerspectiveProjections" .!= []
+      <*> o .: "trcConatusEnergy"
+      <*> o .: "trcConatusGateFired"
+      <*> o .: "trcField"
+      <*> o .:? "trcIdentityClaims" .!= []
+      <*> o .:? "trcEpisodicEncoding" .!= []
+      <*> o .:? "trcEpisodicRetrieval"
+      <*> o .:? "trcEpisodicForgetting" .!= (0, Nothing)
+      <*> o .: "trcRegimeVersion"
+      <*> o .: "trcFamilyDivergenceActive"
+      <*> o .: "trcSemanticCommitmentCount"
+      <*> o .: "trcQuarantinedCommitmentCount"
+      <*> o .: "trcPromotedFromQuarantineCount"
+      <*> o .: "trcCommitmentStoreDecision"
+      <*> o .: "trcCommitmentEngaged"
+      <*> o .: "trcCommitmentContradicted"
+      <*> o .:? "trcCommitmentFamilyHint"
+      <*> o .: "trcCommitmentMatchKind"
+      <*> o .: "trcCognitiveSignals"
+      <*> o .:? "trcDoubtScore"
+      <*> o .:? "trcEpisodicRetrievalCount"
+      <*> o .:? "trcContentSaliencyDominantCluster"
+      <*> o .:? "trcMoodValence"
+      <*> o .:? "trcMoodArousal"
+      <*> o .: "trcAffectDecoupled"
+      <*> o .: "trcMood"
+      <*> o .:? "trcUserModelTopIntent"
+      <*> o .:? "trcUserModelConfidence"
+      <*> o .:? "trcDerivedInferenceCount"
+      <*> o .:? "trcFamilyDivergenceOccurred"
+      <*> o .:? "trcFmarDetectorFamily"
+      <*> o .:? "trcFmarFamily"
+      <*> o .:? "trcFmarFamiliesMatch"
+      <*> o .:? "trcFmarFieldDistance"
+      <*> o .:? "trcFmarMode"
+      <*> o .:? "trcFamilyDerivationChain" .!= []
+      <*> o .:? "trcGenerationTrace" .!= []
+      <*> o .: "trcMorphologyVersion"
+      <*> o .:? "trcEffectSnapshot"
+      <*> o .: "trcEvidenceAdmissibility"
+      <*> o .:? "trcIntentType"
+      <*> o .:? "trcFrameType"
+      <*> o .:? "trcContentSource"
+      <*> o .:? "trcAnalogicalSource"
+      <*> o .:? "trcSubstrateActivated" .!= []
+      <*> o .:? "trcSubstrateEdgesUsed" .!= 0
+      <*> o .:? "trcActivationSteps" .!= Seq.empty
+      <*> o .:? "trcSubstrateHops" .!= 0
+      <*> pure activated
+      <*> pure missing
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

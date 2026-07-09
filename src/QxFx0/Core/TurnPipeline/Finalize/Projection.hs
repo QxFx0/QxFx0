@@ -8,9 +8,13 @@ Description : observer — Finalize-stage turn replay trace projection and seria
 module QxFx0.Core.TurnPipeline.Finalize.Projection
   ( buildTurnProjection
   , turnInputSalience
+  , activatedConcepts
+  , missingPredicateConcepts
   ) where
 
 import Control.Applicative ((<|>))
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -32,6 +36,7 @@ import QxFx0.Core.TruthContract
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.Guardrails (ExternalActionDecisionReason(..), ExternalActionDecisionTrace(..), ExternalActionKind(..))
+import QxFx0.Semantic.Content (definitionCorpus)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Semantic.Proposition (parseProposition)
 import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
@@ -87,6 +92,19 @@ import QxFx0.Runtime.Mode (RuntimeMode(..))
 
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience = svSalience . tiSelfVerdict
+
+-- | P0.2: concepts whose activation value exceeded the reporting threshold.
+-- Source of truth is the spreading-activation map in 'tiActivatedNetwork'.
+activatedConcepts :: Maybe SemanticNetwork -> [Text]
+activatedConcepts Nothing = []
+activatedConcepts (Just net) =
+  M.keys (M.filter (>= 0.05) (snActivation net))
+
+-- | P0.2: subset of activated concepts that have no surface predicate in the
+-- definition corpus.  Drives the GAPS.md curation backlog.
+missingPredicateConcepts :: Maybe SemanticNetwork -> [Text]
+missingPredicateConcepts mNet =
+  filter (not . (`M.member` definitionCorpus)) (activatedConcepts mNet)
 
 -- | WP-S: compute the shared derived-signal bundle once. The single point
 -- where counterfactual entropy, field confidence, shadow disagreement, and the
@@ -383,6 +401,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcSubstrateEdgesUsed = extractSubstrateEdgesUsed (taDerivationTags ta)
           , trcActivationSteps = maybe Seq.empty snActivationLog (tiActivatedNetwork ti)
           , trcSubstrateHops = maybe 0 (\net -> length (filter (\s -> asSource s == SubstrateEdge) (F.toList (snActivationLog net)))) (tiActivatedNetwork ti)
+          , trcActivatedConcepts = activatedConcepts (tiActivatedNetwork ti)
+          , trcMissingPredicates = missingPredicateConcepts (tiActivatedNetwork ti)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

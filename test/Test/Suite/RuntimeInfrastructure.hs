@@ -1718,6 +1718,8 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
     , trcSubstrateEdgesUsed = 0
     , trcActivationSteps = Seq.empty
     , trcSubstrateHops = 0
+    , trcActivatedConcepts = []
+    , trcMissingPredicates = []
                   }
            , tqpDivergence = True
            }
@@ -2252,6 +2254,8 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
     , trcSubstrateEdgesUsed = 0
     , trcActivationSteps = Seq.empty
     , trcSubstrateHops = 0
+    , trcActivatedConcepts = []
+    , trcMissingPredicates = []
                   }
            , tqpDivergence = True
            }

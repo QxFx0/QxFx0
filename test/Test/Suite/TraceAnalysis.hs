@@ -2,10 +2,12 @@
 
 module Test.Suite.TraceAnalysis (traceAnalysisTests) where
 
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
 import Test.HUnit
-import Data.Aeson (decode, encode)
+import Data.Aeson (Value, decode, encode, object, (.=))
 
+import QxFx0.Core.TurnPipeline.Finalize.Projection (activatedConcepts, missingPredicateConcepts)
 import QxFx0.Observability.TraceAnalysis
 import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
@@ -28,6 +30,7 @@ import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..), emptySemanticNetwork)
 
 traceAnalysisTests :: [Test]
 traceAnalysisTests =
@@ -40,6 +43,10 @@ traceAnalysisTests =
   , TestLabel "TraceAnalysis: Essence witnessing" testEssenceWitnessing
   , TestLabel "TraceAnalysis: Full analysis" testFullAnalysis
   , TestLabel "TraceAnalysis: Anomaly detection" testAnomalyDetection
+  , TestLabel "TraceAnalysis: Dogfooding fields round-trip" testDogfoodingFieldsRoundTrip
+  , TestLabel "TraceAnalysis: Trace backward compatibility" testTraceBackwardCompatibility
+  , TestLabel "TraceAnalysis: Activated concepts" testActivatedConcepts
+  , TestLabel "TraceAnalysis: Missing predicate concepts" testMissingPredicateConcepts
   ]
 
 -- | Audit C: LocalRecoveryCause/Strategy serialize via rendered snake_case but
@@ -201,6 +208,8 @@ minimalTrace = TurnReplayTrace
     , trcSubstrateEdgesUsed = 0
     , trcActivationSteps = Seq.empty
     , trcSubstrateHops = 0
+    , trcActivatedConcepts = []
+    , trcMissingPredicates = []
   }
 
 testRecoveryNoTrigger :: Test
@@ -268,4 +277,105 @@ testAnomalyDetection = TestCase $ do
   let summary = analyzeTrace trace
   assertEqual "Has anomaly" True (hasAnyAnomaly summary)
   assertEqual "Anomaly count" 1 (tasAnomalyCount summary)
+
+-- | P0.2: encode a trace with non-empty activated/missing concept lists,
+-- decode it, and assert the lists survive intact.
+testDogfoodingFieldsRoundTrip :: Test
+testDogfoodingFieldsRoundTrip = TestCase $ do
+  let trace = minimalTrace
+        { trcActivatedConcepts = ["свобода", "выбор"]
+        , trcMissingPredicates = ["выбор"]
+        }
+  let decoded = decode (encode trace)
+  assertEqual "Activated concepts round-trip" (Just ["свобода", "выбор"]) (trcActivatedConcepts <$> decoded)
+  assertEqual "Missing predicates round-trip" (Just ["выбор"]) (trcMissingPredicates <$> decoded)
+
+-- | P0.2: a JSON object that contains all other TurnReplayTrace fields but
+-- omits trcActivatedConcepts / trcMissingPredicates decodes with both as [].
+testTraceBackwardCompatibility :: Test
+testTraceBackwardCompatibility = TestCase $ do
+  let json :: Value
+      json = object
+        [ "trcRequestId" .= trcRequestId minimalTrace
+        , "trcSessionId" .= trcSessionId minimalTrace
+        , "trcRuntimeMode" .= trcRuntimeMode minimalTrace
+        , "trcShadowPolicy" .= trcShadowPolicy minimalTrace
+        , "trcLocalRecoveryPolicy" .= trcLocalRecoveryPolicy minimalTrace
+        , "trcRecoveryEvidence" .= trcRecoveryEvidence minimalTrace
+        , "trcSemanticIntrospectionEnabled" .= trcSemanticIntrospectionEnabled minimalTrace
+        , "trcWarnMorphologyFallbackEnabled" .= trcWarnMorphologyFallbackEnabled minimalTrace
+        , "trcRequestedFamily" .= trcRequestedFamily minimalTrace
+        , "trcPreShadowFamily" .= trcPreShadowFamily minimalTrace
+        , "trcShadowSnapshotId" .= trcShadowSnapshotId minimalTrace
+        , "trcShadowStatus" .= trcShadowStatus minimalTrace
+        , "trcShadowDivergenceKind" .= trcShadowDivergenceKind minimalTrace
+        , "trcShadowDivergenceSeverity" .= trcShadowDivergenceSeverity minimalTrace
+        , "trcShadowResolvedFamily" .= trcShadowResolvedFamily minimalTrace
+        , "trcFinalFamily" .= trcFinalFamily minimalTrace
+        , "trcFinalForce" .= trcFinalForce minimalTrace
+        , "trcDecisionDisposition" .= trcDecisionDisposition minimalTrace
+        , "trcLegitimacyReason" .= trcLegitimacyReason minimalTrace
+        , "trcParserConfidence" .= trcParserConfidence minimalTrace
+        , "trcParserBackend" .= trcParserBackend minimalTrace
+        , "trcParserStatus" .= trcParserStatus minimalTrace
+        , "trcParserLatencyMs" .= trcParserLatencyMs minimalTrace
+        , "trcEmbeddingQuality" .= trcEmbeddingQuality minimalTrace
+        , "trcPreSafetyRenderedRaw" .= trcPreSafetyRenderedRaw minimalTrace
+        , "trcRenderedAfterRebind" .= trcRenderedAfterRebind minimalTrace
+        , "trcLinearizationOk" .= trcLinearizationOk minimalTrace
+        , "trcTruthContractStatus" .= trcTruthContractStatus minimalTrace
+        , "trcReplayProvenanceStatus" .= trcReplayProvenanceStatus minimalTrace
+        , "trcSalienceDriver" .= trcSalienceDriver minimalTrace
+        , "trcSalienceHolisticBias" .= trcSalienceHolisticBias minimalTrace
+        , "trcSalienceConfidence" .= trcSalienceConfidence minimalTrace
+        , "trcDialogueFocus" .= trcDialogueFocus minimalTrace
+        , "trcDialogueFocusBefore" .= trcDialogueFocusBefore minimalTrace
+        , "trcDialogueFocusAfter" .= trcDialogueFocusAfter minimalTrace
+        , "trcDialoguePhase" .= trcDialoguePhase minimalTrace
+        , "trcDialoguePhaseBefore" .= trcDialoguePhaseBefore minimalTrace
+        , "trcDialoguePhaseAfter" .= trcDialoguePhaseAfter minimalTrace
+        , "trcDialogueCommitmentCount" .= trcDialogueCommitmentCount minimalTrace
+        , "trcDialogueCommitmentCountBefore" .= trcDialogueCommitmentCountBefore minimalTrace
+        , "trcDialogueCommitmentCountAfter" .= trcDialogueCommitmentCountAfter minimalTrace
+        , "trcMicroPlanExplicitness" .= trcMicroPlanExplicitness minimalTrace
+        , "trcConatusEnergy" .= trcConatusEnergy minimalTrace
+        , "trcConatusGateFired" .= trcConatusGateFired minimalTrace
+        , "trcField" .= trcField minimalTrace
+        , "trcIdentityClaims" .= trcIdentityClaims minimalTrace
+        , "trcEpisodicEncoding" .= trcEpisodicEncoding minimalTrace
+        , "trcEpisodicForgetting" .= trcEpisodicForgetting minimalTrace
+        , "trcRegimeVersion" .= trcRegimeVersion minimalTrace
+        , "trcMorphologyVersion" .= trcMorphologyVersion minimalTrace
+        , "trcFamilyDivergenceActive" .= trcFamilyDivergenceActive minimalTrace
+        , "trcSemanticCommitmentCount" .= trcSemanticCommitmentCount minimalTrace
+        , "trcQuarantinedCommitmentCount" .= trcQuarantinedCommitmentCount minimalTrace
+        , "trcPromotedFromQuarantineCount" .= trcPromotedFromQuarantineCount minimalTrace
+        , "trcCommitmentStoreDecision" .= trcCommitmentStoreDecision minimalTrace
+        , "trcCommitmentEngaged" .= trcCommitmentEngaged minimalTrace
+        , "trcCommitmentContradicted" .= trcCommitmentContradicted minimalTrace
+        , "trcCommitmentMatchKind" .= trcCommitmentMatchKind minimalTrace
+        , "trcCognitiveSignals" .= trcCognitiveSignals minimalTrace
+        , "trcAffectDecoupled" .= trcAffectDecoupled minimalTrace
+        , "trcMood" .= trcMood minimalTrace
+        , "trcSubstrateActivated" .= trcSubstrateActivated minimalTrace
+        , "trcSubstrateEdgesUsed" .= trcSubstrateEdgesUsed minimalTrace
+        , "trcActivationSteps" .= trcActivationSteps minimalTrace
+        , "trcSubstrateHops" .= trcSubstrateHops minimalTrace
+        ]
+  let decoded = decode (encode json)
+  assertEqual "Backward-compatible activated concepts default to []" (Just []) (trcActivatedConcepts <$> decoded)
+  assertEqual "Backward-compatible missing predicates default to []" (Just []) (trcMissingPredicates <$> decoded)
+
+-- | P0.2: concepts whose activation exceeds the 0.05 threshold are reported.
+testActivatedConcepts :: Test
+testActivatedConcepts = TestCase $ do
+  let net = emptySemanticNetwork { snActivation = Map.fromList [("свобода", 0.1), ("выбор", 0.04)] }
+  assertEqual "Activated concepts above threshold" ["свобода"] (activatedConcepts (Just net))
+
+-- | P0.2: only activated concepts absent from the definition corpus are flagged
+-- as missing predicates.
+testMissingPredicateConcepts :: Test
+testMissingPredicateConcepts = TestCase $ do
+  let net = emptySemanticNetwork { snActivation = Map.fromList [("выбор", 0.1), ("ответственность", 0.1)] }
+  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts (Just net))
 

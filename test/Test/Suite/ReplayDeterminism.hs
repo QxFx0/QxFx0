@@ -190,6 +190,8 @@ minimalReplayTrace apiHealthy =
     , trcSubstrateEdgesUsed = 0
     , trcActivationSteps = Seq.empty
     , trcSubstrateHops = 0
+    , trcActivatedConcepts = []
+    , trcMissingPredicates = []
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.
