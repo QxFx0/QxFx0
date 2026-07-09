@@ -272,6 +272,9 @@ library
       QxFx0.Semantic.Network.Substrate
       QxFx0.Semantic.Network.Ingest
       QxFx0.Semantic.Network.Feedback
+      QxFx0.Semantic.Network.Feedback.Detect
+      QxFx0.Semantic.Network.Feedback.Collect
+      QxFx0.Semantic.Network.Feedback.Persist
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
@@ -649,6 +652,7 @@ common test-common
     Test.Suite.NetworkIngest
     Test.Suite.NetworkTypes
     Test.Suite.NetworkFeedback
+    Test.Suite.FeedbackLoopEndToEnd
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
     Test.Suite.VariantC

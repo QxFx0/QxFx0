@@ -145,7 +145,10 @@ import QxFx0.Semantic.AtomAccretion
   , decayProvisionalAtoms
   , resolveCollisions
   )
-import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate)
+import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate, snActivationLog)
+import QxFx0.Semantic.Network.Feedback (UserFeedback(..), applyFeedback)
+import QxFx0.Semantic.Network.Feedback.Collect (collectUsedEdges)
+import QxFx0.Semantic.Network.Feedback.Detect (detectUserFeedback)
 import QxFx0.Semantic.Space (buildSemanticSpace, buildFactVectors)
 import QxFx0.Semantic.Space.Types (emptySemanticSpace, ssFactVectors)
 import QxFx0.Semantic.ContentSelector (buildContentSelector, buildTopicAtoms, tokenizePredicate)
@@ -389,8 +392,8 @@ computeNextEssence ss ti tp =
               trajectory
       in (EssenceCommitted trajectory' commitment, Nothing)
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
-buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect =
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
+buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
       turnSalience = turnInputSalience ti
@@ -568,7 +571,18 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
       , ssSemanticSpace = semanticSpace
       , ssContentSelector = contentSelector
       }
-      semanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
+      semanticNetwork = applyDetectedFeedback rawInput (ssSemanticNetwork ss) mergedSemanticNetwork
+        where
+          rawInput = ipfRawText (tiFrame ti)
+          mergedSemanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
+          applyDetectedFeedback raw previousNetwork baseNetwork
+            | not feedbackLoopActive = baseNetwork
+            | otherwise =
+                case detectUserFeedback raw of
+                  Nothing -> baseNetwork
+                  Just feedback ->
+                    let usedEdges = collectUsedEdges previousNetwork (F.toList (snActivationLog previousNetwork))
+                    in applyFeedback baseNetwork usedEdges feedback
       topicAtomsMap = M.fromList
         [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
         | topic <- Content.coveredTopics

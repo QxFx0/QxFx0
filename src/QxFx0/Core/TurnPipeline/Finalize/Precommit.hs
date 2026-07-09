@@ -53,12 +53,23 @@ import QxFx0.Types.Decision (TurnDecision(..))
 import qualified Data.Text as T
 import Control.Monad (when)
 import Control.Exception (throwIO)
+import System.Environment (lookupEnv)
 import QxFx0.Types
 import QxFx0.Types.Domain.Atoms (maText, asAtoms)
 import QxFx0.Core.TurnPipeline.Types (tiAtomSet)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
+import QxFx0.Semantic.Network.Feedback.Detect (detectUserFeedback)
+import QxFx0.Semantic.Network.Feedback.Persist (persistFeedbackNetwork)
+
+-- | Read the runtime feedback-loop flag.
+-- Defaults to 'True' unless @QXFX0_FEEDBACK_LOOP@ is set to one of
+-- @"0"@, @"false"@, @"no"@ or @"disable"@.
+readFeedbackLoopActive :: IO Bool
+readFeedbackLoopActive = do
+  mEnv <- lookupEnv "QXFX0_FEEDBACK_LOOP"
+  pure $ maybe True (\raw -> T.toLower (T.pack raw) `notElem` ["0", "false", "no", "disable"]) mEnv
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
 planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =
@@ -133,6 +144,7 @@ resolveFinalizePrecommit pipelineIO plan = do
 
 buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
+  feedbackLoopActive <- readFeedbackLoopActive
   let static = fppStatic precommitPlan
       (newDreamState, newMeaningGraph, rewireEventsCount) =
         applyDreamDynamics
@@ -158,6 +170,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
           (fsOutcomeFamily static)
           (fsOutcomeVerdict static)
           (fsConsecReflect static)
+          feedbackLoopActive
       -- Phase 8 gap closure: apply external learning-loop result from
       -- the render-phase artifacts (populated by resolveRenderEffects
       -- when a request strategy triggered TurnReqExternalQuery).
@@ -168,7 +181,12 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
       -- belief stance after base/external learning state has settled.
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
       nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
-      guardStatus = tdGuardStatus (taDecision turnArtifacts)
+  when (feedbackLoopActive && ssSemanticNetwork nextSystemState /= ssSemanticNetwork systemState) $
+    persistFeedbackNetwork
+      "resources/config/tuned_relation_weights.jsonl"
+      (ssSemanticNetwork systemState)
+      (ssSemanticNetwork nextSystemState)
+  let guardStatus = tdGuardStatus (taDecision turnArtifacts)
   evidenceAdmissibility <- classifyEvidenceIO guardStatus
   when (evidenceAdmissibility == EvidenceInadmissible) $
     throwIO (EvidenceInadmissibleFailure $
