@@ -26,7 +26,7 @@ and "the system can render this but cannot re-parse it"
 
 The full rendered surface (every `Text` fragment in
 `Render/Dialogue.hs`, every `Render.Surface.*` function, every
-`QxFx0.Render.LocalRecovery.renderLocalRecoverySurfaceRu`
+`QxFx0.Core.TurnPipeline.Route.Render.renderLocalRecoverySurfaceRu`
 branch) is large, multilingual, and intentionally varied for
 naturalness. The parser can re-parse some of it; the rest is
 authored for the human reader.

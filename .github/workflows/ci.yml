@@ -112,6 +112,9 @@ jobs:
       - name: Python unit tests
         run: python3 -m unittest discover -s test -p 'test_*.py'
 
+      - name: Check docs module paths
+        run: python3 scripts/check_doc_module_paths.py
+
       - name: Generate morphology artifacts
         run: |
           # forms_by_surface.json / lexicon.db are gitignored (large, generated);

@@ -50,7 +50,7 @@ wave are:
 | `scripts/check_schema_contract.py` | A. canonical-build | IN-FLIGHT | `cabal run qxfx0-main -- --check-schema-contract` wired in working tree; deletion pending build/test/CI |
 | `scripts/sync_embedded_sql.py` | A. canonical-build | IN-FLIGHT | `cabal run qxfx0-main -- --check-embedded-sql` and `--sync-embedded-sql` wired in working tree; deletion pending build/test/CI |
 | `scripts/http_runtime.py` | B. canonical-runtime (legacy) | PENDING | Confirmed not invoked after Gate P5-1; file deleted |
-| `services/morphology/server.py` | B. canonical-runtime (ACTIVE) | PENDING | Haskell morphology parser (`QxFx0.Semantic.Morphology.Parser`) |
+| `services/morphology/server.py` | B. canonical-runtime (ACTIVE) | PENDING | Haskell morphology parser (`QxFx0.Semantic.Morphology`) |
 
 **Gate P5-1** is closed when the three `A.` scripts are
 `DELETED` and the Haskell replacements are in CI.

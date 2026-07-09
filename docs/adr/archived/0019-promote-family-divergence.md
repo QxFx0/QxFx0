@@ -37,7 +37,7 @@ of the following hold:
   runtime trace; the audit finds that every caller of
   `holisticFamily` / `formalFamily` goes through
   `Self.Adjunction.reconcile` (no direct
-  `QxFx0.Self.Holistic` / `QxFx0.Self.Formal` imports
+  `QxFx0.Self.Holistic (module removed)` / `QxFx0.Self.Formal (module removed)` imports
   in the pipeline; this is already enforced by
   `check_architecture.sh` rule [12]).
 - **G2 — replay parity**: a fixed-fixture replay under
@@ -134,7 +134,7 @@ The ADR is **deferred** until all five criteria are met.
 
 The release event is **deferred** until all three gates pass. As of 2026-06-02:
 
-- **G1 — adjunction caller mapping audit**: **partial**. The mechanical part (rule [12] in `check_architecture.sh` enforces no direct `QxFx0.Self.Holistic` / `QxFx0.Self.Formal` imports in the pipeline) is verifiable; the human audit is **deferred** to next-contributor.
+- **G1 — adjunction caller mapping audit**: **partial**. The mechanical part (rule [12] in `check_architecture.sh` enforces no direct `QxFx0.Self.Holistic (module removed)` / `QxFx0.Self.Formal (module removed)` imports in the pipeline) is verifiable; the human audit is **deferred** to next-contributor.
 - **G2 — replay parity**: **not verifiable in this session**. Requires `cabal run` of a fixed-fixture replay comparing `familyDivergenceEnabled = True` trace JSON against the `False` baseline on cases where the modulation does not fire. The no-cabal session cannot run this.
 - **G3 — divergence observability**: **not verifiable in this session**. Requires the production-trace corpus (per F-09), which is not harvested yet. The `trcDeliberationDivergence` field is **wired** (per `REPLAY_GATE_TRIAGE.md §2.4`) but no corpus case has been verified to produce a non-`Neutral` value.
 
