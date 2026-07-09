@@ -603,6 +603,7 @@ common test-common
     Test.Suite.LearningLoop
      Test.Suite.TrainingCycle
      Test.Suite.TunedConfigLoading
+     Test.Suite.TuningRuntimeIntegration
      Test.Suite.ReliabilityHardening
     Test.Suite.M5Regime
     Test.Suite.M6Witness
