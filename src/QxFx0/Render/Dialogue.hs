@@ -26,6 +26,7 @@ module QxFx0.Render.Dialogue
   , renderArtifactViaAssembly
   -- M4-SEMANTIC-CORE-003: compositional generator
   , generateFromFrame
+  , generateFromFrameWithEmitted
   -- Semantic selection supplement helpers
   , formatSelectedPredicates
   , semanticSupplement
@@ -139,6 +140,9 @@ data DialogueRenderArtifact = DialogueRenderArtifact
     -- ^ P9: ordered list of generation attempts (dialog assembly, factual,
     --   template, structured fallback, PGF runtime) with per-attempt outcome.
     --   Populated by 'renderArtifactViaAssembly'; extended by PGF resolution.
+  , draEmittedPredicates :: ![Text]
+    -- ^ P2.2: predicate surface forms (spRu) rendered in this artifact.
+    --   Used to avoid repeating predicates across turns on the same topic.
   } deriving stock (Eq, Show)
 
 -- | Detect whether input text is English (pure Latin, no Cyrillic).
@@ -283,6 +287,7 @@ renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector
             , draDerivationTags = ["surface=en_unstructured", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
             , draGenerationTrace = []
+            , draEmittedPredicates = []
             }
       else
         let cleanedTopic = cleanTopic topic
@@ -320,6 +325,7 @@ renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector
             , draDerivationTags = ["surface=template", "fallback=" <> fallbackReason]
             , draDialogAtoms = emptyDialogAtoms
             , draGenerationTrace = []
+            , draEmittedPredicates = []
             }
 
 hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
@@ -356,6 +362,7 @@ renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field conten
                , draDerivationTags = artifactDerivationTags propositionType linearizationOk fallbackReason claimAst
               , draDialogAtoms = emptyDialogAtoms
               , draGenerationTrace = []
+              , draEmittedPredicates = []
               }
 
 structuredDialogueType :: PropositionType -> Bool
@@ -447,15 +454,34 @@ appendSupplement base supplement =
 -- When a semantic network is available and the spreading-activation feature flag
 -- is enabled, composes predicates via the network and verbalizes them with the
 -- requested mode; otherwise falls back to single-topic predicate selection.
+-- This is the exported version without cross-turn filtering.
 frameSupplement :: VerbalizationMode -> MorphologyData -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
 frameSupplement mode morph cs field topic mNetwork isEn =
+  fst (frameSupplementWithEmitted mode morph cs field topic mNetwork isEn Set.empty)
+
+-- | Internal version that accepts a set of already-emitted predicate surface
+-- forms (spRu) and returns both the rendered text and the list of predicates
+-- that were actually emitted in this call.  Used for P2.2 cross-turn coherence.
+frameSupplementWithEmitted
+  :: VerbalizationMode
+  -> MorphologyData
+  -> ContentSelector
+  -> Field
+  -> Text
+  -> Maybe SemanticNetwork
+  -> Bool
+  -> Set.Set Text
+  -> (Text, [Text])
+frameSupplementWithEmitted mode morph cs field topic mNetwork isEn emittedSet =
   case mNetwork of
     Just network | spreadingActivationActive ->
       let composed = composeFromActivation cs field topic network
-      in if null composed
-           then semanticSupplement cs field topic mNetwork isEn
-           else accumulateSurface morph field mode topic composed
-    _ -> semanticSupplement cs field topic mNetwork isEn
+          filtered = filter (\p -> not (Set.member (spRu p) emittedSet)) composed
+      in if null filtered
+           then (semanticSupplement cs field topic mNetwork isEn, [])
+           else let surface = accumulateSurface morph field mode topic filtered
+                in (surface, map spRu filtered)
+    _ -> (semanticSupplement cs field topic mNetwork isEn, [])
 
 structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
 structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
@@ -1913,14 +1939,29 @@ gfMapAuthorityTags =
 --
 -- Invariant: same frame + same morph → same output. Pure, deterministic.
 generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGraph -> SystemState -> FT.SemanticFrame -> MorphologyData -> Text
-generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
+generateFromFrame cs field mNetwork runtimeGraph ss frame morph =
+  fst (generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph)
+
+-- | Version of 'generateFromFrame' that also returns the predicate surface
+-- forms (spRu) emitted by the rendered frame.  Used by P2.2 cross-turn
+-- coherence to avoid repeating predicates across turns.
+generateFromFrameWithEmitted
+  :: ContentSelector
+  -> Field
+  -> Maybe SemanticNetwork
+  -> AtomGraph
+  -> SystemState
+  -> FT.SemanticFrame
+  -> MorphologyData
+  -> (Text, [Text])
+generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         authorityText = renderFrameAuthority authority
         fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-        supplement = frameSupplement VmDefinition morph cs field topic mNetwork isEn
-    in appendSupplement fallback supplement
+        (supplement, emitted) = frameSupplementWithEmitted VmDefinition morph cs field topic mNetwork isEn (ssEmittedPredicates ss)
+    in (appendSupplement fallback supplement, emitted)
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
@@ -1932,10 +1973,10 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
                <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
-        leftSup = frameSupplement VmDistinction morph cs field left mNetwork isEn
-        rightSup = frameSupplement VmDistinction morph cs field right mNetwork isEn
+        (leftSup, leftEmitted) = frameSupplementWithEmitted VmDistinction morph cs field left mNetwork isEn (ssEmittedPredicates ss)
+        (rightSup, rightEmitted) = frameSupplementWithEmitted VmDistinction morph cs field right mNetwork isEn (ssEmittedPredicates ss)
         supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, leftEmitted ++ rightEmitted)
 
   FT.ChallengeFrame target basis strength rawObj ->
     let targetText = T.strip target
@@ -1949,10 +1990,10 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
         firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
-        supplement = frameSupplement VmChallenge morph cs field rawObj mNetwork isEn
+        (supplement, emitted) = frameSupplementWithEmitted VmChallenge morph cs field rawObj mNetwork isEn (ssEmittedPredicates ss)
     in case strength of
-         FT.Soft -> appendSupplement softFallback supplement
-         FT.Firm -> appendSupplement firmFallback supplement
+         FT.Soft -> (appendSupplement softFallback supplement, emitted)
+         FT.Firm -> (appendSupplement firmFallback supplement, emitted)
 
   FT.GroundFrame topic depth ->
     let topicNom = toNominative morph topic
@@ -1961,20 +2002,20 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
                  FT.Shallow -> "Держу " <> topicNom <> " как устойчивую опору для дальнейшего разбора."
                  FT.Detailed -> "Конкретизирую " <> topicNom <> ": фиксирую это как рабочую опору и продолжаю от неё."
         supplement = semanticSupplementFromCorpus lookupGroundContent gcPredicates cs field topic mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.RepairFrame ->
-    "Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно."
+    ("Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно.", [])
 
   FT.ContactFrame greeting ->
-    greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время."
+    (greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.", [])
 
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-        supplement = frameSupplement VmReflection morph cs field topic mNetwork isEn
-    in appendSupplement fallback supplement
+        (supplement, emitted) = frameSupplementWithEmitted VmReflection morph cs field topic mNetwork isEn (ssEmittedPredicates ss)
+    in (appendSupplement fallback supplement, emitted)
 
   FT.LearnFrame topic depth ->
     let topicNom = toNominative morph topic
@@ -1983,50 +2024,50 @@ generateFromFrame cs field mNetwork runtimeGraph ss frame morph = case frame of
                  FT.Shallow -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение."
                  FT.Detailed -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания."
         supplement = semanticSupplement cs field topic mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.HelpFrame task ->
     let taskNom = toNominative morph task
         isEn = isEnglishInput task
         base = "Помогу с " <> taskNom <> ". Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку."
         supplement = semanticSupplement cs field task mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.PurposeFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Функция " <> topicNom <> " проявляется через повторяемую роль в действии."
         supplement = semanticSupplementFromCorpus lookupPurposeContent pcPredicates cs field topic mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.WorldCauseFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Если говорить о причине " <> topicNom <> ", различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
         supplement = semanticSupplement cs field topic mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.DeepenFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Углубимся в " <> topicNom <> " через одно устойчивое фокусирование."
         supplement = semanticSupplement cs field topic mNetwork isEn
-    in appendSupplement base supplement
+    in (appendSupplement base supplement, [])
 
   FT.NextStepFrame ->
-    "Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его."
+    ("Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его.", [])
 
   FT.ExploratoryFrame ->
-    "Если представить другой контекст, можно увидеть новые связи. Давай проследим одну гипотезу до конкретного следствия."
+    ("Если представить другой контекст, можно увидеть новые связи. Давай проследим одну гипотезу до конкретного следствия.", [])
 
   FT.OperationalFrame ->
-    "Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа."
+    ("Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа.", [])
 
   FT.SelfReferenceFrame ->
-    "Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора."
+    ("Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора.", [])
 
   FT.GenericFrame content ->
-    content
+    (content, [])
 
 -- | Render scope modifier.
 renderFrameScope :: FT.FrameScope -> Text

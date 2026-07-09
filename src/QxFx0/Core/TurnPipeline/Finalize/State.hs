@@ -556,6 +556,13 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
       , ssDialogueCommitmentLedger = advanceDialogueLedgerAfterTurn (tiDialogueCommitmentLedger ti) executedOutcome
       , ssDialoguePhase = advanceDialoguePhaseAfterTurn (tiDialoguePhase ti) executedOutcome
       , ssTruthContractStatus = etoTruthContractStatus executedOutcome
+      , ssEmittedPredicates =
+          let prevTopic = ssLastTopic ss
+              newTopic  = bestTopic
+              emitted   = Set.fromList (taEmittedPredicates ta)
+          in if prevTopic /= newTopic
+                then emitted
+                else Set.union emitted (ssEmittedPredicates ss)
       , ssGuardrailState = ssGuardrailState ss
         -- ^ WP5: guardrails currently pass through unchanged;
         --   proposal-submission tracking will be wired when the

@@ -403,6 +403,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcSubstrateHops = maybe 0 (\net -> length (filter (\s -> asSource s == SubstrateEdge) (F.toList (snActivationLog net)))) (tiActivatedNetwork ti)
           , trcActivatedConcepts = activatedConcepts (tiActivatedNetwork ti)
           , trcMissingPredicates = missingPredicateConcepts (ssDefinitionCorpus nextSs) (tiActivatedNetwork ti)
+          , trcEmittedPredicates = taEmittedPredicates ta
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

@@ -1151,6 +1151,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcSubstrateHops = 0
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
+          , trcEmittedPredicates = []
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

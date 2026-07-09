@@ -166,6 +166,8 @@ import QxFx0.Policy.Metacognition (MetacognitionContour)
 import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicIndex, emptyIndex)
 import qualified Data.HashSet as HS
 import qualified Data.Sequence as Seq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
 import QxFx0.Semantic.Network.Types (SemanticNetwork, emptySemanticNetwork)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
@@ -349,6 +351,10 @@ data SystemState = SystemState
     -- ^ P1.2: extended definition corpus = hardcoded seed corpus merged with
     --   curated predicates loaded from @resources/knowledge/curated_predicates.jsonl@.
     --   Used by projection to report missing predicates and by rendering paths.
+  , ssEmittedPredicates :: !(Set Text)
+    -- ^ P2.2: cross-turn coherence buffer. Tracks predicate surface forms
+    --   (spRu) emitted in recent turns on the same topic, so the renderer
+    --   can avoid repeating them. Cleared on topic change.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -427,6 +433,7 @@ instance ToJSON SystemState where
               , "stanceLineages" .= ssStanceLineages ss
               , "runtimeGraph" .= ssRuntimeGraph ss
               , "definitionCorpus" .= ssDefinitionCorpus ss
+              , "emittedPredicates" .= ssEmittedPredicates ss
               ]
 
 instance FromJSON SystemState where
@@ -553,6 +560,7 @@ instance FromJSON SystemState where
               <*> o .:? "stanceLineages" .!= M.empty
               <*> o .:? "runtimeGraph" .!= seedGraph
               <*> o .:? "definitionCorpus" .!= M.empty
+              <*> o .:? "emittedPredicates" .!= Set.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -750,6 +758,7 @@ emptySystemState = SystemState
   , ssStanceLineages = M.empty
   , ssRuntimeGraph = seedGraph
   , ssDefinitionCorpus = M.empty
+  , ssEmittedPredicates = Set.empty
   }
 
 emptyGovernanceProjection :: GovernanceProjection

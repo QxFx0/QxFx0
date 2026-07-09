@@ -435,6 +435,9 @@ data TurnReplayTrace = TurnReplayTrace
   , trcMissingPredicates :: ![Text]
     -- ^ P0.2: subset of 'trcActivatedConcepts' that have no surface
     --   predicate ('SemanticPredicate') in the definition corpus.
+  , trcEmittedPredicates :: ![Text]
+    -- ^ P2.2: predicate surface forms (spRu) actually rendered this turn.
+    --   Empty when the turn did not use semantic predicate selection.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 
@@ -444,6 +447,7 @@ instance FromJSON TurnReplayTrace where
     -- the empty list when absent, so persisted traces remain readable.
     activated <- o .:? "trcActivatedConcepts" .!= []
     missing   <- o .:? "trcMissingPredicates" .!= []
+    emitted   <- o .:? "trcEmittedPredicates" .!= []
     TurnReplayTrace
       <$> o .: "trcRequestId"
       <*> o .: "trcSessionId"
@@ -585,6 +589,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcSubstrateHops" .!= 0
       <*> pure activated
       <*> pure missing
+      <*> pure emitted
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

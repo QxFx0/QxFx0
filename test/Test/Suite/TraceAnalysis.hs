@@ -211,6 +211,7 @@ minimalTrace = TurnReplayTrace
     , trcSubstrateHops = 0
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
+          , trcEmittedPredicates = []
   }
 
 testRecoveryNoTrigger :: Test
@@ -286,6 +287,7 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
   let trace = minimalTrace
         { trcActivatedConcepts = ["свобода", "выбор"]
         , trcMissingPredicates = ["выбор"]
+          , trcEmittedPredicates = []
         }
   let decoded = decode (encode trace)
   assertEqual "Activated concepts round-trip" (Just ["свобода", "выбор"]) (trcActivatedConcepts <$> decoded)

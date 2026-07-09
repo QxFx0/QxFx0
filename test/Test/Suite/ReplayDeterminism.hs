@@ -192,6 +192,7 @@ minimalReplayTrace apiHealthy =
     , trcSubstrateHops = 0
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
+          , trcEmittedPredicates = []
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.

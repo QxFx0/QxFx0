@@ -83,6 +83,7 @@ import QxFx0.Render.Dialogue
   , renderArtifactViaAssembly
   , renderDialogueArtifact
   , generateFromFrame
+  , generateFromFrameWithEmitted
   )
 import QxFx0.Semantic.Intent.Features (extractFeatures)
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily)
@@ -244,7 +245,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticMorph = ssMorphology ss
       semanticIntent = semanticIntentForRender (ipfPropositionType (tiFrame ti)) semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
-      semanticText = generateFromFrame (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) (ssRuntimeGraph ss) ss semanticFrame semanticMorph
+      (semanticText, semanticEmittedPredicates) = generateFromFrameWithEmitted (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) (ssRuntimeGraph ss) ss semanticFrame semanticMorph
       semanticNonUnknown = case semanticIntent of
         IntentUnknown _ -> False
         _               -> True
@@ -307,6 +308,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , GenerationAttempt "frame_builder" "ok"
             , GenerationAttempt "compositional_generator" "ok"
             ]
+        , draEmittedPredicates = semanticEmittedPredicates
         }
       viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
                         bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti)
@@ -754,6 +756,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
         , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
         , taGenerationTrace = draGenerationTrace (rsTemplateArtifact renderStatic)
+        , taEmittedPredicates = draEmittedPredicates (rsTemplateArtifact renderStatic)
          }
 
 deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath

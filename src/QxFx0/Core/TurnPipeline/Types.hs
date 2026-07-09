@@ -306,6 +306,9 @@ data TurnArtifacts = TurnArtifacts
   , taGenerationTrace :: ![GenerationAttempt]
     -- ^ P9: text-generation attempt trace from the dialogue renderer.
     --   Populated by 'buildTurnArtifacts' from the DialogueRenderArtifact.
+  , taEmittedPredicates :: ![Text]
+    -- ^ P2.2: predicate surface forms (spRu) emitted by the rendered
+    --   artifact this turn.  Used for cross-turn coherence.
   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts
