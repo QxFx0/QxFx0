@@ -651,6 +651,7 @@ common test-common
     Test.Suite.NetworkFeedback
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
+    Test.Suite.VariantC
 
 test-suite qxfx0-test-unit
   import:        test-common

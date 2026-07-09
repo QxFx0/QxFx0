@@ -94,7 +94,7 @@ testBootstrapWithSelfPlayEnabled = TestCase $ do
   let firstRel = head rels
       expectedNodes = S.fromList [lrFrom firstRel, lrTo firstRel]
   network <- withSelfPlayEnabled $
-    bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
+    bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False False
   assertBool "selfplay nodes must be present in bootstrapped network"
     (expectedNodes `S.isSubsetOf` snNodes network)
   assertBool "bootstrapped network must contain selfplay edges"
@@ -107,7 +107,7 @@ testBootstrapWithSelfPlayDisabled :: Test
 testBootstrapWithSelfPlayDisabled = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
   network <- withoutSelfPlay $
-    bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
+    bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False False
   let selfPlayEdges = filter (\e -> seProvenance e == ProvenanceSelfPlay)
                              (M.elems (snEdges network))
       isSelfPlayNode node =

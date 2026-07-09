@@ -8,10 +8,16 @@ module QxFx0.CLI.Ingest
   , parseIngestArgs
   , runIngest
   , formatIngestSummary
+  , relationTypeStatistics
+  , suggestRelationTypeWeights
+  , formatSuggestedWeights
+  , runSuggestWeights
   ) where
 
 import Control.Exception (SomeException, try)
+import Data.Foldable (foldl')
 import Data.List (isPrefixOf)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import qualified Data.Set as S
@@ -20,7 +26,7 @@ import qualified Data.Text as T
 import System.Directory (doesFileExist)
 
 import QxFx0.Semantic.Network.Ingest
-  ( LoadedRelation
+  ( LoadedRelation(..)
   , loadRelations
   , mergeSelfPlayRelations
   , semanticNetworkFromLoaded
@@ -29,9 +35,10 @@ import QxFx0.Semantic.Network.Types
   ( SemanticEdge(..)
   , SemanticNetwork(..)
   , EdgeProvenance(..)
+  , calibrateRelationTypeWeight
   )
 import QxFx0.Semantic.Ontology (Ontology(..), loadOntology)
-import QxFx0.Semantic.Content.AtomStore (RelationType)
+import QxFx0.Semantic.Content.AtomStore (RelationType(..))
 
 -- | Paths required by the @ingest@ command.
 data IngestOptions = IngestOptions
@@ -126,6 +133,42 @@ renderRelationType (Just rt) = T.pack (show rt)
 
 renderProvenance :: EdgeProvenance -> Text
 renderProvenance p = T.pack (show p)
+
+-- | Compute per-'RelationType' occurrence counts from a loaded corpus.
+relationTypeStatistics :: [LoadedRelation] -> Map RelationType Int
+relationTypeStatistics =
+  foldl' (\acc lr -> M.insertWith (+) (lrType lr) 1 acc) M.empty
+
+-- | Suggest a calibrated 'relationTypeWeight' mapping from a loaded
+-- corpus. The result is derived from 'relationTypeStatistics' via
+-- 'calibrateRelationTypeWeight', producing weights in @[0.3, 1.0]@.
+suggestRelationTypeWeights :: [LoadedRelation] -> Map RelationType Double
+suggestRelationTypeWeights rels =
+  let counts  = relationTypeStatistics rels
+      countsD = M.map fromIntegral counts
+  in M.mapWithKey (\rt _ -> calibrateRelationTypeWeight countsD rt) countsD
+
+-- | Render a suggested weight map for stdout.
+formatSuggestedWeights :: Map RelationType Double -> Text
+formatSuggestedWeights weights =
+  if M.null weights
+    then "No relation types found."
+    else T.unlines
+      [ T.pack (show rt) <> ": " <> T.pack (show w)
+      | (rt, w) <- M.toList weights
+      ]
+
+-- | Read a relation corpus and produce a suggested weight mapping.
+-- This is a read-only operation: it loads the corpus, counts relation
+-- types, and formats the calibrated weights.
+runSuggestWeights :: FilePath -> IO (Either Text Text)
+runSuggestWeights path = do
+  result <- try $ do
+    rawRelations <- loadRelations path
+    pure (formatSuggestedWeights (suggestRelationTypeWeights rawRelations))
+  case result of
+    Left exc -> pure (Left ("Suggest weights failed: " <> T.pack (show (exc :: SomeException))))
+    Right txt -> pure (Right txt)
 
 -- | Render the summary for stdout.
 formatIngestSummary :: IngestSummary -> Text

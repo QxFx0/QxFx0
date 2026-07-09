@@ -63,7 +63,7 @@ testResolveKnowledgePathFindsRelations = TestCase $ do
 testDisabledLeavesNetworkUnchanged :: Test
 testDisabledLeavesNetworkUnchanged = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False False
   assertBool "external-only node should not appear when disabled"
     (not (S.member externalNode (snNodes network)))
 
@@ -72,7 +72,7 @@ testDisabledLeavesNetworkUnchanged = TestCase $ do
 testEnabledMergesExternalNodes :: Test
 testEnabledMergesExternalNodes = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries True
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False True
   assertBool "seed node should be present"
     (S.member seedNode (snNodes network))
   assertBool "external-only node should be present"
@@ -83,7 +83,7 @@ testEnabledMergesExternalNodes = TestCase $ do
 testExternalEdgeHasIngestedProvenance :: Test
 testExternalEdgeHasIngestedProvenance = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath
-  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries True
+  network <- bootstrapSemanticNetwork minimalMorphologyFallback brainKBEntries False True
   case M.lookup (seedNode, externalNode) (snEdges network) of
     Nothing ->
       assertBool "expected edge свобода -> выбор to be present" False

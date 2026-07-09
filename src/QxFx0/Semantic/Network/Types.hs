@@ -12,6 +12,8 @@ module QxFx0.Semantic.Network.Types
   , semanticEdge
   , emptySemanticNetwork
   , relationTypeWeight
+  , calibrateRelationTypeWeight
+  , sweepRelationTypeWeights
   ) where
 
 import Control.DeepSeq (NFData)
@@ -148,6 +150,44 @@ emptySemanticNetwork = SemanticNetwork
   , snMaxHops = 3
   , snActivationLog = Seq.empty
   }
+
+-- | Calibrate a relation-type weight from corpus statistics.
+--
+-- Takes a map of observed counts per relation type (for example,
+-- co-occurrence counts from successful turns) and returns a weight in
+-- the range @[0.3, 1.0]@. High-count types are boosted; low-count types
+-- are reduced. Types not present in the statistics map receive the
+-- default weight 0.5. When all observed counts are identical the
+-- midpoint weight 0.65 is returned.
+calibrateRelationTypeWeight :: Map RelationType Double -> RelationType -> Double
+calibrateRelationTypeWeight stats rt =
+  case M.lookup rt stats of
+    Nothing -> 0.5
+    Just count ->
+      let counts = M.elems stats
+          minC   = minimum counts
+          maxC   = maximum counts
+      in if minC == maxC
+           then 0.65
+           else 0.3 + (count - minC) / (maxC - minC) * 0.7
+
+-- | Normalize a list of per-type counts into weights in @[0.0, 1.0]@.
+--
+-- The lowest count maps to 0.0, the highest to 1.0, and all others are
+-- placed linearly in between. When all counts are identical every type
+-- receives 0.5. An empty list yields an empty map.
+sweepRelationTypeWeights :: [(RelationType, Double)] -> Map RelationType Double
+sweepRelationTypeWeights pairs =
+  let countsMap = M.fromList pairs
+      counts    = M.elems countsMap
+  in case counts of
+       [] -> M.empty
+       _  ->
+         let minC = minimum counts
+             maxC = maximum counts
+         in if minC == maxC
+              then M.map (const 0.5) countsMap
+              else M.map (\c -> (c - minC) / (maxC - minC)) countsMap
 
 -- | Base weight for a 'RelationType' in the range @[0.1, 1.0]@.
 -- Hierarchical and strong relations receive the highest weights;
