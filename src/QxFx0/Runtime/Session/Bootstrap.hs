@@ -84,6 +84,11 @@ import QxFx0.Semantic.Lexicon.RuntimeParadigms (loadDefaultRuntimeParadigms, all
 import QxFx0.Semantic.ContentSelector (buildContentSelector)
 import QxFx0.Semantic.Space (buildSemanticSpace)
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..), coveredTopics)
+import QxFx0.Semantic.Content.Curated
+  ( curatedPredicatesPath
+  , loadCuratedPredicates
+  , mergeCuratedIntoDefinitionCorpus
+  )
 import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
 import QxFx0.Semantic.Network (contentDensityGate, mergeSemanticNetworks)
 import QxFx0.Semantic.Network.Seed.Select (loadRelationWeightOverlay, selectSeedNetwork, selectSeedNetworkIO, readUseAtomGraphSeed)
@@ -354,6 +359,28 @@ bootstrapSession quiet sessionId = do
   externalEnabled <- readExternalKnowledgeEnabled
   finalNetwork <- bootstrapSemanticNetwork morphology brainKBEntries externalEnabled
 
+  -- P1.2: load curated predicates for gap concepts and merge them into the
+  -- definition corpus.  Failure is non-fatal: the runtime falls back to the
+  -- hardcoded seed corpus.
+  curatedPath <- resolveKnowledgePath curatedPredicatesPath
+  curatedExists <- doesFileExist curatedPath
+  extendedCorpus <- if not curatedExists
+    then do
+      Log.logWarn "Curated predicates file not found; using seed corpus only"
+        (Log.addContext "path" (T.pack curatedPath) Log.emptyContext)
+      pure definitionCorpus
+    else do
+      curatedResult <- try @IOException (loadCuratedPredicates curatedPath)
+      case curatedResult of
+        Left err -> do
+          Log.logWarn "Curated predicates load failed; using seed corpus only"
+            (Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+          pure definitionCorpus
+        Right curated -> do
+          Log.logInfo "Curated predicates loaded"
+            (Log.addContext "topics" (T.pack $ show $ M.size curated) Log.emptyContext)
+          pure (mergeCuratedIntoDefinitionCorpus curated definitionCorpus)
+
   let firstScene = case (scenes ++ defaultScenes) of
         s : _ -> s
         [] -> ssActiveScene emptySystemState
@@ -362,9 +389,9 @@ bootstrapSession quiet sessionId = do
       lemmaMap = buildLemmaMap morphology
       topicAtoms = M.fromList
         [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
-        | (topic, dc) <- M.toList definitionCorpus
+        | (topic, dc) <- M.toList extendedCorpus
         ]
-      topicPredicates = M.map dcPredicates definitionCorpus
+      topicPredicates = M.map dcPredicates extendedCorpus
       -- Substrate candidate extraction + admission
       -- Use allAtomIds (85+ atoms) for admission, not just allTopics (30+)
       -- Also include discovered atoms from brain_kb
@@ -390,6 +417,7 @@ bootstrapSession quiet sessionId = do
         , ssSemanticNetwork = finalNetwork
         , ssOntology = ontology
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
+        , ssDefinitionCorpus = extendedCorpus
         }
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
   (stateOrigin, restored) <- do
@@ -444,6 +472,7 @@ bootstrapSession quiet sessionId = do
                    , ssSemanticNetwork = finalNetwork
                    , ssOntology = ontology
                    , ssRuntimeGraph = withPromoted promotedRelations seedGraph
+                   , ssDefinitionCorpus = extendedCorpus
                    }
              in if truthContractIsAuthoritative (ssTruthContractStatus restored0)
                   then case rebuildGovernedSystemState restored0 of

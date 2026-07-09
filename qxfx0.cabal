@@ -20,6 +20,7 @@ data-files:
   resources/knowledge/relations.jsonl
   resources/knowledge/ontology.jsonl
   resources/knowledge/selfplay_relations.jsonl
+  resources/knowledge/curated_predicates.jsonl
   resources/lexicon/*.json
   resources/morphology/*.json
   semantics/*.nix
@@ -300,6 +301,7 @@ library
       QxFx0.Semantic.Content
       QxFx0.Semantic.Content.Category
       QxFx0.Semantic.Content.Base
+      QxFx0.Semantic.Content.Curated
       QxFx0.Semantic.Content.Argued
       QxFx0.Semantic.Content.Challenges
       QxFx0.Semantic.Content.AtomStore
@@ -657,6 +659,7 @@ common test-common
     Test.Suite.RelationWeightOverlay
     Test.Suite.CLIIngest
     Test.Suite.SelfPlayRelations
+    Test.Suite.CuratedPredicates
     Test.Suite.VariantC
     Test.Suite.AtomGraphSeed
 

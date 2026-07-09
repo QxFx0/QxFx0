@@ -69,6 +69,7 @@ module QxFx0.Semantic.Content
   , coveredTopics
   , classifyConceptCategory
   , categoryFromOntology
+  , normalizeTopic
   , genericDefinitionPredicates
   , genericDistinctionPredicates
     -- * B3 helpers

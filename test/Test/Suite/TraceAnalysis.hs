@@ -8,6 +8,7 @@ import Test.HUnit
 import Data.Aeson (Value, decode, encode, object, (.=))
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (activatedConcepts, missingPredicateConcepts)
+import QxFx0.Semantic.Content (definitionCorpus)
 import QxFx0.Observability.TraceAnalysis
 import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
@@ -377,5 +378,5 @@ testActivatedConcepts = TestCase $ do
 testMissingPredicateConcepts :: Test
 testMissingPredicateConcepts = TestCase $ do
   let net = emptySemanticNetwork { snActivation = Map.fromList [("выбор", 0.1), ("ответственность", 0.1)] }
-  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts (Just net))
+  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts definitionCorpus (Just net))
 

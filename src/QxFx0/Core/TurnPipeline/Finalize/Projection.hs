@@ -36,7 +36,7 @@ import QxFx0.Core.TruthContract
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.Guardrails (ExternalActionDecisionReason(..), ExternalActionDecisionTrace(..), ExternalActionKind(..))
-import QxFx0.Semantic.Content (definitionCorpus)
+import QxFx0.Semantic.Content (DefinitionContent(..))
 import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Semantic.Proposition (parseProposition)
 import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
@@ -102,9 +102,9 @@ activatedConcepts (Just net) =
 
 -- | P0.2: subset of activated concepts that have no surface predicate in the
 -- definition corpus.  Drives the GAPS.md curation backlog.
-missingPredicateConcepts :: Maybe SemanticNetwork -> [Text]
-missingPredicateConcepts mNet =
-  filter (not . (`M.member` definitionCorpus)) (activatedConcepts mNet)
+missingPredicateConcepts :: M.Map Text DefinitionContent -> Maybe SemanticNetwork -> [Text]
+missingPredicateConcepts corpus mNet =
+  filter (not . (`M.member` corpus)) (activatedConcepts mNet)
 
 -- | WP-S: compute the shared derived-signal bundle once. The single point
 -- where counterfactual entropy, field confidence, shadow disagreement, and the
@@ -402,7 +402,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcActivationSteps = maybe Seq.empty snActivationLog (tiActivatedNetwork ti)
           , trcSubstrateHops = maybe 0 (\net -> length (filter (\s -> asSource s == SubstrateEdge) (F.toList (snActivationLog net)))) (tiActivatedNetwork ti)
           , trcActivatedConcepts = activatedConcepts (tiActivatedNetwork ti)
-          , trcMissingPredicates = missingPredicateConcepts (tiActivatedNetwork ti)
+          , trcMissingPredicates = missingPredicateConcepts (ssDefinitionCorpus nextSs) (tiActivatedNetwork ti)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

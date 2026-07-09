@@ -25,6 +25,7 @@ module QxFx0.Semantic.Network.Ingest
   , loadSelfPlayRelations
   , mergeSelfPlayRelations
   , normalizeRelationText
+  , admitRelationEndpoint
   ) where
 
 import Control.Applicative ((<|>))

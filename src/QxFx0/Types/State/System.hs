@@ -171,6 +171,7 @@ import QxFx0.Semantic.Network.Types (SemanticNetwork, emptySemanticNetwork)
 import QxFx0.Semantic.Network.Seed (seedFromCorpus)
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
 import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
+import QxFx0.Semantic.Content (DefinitionContent)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
 import QxFx0.Semantic.Content.Category (ConceptCategory)
 import QxFx0.Semantic.Content.AtomStore (AtomGraph, seedGraph)
@@ -344,6 +345,10 @@ data SystemState = SystemState
     -- ^ Runtime atom graph: seed relations + promoted substrate relations.
     --   Used by PathFinder for generative composition. Initialised to
     --   'seedGraph', updated in Bootstrap with promoted substrate.
+  , ssDefinitionCorpus :: !(M.Map Text DefinitionContent)
+    -- ^ P1.2: extended definition corpus = hardcoded seed corpus merged with
+    --   curated predicates loaded from @resources/knowledge/curated_predicates.jsonl@.
+    --   Used by projection to report missing predicates and by rendering paths.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -421,6 +426,7 @@ instance ToJSON SystemState where
               , "userStanceTrackers" .= ssUserStanceTrackers ss
               , "stanceLineages" .= ssStanceLineages ss
               , "runtimeGraph" .= ssRuntimeGraph ss
+              , "definitionCorpus" .= ssDefinitionCorpus ss
               ]
 
 instance FromJSON SystemState where
@@ -546,6 +552,7 @@ instance FromJSON SystemState where
               <*> o .:? "userStanceTrackers" .!= M.empty
               <*> o .:? "stanceLineages" .!= M.empty
               <*> o .:? "runtimeGraph" .!= seedGraph
+              <*> o .:? "definitionCorpus" .!= M.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -742,6 +749,7 @@ emptySystemState = SystemState
   , ssUserStanceTrackers = M.empty
   , ssStanceLineages = M.empty
   , ssRuntimeGraph = seedGraph
+  , ssDefinitionCorpus = M.empty
   }
 
 emptyGovernanceProjection :: GovernanceProjection
