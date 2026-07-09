@@ -403,7 +403,7 @@ buildDistinctionFromTriggers admittedTriggers
 
 detectConfrontSignal :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectConfrontSignal truthContractStatus rawText tokens =
-  buildConfrontSignalFromTriggers rawText (aptTriggers admittedTriggers)
+  buildConfrontSignalFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawConfrontTriggers rawText tokens
     admittedTriggers =
@@ -432,8 +432,8 @@ collectRawConfrontTriggers rawText tokens =
   , RawPropositionTrigger "reduction_merely" (T.isInfixOf "всего лишь" lower || T.isInfixOf "это лишь" lower)
   ]
 
-buildConfrontSignalFromTriggers :: Text -> [RawPropositionTrigger] -> Maybe PropositionType
-buildConfrontSignalFromTriggers _rawText admittedTriggers
+buildConfrontSignalFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
+buildConfrontSignalFromTriggers admittedTriggers
   | matched "contradiction_phrase" = Just ConfrontQ
   | matched "disagree_masc" = Just ConfrontQ
   | matched "disagree_fem" = Just ConfrontQ
@@ -456,7 +456,7 @@ buildConfrontSignalFromTriggers _rawText admittedTriggers
 
 detectNextStepSignal :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectNextStepSignal truthContractStatus rawText tokens =
-  buildNextStepSignalFromTriggers rawText (aptTriggers admittedTriggers)
+  buildNextStepSignalFromTriggers (aptTriggers admittedTriggers)
   where
     rawTriggers = collectRawNextStepTriggers rawText tokens
     admittedTriggers =
@@ -478,8 +478,8 @@ collectRawNextStepTriggers rawText tokens =
   , RawPropositionTrigger "direct_text_short" (T.toLower (T.strip rawText) `elem` ["дальше", "что дальше?"])
   ]
 
-buildNextStepSignalFromTriggers :: Text -> [RawPropositionTrigger] -> Maybe PropositionType
-buildNextStepSignalFromTriggers _rawText admittedTriggers
+buildNextStepSignalFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
+buildNextStepSignalFromTriggers admittedTriggers
   | matched "what_next" = Just NextStepQ
   | matched "next_what" = Just NextStepQ
   | matched "what_now" = Just NextStepQ
