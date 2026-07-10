@@ -20,6 +20,8 @@ module QxFx0.Runtime.Session.Bootstrap
   , readSelfPlayRelationsPath
   , selfPlayRelationsPath
   , useSelfPlay
+  , useAutonomousLearning
+  , readAutonomousLearningEnabled
   ) where
 
 import Control.Exception (bracket, try, IOException)
@@ -164,6 +166,22 @@ readSelfPlayEnabled = do
   let envDisabled = maybe False (`elem` ["0", "false", "no", "disable"]) mEnv
       envEnabled  = maybe False (`elem` ["1", "true", "yes"]) mEnv
   pure (not envDisabled && (useSelfPlay || envEnabled))
+
+-- | Compile-time feature flag for ADR-0054 autonomous semantic network
+-- expansion. Defaults to 'False' so runtime behaviour is unchanged unless
+-- explicitly enabled via @QXFX0_AUTONOMOUS_LEARNING@ environment variable.
+useAutonomousLearning :: Bool
+useAutonomousLearning = False
+
+-- | Read whether autonomous semantic network expansion should be enabled.
+-- The compile-time 'useAutonomousLearning' flag defaults it off; the
+-- @QXFX0_AUTONOMOUS_LEARNING@ environment variable enables it when set to
+-- @"1"@, @"true"@, or @"yes"@.
+readAutonomousLearningEnabled :: IO Bool
+readAutonomousLearningEnabled = do
+  mEnv <- lookupEnv "QXFX0_AUTONOMOUS_LEARNING"
+  let envEnabled = maybe False (`elem` ["1", "true", "yes"]) mEnv
+  pure (envEnabled || useAutonomousLearning)
 
 -- | Resolve the path to the self-play relations file. The
 -- @QXFX0_SELFPLAY_RELATIONS_PATH@ environment variable overrides the

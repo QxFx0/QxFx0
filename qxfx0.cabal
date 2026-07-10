@@ -255,6 +255,7 @@ library
     QxFx0.Learning.Validator
     QxFx0.Learning.Parser
     QxFx0.Learning.Loop
+    QxFx0.Learning.Autonomous
     QxFx0.Learning.Sandbox
     QxFx0.Learning.TrainingCycle
     QxFx0.Learning.CorpusExtract
@@ -650,6 +651,7 @@ common test-common
     Test.Suite.Ontology
     Test.Suite.OntologyCategoryClassification
     Test.Suite.OntologyContentSelector
+    Test.Suite.Autonomous
     Test.Suite.RuntimeLLMToNetwork
     Test.Suite.BootstrapRecovery
     Test.Suite.BootstrapExternalKnowledge
