@@ -649,6 +649,7 @@ common test-common
     Test.Suite.Ontology
     Test.Suite.OntologyCategoryClassification
     Test.Suite.OntologyContentSelector
+    Test.Suite.RuntimeLLMToNetwork
     Test.Suite.BootstrapRecovery
     Test.Suite.BootstrapExternalKnowledge
     Test.Suite.SurfaceAccumulator

@@ -26,13 +26,19 @@ module QxFx0.Learning.Loop
   ( LearningTelemetry(..)
   , runLearningStep
   , applyExternalLearning
+  , applyLLMResponseToSemanticNetwork
   , emptyLearningTelemetry
   ) where
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Foldable (foldl')
 import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -75,7 +81,18 @@ import QxFx0.Types.ExternalQuery
   )
 import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
 import QxFx0.Types.Decision.Model (ipfRawText)
-import QxFx0.Types.State.System (SystemState(..), ssGuardrailState, ssLearningNeedState, ssKnowledgeTree, ssToolReliability, ssMorphology, ssTurnCount)
+import QxFx0.Semantic.Content.AtomStore (Atom(..), AtomId(..), Relation(..), RelationType(..), atomDisplay)
+import QxFx0.Semantic.LLMDiscovery (parseLLMRelations)
+import QxFx0.Semantic.Network (mergeSemanticNetworksWithProvenance)
+import QxFx0.Semantic.Network.Ingest (admitRelationEndpoint, normalizeRelationText)
+import QxFx0.Semantic.Network.Types
+  ( EdgeProvenance(..)
+  , EdgeSource(..)
+  , SemanticEdge(..)
+  , SemanticNetwork(..)
+  , relationTypeWeight
+  )
+import QxFx0.Types.State.System (SystemState(..), ssGuardrailState, ssLearningNeedState, ssKnowledgeTree, ssSemanticNetwork, ssToolReliability, ssMorphology, ssTurnCount)
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.AdaptiveMutation
   ( AdaptiveDecision(..)
@@ -235,7 +252,11 @@ runLearningStep ss tool need query mResult =
                       postProxy = conatusProxyFromState ss1 + 0.01
                       fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy) derivedPredictive
                       tree1 = graftFruit (renderNeedTag need) fruit tree0
-                      ss2   = ss1 { ssKnowledgeTree = tree1 }
+                      llmNetwork = applyLLMResponseToSemanticNetwork need resp
+                      network1 = mergeSemanticNetworksWithProvenance (ssSemanticNetwork ss) llmNetwork
+                      ss2   = ss1 { ssKnowledgeTree = tree1
+                                  , ssSemanticNetwork = network1
+                                  }
                       records =
                         [ toolReliabilityMutation turn executedTool True "sandbox_accept"
                         , knowledgeTreeMutation turn MutKnowledgeTree AdaptiveAccepted EvidenceStrong "external_learning:graft" (renderNeedTag need)
@@ -420,6 +441,63 @@ knowledgeTreeMutation turn kind decision strength cause evidence = AdaptiveMutat
   , amrDecision = decision
   }
 
+
+-- | ADR-0053: extract candidate relations from an LLM response body,
+-- admit them through the same gate used by selfplay ingestion, and
+-- build a small 'SemanticNetwork' ready to merge into the runtime graph.
+--
+-- Only endpoints that survive 'admitRelationEndpoint' enter the network;
+-- everything else is silently dropped.  Confidence is seeded low so that
+-- runtime-LLM edges are subordinate to curated/selfplay edges until they
+-- are reinforced by feedback or repeated discovery.
+applyLLMResponseToSemanticNetwork
+  :: LearningNeed
+  -> ExternalQueryResponse
+  -> SemanticNetwork
+applyLLMResponseToSemanticNetwork need resp =
+  let concept = renderNeedTag need
+      body = if T.null (eqrStructured resp) then eqrRawBody resp else eqrStructured resp
+      candidates = parseLLMRelations concept body
+      admitted = mapMaybe admitRelation candidates
+      nodes = foldl' (\acc (f, t, _, _) -> S.insert f (S.insert t acc)) S.empty admitted
+      edges = foldl' insertEdge M.empty admitted
+      insertEdge acc (f, t, rt, mverb) =
+        let key = (f, t)
+            w = relationTypeWeight rt
+            edge = SemanticEdge
+              { seFrom         = f
+              , seTo           = t
+              , seWeight       = w * 0.6
+              , seCoOccurrence = 1
+              , seSource       = ExplicitEdge
+              , seRelationType = Just rt
+              , seVerb         = mverb
+              , seRationale    = Nothing
+              , seCounter      = Nothing
+              , seSynthesis    = Nothing
+              , seConfidence   = 0.6
+              , seProvenance   = ProvenanceIngested
+              }
+        in case M.lookup key acc of
+             Nothing -> M.insert key edge acc
+             Just old -> if seWeight edge > seWeight old then M.insert key edge acc else acc
+  in SemanticNetwork
+      { snNodes         = nodes
+      , snEdges         = edges
+      , snActivation    = M.empty
+      , snDecayRate     = 0.5
+      , snMaxHops       = 3
+      , snActivationLog = Seq.empty
+      }
+  where
+    admitRelation :: Relation -> Maybe (Text, Text, RelationType, Maybe Text)
+    admitRelation r =
+      let AtomId fromId = relFrom r
+          AtomId toId   = relTo r
+      in do
+        fromAtom <- admitRelationEndpoint fromId
+        toAtom   <- admitRelationEndpoint toId
+        pure (atomDisplay fromAtom, atomDisplay toAtom, relType r, relVerbText r)
 -- | Convenience wrapper: apply the learning loop to a system state
 -- when an external query result is present.
 -- If no result was carried, returns the state unchanged.
