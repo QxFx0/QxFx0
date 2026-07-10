@@ -547,6 +547,7 @@ common test-common
   build-depends:
     , qxfx0
     , HUnit        >=1.6 && <1.7
+    , stm          >=2.5 && <2.6
     , QuickCheck   >=2.14 && <2.15
     , hspec         >=2.7 && <2.12
     , vector        >=0.12 && <0.14
@@ -653,6 +654,7 @@ common test-common
     Test.Suite.OntologyContentSelector
     Test.Suite.Autonomous
     Test.Suite.DensityGate
+    Test.Suite.AutonomousLoop
     Test.Suite.RuntimeLLMToNetwork
     Test.Suite.BootstrapRecovery
     Test.Suite.BootstrapExternalKnowledge
