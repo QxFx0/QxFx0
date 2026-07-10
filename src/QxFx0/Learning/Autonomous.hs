@@ -40,6 +40,10 @@ module QxFx0.Learning.Autonomous
   , buildAtomMorphology
   , isTruthy
   , readIntWithDefault
+  , enqueueIfStarving
+  , enqueueStarvingTopics
+  , maybeEnqueueStarvingTopic
+  , spawnDensityAudit
   ) where
 
 import Control.Applicative ((<|>))
@@ -82,6 +86,13 @@ import QxFx0.Semantic.Content.AtomStore
   , atomHead
   )
 import QxFx0.Semantic.LLMDiscovery (parseLLMRelations, buildDiscoveryPrompt)
+import QxFx0.Semantic.Network.Seed
+  ( DensityConfig(..)
+  , buildTopicAtomsMap
+  , contentDensity
+  , starvingTopics
+  )
+import QxFx0.Semantic.Morphology (buildLemmaMap)
 import QxFx0.Semantic.Morphology (toNominative)
 import QxFx0.Semantic.Network (mergeSemanticNetworksWithProvenance)
 import QxFx0.Semantic.Network.Types
@@ -453,3 +464,92 @@ checkAndBump qs (maxReq, now)
       in (qs', qs')
   where
     _ = maxReq  -- bound for clarity; not used here, enforced at call site
+
+-- ---------------------------------------------------------------------------
+-- ADR-0054 M2: Density-gate triggers
+-- ---------------------------------------------------------------------------
+
+-- | Enqueue a 'LearningTask' for a single topic if its density is below
+-- 'dcThreshold'.  Returns 'True' iff the task was enqueued.  Useful as a
+-- per-turn trigger right after the topic has been chosen.
+enqueueIfStarving
+  :: LearningQueue
+  -> Map Text Text          -- ^ lemma map (used to build topic→atoms)
+  -> DensityConfig
+  -> Text                  -- ^ topic
+  -> SemanticNetwork
+  -> IO Bool
+enqueueIfStarving queue lemmaMap cfg topic network =
+  let map_ = buildTopicAtomsMap lemmaMap
+  in case M.lookup topic map_ of
+       Just atoms | contentDensity network atoms (dcKappa cfg) < dcThreshold cfg ->
+         let task = LearningTask
+               { ltTopic     = topic
+               , ltPriority  = 1.0 / max 1.0 (contentDensity network atoms (dcKappa cfg) + 0.01)
+               , ltRequestId = "per-turn:" <> topic
+               }
+         in enqueueLearningTask queue task >> pure True
+       _ -> pure False
+
+-- | Enqueue 'LearningTask's for ALL starving topics discovered by
+-- 'starvingTopics'.  Returns the number of tasks enqueued.  Intended
+-- for the periodic audit loop.
+enqueueStarvingTopics
+  :: LearningQueue
+  -> Map Text Text          -- ^ lemma map
+  -> DensityConfig
+  -> SemanticNetwork
+  -> IO Int
+enqueueStarvingTopics queue lemmaMap cfg network = do
+  let map_   = buildTopicAtomsMap lemmaMap
+      topics = starvingTopics network map_ cfg
+      tasks  = map
+        (\t -> LearningTask
+          { ltTopic     = t
+          , ltPriority  = 1.0
+          , ltRequestId = "audit:" <> t
+          })
+        topics
+  mapM_ (enqueueLearningTask queue) tasks
+  pure (length tasks)
+
+-- | Convenience wrapper for the per-turn call site: same as
+-- 'enqueueIfStarving' but returns unit so it can be called from IO
+-- contexts without threading the boolean.
+maybeEnqueueStarvingTopic
+  :: LearningQueue
+  -> Map Text Text
+  -> DensityConfig
+  -> Text
+  -> SemanticNetwork
+  -> IO ()
+maybeEnqueueStarvingTopic q lm cfg t sn = void (enqueueIfStarving q lm cfg t sn)
+
+-- | Spawn a background thread that periodically scans all known topics
+-- and enqueues 'LearningTask's for the starving ones.  The thread
+-- sleeps 'auditIntervalSec' between scans.  Fail-closed: any exception
+-- is logged to stderr and the thread exits (it should be respawned
+-- by the caller if desired).
+--
+-- 'getNetwork' is an IO action that returns the current
+-- 'SemanticNetwork' to scan (e.g. 'readIORef' of an MVar updated by the
+-- turn pipeline, or a SQLite query).
+spawnDensityAudit
+  :: LearningQueue
+  -> Map Text Text          -- ^ lemma map
+  -> DensityConfig
+  -> Int                      -- ^ audit interval in seconds
+  -> IO SemanticNetwork       -- ^ get current network
+  -> IO ()
+spawnDensityAudit queue lemmaMap cfg auditIntervalSec getNetwork = do
+  let sleepMicros = auditIntervalSec * 1000 * 1000
+  void . forkIO . forever $ do
+    threadDelay sleepMicros
+    netE <- try getNetwork
+    case netE of
+      Left (e :: SomeException) ->
+        hPutStrLn stderr $ "[density-audit] getNetwork error: " <> show e
+      Right net -> do
+        n <- enqueueStarvingTopics queue lemmaMap cfg net
+        when (n > 0) $
+          hPutStrLn stderr $ "[density-audit] enqueued " <> show n <> " starving topics"
