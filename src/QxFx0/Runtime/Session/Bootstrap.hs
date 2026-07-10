@@ -22,6 +22,8 @@ module QxFx0.Runtime.Session.Bootstrap
   , useSelfPlay
   , useAutonomousLearning
   , readAutonomousLearningEnabled
+  , AutonomousHandles(..)
+  , spawnAutonomousLearningHandles
   ) where
 
 import Control.Exception (bracket, try, IOException)
@@ -93,6 +95,21 @@ import QxFx0.Semantic.Content.Curated
   )
 import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
 import QxFx0.Semantic.Network (contentDensityGate, mergeSemanticNetworks)
+import QxFx0.Learning.Autonomous
+  ( AutonomousWorkerConfig(..)
+  , LearningQueue
+  , LearningTask(..)
+  , NetworkUpdateEvent(..)
+  , buildAtomMorphology
+  , defaultAutonomousWorkerConfig
+  , enqueueLearningTask
+  , newLearningQueue
+  , readAutonomousWorkerConfig
+  , spawnAutonomousWorker
+  )
+import QxFx0.Semantic.Content.AtomStore (atomStore)
+import QxFx0.Semantic.Network.Types (SemanticNetwork(..))
+import Control.Concurrent.STM (TQueue, atomically, newTQueue, writeTQueue)
 import QxFx0.Semantic.Network.Seed.Select (loadRelationWeightOverlay, selectSeedNetwork, selectSeedNetworkIO, readUseAtomGraphSeed)
 import QxFx0.Semantic.Network.Seed (overlayConfidence)
 import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalKnowledge, mergeSelfPlayRelations)
@@ -190,6 +207,47 @@ readSelfPlayRelationsPath :: IO FilePath
 readSelfPlayRelationsPath = do
   mEnv <- lookupEnv "QXFX0_SELFPLAY_RELATIONS_PATH"
   pure (fromMaybe "resources/knowledge/selfplay_relations.jsonl" mEnv)
+
+-- | Handles returned by 'spawnAutonomousLearningHandles'.  When the
+-- autonomous-learning feature is disabled, all fields are 'Nothing'.
+data AutonomousHandles = AutonomousHandles
+  { ahQueue        :: !(Maybe LearningQueue)
+  , ahUpdateQueue  :: !(Maybe (TQueue NetworkUpdateEvent))
+  , ahEnabled      :: !Bool
+  }
+
+-- | Spawn the autonomous learning infrastructure (worker thread + queues)
+-- when @QXFX0_AUTONOMOUS_LEARNING@ is enabled.  Returns 'Nothing' for
+-- all handles when disabled.  The worker processes 'LearningTask's
+-- pulled from the queue and emits 'NetworkUpdateEvent's on the update
+-- channel for the turn pipeline to drain between turns.
+--
+-- NOTE: This function only spawns the worker.  The audit thread and
+-- 'applyPendingNetworkUpdates' call site are deferred (see M3 follow-up
+-- #2/#3) because they require pure→IO refactors of TurnPlanning and
+-- Finalize/State.hs.
+spawnAutonomousLearningHandles :: IO AutonomousHandles
+spawnAutonomousLearningHandles = do
+  enabled <- readAutonomousLearningEnabled
+  if not enabled
+    then pure AutonomousHandles
+           { ahQueue       = Nothing
+           , ahUpdateQueue = Nothing
+           , ahEnabled     = False
+           }
+    else do
+      cfg   <- readAutonomousWorkerConfig
+      queue <- newLearningQueue
+      updates <- atomically newTQueue
+      store <- pure atomStore
+      morph <- pure (buildAtomMorphology atomStore)
+      -- Spawn the worker thread (fail-closed; logs to stderr).
+      spawnAutonomousWorker cfg store morph queue updates
+      pure AutonomousHandles
+           { ahQueue       = Just queue
+           , ahUpdateQueue = Just updates
+           , ahEnabled     = True
+           }
 
 -- | Alias for 'readSelfPlayRelationsPath'.
 selfPlayRelationsPath :: IO FilePath
