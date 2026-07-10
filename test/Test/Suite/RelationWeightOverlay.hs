@@ -49,6 +49,7 @@ relationWeightOverlayTests =
   , TestLabel "overlay caps at 0.95" testCapAt0_95
   , TestLabel "fresh-only edges remain unchanged" testFreshOnlyEdgesUnchanged
   , TestLabel "loadRelationWeightOverlay reads JSONL weights" testLoadRelationWeightOverlay
+  , TestLabel "loadRelationWeightOverlay skips malformed JSONL lines" testMalformedLineIsSkipped
   , TestLabel "loadRelationWeightOverlay missing file is no-op" testMissingFileNoOp
   ]
 
@@ -94,6 +95,20 @@ testLoadRelationWeightOverlay = TestCase $ do
   case Map.lookup ("a", "b") (snEdges result) of
     Nothing -> assertFailure "edge should remain"
     Just e  -> assertEqual "JSONL weight overlay applied" 0.78 (round2 (seConfidence e))
+  where
+    round2 x = fromIntegral (round (x * 100 :: Double)) / 100.0
+
+testMalformedLineIsSkipped :: Test
+testMalformedLineIsSkipped = TestCase $ do
+  let fresh = mkNetwork [("a", "b", 0.5, 0.5)]
+      validLine = "{\"seFrom\":\"a\",\"seTo\":\"b\",\"seWeight\":0.5,\"seCoOccurrence\":1,\"seSource\":\"ExplicitEdge\",\"relation_type\":\"RelRequires\",\"confidence\":0.9,\"provenance\":\"ProvenanceCurated\"}"
+      path = "/tmp/qxfx0_relation_weight_overlay_malformed_test.jsonl"
+  writeFile path ("not-json\n" <> validLine <> "\n")
+  result <- loadRelationWeightOverlay path fresh
+  removeFile path
+  case Map.lookup ("a", "b") (snEdges result) of
+    Nothing -> assertFailure "valid edge should still be applied"
+    Just edge -> assertEqual "valid edge survives malformed predecessor" 0.78 (round2 (seConfidence edge))
   where
     round2 x = fromIntegral (round (x * 100 :: Double)) / 100.0
 

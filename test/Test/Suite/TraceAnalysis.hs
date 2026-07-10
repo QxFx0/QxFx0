@@ -3,9 +3,10 @@
 module Test.Suite.TraceAnalysis (traceAnalysisTests) where
 
 import qualified Data.Map.Strict as Map
+import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Sequence as Seq
 import Test.HUnit
-import Data.Aeson (Value, decode, encode, object, (.=))
+import Data.Aeson (Value(Object), decode, encode, object, toJSON, (.=))
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (activatedConcepts, missingPredicateConcepts)
 import QxFx0.Semantic.Content (definitionCorpus)
@@ -297,75 +298,14 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
 -- omits trcActivatedConcepts / trcMissingPredicates decodes with both as [].
 testTraceBackwardCompatibility :: Test
 testTraceBackwardCompatibility = TestCase $ do
-  let json :: Value
-      json = object
-        [ "trcRequestId" .= trcRequestId minimalTrace
-        , "trcSessionId" .= trcSessionId minimalTrace
-        , "trcRuntimeMode" .= trcRuntimeMode minimalTrace
-        , "trcShadowPolicy" .= trcShadowPolicy minimalTrace
-        , "trcLocalRecoveryPolicy" .= trcLocalRecoveryPolicy minimalTrace
-        , "trcRecoveryEvidence" .= trcRecoveryEvidence minimalTrace
-        , "trcSemanticIntrospectionEnabled" .= trcSemanticIntrospectionEnabled minimalTrace
-        , "trcWarnMorphologyFallbackEnabled" .= trcWarnMorphologyFallbackEnabled minimalTrace
-        , "trcRequestedFamily" .= trcRequestedFamily minimalTrace
-        , "trcPreShadowFamily" .= trcPreShadowFamily minimalTrace
-        , "trcShadowSnapshotId" .= trcShadowSnapshotId minimalTrace
-        , "trcShadowStatus" .= trcShadowStatus minimalTrace
-        , "trcShadowDivergenceKind" .= trcShadowDivergenceKind minimalTrace
-        , "trcShadowDivergenceSeverity" .= trcShadowDivergenceSeverity minimalTrace
-        , "trcShadowResolvedFamily" .= trcShadowResolvedFamily minimalTrace
-        , "trcFinalFamily" .= trcFinalFamily minimalTrace
-        , "trcFinalForce" .= trcFinalForce minimalTrace
-        , "trcDecisionDisposition" .= trcDecisionDisposition minimalTrace
-        , "trcLegitimacyReason" .= trcLegitimacyReason minimalTrace
-        , "trcParserConfidence" .= trcParserConfidence minimalTrace
-        , "trcParserBackend" .= trcParserBackend minimalTrace
-        , "trcParserStatus" .= trcParserStatus minimalTrace
-        , "trcParserLatencyMs" .= trcParserLatencyMs minimalTrace
-        , "trcEmbeddingQuality" .= trcEmbeddingQuality minimalTrace
-        , "trcPreSafetyRenderedRaw" .= trcPreSafetyRenderedRaw minimalTrace
-        , "trcRenderedAfterRebind" .= trcRenderedAfterRebind minimalTrace
-        , "trcLinearizationOk" .= trcLinearizationOk minimalTrace
-        , "trcTruthContractStatus" .= trcTruthContractStatus minimalTrace
-        , "trcReplayProvenanceStatus" .= trcReplayProvenanceStatus minimalTrace
-        , "trcSalienceDriver" .= trcSalienceDriver minimalTrace
-        , "trcSalienceHolisticBias" .= trcSalienceHolisticBias minimalTrace
-        , "trcSalienceConfidence" .= trcSalienceConfidence minimalTrace
-        , "trcDialogueFocus" .= trcDialogueFocus minimalTrace
-        , "trcDialogueFocusBefore" .= trcDialogueFocusBefore minimalTrace
-        , "trcDialogueFocusAfter" .= trcDialogueFocusAfter minimalTrace
-        , "trcDialoguePhase" .= trcDialoguePhase minimalTrace
-        , "trcDialoguePhaseBefore" .= trcDialoguePhaseBefore minimalTrace
-        , "trcDialoguePhaseAfter" .= trcDialoguePhaseAfter minimalTrace
-        , "trcDialogueCommitmentCount" .= trcDialogueCommitmentCount minimalTrace
-        , "trcDialogueCommitmentCountBefore" .= trcDialogueCommitmentCountBefore minimalTrace
-        , "trcDialogueCommitmentCountAfter" .= trcDialogueCommitmentCountAfter minimalTrace
-        , "trcMicroPlanExplicitness" .= trcMicroPlanExplicitness minimalTrace
-        , "trcConatusEnergy" .= trcConatusEnergy minimalTrace
-        , "trcConatusGateFired" .= trcConatusGateFired minimalTrace
-        , "trcField" .= trcField minimalTrace
-        , "trcIdentityClaims" .= trcIdentityClaims minimalTrace
-        , "trcEpisodicEncoding" .= trcEpisodicEncoding minimalTrace
-        , "trcEpisodicForgetting" .= trcEpisodicForgetting minimalTrace
-        , "trcRegimeVersion" .= trcRegimeVersion minimalTrace
-        , "trcMorphologyVersion" .= trcMorphologyVersion minimalTrace
-        , "trcFamilyDivergenceActive" .= trcFamilyDivergenceActive minimalTrace
-        , "trcSemanticCommitmentCount" .= trcSemanticCommitmentCount minimalTrace
-        , "trcQuarantinedCommitmentCount" .= trcQuarantinedCommitmentCount minimalTrace
-        , "trcPromotedFromQuarantineCount" .= trcPromotedFromQuarantineCount minimalTrace
-        , "trcCommitmentStoreDecision" .= trcCommitmentStoreDecision minimalTrace
-        , "trcCommitmentEngaged" .= trcCommitmentEngaged minimalTrace
-        , "trcCommitmentContradicted" .= trcCommitmentContradicted minimalTrace
-        , "trcCommitmentMatchKind" .= trcCommitmentMatchKind minimalTrace
-        , "trcCognitiveSignals" .= trcCognitiveSignals minimalTrace
-        , "trcAffectDecoupled" .= trcAffectDecoupled minimalTrace
-        , "trcMood" .= trcMood minimalTrace
-        , "trcSubstrateActivated" .= trcSubstrateActivated minimalTrace
-        , "trcSubstrateEdgesUsed" .= trcSubstrateEdgesUsed minimalTrace
-        , "trcActivationSteps" .= trcActivationSteps minimalTrace
-        , "trcSubstrateHops" .= trcSubstrateHops minimalTrace
-        ]
-  let decoded = decode (encode json)
+  -- Build a legacy JSON by encoding the full trace and then stripping the
+  -- three dogfooding fields. This keeps all other required fields present
+  -- and makes the test robust to future additions to TurnReplayTrace.
+  let Object fullObj = toJSON minimalTrace
+      legacyObj = Object $ KM.delete "trcActivatedConcepts"
+                         $ KM.delete "trcMissingPredicates"
+                         $ KM.delete "trcEmittedPredicates" fullObj
+      decoded = decode (encode legacyObj)
   assertEqual "Backward-compatible activated concepts default to []" (Just []) (trcActivatedConcepts <$> decoded)
   assertEqual "Backward-compatible missing predicates default to []" (Just []) (trcMissingPredicates <$> decoded)
 

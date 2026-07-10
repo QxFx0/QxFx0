@@ -123,16 +123,17 @@ main = do
                   ++ intentClassifierTests
                   ++ semanticNetworkTests
                    ++ semanticSpaceTests
-                   ++ contentSelectorTests
-                    ++ [analogyTests]
-                    ++ geometricClassifierTests
-                    ++ [anomalyTests]
-                    ++ stanceTests
-            ++ semanticContentB3Tests
-            ++ semanticRepairB3Tests
-            ++ b3MechanicalGateExecutionTests
-            ++ contentQualityGateTests
-                )
+                    ++ contentSelectorTests
+                     ++ [analogyTests]
+                     ++ geometricClassifierTests
+                     ++ [anomalyTests]
+                     ++ stanceTests
+             ++ semanticContentB3Tests
+              ++ semanticRepairB3Tests
+              ++ b3MechanicalGateExecutionTests
+              ++ contentQualityGateTests
+                  )
+
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

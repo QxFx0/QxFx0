@@ -371,6 +371,7 @@ computeNextEssence ss ti tp =
               (tiField ti)
               (fromMaybe defaultDeliberation (tpDeliberation tp))
               trajectory
+      -- no feature flag: Essence commitment is law-driven (ADR-0036 Policy A).
       in case shouldCommit defaultEssenceModulation trajectory' of
            Nothing      -> (EssenceUncommitted trajectory', Nothing)
            Just trigger ->
@@ -581,25 +582,23 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
       semanticNetwork = applyDetectedFeedback feedbackLoopActive rawInput (ssSemanticNetwork ss) mergedSemanticNetwork
       topicAtomsMap = M.fromList
         [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
-        | topic <- Content.coveredTopics
-        , Just dc <- [Content.lookupDefinitionContent topic]
+        | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
       topicAtomsSetMap = M.fromList
         [ (topic, Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
-        | topic <- Content.coveredTopics
-        , Just dc <- [Content.lookupDefinitionContent topic]
+        | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
       semanticSpace = if contentDensityGate semanticNetwork
-                      then buildSemanticSpace semanticNetwork topicAtomsSetMap
-                      else emptySemanticSpace
+                       then buildSemanticSpace semanticNetwork topicAtomsSetMap
+                       else emptySemanticSpace
       contentSelector = if contentDensityGate semanticNetwork
-                         then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss) Nothing
-                         else emptyContentSelector
+                          then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss) (Just (ssOntology ss))
+                          else emptyContentSelector
       topicPredicatesMap = M.fromList
         [ (topic, Content.dcPredicates dc)
-        | topic <- Content.coveredTopics
-        , Just dc <- [Content.lookupDefinitionContent topic]
+        | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
+
       nextWithLog = appendAdaptiveMutationRecords adaptiveRecords baseNext
       -- P4: commit the pre-parsed authority surface payload if recognised.
       -- Nothing parse is silently skipped (non-authority surface).

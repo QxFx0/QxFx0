@@ -163,6 +163,9 @@ library
     QxFx0.Runtime.GF.Map
     QxFx0.Runtime.GF.Morphology
     QxFx0.Runtime.Session
+    QxFx0.Runtime.Session.Bootstrap
+    QxFx0.Runtime.Session.Types
+    QxFx0.Runtime.Session.UI
     QxFx0.Core.Observability
     QxFx0.Core.EvidenceAdmissibility
      QxFx0.Core.SessionLock
@@ -209,6 +212,7 @@ library
     QxFx0.Types.Admission.PropositionSystemLogicAdmission
     QxFx0.Types.Admission.PropositionWorldCauseAdmission
     QxFx0.Core.TurnPipeline.Finalize.Projection
+    QxFx0.Core.TurnPipeline.Finalize.State
     QxFx0.Core.RouteHintAdmission
     QxFx0.Core.SemanticContributionAdmission
     QxFx0.Core.SemanticFrameAdmission
@@ -228,6 +232,7 @@ library
     QxFx0.Core.TurnLegitimacy
     QxFx0.Core.TurnPipeline
     QxFx0.Core.TurnPipeline.Protocol
+    QxFx0.Core.TurnPipeline.Types
     QxFx0.Core.TurnPipeline.Route.Anomaly
     QxFx0.Bridge.NixGuard
     QxFx0.Bridge.NixCache
@@ -427,11 +432,9 @@ library
     QxFx0.Runtime.Gate
     QxFx0.Runtime.Mode
     QxFx0.Runtime.Paths
-    QxFx0.Runtime.Session.Types
-    QxFx0.Runtime.Session.Bootstrap
-    QxFx0.Runtime.Session.UI
     QxFx0.Runtime.Wiring
     QxFx0.Runtime.Wiring.Context
+
     QxFx0.Runtime.Wiring.Handlers
     QxFx0.Runtime.Wiring.Readiness
     QxFx0.Runtime.Wiring.Pipeline
@@ -476,7 +479,6 @@ library
     QxFx0.Core.Legitimacy.Policy
     QxFx0.Core.TurnLegitimacy.Plans
     QxFx0.Core.TurnLegitimacy.Output
-    QxFx0.Core.TurnPipeline.Types
     QxFx0.Core.TurnPipeline.Effects
     QxFx0.Core.TurnPipeline.EffectLabel
     QxFx0.Core.TurnPipeline.Prepare
@@ -494,7 +496,6 @@ library
     QxFx0.Core.TurnPipeline.Finalize.Commit
     QxFx0.Core.TurnPipeline.Finalize.Orchestrate
     QxFx0.Core.TurnPipeline.Finalize.Dream
-    QxFx0.Core.TurnPipeline.Finalize.State
   hs-source-dirs:   src
   c-sources:        cbits/qxfx0_sqlite_ffi.c
   extra-libraries:  sqlite3
@@ -664,6 +665,7 @@ common test-common
     Test.Suite.CuratedPredicates
     Test.Suite.VariantC
     Test.Suite.AtomGraphSeed
+    Test.Suite.CuratedOntologyIntegration
 
 test-suite qxfx0-test-unit
   import:        test-common

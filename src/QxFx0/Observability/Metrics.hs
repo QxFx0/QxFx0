@@ -87,11 +87,17 @@ recordCounter registry name value tags = do
 
 -- | Record gauge metric
 recordGauge :: MetricRegistry -> Text -> Double -> Map Text Text -> IO ()
-recordGauge = recordCounter
+recordGauge registry name value tags = do
+  timestamp <- getCurrentTime
+  let metric = Metric name Gauge value timestamp tags
+  modifyIORef' registry (metric :)
 
 -- | Record histogram metric
 recordHistogram :: MetricRegistry -> Text -> Double -> Map Text Text -> IO ()
-recordHistogram = recordCounter
+recordHistogram registry name value tags = do
+  timestamp <- getCurrentTime
+  let metric = Metric name Histogram value timestamp tags
+  modifyIORef' registry (metric :)
 
 -- | Record timing metric
 recordTiming :: MetricRegistry -> Text -> NominalDiffTime -> Map Text Text -> IO ()

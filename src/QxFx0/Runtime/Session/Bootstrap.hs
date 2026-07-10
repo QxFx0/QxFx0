@@ -385,16 +385,12 @@ bootstrapSession quiet sessionId = do
         s : _ -> s
         [] -> ssActiveScene emptySystemState
 
-      -- Initialize ContentSelector from seed network and definition corpus
       lemmaMap = buildLemmaMap morphology
       topicAtoms = M.fromList
         [ (topic, S.unions [tokenizePredicateForSeed (spRu p) | p <- dcPredicates dc])
         | (topic, dc) <- M.toList extendedCorpus
         ]
       topicPredicates = M.map dcPredicates extendedCorpus
-      -- Substrate candidate extraction + admission
-      -- Use allAtomIds (85+ atoms) for admission, not just allTopics (30+)
-      -- Also include discovered atoms from brain_kb
       topicList = allTopics
       discoveredAtoms = discoverAtoms brainKBEntries
       discoveredAtomIds = map (atomId . daAtom) discoveredAtoms
@@ -403,7 +399,7 @@ bootstrapSession quiet sessionId = do
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted
       seedSpace = buildSemanticSpace finalNetwork topicAtoms
-      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap Nothing
+      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap (Just ontology)
 
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}
@@ -419,6 +415,9 @@ bootstrapSession quiet sessionId = do
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         , ssDefinitionCorpus = extendedCorpus
         }
+
+
+
   stateRevision <- loadStateRevision (withRuntimeDb runtime) sessionId
   (stateOrigin, restored) <- do
     mSs <- tryIO (loadState (withRuntimeDb runtime) sessionId)

@@ -23,6 +23,7 @@ module QxFx0.Semantic.Network.Seed.Select
   , loadRelationWeightOverlay
   ) where
 
+import Control.Exception (IOException, try)
 import Control.Monad (when)
 import Data.Aeson (eitherDecodeStrict)
 import Data.Map.Strict (Map)
@@ -33,6 +34,7 @@ import qualified Data.Text.Encoding as TE
 import qualified Data.Text.IO as TIO
 import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
+import System.IO (hPutStrLn, stderr)
 
 import QxFx0.Semantic.Content.AtomStore (AtomGraph(..), seedGraph)
 import QxFx0.Semantic.Network (contentDensityGate)
@@ -77,23 +79,30 @@ selectSeedNetworkFor atomGraph lemmaMap =
 --
 -- Each non-empty line must decode as a 'SemanticEdge'.  The file is keyed
 -- by @(from, to)@ and the resulting map is passed to 'overlayConfidence'.
--- If the file does not exist the input network is returned unchanged, so
--- callers can safely point this at a path that only exists after feedback
--- has been persisted.
+-- If the file is absent or cannot be read, the input network is returned
+-- unchanged. Malformed lines are skipped with a warning, so this optional
+-- feedback mirror can never prevent the runtime from bootstrapping.
 loadRelationWeightOverlay :: FilePath -> SemanticNetwork -> IO SemanticNetwork
 loadRelationWeightOverlay path network = do
   exists <- doesFileExist path
   if not exists
     then pure network
     else do
-      contents <- TIO.readFile path
-      let rawLines = filter (not . T.null . T.strip) (T.lines contents)
-      edges <- traverse parseOverlayLine rawLines
-      let edgeMap = M.fromList [ ((seFrom e, seTo e), e) | e <- edges ]
-      pure $ overlayConfidence network (network { snEdges = edgeMap })
+      readResult <- try (TIO.readFile path) :: IO (Either IOException Text)
+      case readResult of
+        Left err -> do
+          hPutStrLn stderr $ "loadRelationWeightOverlay: skipping unreadable file: " ++ show err
+          pure network
+        Right contents -> do
+          let rawLines = filter (not . T.null . T.strip) (T.lines contents)
+          edges <- traverse parseOverlayLine rawLines
+          let edgeMap = M.fromList [ ((seFrom e, seTo e), e) | Just e <- edges ]
+          pure (overlayConfidence network (network { snEdges = edgeMap }))
   where
-    parseOverlayLine :: Text -> IO SemanticEdge
+    parseOverlayLine :: Text -> IO (Maybe SemanticEdge)
     parseOverlayLine line =
       case eitherDecodeStrict (TE.encodeUtf8 line) of
-        Left err  -> fail ("loadRelationWeightOverlay: failed to parse line: " ++ err)
-        Right edge -> pure edge
+        Left err -> do
+          hPutStrLn stderr $ "loadRelationWeightOverlay: skipping malformed line: " ++ err
+          pure Nothing
+        Right edge -> pure (Just edge)

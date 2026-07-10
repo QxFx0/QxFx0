@@ -10,10 +10,11 @@ import Test.Suite.LegalAdapter (legalAdapterTests)
 import Test.Suite.RenderDialogueCoverage (renderDialogueCoverageTests)
 import Test.Suite.RussianQuality (russianQualityTests)
 import Test.Suite.LongSessionCorpus (longSessionCorpusTests)
+import Test.Suite.CuratedOntologyIntegration (curatedOntologyIntegrationTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (semanticCorpusTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ longSessionCorpusTests)
+  testCounts <- runTestTT $ TestList (semanticCorpusTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ russianQualityTests ++ longSessionCorpusTests ++ curatedOntologyIntegrationTests)
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess
