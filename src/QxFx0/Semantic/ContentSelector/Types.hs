@@ -19,12 +19,14 @@ import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
 import QxFx0.Semantic.Content (SemanticPredicate)
+import QxFx0.Semantic.Ontology (Ontology, emptyOntology)
 
 data ContentSelector = ContentSelector
   { csSpace           :: !SemanticSpace
   , csTopicAtoms      :: !(Map Text (Set Text))
   , csTopicPredicates :: !(Map Text [SemanticPredicate])
   , csLemmaMap        :: !(Map Text Text)
+  , csOntology        :: !(Maybe Ontology)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -41,4 +43,5 @@ emptyContentSelector = ContentSelector
   , csTopicAtoms = M.empty
   , csTopicPredicates = M.empty
   , csLemmaMap = M.empty
+  , csOntology = Nothing
   }

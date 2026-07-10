@@ -69,7 +69,7 @@ mkTestSelector topic ruText enText =
         }
       topicAtoms = M.singleton topic atoms
       topicPreds = M.singleton topic [mkPred RoleProperty ruText enText]
-  in buildContentSelector space topicAtoms topicPreds M.empty
+  in buildContentSelector space topicAtoms topicPreds M.empty Nothing
 
 testField :: Field
 testField = emptyField
@@ -119,7 +119,7 @@ mkSpreadingSelector =
       topicAtoms = M.fromList [("логика", atomsLogic), ("мышление", atomsThought)]
       pThought = mkPred RoleProperty "связана с субъекта действие" "connected to subject action"
       topicPreds = M.fromList [("мышление", [pThought])]
-  in buildContentSelector testSpace topicAtoms topicPreds M.empty
+  in buildContentSelector testSpace topicAtoms topicPreds M.empty Nothing
 
 -- | Build a ContentSelector with topic atoms but no predicates, so
 -- composeFromActivation returns an empty list and the fallback path is taken.
@@ -128,7 +128,7 @@ mkEmptySpreadingSelector =
   let atomsLogic = S.fromList ["связана"]
       atomsThought = S.fromList ["субъекта"]
       topicAtoms = M.fromList [("логика", atomsLogic), ("мышление", atomsThought)]
-  in buildContentSelector testSpace topicAtoms M.empty M.empty
+  in buildContentSelector testSpace topicAtoms M.empty M.empty Nothing
 
 dialogueSemanticSelectionTests :: [Test]
 dialogueSemanticSelectionTests =

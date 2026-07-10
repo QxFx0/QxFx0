@@ -35,7 +35,8 @@ module QxFx0.Render.Dialogue
   ) where
 
 import Data.Text (Text)
-import QxFx0.Self.Field (Field, emptyField)
+import QxFx0.Self.Field (Field, emptyField, FieldHeuristics, builtinFieldHeuristics)
+import QxFx0.Types.State.SelfState (selfFieldHeuristics)
 import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
@@ -98,7 +99,7 @@ import QxFx0.Semantic.Input.Parse (ParsedInput)
 import QxFx0.Semantic.DialogAssembly (assembleTurn)
 import QxFx0.Semantic.MeaningDecompose (factBySubject)
 import QxFx0.Semantic.MeaningAssembly (assembleExplanation)
-import QxFx0.Types.State.System (ssDiscourse, ssDialogue)
+import QxFx0.Types.State.System (ssDiscourse, ssDialogue, ssSelfState)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms)
 import QxFx0.Semantic.Embedding.Fallback (stableHash)
 import qualified QxFx0.Semantic.Frame.Types as FT
@@ -457,7 +458,7 @@ appendSupplement base supplement =
 -- This is the exported version without cross-turn filtering.
 frameSupplement :: VerbalizationMode -> MorphologyData -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
 frameSupplement mode morph cs field topic mNetwork isEn =
-  fst (frameSupplementWithEmitted mode morph cs field topic mNetwork isEn Set.empty)
+  fst (frameSupplementWithEmitted mode morph cs field builtinFieldHeuristics topic mNetwork isEn Set.empty)
 
 -- | Internal version that accepts a set of already-emitted predicate surface
 -- forms (spRu) and returns both the rendered text and the list of predicates
@@ -467,15 +468,16 @@ frameSupplementWithEmitted
   -> MorphologyData
   -> ContentSelector
   -> Field
+  -> FieldHeuristics
   -> Text
   -> Maybe SemanticNetwork
   -> Bool
   -> Set.Set Text
   -> (Text, [Text])
-frameSupplementWithEmitted mode morph cs field topic mNetwork isEn emittedSet =
+frameSupplementWithEmitted mode morph cs field heuristics topic mNetwork isEn emittedSet =
   case mNetwork of
     Just network | spreadingActivationActive ->
-      let composed = composeFromActivation cs field topic network
+      let composed = composeFromActivation cs field heuristics topic network
           filtered = filter (\p -> not (Set.member (spRu p) emittedSet)) composed
       in if null filtered
            then (semanticSupplement cs field topic mNetwork isEn, [])
@@ -1960,7 +1962,7 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         isEn = isEnglishInput topic
         authorityText = renderFrameAuthority authority
         fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-        (supplement, emitted) = frameSupplementWithEmitted VmDefinition morph cs field topic mNetwork isEn (ssEmittedPredicates ss)
+        (supplement, emitted) = frameSupplementWithEmitted VmDefinition morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mNetwork isEn (ssEmittedPredicates ss)
     in (appendSupplement fallback supplement, emitted)
 
   FT.DistinctionFrame left right criteria ->
@@ -1973,8 +1975,8 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
                <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
-        (leftSup, leftEmitted) = frameSupplementWithEmitted VmDistinction morph cs field left mNetwork isEn (ssEmittedPredicates ss)
-        (rightSup, rightEmitted) = frameSupplementWithEmitted VmDistinction morph cs field right mNetwork isEn (ssEmittedPredicates ss)
+        (leftSup, leftEmitted) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mNetwork isEn (ssEmittedPredicates ss)
+        (rightSup, rightEmitted) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mNetwork isEn (ssEmittedPredicates ss)
         supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
     in (appendSupplement base supplement, leftEmitted ++ rightEmitted)
 
@@ -1990,7 +1992,7 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
-        (supplement, emitted) = frameSupplementWithEmitted VmChallenge morph cs field rawObj mNetwork isEn (ssEmittedPredicates ss)
+        (supplement, emitted) = frameSupplementWithEmitted VmChallenge morph cs field (selfFieldHeuristics (ssSelfState ss)) rawObj mNetwork isEn (ssEmittedPredicates ss)
     in case strength of
          FT.Soft -> (appendSupplement softFallback supplement, emitted)
          FT.Firm -> (appendSupplement firmFallback supplement, emitted)
@@ -2014,7 +2016,7 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-        (supplement, emitted) = frameSupplementWithEmitted VmReflection morph cs field topic mNetwork isEn (ssEmittedPredicates ss)
+        (supplement, emitted) = frameSupplementWithEmitted VmReflection morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mNetwork isEn (ssEmittedPredicates ss)
     in (appendSupplement fallback supplement, emitted)
 
   FT.LearnFrame topic depth ->

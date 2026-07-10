@@ -54,7 +54,7 @@ contentSelectorTests =
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
           topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
-          cs = buildContentSelector space topicAtoms topicPredicates M.empty
+          cs = buildContentSelector space topicAtoms topicPredicates M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
           result = selectPredicates cs field "test_topic" Nothing
       assertBool "should return at least one predicate" (not (null result))
@@ -73,7 +73,7 @@ contentSelectorTests =
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
           topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
-          cs = buildContentSelector space topicAtoms topicPredicates M.empty
+          cs = buildContentSelector space topicAtoms topicPredicates M.empty Nothing
           field1 = emptyField { fieldResonance = Resonance 0.9, fieldAtmosphere = Atmosphere 0.1 0.5 }
           field2 = emptyField { fieldResonance = Resonance 0.2, fieldAtmosphere = Atmosphere 0.9 0.5 }
           result1 = selectPredicates cs field1 "test_topic" Nothing
@@ -94,7 +94,7 @@ contentSelectorTests =
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1"])
           topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
-          cs = buildContentSelector space topicAtoms topicPredicates M.empty
+          cs = buildContentSelector space topicAtoms topicPredicates M.empty Nothing
           field = emptyField { fieldResonance = Resonance 1.0 }
           result = selectPredicates cs field "test_topic" Nothing
       assertBool "should return predicates" (not (null result))
@@ -122,7 +122,7 @@ contentSelectorTests =
           topicAtoms = M.singleton topic tokenizedAtoms
           space = buildSemanticSpace sn topicAtoms
           topicPreds = M.singleton topic predicates
-          cs = buildContentSelector space topicAtoms topicPreds M.empty
+          cs = buildContentSelector space topicAtoms topicPreds M.empty Nothing
           field1 = emptyField { fieldResonance = Resonance 0.9, fieldAtmosphere = Atmosphere 0.1 0.5, fieldConsolidation = Consolidation 0.9 }
           field2 = emptyField { fieldResonance = Resonance 0.1, fieldAtmosphere = Atmosphere 0.9 0.5, fieldConsolidation = Consolidation 0.1 }
           result1 = selectPredicates cs field1 topic Nothing
@@ -160,7 +160,7 @@ contentSelectorTests =
                 ]
             }
           topicPreds = M.singleton "истина" [pred1, pred2]
-          cs = buildContentSelector space M.empty topicPreds M.empty
+          cs = buildContentSelector space M.empty topicPreds M.empty Nothing
           fieldConf = emptyField { fieldConfidence = FieldConfidence 1.0, fieldCounterfactual = Counterfactual 0.0 }
           fieldCounter = emptyField { fieldConfidence = FieldConfidence 0.0, fieldCounterfactual = Counterfactual 1.0 }
           resultConf = selectPredicates cs fieldConf "истина" Nothing
@@ -181,7 +181,7 @@ contentSelectorTests =
             }
           topicAtoms = M.singleton "test_topic" (S.fromList ["atom1", "atom2"])
           topicPredicates = M.singleton "test_topic" [SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "atom1" Nothing Nothing Nothing]
-          cs = buildContentSelector space topicAtoms topicPredicates M.empty
+          cs = buildContentSelector space topicAtoms topicPredicates M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.8 }
           activatedNetwork = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2"]
@@ -217,7 +217,7 @@ contentSelectorTests =
             }
           pred1 = SemanticPredicate RoleProperty "atom1 atom2" "atom1 atom2" "test_topic" Nothing Nothing Nothing
           pred2 = SemanticPredicate RoleRelation "atom2 atom1" "atom2 atom1" "test_topic" Nothing Nothing Nothing
-          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.8, fieldAtmosphere = Atmosphere 0.5 0.5 }
           result = composePredicates cs field [pred1, pred2] Nothing
       assertBool "should return at least one predicate" (not (null result))
@@ -233,7 +233,7 @@ contentSelectorTests =
             }
           pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic" Nothing Nothing Nothing
           pred2 = SemanticPredicate RoleRelation "atom2" "atom2" "test_topic" Nothing Nothing Nothing
-          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.9 }
           result = composePredicates cs field [pred1, pred2] Nothing
       assertBool "should return predicates" (not (null result))
@@ -250,7 +250,7 @@ contentSelectorTests =
             }
           pred1 = SemanticPredicate RoleProperty "atom1" "atom1" "test_topic" Nothing Nothing Nothing
           pred2 = SemanticPredicate RoleRelation "atom1 atom2" "atom1 atom2" "test_topic" Nothing Nothing Nothing
-          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty
+          cs = buildContentSelector space M.empty (M.singleton "test_topic" [pred1, pred2]) M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.5 }
           activatedNetwork = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2"]
@@ -284,7 +284,7 @@ contentSelectorTests =
             [ ("topic1", [pred1])
             , ("topic2", [pred2])
             ]
-          cs = buildContentSelector space topicAtoms topicPreds M.empty
+          cs = buildContentSelector space topicAtoms topicPreds M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.8 }
           network = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2", "atom3"]
@@ -297,7 +297,7 @@ contentSelectorTests =
             , snMaxHops = 3
             , snActivationLog = Seq.empty
             }
-          result = composeFromActivation cs field "topic1" network
+          result = composeFromActivation cs field builtinFieldHeuristics "topic1" network
       assertBool "should return predicates from overlapping topics" (length result >= 1)
       assertBool "pred1 from topic1 should be included" (pred1 `elem` result)
 
@@ -319,7 +319,7 @@ contentSelectorTests =
             [ ("topic1", [pred1])
             , ("topic2", [pred2])
             ]
-          cs = buildContentSelector space topicAtoms topicPreds M.empty
+          cs = buildContentSelector space topicAtoms topicPreds M.empty Nothing
           field = emptyField { fieldResonance = Resonance 0.9 }
           network = SemanticNetwork
             { snNodes = S.fromList ["atom1", "atom2"]
@@ -331,7 +331,7 @@ contentSelectorTests =
             , snMaxHops = 3
             , snActivationLog = Seq.empty
             }
-          result = composeFromActivation cs field "topic1" network
+          result = composeFromActivation cs field builtinFieldHeuristics "topic1" network
       assertBool "should return predicates" (not (null result))
       assertBool "should return at most 3 predicates" (length result <= 3)
   ]

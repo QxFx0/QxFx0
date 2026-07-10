@@ -75,6 +75,7 @@ builtinFieldHeuristics = FieldHeuristics
   , fhHolisticStreakBoostCap  = 0.2
   , fhLegitimacyMidpoint      = 0.5
   , fhLegitimacyBonusScale    = 0.4
+  , fhOntologyDepthBoost      = 0.0
   }
 
 -- ---------------------------------------------------------------------------
@@ -105,6 +106,7 @@ tunedFieldHeuristics = FieldHeuristics
   , fhHolisticStreakBoostCap  = 0.25
   , fhLegitimacyMidpoint      = 0.55
   , fhLegitimacyBonusScale    = 0.45
+  , fhOntologyDepthBoost      = 0.1
   }
 
 -- ---------------------------------------------------------------------------

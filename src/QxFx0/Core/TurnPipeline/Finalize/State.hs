@@ -593,7 +593,7 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
                       then buildSemanticSpace semanticNetwork topicAtomsSetMap
                       else emptySemanticSpace
       contentSelector = if contentDensityGate semanticNetwork
-                         then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss)
+                         then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss) Nothing
                          else emptyContentSelector
       topicPredicatesMap = M.fromList
         [ (topic, Content.dcPredicates dc)

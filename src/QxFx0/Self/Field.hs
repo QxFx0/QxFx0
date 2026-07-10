@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
 {-|
@@ -86,6 +87,7 @@ module QxFx0.Self.Field
   , deriveFieldConfidence
     -- * Phase-7 tunable heuristics (lifeness gates)
   , FieldHeuristics (..)
+  , builtinFieldHeuristics
   , defaultFieldHeuristics
   , computeConsolidation
   , computeCounterfactual
@@ -113,8 +115,9 @@ module QxFx0.Self.Field
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.=), (.:), (.:?), (.!=))
 import GHC.Generics (Generic)
+
 
 import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 
@@ -284,9 +287,39 @@ data FieldHeuristics = FieldHeuristics
   , fhLegitimacyBonusScale    :: !Double
     -- ^ Multiplier on (legitimacy − midpoint) that is added
     --   to the ego-derived valence base. Default: 0.4.
+  , fhOntologyDepthBoost      :: !Double
+    -- ^ Multiplier applied to predicate scores based on ontology
+    --   node depth.  A value of @0.0@ disables depth weighting.
+    --   Default: 0.0.
   }
   deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData)
+
+instance ToJSON FieldHeuristics where
+  toJSON fh = object
+    [ "fhNarrativeWindowSize"     .= fhNarrativeWindowSize fh
+    , "fhDefaultNarrativeRate"    .= fhDefaultNarrativeRate fh
+    , "fhTopicStabilityBoost"     .= fhTopicStabilityBoost fh
+    , "fhEntropyEpsilon"          .= fhEntropyEpsilon fh
+    , "fhHolisticStreakBoostRate" .= fhHolisticStreakBoostRate fh
+    , "fhHolisticStreakBoostCap"  .= fhHolisticStreakBoostCap fh
+    , "fhLegitimacyMidpoint"      .= fhLegitimacyMidpoint fh
+    , "fhLegitimacyBonusScale"    .= fhLegitimacyBonusScale fh
+    , "fhOntologyDepthBoost"      .= fhOntologyDepthBoost fh
+    ]
+
+instance FromJSON FieldHeuristics where
+  parseJSON = withObject "FieldHeuristics" $ \o ->
+    FieldHeuristics
+      <$> o .:  "fhNarrativeWindowSize"
+      <*> o .:  "fhDefaultNarrativeRate"
+      <*> o .:  "fhTopicStabilityBoost"
+      <*> o .:  "fhEntropyEpsilon"
+      <*> o .:  "fhHolisticStreakBoostRate"
+      <*> o .:  "fhHolisticStreakBoostCap"
+      <*> o .:  "fhLegitimacyMidpoint"
+      <*> o .:  "fhLegitimacyBonusScale"
+      <*> o .:? "fhOntologyDepthBoost" .!= 0.0
 
 -- | Phase-7 builtin heuristic parameters.  These reproduce the
 -- behaviour of the hardcoded constants that shipped in Phase 5.5d.
@@ -294,12 +327,13 @@ builtinFieldHeuristics :: FieldHeuristics
 builtinFieldHeuristics = FieldHeuristics
   { fhNarrativeWindowSize     = 5
   , fhDefaultNarrativeRate    = 0.2
-  , fhTopicStabilityBoost   = 0.5
-  , fhEntropyEpsilon        = 1e-9
+  , fhTopicStabilityBoost     = 0.5
+  , fhEntropyEpsilon          = 1e-9
   , fhHolisticStreakBoostRate = 0.05
   , fhHolisticStreakBoostCap  = 0.2
   , fhLegitimacyMidpoint      = 0.5
   , fhLegitimacyBonusScale    = 0.4
+  , fhOntologyDepthBoost      = 0.0
   }
 
 -- | Phase-7 default heuristic parameters, loaded from
@@ -470,6 +504,7 @@ adaptFieldHeuristics rawSignal fh =
        , fhHolisticStreakBoostCap  = bounded (fhHolisticStreakBoostCap  def) (fhHolisticStreakBoostCap  fh)
        , fhLegitimacyMidpoint      = bounded (fhLegitimacyMidpoint      def) (fhLegitimacyMidpoint      fh)
        , fhLegitimacyBonusScale    = bounded (fhLegitimacyBonusScale    def) (fhLegitimacyBonusScale    fh)
+       , fhOntologyDepthBoost      = bounded (fhOntologyDepthBoost      def) (fhOntologyDepthBoost      fh)
        }
 
 -- ---------------------------------------------------------------------------

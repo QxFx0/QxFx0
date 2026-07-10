@@ -403,7 +403,7 @@ bootstrapSession quiet sessionId = do
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted
       seedSpace = buildSemanticSpace finalNetwork topicAtoms
-      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap
+      seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap Nothing
 
       freshState = emptySystemState
         { ssDialogue = (ssDialogue emptySystemState) {dsActiveScene = firstScene}

@@ -6,6 +6,8 @@ module QxFx0.Semantic.ContentSelector
   , selectPredicates
   , composePredicates
   , composeFromActivation
+  , ontologyRelatedTopics
+  , ontologyDepthBoost
   , buildTopicAtoms
   , tokenizePredicate
   , scorePred
@@ -26,10 +28,11 @@ import QxFx0.Semantic.Space (tokenizePredicate, SemanticSpace(..), FieldDimensio
 import QxFx0.Semantic.Network (SemanticNetwork(..), activateTopicWithField, getActivatedAtoms)
 import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
-import QxFx0.Self.Field (Field(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
+import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), lookupOntologyNode, lookupSiblings, lookupChildren, lookupCategory)
+import QxFx0.Self.Field (Field(..), FieldHeuristics(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 
-buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> Map Text [SemanticPredicate] -> Map Text Text -> ContentSelector
-buildContentSelector space atoms predicates lemmaMap = ContentSelector space atoms predicates lemmaMap
+buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> Map Text [SemanticPredicate] -> Map Text Text -> Maybe Ontology -> ContentSelector
+buildContentSelector space atoms predicates lemmaMap mOntology = ContentSelector space atoms predicates lemmaMap mOntology
 
 selectPredicates :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> [SelectedPredicate]
 selectPredicates cs field topic mActivatedNetwork =
@@ -93,22 +96,26 @@ composePredicates cs field preds mNetwork =
                filtered = filter (\(_, s) -> s >= threshold) scored
            in map fst filtered
 
-composeFromActivation :: ContentSelector -> Field -> Text -> SemanticNetwork -> [SemanticPredicate]
-composeFromActivation cs field topic network =
+composeFromActivation :: ContentSelector -> Field -> FieldHeuristics -> Text -> SemanticNetwork -> [SemanticPredicate]
+composeFromActivation cs field heuristics topic network =
   let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
       activatedNetwork = activateTopicWithField field topicAtoms network
       activatedAtoms = S.fromList (map fst (getActivatedAtoms activatedNetwork))
       overlappingTopics = M.keys (M.filter (not . S.null . S.intersection activatedAtoms) (csTopicAtoms cs))
+      ontologyTopics = ontologyRelatedTopics cs topic
+      candidateTopics = S.toList (S.fromList (overlappingTopics ++ ontologyTopics))
       perTopicPreds = mapMaybe (\t ->
         case M.lookup t (csTopicPredicates cs) of
           Nothing -> Nothing
           Just preds ->
             let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) (Just activatedNetwork)) preds
-            in case scored of
+                depthBoost = ontologyDepthBoost cs heuristics t
+                boosted = map (\(p, s) -> (p, s * (1.0 + depthBoost))) scored
+            in case boosted of
                  [] -> Nothing
-                 _ -> let (bestPred, _) = maximumBy (comparing snd) scored
+                 _ -> let (bestPred, _) = maximumBy (comparing snd) boosted
                       in Just (t, bestPred)
-        ) overlappingTopics
+        ) candidateTopics
       totalActivation = sum [snd a | a <- getActivatedAtoms activatedNetwork]
       weightedPreds = map (\(t, p) ->
         let topicAct = sum [snd a | a <- getActivatedAtoms activatedNetwork
@@ -118,3 +125,31 @@ composeFromActivation cs field topic network =
         ) perTopicPreds
       sortedPreds = sortBy (comparing (Down . snd)) weightedPreds
   in map fst (take 3 sortedPreds)
+
+-- | Collect related topics from the ontology, if one is configured.
+-- Returns siblings and children of the queried topic so that
+-- 'composeFromActivation' can borrow predicates when the direct
+-- topic has weak coverage.
+ontologyRelatedTopics :: ContentSelector -> Text -> [Text]
+ontologyRelatedTopics cs topic =
+  case csOntology cs of
+    Nothing -> []
+    Just ont ->
+      let siblings = lookupSiblings ont topic
+          children = lookupChildren ont topic
+      in siblings ++ children
+
+-- | Compute the ontology depth boost for predicates from a given topic.
+-- When 'fhOntologyDepthBoost' is @0.0@ the result is @0.0@ and scoring
+-- is unchanged.  Otherwise deeper ontology nodes receive a larger
+-- multiplier.
+ontologyDepthBoost :: ContentSelector -> FieldHeuristics -> Text -> Double
+ontologyDepthBoost cs heuristics topic =
+  let base = fhOntologyDepthBoost heuristics
+  in if base == 0.0
+       then 0.0
+       else case csOntology cs of
+              Nothing -> 0.0
+              Just ont -> case lookupOntologyNode ont topic of
+                            Nothing -> 0.0
+                            Just node -> base * fromIntegral (onDepth node)

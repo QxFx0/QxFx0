@@ -518,7 +518,8 @@ arbitraryFieldHeuristics = do
   hsbc <- choose (0.0, 1.0)
   lm   <- choose (0.0, 1.0)
   lbs  <- choose (0.0, 1.0)
-  pure $ FieldHeuristics nw dnr tsb ee hsbr hsbc lm lbs
+  odb  <- choose (0.0, 1.0)
+  pure $ FieldHeuristics nw dnr tsb ee hsbr hsbc lm lbs odb
 
 propAdaptFieldHeuristicsIdentity :: Property
 propAdaptFieldHeuristicsIdentity =
