@@ -103,3 +103,4 @@ docs/infra-hardening-tz.md
 
 # Orphan worktree artifacts
 qxfx0-s13-wt/
+.worktrees/
