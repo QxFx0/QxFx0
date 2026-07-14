@@ -358,6 +358,31 @@ testCuratedPredicatesBatch243To272 = TestLabel "curated predicates batch 243-272
                                    (length (dcPredicates dc) >= 2))
         batch243To272
 
+-- | P1.12: Verify that batch 273-293 concepts are curated (final batch)
+testCuratedPredicatesBatch273To293 :: Test
+testCuratedPredicatesBatch273To293 = TestLabel "curated predicates batch 273-293 (final)" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  let batch273To293 = [ "усталость и удовлетворение", "утешение и мотив"
+                       , "утрата контекста", "уязвимость и близость"
+                       , "уязвимость и риск потери", "уязвимость перед другим"
+                       , "факт присутствия", "ценность другого как несводимую"
+                       , "цикличность и линейность", "частная перспектива"
+                       , "частное суждение", "через повторяемый позитивный опыт"
+                       , "чья воля становится законом", "эволюция"
+                       , "эксперимент", "эмоциональная окраска"
+                       , "эмоция", "энергия", "энтропия"
+                       , "эстетическое переживание", "язык"
+                       ]
+      missing = filter (\t -> not (M.member t curated)) batch273To293
+  assertEqual "all batch 273-293 topics must be present in curated predicates"
+    [] missing
+  mapM_ (\t ->
+           case M.lookup t curated of
+             Nothing -> assertFailure ("batch 273-293 topic " ++ T.unpack t ++ " missing")
+             Just dc -> assertBool ("batch 273-293 topic " ++ T.unpack t ++ " must have >=2 predicates")
+                                   (length (dcPredicates dc) >= 2))
+        batch273To293
+
 curatedPredicatesTests :: [Test]
 curatedPredicatesTests =
   [ testCuratedPredicatesLoad
@@ -373,4 +398,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch183To212
   , testCuratedPredicatesBatch213To242
   , testCuratedPredicatesBatch243To272
+  , testCuratedPredicatesBatch273To293
   ]
