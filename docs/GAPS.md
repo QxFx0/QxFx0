@@ -150,7 +150,7 @@ Full list contains 100 concepts; top 100 shown.
 | 118 | обоснованность не доказательством | 1 | ✅ curated |
 | 119 | объективность | 1 | ✅ curated |
 
-## Gap backlog (batch 121-150)
+## Gap backlog (batch 121-152)
 
 | Rank | Concept | Frequency | Status |
 |---|---|---|---|
@@ -187,12 +187,47 @@ Full list contains 100 concepts; top 100 shown.
 | 151 | ответственность | 1 | ✅ curated |
 | 152 | ответственность власти | 1 | ✅ curated |
 
+## Gap backlog (batch 153-182)
+
+| Rank | Concept | Frequency | Status |
+|---|---|---|---|
+| 153 | открытость пересмотру | 1 | ✅ curated |
+| 154 | открытость проверке | 1 | ✅ curated |
+| 155 | отсутствие движения и напряжения | 1 | ✅ curated |
+| 156 | отсутствие значимого другого | 1 | ✅ curated |
+| 157 | отсутствие контакта | 1 | ✅ curated |
+| 158 | отсутствие основания | 1 | ✅ curated |
+| 159 | отсутствие принуждения | 1 | ✅ curated |
+| 160 | отсутствием движения | 1 | ✅ curated |
+| 161 | отсутствием слов | 1 | ✅ curated |
+| 162 | память | 1 | ✅ curated |
+| 163 | память коллектива | 1 | ✅ curated |
+| 164 | паралич или действие | 1 | ✅ curated |
+| 165 | пауза в действии | 1 | ✅ curated |
+| 166 | пауза и смысл | 1 | ✅ curated |
+| 167 | переводимость и непереводимость | 1 | ✅ curated |
+| 168 | перед неизвестным | 1 | ✅ curated |
+| 169 | переживание значимости | 1 | ✅ curated |
+| 170 | пережитое в новой рамке | 1 | ✅ curated |
+| 171 | перспектива наблюдателя | 1 | ✅ curated |
+| 172 | повторное переживание | 1 | ✅ curated |
+| 173 | позиция субъекта | 1 | ✅ curated |
+| 174 | покой | 1 | ✅ curated |
+| 175 | порядок мысли | 1 | ✅ curated |
+| 176 | порядок следования событий | 1 | ✅ curated |
+| 177 | поток переживаний | 1 | ✅ curated |
+| 178 | потребность в другом | 1 | ✅ curated |
+| 179 | потребностью и распределением ресурсов | 1 | ✅ curated |
+| 180 | почему а не зачем | 1 | ✅ curated |
+| 181 | поэзия | 1 | ✅ curated |
+| 182 | правда | 1 | ✅ curated |
+
 ## Summary
 
-- Covered topics: **151** (30 seed + 121 curated)
+- Covered topics: **182** (30 seed + 152 curated)
 - Concepts in relations graph: **311**
-- Uncovered (gap) concepts: **160** (was 281, reduced by 121)
-- Remaining concepts to curate: **160**
+- Uncovered (gap) concepts: **129** (was 281, reduced by 152)
+- Remaining concepts to curate: **129**
 
 ## Notes
 
@@ -202,4 +237,5 @@ Full list contains 100 concepts; top 100 shown.
 - **P1.5 COMPLETED**: Batch 51–100 concepts curated with 1–2 `SemanticPredicate`s each.
 - **P1.6 COMPLETED**: Batch 101–120 concepts curated with 1–2 `SemanticPredicate`s each (20 concepts).
 - **P1.7 COMPLETED**: Batch 121–152 concepts curated with 1–2 `SemanticPredicate`s each (32 concepts).
-- Next step: Curate remaining concepts from GAPS.md (160 remaining concepts).
+- **P1.8 COMPLETED**: Batch 153–182 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
+- Next step: Curate remaining concepts from GAPS.md (129 remaining concepts).

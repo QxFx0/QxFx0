@@ -241,6 +241,34 @@ testCuratedPredicatesBatch121To150 = TestLabel "curated predicates batch 121-150
                                    (length (dcPredicates dc) >= 2))
         batch121To150
 
+-- | P1.8: Verify that batch 153-182 concepts are curated
+testCuratedPredicatesBatch153To182 :: Test
+testCuratedPredicatesBatch153To182 = TestLabel "curated predicates batch 153-182" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  let batch153To182 = [ "открытость пересмотру", "открытость проверке"
+                      , "отсутствие движения и напряжения", "отсутствие значимого другого"
+                      , "отсутствие контакта", "отсутствие основания"
+                      , "отсутствие принуждения", "отсутствием движения"
+                      , "отсутствием слов", "память", "память коллектива"
+                      , "паралич или действие", "пауза в действии", "пауза и смысл"
+                      , "переводимость и непереводимость", "перед неизвестным"
+                      , "переживание значимости", "пережитое в новой рамке"
+                      , "перспектива наблюдателя", "повторное переживание"
+                      , "позиция субъекта", "покой", "порядок мысли"
+                      , "порядок следования событий", "поток переживаний"
+                      , "потребность в другом", "потребностью и распределением ресурсов"
+                      , "почему а не зачем", "поэзия", "правда"
+                      ]
+      missing = filter (\t -> not (M.member t curated)) batch153To182
+  assertEqual "all batch 153-182 topics must be present in curated predicates"
+    [] missing
+  mapM_ (\t ->
+           case M.lookup t curated of
+             Nothing -> assertFailure ("batch 153-182 topic " ++ T.unpack t ++ " missing")
+             Just dc -> assertBool ("batch 153-182 topic " ++ T.unpack t ++ " must have >=2 predicates")
+                                   (length (dcPredicates dc) >= 2))
+        batch153To182
+
 curatedPredicatesTests :: [Test]
 curatedPredicatesTests =
   [ testCuratedPredicatesLoad
@@ -252,4 +280,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch51To100
   , testCuratedPredicatesBatch101To150
   , testCuratedPredicatesBatch121To150
+  , testCuratedPredicatesBatch153To182
   ]
