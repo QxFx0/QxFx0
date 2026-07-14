@@ -685,3 +685,15 @@
 {"topic":"организация","predicates":[{"ru":"организация объединяет людей","en":"organization unites people","kind":"prop"},{"ru":"организация имеет структуру","en":"organization has a structure","kind":"rel"}]}
 {"topic":"руководство","predicates":[{"ru":"руководство принимает решения","en":"management makes decisions","kind":"prop"},{"ru":"руководство отвечает за развитие","en":"management is responsible for development","kind":"rel"}]}
 {"topic":"персонал","predicates":[{"ru":"персонал выполняет работу","en":"staff performs work","kind":"prop"},{"ru":"персонал является важной частью организации","en":"staff is an important part of the organization","kind":"rel"}]}
+{"topic":"библиотека","predicates":[{"ru":"библиотека хранит книги","en":"library stores books","kind":"prop"},{"ru":"библиотека предоставляет доступ к знаниям","en":"library provides access to knowledge","kind":"rel"}]}
+{"topic":"чтение","predicates":[{"ru":"чтение расширяет кругозор","en":"reading expands horizons","kind":"prop"},{"ru":"чтение развивает мышление","en":"reading develops thinking","kind":"rel"}]}
+{"topic":"письмо","predicates":[{"ru":"письмо фиксирует мысли","en":"writing fixes thoughts","kind":"prop"},{"ru":"письмо является средством общения","en":"writing is a means of communication","kind":"rel"}]}
+{"topic":"слово","predicates":[{"ru":"слово выражает смысл","en":"word expresses meaning","kind":"prop"},{"ru":"слово является единицей языка","en":"word is a unit of language","kind":"rel"}]}
+{"topic":"текст","predicates":[{"ru":"текст передает информацию","en":"text conveys information","kind":"prop"},{"ru":"текст может быть художественным или научным","en":"text can be artistic or scientific","kind":"rel"}]}
+{"topic":"идея","predicates":[{"ru":"идея выражает мысль","en":"idea expresses thought","kind":"prop"},{"ru":"идея может быть реализована","en":"idea can be implemented","kind":"rel"}]}
+{"topic":"мысль","predicates":[{"ru":"мысль отражает понимание","en":"thought reflects understanding","kind":"prop"},{"ru":"мысль может быть выражена словами","en":"thought can be expressed in words","kind":"rel"}]}
+{"topic":"концепция","predicates":[{"ru":"концепция объединяет идеи","en":"concept unites ideas","kind":"prop"},{"ru":"концепция объясняет явление","en":"concept explains a phenomenon","kind":"rel"}]}
+{"topic":"учитель","predicates":[{"ru":"учитель передает знания","en":"teacher transmits knowledge","kind":"prop"},{"ru":"учитель воспитывает учеников","en":"teacher educates students","kind":"rel"}]}
+{"topic":"ученик","predicates":[{"ru":"ученик получает знания","en":"student receives knowledge","kind":"prop"},{"ru":"ученик развивает навыки","en":"student develops skills","kind":"rel"}]}
+{"topic":"учение","predicates":[{"ru":"учение расширяет познания","en":"learning expands knowledge","kind":"prop"},{"ru":"учение требует усилий","en":"learning requires effort","kind":"rel"}]}
+{"topic":"информация","predicates":[{"ru":"информация передает знания","en":"information conveys knowledge","kind":"prop"},{"ru":"информация может быть структурированной","en":"information can be structured","kind":"rel"}]}
