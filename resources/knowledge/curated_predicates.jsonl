@@ -1668,3 +1668,10 @@
 {"topic":"грамотность","predicates":[{"ru":"грамотность это умение читать и писать","en":"literacy is the ability to read and write","kind":"prop"},{"ru":"грамотность важна для образования","en":"literacy is important for education","kind":"rel"}]}
 {"topic":"диалект","predicates":[{"ru":"диалект это региональный вариант языка","en":"dialect is a regional variant of language","kind":"prop"},{"ru":"диалект отражает культуру","en":"dialect reflects culture","kind":"rel"}]}
 {"topic":"акцент","predicates":[{"ru":"акцент это манера произношения","en":"accent is a manner of pronunciation","kind":"prop"},{"ru":"акцент может быть иностранным","en":"accent can be foreign","kind":"rel"}]}
+{"topic":"назначение","predicates":[{"ru":"назначение это цель или роль","en":"purpose is a goal or role","kind":"prop"},{"ru":"назначение определяет функцию","en":"purpose defines function","kind":"rel"}]}
+{"topic":"вызов","predicates":[{"ru":"вызов это сложная задача","en":"challenge is a difficult task","kind":"prop"},{"ru":"вызов требует усилий","en":"challenge requires effort","kind":"rel"}]}
+{"topic":"испытание","predicates":[{"ru":"испытание это проверка сил","en":"trial is a test of strength","kind":"prop"},{"ru":"испытание закаляет","en":"trial tempers","kind":"rel"}]}
+{"topic":"преодоление","predicates":[{"ru":"преодоление это победа над препятствиями","en":"overcoming is victory over obstacles","kind":"prop"},{"ru":"преодоление ведет к росту","en":"overcoming leads to growth","kind":"rel"}]}
+{"topic":"достижение","predicates":[{"ru":"достижение это результат усилий","en":"achievement is the result of efforts","kind":"prop"},{"ru":"достижение вдохновляет","en":"achievement inspires","kind":"rel"}]}
+{"topic":"провал","predicates":[{"ru":"провал это неудача","en":"failure is a setback","kind":"prop"},{"ru":"провал учит","en":"failure teaches","kind":"rel"}]}
+{"topic":"следование","predicates":[{"ru":"следование это соблюдение правил","en":"following is adherence to rules","kind":"prop"},{"ru":"следование ведет к порядку","en":"following leads to order","kind":"rel"}]}
