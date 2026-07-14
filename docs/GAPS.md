@@ -292,12 +292,47 @@ Full list contains 100 concepts; top 100 shown.
 | 241 | свобода как условие | 1 | ✅ curated |
 | 242 | связь времён | 1 | ✅ curated |
 
+## Gap backlog (batch 243-272)
+
+| Rank | Concept | Frequency | Status |
+|---|---|---|---|
+| 243 | сжимает мир до значения | 1 | ✅ curated |
+| 244 | сигнал опасности | 1 | ✅ curated |
+| 245 | след прошлого | 1 | ✅ curated |
+| 246 | слушание | 1 | ✅ curated |
+| 247 | смерть | 1 | ✅ curated |
+| 248 | собственность | 1 | ✅ curated |
+| 249 | собственные состояния субъекта | 1 | ✅ curated |
+| 250 | совесть как свидетель | 1 | ✅ curated |
+| 251 | совпадение с собой | 1 | ✅ curated |
+| 252 | созерцание и присутствие | 1 | ✅ curated |
+| 253 | сознание | 1 | ✅ curated |
+| 254 | соответствие реальности | 1 | ✅ curated |
+| 255 | соразмерности между деянием и воздаянием | 1 | ✅ curated |
+| 256 | соразмерность частей | 1 | ✅ curated |
+| 257 | способность влиять на действия других | 1 | ✅ curated |
+| 258 | способность к обобщению | 1 | ✅ curated |
+| 259 | способность к самоотчёту | 1 | ✅ curated |
+| 260 | справедливость | 1 | ✅ curated |
+| 261 | страх | 1 | ✅ curated |
+| 262 | страх и принятие | 1 | ✅ curated |
+| 263 | структура значения | 1 | ✅ curated |
+| 264 | субъекта объектом для самого себя | 1 | ✅ curated |
+| 265 | темп и ритм | 1 | ✅ curated |
+| 266 | тишина и пустота | 1 | ✅ curated |
+| 267 | труд | 1 | ✅ curated |
+| 268 | узнавание | 1 | ✅ curated |
+| 269 | уравнивание всех | 1 | ✅ curated |
+| 270 | урок и предупреждение | 1 | ✅ curated |
+| 271 | усилие и результат | 1 | ✅ curated |
+| 272 | усилие против энтропии | 1 | ✅ curated |
+
 ## Summary
 
-- Covered topics: **242** (30 seed + 212 curated)
+- Covered topics: **272** (30 seed + 242 curated)
 - Concepts in relations graph: **311**
-- Uncovered (gap) concepts: **69** (was 281, reduced by 212)
-- Remaining concepts to curate: **69**
+- Uncovered (gap) concepts: **39** (was 281, reduced by 242)
+- Remaining concepts to curate: **39**
 
 ## Notes
 
@@ -310,4 +345,5 @@ Full list contains 100 concepts; top 100 shown.
 - **P1.8 COMPLETED**: Batch 153–182 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
 - **P1.9 COMPLETED**: Batch 183–212 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
 - **P1.10 COMPLETED**: Batch 213–242 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
-- Next step: Curate remaining concepts from GAPS.md (69 remaining concepts).
+- **P1.11 COMPLETED**: Batch 243–272 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
+- Next step: Curate remaining concepts from GAPS.md (39 remaining concepts).
