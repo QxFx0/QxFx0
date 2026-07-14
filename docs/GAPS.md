@@ -126,7 +126,7 @@ Static scan comparing the `from`/`to` tokens of the 666 curated relations agains
 
 Full list contains 100 concepts; top 100 shown.
 
-## Gap backlog (batch 101-150)
+## Gap backlog (batch 101-120)
 
 | Rank | Concept | Frequency | Status |
 |---|---|---|---|
@@ -150,12 +150,49 @@ Full list contains 100 concepts; top 100 shown.
 | 118 | обоснованность не доказательством | 1 | ✅ curated |
 | 119 | объективность | 1 | ✅ curated |
 
+## Gap backlog (batch 121-150)
+
+| Rank | Concept | Frequency | Status |
+|---|---|---|---|
+| 121 | бытие | 1 | ✅ curated |
+| 122 | вера | 1 | ✅ curated |
+| 123 | власть | 1 | ✅ curated |
+| 124 | воля | 1 | ✅ curated |
+| 125 | воспоминание | 1 | ✅ curated |
+| 126 | время | 1 | ✅ curated |
+| 127 | доверие | 1 | ✅ curated |
+| 128 | долг | 1 | ✅ curated |
+| 129 | истина | 1 | ✅ curated |
+| 130 | история | 1 | ✅ curated |
+| 131 | красота | 1 | ✅ curated |
+| 132 | любовь | 1 | ✅ curated |
+| 133 | мнение | 1 | ✅ curated |
+| 134 | молчание | 1 | ✅ curated |
+| 135 | надежда | 1 | ✅ curated |
+| 136 | обязательства перед другими | 1 | ✅ curated |
+| 137 | одиночество | 1 | ✅ curated |
+| 138 | ожидание угрозы | 1 | ✅ curated |
+| 139 | опора на другого | 1 | ✅ curated |
+| 140 | опыт через различение и именование | 1 | ✅ curated |
+| 141 | ориентация на будущее | 1 | ✅ curated |
+| 142 | осмысление конечности | 1 | ✅ curated |
+| 143 | основание всего | 1 | ✅ curated |
+| 144 | осознание последствий | 1 | ✅ curated |
+| 145 | остановка и осмысление | 1 | ✅ curated |
+| 146 | от воспринимающего и культурной рамки | 1 | ✅ curated |
+| 147 | от интуиции потребностью в доказательстве | 1 | ✅ curated |
+| 148 | от точки зрения рассказчика | 1 | ✅ curated |
+| 149 | ответ на вопрос кто я | 1 | ✅ curated |
+| 150 | ответ перед другими | 1 | ✅ curated |
+| 151 | ответственность | 1 | ✅ curated |
+| 152 | ответственность власти | 1 | ✅ curated |
+
 ## Summary
 
-- Covered topics: **121** (30 seed + 91 curated)
+- Covered topics: **151** (30 seed + 121 curated)
 - Concepts in relations graph: **311**
-- Uncovered (gap) concepts: **190** (was 281, reduced by 91)
-- Remaining concepts to curate: **190**
+- Uncovered (gap) concepts: **160** (was 281, reduced by 121)
+- Remaining concepts to curate: **160**
 
 ## Notes
 
@@ -164,4 +201,5 @@ Full list contains 100 concepts; top 100 shown.
 - **P1.4 COMPLETED**: Batch 21–50 concepts curated with 1–2 `SemanticPredicate`s each.
 - **P1.5 COMPLETED**: Batch 51–100 concepts curated with 1–2 `SemanticPredicate`s each.
 - **P1.6 COMPLETED**: Batch 101–120 concepts curated with 1–2 `SemanticPredicate`s each (20 concepts).
-- Next step: Curate remaining concepts from GAPS.md (190 remaining concepts).
+- **P1.7 COMPLETED**: Batch 121–152 concepts curated with 1–2 `SemanticPredicate`s each (32 concepts).
+- Next step: Curate remaining concepts from GAPS.md (160 remaining concepts).
