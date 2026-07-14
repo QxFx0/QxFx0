@@ -269,6 +269,37 @@ testCuratedPredicatesBatch153To182 = TestLabel "curated predicates batch 153-182
                                    (length (dcPredicates dc) >= 2))
         batch153To182
 
+-- | P1.9: Verify that batch 183-212 concepts are curated
+testCuratedPredicatesBatch183To212 :: Test
+testCuratedPredicatesBatch183To212 = TestLabel "curated predicates batch 183-212" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  let batch183To212 = [ "право", "праздность созерцания"
+                      , "превосходство над полезным", "предел действия"
+                      , "предел слова", "предел существования"
+                      , "пределы контроля", "преобразование материи"
+                      , "преодоление сопротивления", "преодоление эгоцентризма"
+                      , "преодоления препятствий и конкурирующих мотивов"
+                      , "привычка и рутина", "признание прав другого"
+                      , "признание ценности другого", "принуждение и авторитет"
+                      , "принятия без полного доказательства", "приоритет над желанием"
+                      , "присутствие", "присутствие без выражения"
+                      , "причина и следствие", "проверка опытом"
+                      , "прозрачность намерений", "произвол"
+                      , "пространство возможностей", "против забвения"
+                      , "процедура и результат", "прошлое для настоящего"
+                      , "прошлое с настоящим через интерпретацию"
+                      , "прыжок за горизонт", "псевдосвобода"
+                      ]
+      missing = filter (\t -> not (M.member t curated)) batch183To212
+  assertEqual "all batch 183-212 topics must be present in curated predicates"
+    [] missing
+  mapM_ (\t ->
+           case M.lookup t curated of
+             Nothing -> assertFailure ("batch 183-212 topic " ++ T.unpack t ++ " missing")
+             Just dc -> assertBool ("batch 183-212 topic " ++ T.unpack t ++ " must have >=2 predicates")
+                                   (length (dcPredicates dc) >= 2))
+        batch183To212
+
 curatedPredicatesTests :: [Test]
 curatedPredicatesTests =
   [ testCuratedPredicatesLoad
@@ -281,4 +312,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch101To150
   , testCuratedPredicatesBatch121To150
   , testCuratedPredicatesBatch153To182
+  , testCuratedPredicatesBatch183To212
   ]

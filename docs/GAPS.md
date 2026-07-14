@@ -222,12 +222,47 @@ Full list contains 100 concepts; top 100 shown.
 | 181 | поэзия | 1 | ✅ curated |
 | 182 | правда | 1 | ✅ curated |
 
+## Gap backlog (batch 183-212)
+
+| Rank | Concept | Frequency | Status |
+|---|---|---|---|
+| 183 | право | 1 | ✅ curated |
+| 184 | праздность созерцания | 1 | ✅ curated |
+| 185 | превосходство над полезным | 1 | ✅ curated |
+| 186 | предел действия | 1 | ✅ curated |
+| 187 | предел слова | 1 | ✅ curated |
+| 188 | предел существования | 1 | ✅ curated |
+| 189 | пределы контроля | 1 | ✅ curated |
+| 190 | преобразование материи | 1 | ✅ curated |
+| 191 | преодоление сопротивления | 1 | ✅ curated |
+| 192 | преодоление эгоцентризма | 1 | ✅ curated |
+| 193 | преодоления препятствий и конкурирующих мотивов | 1 | ✅ curated |
+| 194 | привычка и рутина | 1 | ✅ curated |
+| 195 | признание прав другого | 1 | ✅ curated |
+| 196 | признание ценности другого | 1 | ✅ curated |
+| 197 | принуждение и авторитет | 1 | ✅ curated |
+| 198 | принятия без полного доказательства | 1 | ✅ curated |
+| 199 | приоритет над желанием | 1 | ✅ curated |
+| 200 | присутствие | 1 | ✅ curated |
+| 201 | присутствие без выражения | 1 | ✅ curated |
+| 202 | причина и следствие | 1 | ✅ curated |
+| 203 | проверка опытом | 1 | ✅ curated |
+| 204 | прозрачность намерений | 1 | ✅ curated |
+| 205 | произвол | 1 | ✅ curated |
+| 206 | пространство возможностей | 1 | ✅ curated |
+| 207 | против забвения | 1 | ✅ curated |
+| 208 | процедура и результат | 1 | ✅ curated |
+| 209 | прошлое для настоящего | 1 | ✅ curated |
+| 210 | прошлое с настоящим через интерпретацию | 1 | ✅ curated |
+| 211 | прыжок за горизонт | 1 | ✅ curated |
+| 212 | псевдосвобода | 1 | ✅ curated |
+
 ## Summary
 
-- Covered topics: **182** (30 seed + 152 curated)
+- Covered topics: **212** (30 seed + 182 curated)
 - Concepts in relations graph: **311**
-- Uncovered (gap) concepts: **129** (was 281, reduced by 152)
-- Remaining concepts to curate: **129**
+- Uncovered (gap) concepts: **99** (was 281, reduced by 182)
+- Remaining concepts to curate: **99**
 
 ## Notes
 
@@ -238,4 +273,5 @@ Full list contains 100 concepts; top 100 shown.
 - **P1.6 COMPLETED**: Batch 101–120 concepts curated with 1–2 `SemanticPredicate`s each (20 concepts).
 - **P1.7 COMPLETED**: Batch 121–152 concepts curated with 1–2 `SemanticPredicate`s each (32 concepts).
 - **P1.8 COMPLETED**: Batch 153–182 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
-- Next step: Curate remaining concepts from GAPS.md (129 remaining concepts).
+- **P1.9 COMPLETED**: Batch 183–212 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
+- Next step: Curate remaining concepts from GAPS.md (99 remaining concepts).
