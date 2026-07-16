@@ -3825,3 +3825,23 @@
 {"topic":"стадион","predicates":[{"ru":"стадион принимает зрителей","en":"stadium hosts spectators","kind":"prop"},{"ru":"стадион оборудован для соревнований","en":"stadium is equipped for competitions","kind":"rel"}]}
 {"topic":"медаль","predicates":[{"ru":"медаль награждает победителей","en":"medal awards winners","kind":"prop"},{"ru":"медаль может быть золотой silver или бронзовой","en":"medal can be gold silver or bronze","kind":"rel"}]}
 {"topic":"кубок","predicates":[{"ru":"кубок вручается команде-победителю","en":"cup is awarded to the winning team","kind":"prop"},{"ru":"кубок символизирует победу","en":"cup symbolizes victory","kind":"rel"}]}
+{"topic":"искусство","predicates":[{"ru":"искусство выражает творчество","en":"art expresses creativity","kind":"prop"},{"ru":"искусство отражает реальность","en":"art reflects reality","kind":"rel"}]}
+{"topic":"музыка","predicates":[{"ru":"музыка передает эмоции","en":"music conveys emotions","kind":"prop"},{"ru":"музыка создается звуками","en":"music is created with sounds","kind":"rel"}]}
+{"topic":"живопись","predicates":[{"ru":"живопись изображает мир","en":"painting depicts the world","kind":"prop"},{"ru":"живопись использует краски","en":"painting uses paints","kind":"rel"}]}
+{"topic":"рисунок","predicates":[{"ru":"рисунок создается на бумаге","en":"drawing is created on paper","kind":"prop"},{"ru":"рисунок передает образ","en":"drawing conveys an image","kind":"rel"}]}
+{"topic":"скульптура","predicates":[{"ru":"скульптура создается из материала","en":"sculpture is created from material","kind":"prop"},{"ru":"скульптура имеет объем","en":"sculpture has volume","kind":"rel"}]}
+{"topic":"литература","predicates":[{"ru":"литература передает знания","en":"literature conveys knowledge","kind":"prop"},{"ru":"литература включает прозу и поэзию","en":"literature includes prose and poetry","kind":"rel"}]}
+{"topic":"поэзия","predicates":[{"ru":"поэзия использует рифму","en":"poetry uses rhyme","kind":"prop"},{"ru":"поэзия выражает чувства","en":"poetry expresses feelings","kind":"rel"}]}
+{"topic":"роман","predicates":[{"ru":"роман рассказывает историю","en":"novel tells a story","kind":"prop"},{"ru":"роман имеет персонажей","en":"novel has characters","kind":"rel"}]}
+{"topic":"стихотворение","predicates":[{"ru":"стихотворение состоит из строк","en":"poem consists of lines","kind":"prop"},{"ru":"стихотворение имеет ритм","en":"poem has rhythm","kind":"rel"}]}
+{"topic":"пьеса","predicates":[{"ru":"пьеса предназначена для театра","en":"play is intended for theater","kind":"prop"},{"ru":"пьеса состоит из актов","en":"play consists of acts","kind":"rel"}]}
+{"topic":"театр","predicates":[{"ru":"театр показывает спектакли","en":"theater shows performances","kind":"prop"},{"ru":"театр имеет сцену","en":"theater has a stage","kind":"rel"}]}
+{"topic":"актер","predicates":[{"ru":"актер играет роль","en":"actor plays a role","kind":"prop"},{"ru":"актер выражает эмоции","en":"actor expresses emotions","kind":"rel"}]}
+{"topic":"режиссер","predicates":[{"ru":"режиссер ставит спектакль","en":"director stages a performance","kind":"prop"},{"ru":"режиссер руководит актерами","en":"director manages actors","kind":"rel"}]}
+{"topic":"фильм","predicates":[{"ru":"фильм рассказывает историю","en":"film tells a story","kind":"prop"},{"ru":"фильм снимается камерой","en":"film is shot with a camera","kind":"rel"}]}
+{"topic":"кино","predicates":[{"ru":"кино показывается в кинотеатре","en":"cinema is shown in a theater","kind":"prop"},{"ru":"кино создается режиссером","en":"cinema is created by a director","kind":"rel"}]}
+{"topic":"картина","predicates":[{"ru":"картина висит на стене","en":"painting hangs on the wall","kind":"prop"},{"ru":"картина создается художником","en":"painting is created by an artist","kind":"rel"}]}
+{"topic":"художник","predicates":[{"ru":"художник создает произведения искусства","en":"artist creates works of art","kind":"prop"},{"ru":"художник использует кисти","en":"artist uses brushes","kind":"rel"}]}
+{"topic":"выставка","predicates":[{"ru":"выставка демонстрирует произведения","en":"exhibition displays works","kind":"prop"},{"ru":"выставка посещается зрителями","en":"exhibition is visited by viewers","kind":"rel"}]}
+{"topic":"музей","predicates":[{"ru":"музей хранит произведения искусства","en":"museum stores works of art","kind":"prop"},{"ru":"музей открыт для посетителей","en":"museum is open to visitors","kind":"rel"}]}
+{"topic":"культура","predicates":[{"ru":"культура объединяет традиции","en":"culture unites traditions","kind":"prop"},{"ru":"культура передается из поколения в поколение","en":"culture is passed from generation to generation","kind":"rel"}]}
