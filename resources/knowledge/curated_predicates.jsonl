@@ -6090,3 +6090,31 @@
 {"topic":"кабачок","predicates":[{"ru":"кабачок это овощное растение","en":"zucchini is a vegetable plant","kind":"prop"},{"ru":"кабачок используется в кулинарии","en":"zucchini is used in cooking","kind":"rel"}]}
 {"topic":"горох","predicates":[{"ru":"горох это бобовое растение","en":"pea is a leguminous plant","kind":"prop"},{"ru":"горох используется в кулинарии","en":"pea is used in cooking","kind":"rel"}]}
 {"topic":"фасоль","predicates":[{"ru":"фасоль это бобовое растение","en":"bean is a leguminous plant","kind":"prop"},{"ru":"фасоль используется в кулинарии","en":"bean is used in cooking","kind":"rel"}]}
+{"topic":"собака","predicates":[{"ru":"собака это домашнее животное","en":"dog is a domestic animal","kind":"prop"},{"ru":"собака является другом человека","en":"dog is a mans friend","kind":"rel"}]}
+{"topic":"кошка","predicates":[{"ru":"кошка это домашнее животное","en":"cat is a domestic animal","kind":"prop"},{"ru":"кошка ловит мышей","en":"cat catches mice","kind":"rel"}]}
+{"topic":"корова","predicates":[{"ru":"корова это сельскохозяйственное животное","en":"cow is a farm animal","kind":"prop"},{"ru":"корова дает молоко","en":"cow gives milk","kind":"rel"}]}
+{"topic":"лошадь","predicates":[{"ru":"лошадь это домашнее животное","en":"horse is a domestic animal","kind":"prop"},{"ru":"лошадь используется для верховой езды","en":"horse is used for riding","kind":"rel"}]}
+{"topic":"свинья","predicates":[{"ru":"свинья это сельскохозяйственное животное","en":"pig is a farm animal","kind":"prop"},{"ru":"свинья дает мясо","en":"pig gives meat","kind":"rel"}]}
+{"topic":"овца","predicates":[{"ru":"овца это сельскохозяйственное животное","en":"sheep is a farm animal","kind":"prop"},{"ru":"овца дает шерсть","en":"sheep gives wool","kind":"rel"}]}
+{"topic":"курица","predicates":[{"ru":"курица это домашняя птица","en":"chicken is a domestic bird","kind":"prop"},{"ru":"курица несет яйца","en":"chicken lays eggs","kind":"rel"}]}
+{"topic":"гусь","predicates":[{"ru":"гусь это домашняя птица","en":"goose is a domestic bird","kind":"prop"},{"ru":"гусь дает пух","en":"goose gives down","kind":"rel"}]}
+{"topic":"утка","predicates":[{"ru":"утка это домашняя птица","en":"duck is a domestic bird","kind":"prop"},{"ru":"утка плавает в воде","en":"duck swims in water","kind":"rel"}]}
+{"topic":"кролик","predicates":[{"ru":"кролик это домашнее животное","en":"rabbit is a domestic animal","kind":"prop"},{"ru":"кролик дает мясо и мех","en":"rabbit gives meat and fur","kind":"rel"}]}
+{"topic":"лев","predicates":[{"ru":"лев это хищное животное","en":"lion is a predatory animal","kind":"prop"},{"ru":"лев считается царем зверей","en":"lion is considered the king of beasts","kind":"rel"}]}
+{"topic":"тигр","predicates":[{"ru":"тигр это хищное животное","en":"tiger is a predatory animal","kind":"prop"},{"ru":"тигр является самым большим кошачьим","en":"tiger is the largest feline","kind":"rel"}]}
+{"topic":"медведь","predicates":[{"ru":"медведь это всеядное животное","en":"bear is an omnivorous animal","kind":"prop"},{"ru":"медведь впадает в спячку","en":"bear hibernates","kind":"rel"}]}
+{"topic":"волк","predicates":[{"ru":"волк это хищное животное","en":"wolf is a predatory animal","kind":"prop"},{"ru":"волк живет в стае","en":"wolf lives in a pack","kind":"rel"}]}
+{"topic":"лиса","predicates":[{"ru":"лиса это хищное животное","en":"fox is a predatory animal","kind":"prop"},{"ru":"лиса известна своей хитростью","en":"fox is known for its cunning","kind":"rel"}]}
+{"topic":"заяц","predicates":[{"ru":"заяц это травоядное животное","en":"hare is a herbivorous animal","kind":"prop"},{"ru":"заяц быстро бегает","en":"hare runs fast","kind":"rel"}]}
+{"topic":"белка","predicates":[{"ru":"белка это травоядное животное","en":"squirrel is a herbivorous animal","kind":"prop"},{"ru":"белка живет на деревьях","en":"squirrel lives in trees","kind":"rel"}]}
+{"topic":"еж","predicates":[{"ru":"еж это всеядное животное","en":"hedgehog is an omnivorous animal","kind":"prop"},{"ru":"еж защищается колючками","en":"hedgehog is protected by spines","kind":"rel"}]}
+{"topic":"мышь","predicates":[{"ru":"мышь это грызун","en":"mouse is a rodent","kind":"prop"},{"ru":"мышь живет в норах","en":"mouse lives in burrows","kind":"rel"}]}
+{"topic":"крыса","predicates":[{"ru":"крыса это грызун","en":"rat is a rodent","kind":"prop"},{"ru":"крыса живет в канализации","en":"rat lives in sewers","kind":"rel"}]}
+{"topic":"орел","predicates":[{"ru":"орел это хищная птица","en":"eagle is a bird of prey","kind":"prop"},{"ru":"орел имеет острое зрение","en":"eagle has sharp vision","kind":"rel"}]}
+{"topic":"сова","predicates":[{"ru":"сова это хищная птица","en":"owl is a bird of prey","kind":"prop"},{"ru":"сова охотится ночью","en":"owl hunts at night","kind":"rel"}]}
+{"topic":"ворона","predicates":[{"ru":"ворона это всеядная птица","en":"crow is an omnivorous bird","kind":"prop"},{"ru":"ворона известна своим умом","en":"crow is known for its intelligence","kind":"rel"}]}
+{"topic":"воробей","predicates":[{"ru":"воробей это небольшая птица","en":"sparrow is a small bird","kind":"prop"},{"ru":"воробей живет в городах","en":"sparrow lives in cities","kind":"rel"}]}
+{"topic":"голубь","predicates":[{"ru":"голубь это птица живущая в городах","en":"pigeon is a bird living in cities","kind":"prop"},{"ru":"голубь символ мира","en":"pigeon is a symbol of peace","kind":"rel"}]}
+{"topic":"ласточка","predicates":[{"ru":"ласточка это перелетная птица","en":"swallow is a migratory bird","kind":"prop"},{"ru":"ласточка строит гнезда","en":"swallow builds nests","kind":"rel"}]}
+{"topic":"лебедь","predicates":[{"ru":"лебедь это водоплавающая птица","en":"swan is a waterfowl","kind":"prop"},{"ru":"лебедь известен своей красотой","en":"swan is known for its beauty","kind":"rel"}]}
+{"topic":"аист","predicates":[{"ru":"аист это перелетная птица","en":"stork is a migratory bird","kind":"prop"},{"ru":"аист приносит детей","en":"stork brings children","kind":"rel"}]}
