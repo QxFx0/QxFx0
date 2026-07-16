@@ -4377,3 +4377,22 @@
 {"topic":"экзамен","predicates":[{"ru":"экзамен это проверка знаний","en":"exam is a test of knowledge","kind":"prop"},{"ru":"экзамен оценивает учеников","en":"exam evaluates students","kind":"rel"}]}
 {"topic":"оценка","predicates":[{"ru":"оценка это результат экзамена","en":"grade is the result of an exam","kind":"prop"},{"ru":"оценка бывает числовой","en":"grade can be numerical","kind":"rel"}]}
 {"topic":"диплом","predicates":[{"ru":"диплом это документ об образовании","en":"diploma is a document of education","kind":"prop"},{"ru":"диплом подтверждает квалификацию","en":"diploma confirms qualification","kind":"rel"}]}
+{"topic":"магазин","predicates":[{"ru":"магазин это место для покупок","en":"store is a place for shopping","kind":"prop"},{"ru":"магазин продает товары","en":"store sells goods","kind":"rel"}]}
+{"topic":"супермаркет","predicates":[{"ru":"супермаркет это большой магазин","en":"supermarket is a large store","kind":"prop"},{"ru":"супермаркет имеет много отделов","en":"supermarket has many departments","kind":"rel"}]}
+{"topic":"рынок","predicates":[{"ru":"рынок это место для торговли","en":"market is a place for trading","kind":"prop"},{"ru":"рынок имеет прилавки","en":"market has stalls","kind":"rel"}]}
+{"topic":"кафе","predicates":[{"ru":"кафе это место для еды","en":"cafe is a place for eating","kind":"prop"},{"ru":"кафе предлагает напитки","en":"cafe offers drinks","kind":"rel"}]}
+{"topic":"ресторан","predicates":[{"ru":"ресторан это место для обедов","en":"restaurant is a place for dinners","kind":"prop"},{"ru":"ресторан имеет меню","en":"restaurant has a menu","kind":"rel"}]}
+{"topic":"столовая","predicates":[{"ru":"столовая это место для питания","en":"canteen is a place for eating","kind":"prop"},{"ru":"столовая бывает на работе","en":"canteen can be at work","kind":"rel"}]}
+{"topic":"отель","predicates":[{"ru":"отель это место для проживания","en":"hotel is a place for living","kind":"prop"},{"ru":"отель имеет номера","en":"hotel has rooms","kind":"rel"}]}
+{"topic":"гостиница","predicates":[{"ru":"гостиница это место для временного проживания","en":"guesthouse is a place for temporary living","kind":"prop"},{"ru":"гостиница дешевле отеля","en":"guesthouse is cheaper than hotel","kind":"rel"}]}
+{"topic":"библиотека","predicates":[{"ru":"библиотека это место для чтения","en":"library is a place for reading","kind":"prop"},{"ru":"библиотека выдает книги","en":"library lends books","kind":"rel"}]}
+{"topic":"книга","predicates":[{"ru":"книга это источник знаний","en":"book is a source of knowledge","kind":"prop"},{"ru":"книга имеет страницы","en":"book has pages","kind":"rel"}]}
+{"topic":"журнал","predicates":[{"ru":"журнал это периодическое издание","en":"magazine is a periodical publication","kind":"prop"},{"ru":"журнал выходит регулярно","en":"magazine is published regularly","kind":"rel"}]}
+{"topic":"газета","predicates":[{"ru":"газета это печатное издание","en":"newspaper is a printed publication","kind":"prop"},{"ru":"газета выходит ежедневно","en":"newspaper is published daily","kind":"rel"}]}
+{"topic":"кинотеатр","predicates":[{"ru":"кинотеатр это место для просмотра фильмов","en":"cinema is a place for watching movies","kind":"prop"},{"ru":"кинотеатр имеет экран","en":"cinema has a screen","kind":"rel"}]}
+{"topic":"фильм","predicates":[{"ru":"фильм это произведение кино","en":"movie is a cinematic work","kind":"prop"},{"ru":"фильм показывают в кинотеатре","en":"movie is shown in cinema","kind":"rel"}]}
+{"topic":"актер","predicates":[{"ru":"актер это исполнитель ролей в фильмах","en":"actor is a performer of roles in movies","kind":"prop"},{"ru":"актер играет в кино","en":"actor acts in movies","kind":"rel"}]}
+{"topic":"режиссер","predicates":[{"ru":"режиссер это создатель фильмов","en":"director is a creator of movies","kind":"prop"},{"ru":"режиссер управляет съемками","en":"director manages filming","kind":"rel"}]}
+{"topic":"сцена","predicates":[{"ru":"сцена это место для działania","en":"stage is a place for action","kind":"prop"},{"ru":"сцена используется в театре","en":"stage is used in theater","kind":"rel"}]}
+{"topic":"зритель","predicates":[{"ru":"зритель это наблюдатель","en":"spectator is an observer","kind":"prop"},{"ru":"зритель смотрит спектакль","en":"spectator watches performance","kind":"rel"}]}
+{"topic":"билет","predicates":[{"ru":"билет это документ для входа","en":"ticket is a document for entry","kind":"prop"},{"ru":"билет покупается за деньги","en":"ticket is bought for money","kind":"rel"}]}
