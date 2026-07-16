@@ -4002,3 +4002,23 @@
 {"topic":"масса","predicates":[{"ru":"масса это мера инертности","en":"mass is a measure of inertia","kind":"prop"},{"ru":"масса измеряется в килограммах","en":"mass is measured in kilograms","kind":"rel"}]}
 {"topic":"время","predicates":[{"ru":"время это форма существования материи","en":"time is a form of existence of matter","kind":"prop"},{"ru":"время измеряется в секундах часах и днях","en":"time is measured in seconds hours and days","kind":"rel"}]}
 {"topic":"пространство","predicates":[{"ru":"пространство это форма существования материи","en":"space is a form of existence of matter","kind":"prop"},{"ru":"пространство характеризуется размерностью","en":"space is characterized by dimensionality","kind":"rel"}]}
+{"topic":"одежда","predicates":[{"ru":"одежда защищает тело","en":"clothing protects the body","kind":"prop"},{"ru":"одежда выражает стиль","en":"clothing expresses style","kind":"rel"}]}
+{"topic":"рубашка","predicates":[{"ru":"рубашка это верхняя одежда","en":"shirt is upper clothing","kind":"prop"},{"ru":"рубашка имеет воротник и рукава","en":"shirt has a collar and sleeves","kind":"rel"}]}
+{"topic":"брюки","predicates":[{"ru":"брюки это нижняя одежда","en":"pants are lower clothing","kind":"prop"},{"ru":"брюки бывают разного фасона","en":"pants come in different styles","kind":"rel"}]}
+{"topic":"платье","predicates":[{"ru":"платье это женская одежда","en":"dress is women's clothing","kind":"prop"},{"ru":"платье может быть длинным или коротким","en":"dress can be long or short","kind":"rel"}]}
+{"topic":"юбка","predicates":[{"ru":"юбка это часть женского гардероба","en":"skirt is part of women's wardrobe","kind":"prop"},{"ru":"юбка бывает разной длины","en":"skirt can be of different lengths","kind":"rel"}]}
+{"topic":"штаны","predicates":[{"ru":"штаны это sportswear одежда","en":"pants are sports clothing","kind":"prop"},{"ru":"штаны удобны для активности","en":"pants are comfortable for activity","kind":"rel"}]}
+{"topic":"куртка","predicates":[{"ru":"куртка это верхняя одежда","en":"jacket is outerwear","kind":"prop"},{"ru":"куртка защищает от холода","en":"jacket protects from cold","kind":"rel"}]}
+{"topic":"пальто","predicates":[{"ru":"пальто это зимняя одежда","en":"coat is winter clothing","kind":"prop"},{"ru":"пальто бывает длинным","en":"coat can be long","kind":"rel"}]}
+{"topic":"шуба","predicates":[{"ru":"шуба это теплая одежда","en":"fur coat is warm clothing","kind":"prop"},{"ru":"шуба сделана из меха","en":"fur coat is made of fur","kind":"rel"}]}
+{"topic":"обувь","predicates":[{"ru":"обувь защищает ноги","en":"shoes protect feet","kind":"prop"},{"ru":"обувь бывает разной","en":"shoes come in different types","kind":"rel"}]}
+{"topic":"ботинки","predicates":[{"ru":"ботинки это закрытая обувь","en":"boots are closed shoes","kind":"prop"},{"ru":"ботинки подходят для зимы","en":"boots are suitable for winter","kind":"rel"}]}
+{"topic":"туфли","predicates":[{"ru":"туфли это легкая обувь","en":"shoes are light footwear","kind":"prop"},{"ru":"туфли носят в теплую погоду","en":"shoes are worn in warm weather","kind":"rel"}]}
+{"topic":"кроссовки","predicates":[{"ru":"кроссовки это спортивная обувь","en":"sneakers are sports shoes","kind":"prop"},{"ru":"кроссовки удобны для бега","en":"sneakers are comfortable for running","kind":"rel"}]}
+{"topic":"шапка","predicates":[{"ru":"шапка это головной убор","en":"hat is a headwear","kind":"prop"},{"ru":"шапка защищает от холода","en":"hat protects from cold","kind":"rel"}]}
+{"topic":"шарф","predicates":[{"ru":"шарф это аксессуар","en":"scarf is an accessory","kind":"prop"},{"ru":"шарф согревает шею","en":"scarf warms the neck","kind":"rel"}]}
+{"topic":"перчатки","predicates":[{"ru":"перчатки это рукавицы","en":"gloves are hand coverings","kind":"prop"},{"ru":"перчатки защищают руки","en":"gloves protect hands","kind":"rel"}]}
+{"topic":"очки","predicates":[{"ru":"очки это оптический аксессуар","en":"glasses are optical accessories","kind":"prop"},{"ru":"очки корректируют зрение","en":"glasses correct vision","kind":"rel"}]}
+{"topic":"часы","predicates":[{"ru":"часы это устройство для измерения времени","en":"watch is a device for measuring time","kind":"prop"},{"ru":"часы бывают наручными или настенными","en":"watch can be wrist or wall","kind":"rel"}]}
+{"topic":"сумка","predicates":[{"ru":"сумка это аксессуар для переноски","en":"bag is an accessory for carrying","kind":"prop"},{"ru":"сумка бывает разного размера","en":"bag comes in different sizes","kind":"rel"}]}
+{"topic":"рюкзак","predicates":[{"ru":"рюкзак это сумка для спины","en":"backpack is a bag for the back","kind":"prop"},{"ru":"рюкзак удобен для путешествий","en":"backpack is convenient for travel","kind":"rel"}]}
