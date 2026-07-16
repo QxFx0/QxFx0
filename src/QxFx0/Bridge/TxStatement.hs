@@ -1,11 +1,13 @@
 {-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData #-}
 module QxFx0.Bridge.TxStatement
   ( TxStmt
+  , txsStmt
   , prepareTx
   , bindTextOrFail
   , bindIntOrFail
   , bindInt64OrFail
   , bindDoubleOrFail
+  , bindNullOrFail
   , stepOrFail
   , rollbackAndFail
   ) where
@@ -61,6 +63,12 @@ bindDoubleOrFail :: TxStmt -> CInt -> Double -> IO ()
 bindDoubleOrFail ts ix v =
   NSQL.bindDouble (txsStmt ts) ix v >>= either
     (\err -> rollbackAndFail ts ("bindDouble[" <> T.pack (show ix) <> "] failed: " <> err))
+    (const (pure ()))
+
+bindNullOrFail :: TxStmt -> CInt -> IO ()
+bindNullOrFail ts ix =
+  NSQL.bindNull (txsStmt ts) ix >>= either
+    (\err -> rollbackAndFail ts ("bindNull[" <> T.pack (show ix) <> "] failed: " <> err))
     (const (pure ()))
 
 stepOrFail :: TxStmt -> IO ()

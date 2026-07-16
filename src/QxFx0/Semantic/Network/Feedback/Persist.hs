@@ -79,3 +79,6 @@ persistFeedbackNetwork path previousNetwork updatedNetwork = do
         authorFromProvenance ProvenanceCorpus           = "corpus"
         authorFromProvenance ProvenanceSubstrate        = "substrate"
         authorFromProvenance ProvenanceIngested         = "ingested"
+        authorFromProvenance ProvenanceRuntimeLLM       = "runtime_llm"
+        authorFromProvenance ProvenanceHumanCorrection  = "human_correction"
+        authorFromProvenance ProvenanceDerived          = "derived"

@@ -79,6 +79,9 @@ mergeSemanticNetworksWithProvenance base update =
       ProvenanceCurated          -> True
       ProvenanceIngested         -> True
       ProvenanceSelfPlay         -> True
+      ProvenanceRuntimeLLM       -> True
+      ProvenanceHumanCorrection  -> True
+      ProvenanceDerived          -> True
       ProvenanceCorpus           -> False
       ProvenanceSubstrate        -> False
       ProvenanceDialogueFeedback -> False

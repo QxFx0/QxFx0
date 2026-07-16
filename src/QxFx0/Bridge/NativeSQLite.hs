@@ -14,9 +14,11 @@ module QxFx0.Bridge.NativeSQLite
   , bindInt
   , bindInt64
   , bindDouble
+  , bindNull
   , columnText
   , columnTextLenient
   , columnInt
+  , columnInt64
   , columnIntMaybe
   , columnDouble
   , columnDoubleMaybe
@@ -74,6 +76,9 @@ foreign import ccall unsafe "sqlite3_bind_int64"
 foreign import ccall unsafe "sqlite3_bind_double"
   c_sqlite3_bind_double :: Statement -> CInt -> CDouble -> IO CInt
 
+foreign import ccall unsafe "sqlite3_bind_null"
+  c_sqlite3_bind_null :: Statement -> CInt -> IO CInt
+
 foreign import ccall unsafe "sqlite3_column_text"
   c_sqlite3_column_text :: Statement -> CInt -> IO CString
 
@@ -82,6 +87,9 @@ foreign import ccall unsafe "sqlite3_column_int"
 
 foreign import ccall unsafe "sqlite3_column_double"
   c_sqlite3_column_double :: Statement -> CInt -> IO CDouble
+
+foreign import ccall unsafe "sqlite3_column_int64"
+  c_sqlite3_column_int64 :: Statement -> CInt -> IO Int64
 
 foreign import ccall unsafe "sqlite3_column_type"
   c_sqlite3_column_type :: Statement -> CInt -> IO CInt
@@ -207,6 +215,13 @@ bindDouble stmt idx val = do
     then return (Right ())
     else return (Left $ "bindDouble failed: " <> T.pack (show rc))
 
+bindNull :: Statement -> CInt -> IO (Either Text ())
+bindNull stmt idx = do
+  rc <- c_sqlite3_bind_null stmt idx
+  if rc == sqlOk
+    then return (Right ())
+    else return (Left $ "bindNull failed: " <> T.pack (show rc))
+
 columnText :: Statement -> CInt -> IO Text
 columnText stmt idx = do
   cStr <- c_sqlite3_column_text stmt idx
@@ -256,6 +271,10 @@ columnIntMaybe stmt idx = do
 -- Use 'columnDoubleMaybe' if you need to tell the two apart.
 columnDouble :: Statement -> CInt -> IO Double
 columnDouble stmt idx = realToFrac <$> c_sqlite3_column_double stmt idx
+
+-- | Read an Int64 column value.
+columnInt64 :: Statement -> CInt -> IO Int64
+columnInt64 stmt idx = c_sqlite3_column_int64 stmt idx
 
 -- | Read a floating-point column value, returning 'Nothing' when the column is NULL.
 columnDoubleMaybe :: Statement -> CInt -> IO (Maybe Double)

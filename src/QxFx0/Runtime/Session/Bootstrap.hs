@@ -22,11 +22,10 @@ module QxFx0.Runtime.Session.Bootstrap
   , useSelfPlay
   , useAutonomousLearning
   , readAutonomousLearningEnabled
-  , AutonomousHandles(..)
   , spawnAutonomousLearningHandles
   ) where
 
-import Control.Exception (bracket, try, IOException)
+import Control.Exception (bracket, try, IOException, SomeException, catch, throwIO)
 import Control.Monad (unless, when)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -95,6 +94,7 @@ import QxFx0.Semantic.Content.Curated
   )
 import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
 import QxFx0.Semantic.Network (contentDensityGate, mergeSemanticNetworks)
+import QxFx0.Runtime.Session.Autonomous (AutonomousHandles(..))
 import QxFx0.Learning.Autonomous
   ( AutonomousWorkerConfig(..)
   , LearningQueue
@@ -107,6 +107,9 @@ import QxFx0.Learning.Autonomous
   , readAutonomousWorkerConfig
   , spawnAutonomousWorker
   )
+import QxFx0.Learning.CircuitBreaker (PendingBreakerCloseQueue, newPendingBreakerCloseQueue)
+import QxFx0.Bridge.SQLite (QxFx0DB)
+import QxFx0.Learning.Metrics (LearningMetrics(..), emptyLearningMetrics, newLearningMetrics)
 import QxFx0.Semantic.Content.AtomStore (atomStore)
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..))
 import Control.Concurrent.STM (TQueue, atomically, newTQueue, writeTQueue)
@@ -208,14 +211,6 @@ readSelfPlayRelationsPath = do
   mEnv <- lookupEnv "QXFX0_SELFPLAY_RELATIONS_PATH"
   pure (fromMaybe "resources/knowledge/selfplay_relations.jsonl" mEnv)
 
--- | Handles returned by 'spawnAutonomousLearningHandles'.  When the
--- autonomous-learning feature is disabled, all fields are 'Nothing'.
-data AutonomousHandles = AutonomousHandles
-  { ahQueue        :: !(Maybe LearningQueue)
-  , ahUpdateQueue  :: !(Maybe (TQueue NetworkUpdateEvent))
-  , ahEnabled      :: !Bool
-  }
-
 -- | Spawn the autonomous learning infrastructure (worker thread + queues)
 -- when @QXFX0_AUTONOMOUS_LEARNING@ is enabled.  Returns 'Nothing' for
 -- all handles when disabled.  The worker processes 'LearningTask's
@@ -231,22 +226,31 @@ spawnAutonomousLearningHandles = do
   enabled <- readAutonomousLearningEnabled
   if not enabled
     then pure AutonomousHandles
-           { ahQueue       = Nothing
-           , ahUpdateQueue = Nothing
-           , ahEnabled     = False
+           { ahQueue               = Nothing
+           , ahUpdateQueue         = Nothing
+           , ahPendingBreakerQueue = Nothing
+           , ahQuarantineDB       = Nothing
+           , ahMetricsRef         = Nothing
+           , ahEnabled            = False
            }
     else do
       cfg   <- readAutonomousWorkerConfig
       queue <- newLearningQueue
       updates <- atomically newTQueue
+      breakerQueue <- newPendingBreakerCloseQueue 100
+      quarantineDB <- pure Nothing  -- Will be initialized by caller if needed
+      metricsRef <- newLearningMetrics
       store <- pure atomStore
       morph <- pure (buildAtomMorphology atomStore)
       -- Spawn the worker thread (fail-closed; logs to stderr).
       spawnAutonomousWorker cfg store morph queue updates
       pure AutonomousHandles
-           { ahQueue       = Just queue
-           , ahUpdateQueue = Just updates
-           , ahEnabled     = True
+           { ahQueue               = Just queue
+           , ahUpdateQueue         = Just updates
+           , ahPendingBreakerQueue = Just breakerQueue
+           , ahQuarantineDB       = quarantineDB
+           , ahMetricsRef         = Just metricsRef
+           , ahEnabled            = True
            }
 
 -- | Alias for 'readSelfPlayRelationsPath'.
@@ -591,6 +595,7 @@ bootstrapSession quiet sessionId = do
         (Log.addContext "violations" violations Log.emptyContext)
       throwQxFx0 (IdentityRupture ("bootstrap: " <> violations))
   hydrateRuntimeTurnState runtime restored'
+  autonomousHandles <- spawnAutonomousLearningHandles
   Log.logInfo "Session bootstrap complete"
     (Log.addContext "session_id" sessionId' $
      Log.addContext "state_origin" (T.pack $ show stateOrigin) $
@@ -604,6 +609,7 @@ bootstrapSession quiet sessionId = do
     , sessStateRevision = stateRevision
     , sessReadinessMode = readinessMode
     , sessRuntime = runtime
+    , sessAutonomousHandles = autonomousHandles
     }
 
 -- | Merge persisted morphology with resource-loaded morphology.
@@ -633,7 +639,9 @@ closeSession :: Session -> IO ()
 closeSession session = do
   Log.logInfo "Closing session"
     (Log.addContext "session_id" (sessSessionId session) Log.emptyContext)
-  releaseRuntimeContext (sessRuntime session)
+  releaseRuntimeContext (sessRuntime session) `catch` \e -> do
+    hPutStrLn stderr $ "[closeSession] releaseRuntimeContext failed: " <> show (e :: SomeException)
+    throwIO e
 
 checkSessionReadiness :: Session -> IO ReadinessMode
 checkSessionReadiness session = do

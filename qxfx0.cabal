@@ -166,6 +166,7 @@ library
     QxFx0.Runtime.Session.Bootstrap
     QxFx0.Runtime.Session.Types
     QxFx0.Runtime.Session.UI
+    QxFx0.Runtime.Session.Autonomous
     QxFx0.Core.Observability
     QxFx0.Core.EvidenceAdmissibility
      QxFx0.Core.SessionLock
@@ -257,9 +258,15 @@ library
     QxFx0.Learning.Loop
     QxFx0.Learning.Autonomous
     QxFx0.Learning.Sandbox
+    QxFx0.Learning.CircuitBreaker
+    QxFx0.Learning.Metrics
+    QxFx0.Learning.Events
+    QxFx0.Learning.Quarantine
     QxFx0.Learning.TrainingCycle
     QxFx0.Learning.CorpusExtract
     QxFx0.Learning.Tuning
+    QxFx0.Learning.SeedVerify
+    QxFx0.Learning.EdgeScore
     QxFx0.Learning.GameTheory
     QxFx0.Learning.GameTheory.LP
 
@@ -283,16 +290,20 @@ library
       QxFx0.Semantic.Network.Feedback.Detect
       QxFx0.Semantic.Network.Feedback.Collect
       QxFx0.Semantic.Network.Feedback.Persist
+      QxFx0.Semantic.Network.RuntimeProjection
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.Syntax.Combinators
     QxFx0.Semantic.Logic
+    QxFx0.Semantic.Logic.BeliefRevision
+    QxFx0.Semantic.Logic.Inference
     QxFx0.Semantic.DialogAssembly
     QxFx0.Semantic.DialogAtom
     QxFx0.Semantic.DialogMeaning
     QxFx0.Semantic.Ontology
+    QxFx0.Semantic.Ontology.Philosophy
     QxFx0.Semantic.Input.Parse
     QxFx0.Semantic.Lexicon.RuntimeParadigms
      QxFx0.Semantic.Embedding

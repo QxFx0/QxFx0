@@ -48,7 +48,7 @@ parentChildOntology = Ontology
 
 semanticEdge :: Text -> Text -> Double -> Int -> EdgeSource -> SemanticEdge
 semanticEdge f t w cooc source =
-  SemanticEdge f t w cooc source Nothing Nothing Nothing Nothing Nothing 1.0 ProvenanceCurated
+  SemanticEdge f t w cooc source Nothing Nothing Nothing Nothing Nothing 1.0 ProvenanceCurated Nothing Nothing Nothing
 
 childOnlySelector :: Ontology -> SemanticSpace -> ContentSelector
 childOnlySelector ont space =

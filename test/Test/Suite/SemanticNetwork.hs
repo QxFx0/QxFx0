@@ -251,7 +251,7 @@ semanticNetworkTests =
   where
     testEdge :: Text -> Text -> EdgeProvenance -> Double -> SemanticEdge
     testEdge from to prov conf =
-      SemanticEdge from to 0.5 1 ExplicitEdge Nothing Nothing Nothing Nothing Nothing conf prov
+      SemanticEdge from to 0.5 1 ExplicitEdge Nothing Nothing Nothing Nothing Nothing conf prov Nothing Nothing Nothing
 
     snWithEdge :: (Text, Text) -> SemanticEdge -> SemanticNetwork
     snWithEdge key edge =

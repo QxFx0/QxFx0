@@ -72,6 +72,10 @@ applyChallenge reason edge network =
         , seSynthesis    = Nothing
         , seConfidence   = 0.3
         , seProvenance   = ProvenanceDialogueFeedback
+        , seDomain       = Nothing
+        , seTemporalScope = Nothing
+        , seNamespace    = Nothing
+        , seLineage      = Nothing
         }
   in addEdge reverseKey counterEdge network'
 

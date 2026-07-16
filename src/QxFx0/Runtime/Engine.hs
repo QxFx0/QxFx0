@@ -28,6 +28,7 @@ import QxFx0.Runtime.Session
   , printStateSummary
   , runtimeToDialogueMode
   )
+import QxFx0.Runtime.Session.Autonomous (applyPendingUpdatesForSession)
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), mkRuntimeInitError, throwQxFx0)
 import qualified QxFx0.Observability.Logging as Log
 import qualified QxFx0.Observability.Metrics as Metrics
@@ -203,7 +204,10 @@ runTurnInSession session text = do
         Left err ->
           throwQxFx0 err
         Right (nextSs, response) -> do
-          let !session' = s { sessSystemState = nextSs, sessStateRevision = expectedRevision + 1, sessReadinessMode = readiness }
+          hPutStrLn stderr "[engine] Applying pending autonomous updates..."
+          nextSsWithUpdates <- applyPendingUpdatesForSession (sessAutonomousHandles s) nextSs
+          hPutStrLn stderr "[engine] Pending updates applied."
+          let !session' = s { sessSystemState = nextSsWithUpdates, sessStateRevision = expectedRevision + 1, sessReadinessMode = readiness }
           pure (session', response)
 
 loop :: Session -> IO ()

@@ -9,6 +9,7 @@ import CLI.Protocol (RuntimeOutputMode(..))
 import CLI.State (handleStateJson)
 import CLI.Turn (runTurnJson)
 import CLI.Worker (runWorkerStdio)
+import CLI.AutonomousSmoke (runAutonomousSmoke)
 
 import QxFx0.Learning.Tuning (runCorpusTuning)
 
@@ -72,6 +73,11 @@ main = do
     ("--selfplay":rest)       -> handleSelfPlay sessionId rest
     ("--discover":rest)       -> handleDiscover sessionId rest
     ("--tune-corpus":rest)    -> handleTuneCorpus sessionId rest
+    ("--autonomous-smoke":rest) -> case rest of
+      (topic:_) -> runAutonomousSmoke (T.pack topic) sessionId
+      _ -> do
+        hPutStrLn stderr "Error: --autonomous-smoke requires a topic name"
+        exitFailure
     ("ingest":rest)           -> handleIngest rest
     _                         -> do
       hPutStrLn stderr "Unsupported arguments. Use --help."
@@ -99,6 +105,7 @@ printMachineHelp = do
   T.putStrLn "  --strict-decode              fail on missing JSON fields (sets QXFX0_STRICT_DECODE=true)"
   T.putStrLn "  --selfplay [N]               run N self-play iterations (offline graph enrichment)"
   T.putStrLn "  --discover <concept>         discover relations for a concept via LLM (offline)"
+  T.putStrLn "  --autonomous-smoke <topic>    run autonomous learning smoke test with LLM"
   T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
   T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
   T.putStrLn "  --tune-corpus [session-id|all]  run corpus-driven calibration tuning"

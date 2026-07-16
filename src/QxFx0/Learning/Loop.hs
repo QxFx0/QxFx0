@@ -477,6 +477,10 @@ applyLLMResponseToSemanticNetwork need resp =
               , seSynthesis    = Nothing
               , seConfidence   = 0.6
               , seProvenance   = ProvenanceIngested
+              , seDomain       = Nothing
+              , seTemporalScope = Nothing
+              , seNamespace    = Nothing
+              , seLineage      = Nothing
               }
         in case M.lookup key acc of
              Nothing -> M.insert key edge acc

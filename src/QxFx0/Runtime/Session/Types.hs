@@ -20,6 +20,7 @@ import QxFx0.Resources (ReadinessMode)
 import QxFx0.Runtime.Wiring (RuntimeContext)
 import QxFx0.Types.Decision (DialogueOutputMode(..))
 import QxFx0.Types.State (SystemState)
+import QxFx0.Runtime.Session.Autonomous (AutonomousHandles)
 
 data RuntimeOutputMode
   = DialogueMode
@@ -57,6 +58,7 @@ data Session = Session
   , sessStateRevision :: !Int
   , sessReadinessMode :: !ReadinessMode
   , sessRuntime :: !RuntimeContext
+  , sessAutonomousHandles :: !AutonomousHandles
   }
 
 renderRuntimeOutputMode :: RuntimeOutputMode -> Text

@@ -31,10 +31,13 @@ module QxFx0.Semantic.LLMDiscovery
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.Aeson as A
+import Data.Aeson.KeyMap (KeyMap)
+import qualified Data.Aeson.KeyMap as KeyMap
 import Data.List (intercalate, isInfixOf, find)
 import Data.Maybe (fromMaybe, mapMaybe, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Vector as V
 import GHC.Generics (Generic)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS (tlsManagerSettings)
@@ -56,8 +59,8 @@ data LLMConfig = LLMConfig
 defaultLLMConfig :: Text -> LLMConfig
 defaultLLMConfig apiKey = LLMConfig
   { llmApiKey = apiKey
-  , llmUrl = "https://api.fireworks.ai/inference/v1/chat/completions"
-  , llmModel = "accounts/fireworks/models/deepseek-v4-pro"
+  , llmUrl = "https://api.cerebras.ai/v1/chat/completions"
+  , llmModel = "gemma-4-31b"
   }
 
 -- | Discover relations for a concept via LLM.
@@ -91,9 +94,43 @@ discoverFromLLM config concept = do
       case choices of
         (choice:_) -> return $ parseLLMRelations concept (mContent (cMessage choice))
         [] -> return []
-    Left err -> do
-      hPutStrLn stderr $ "[llm_discovery] JSON decode error for concept '" <> T.unpack concept <> "': " <> err
-      return []
+    Left _ -> do
+      -- Try to parse as generic JSON and extract content from choices[0].message.content
+      case A.decode body of
+        Just val -> 
+          case val of
+            A.Object obj -> do
+              let choices = KeyMap.lookup "choices" obj
+              case choices of
+                Just (A.Array arr) -> do
+                  let firstChoice = if V.null arr then Nothing else Just (V.head arr)
+                  case firstChoice of
+                    Just (A.Object choiceObj) -> do
+                      let msg = KeyMap.lookup "message" choiceObj
+                      case msg of
+                        Just (A.Object msgObj) -> do
+                          let content = KeyMap.lookup "content" msgObj
+                          case content of
+                            Just (A.String txt) -> return $ parseLLMRelations concept txt
+                            _ -> do
+                              hPutStrLn stderr $ "[llm_discovery] Could not extract content from message for concept '" <> T.unpack concept <> "'"
+                              return []
+                        Just (A.String txt) -> return $ parseLLMRelations concept txt
+                        _ -> do
+                          hPutStrLn stderr $ "[llm_discovery] Unexpected choice format for concept '" <> T.unpack concept <> "'"
+                          return []
+                    _ -> do
+                      hPutStrLn stderr $ "[llm_discovery] Unexpected choice type for concept '" <> T.unpack concept <> "'"
+                      return []
+                _ -> do
+                  hPutStrLn stderr $ "[llm_discovery] JSON decode error for concept '" <> T.unpack concept <> "': choices field missing"
+                  return []
+            _ -> do
+              hPutStrLn stderr $ "[llm_discovery] JSON decode error for concept '" <> T.unpack concept <> "': not an object"
+              return []
+        Nothing -> do
+          hPutStrLn stderr $ "[llm_discovery] JSON decode error for concept '" <> T.unpack concept <> "'"
+          return []
 
 -- | Build a structured prompt for the LLM to extract relations.
 buildDiscoveryPrompt :: Text -> Text
@@ -204,18 +241,27 @@ parseLLMRelations topic responseText =
       "notreducibleto" -> RelNotReducibleTo
       _ -> RelRelatedTo  -- safe default
 
--- | LLM API response types.
+-- | LLM API response types (compatible with OpenAI/Cerebras format).
 data LLMResponse = LLMResponse
   { lrChoices :: ![LLMChoice]
   } deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON)
+
+instance FromJSON LLMResponse where
+  parseJSON = A.withObject "LLMResponse" $ \v ->
+    LLMResponse <$> v A..: "choices"
 
 data LLMChoice = LLMChoice
   { cMessage :: !LLMMessage
   } deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON)
+
+instance FromJSON LLMChoice where
+  parseJSON = A.withObject "LLMChoice" $ \v ->
+    LLMChoice <$> v A..: "message"
 
 data LLMMessage = LLMMessage
   { mContent :: !Text
   } deriving stock (Eq, Show, Generic)
-  deriving anyclass (FromJSON)
+
+instance FromJSON LLMMessage where
+  parseJSON = A.withObject "LLMMessage" $ \v ->
+    LLMMessage <$> v A..: "content"

@@ -9,11 +9,16 @@ module QxFx0.Semantic.Network.Types
   , SemanticNetwork(..)
   , ActivationStep(..)
   , EdgeProvenance(..)
+  , DomainTag(..)
+  , EdgeNamespace(..)
+  , EdgeRef
+  , TemporalScope(..)
   , semanticEdge
   , emptySemanticNetwork
   , relationTypeWeight
   , calibrateRelationTypeWeight
   , sweepRelationTypeWeights
+  , edgeRefOf
   ) where
 
 import Control.DeepSeq (NFData)
@@ -29,6 +34,7 @@ import Data.Aeson
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
@@ -37,6 +43,51 @@ import Data.Text (Text)
 import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.AtomStore (RelationType(..))
+
+-- | Domain tag for semantic edges (philosophy ontology categories).
+data DomainTag
+  = DomainOntology
+  | DomainEthics
+  | DomainAesthetics
+  | DomainEpistemology
+  | DomainPoliticalPhilosophy
+  | DomainAnthropology
+  | DomainMethodology
+  | DomainLogic
+  | DomainSocialPhilosophy
+  | DomainPhilosophyOfMind
+  | DomainArtHistory
+  | DomainGeneral
+  deriving stock (Eq, Show, Ord, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Namespace for runtime semantic edges (used by RuntimeProjection).
+data EdgeNamespace
+  = NamespaceSessionLocal
+  | NamespaceUserLocal
+  | NamespaceGlobal
+  deriving stock (Eq, Show, Ord, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
+
+-- | Reference to an edge in the projection.
+type EdgeRef = (Text, Text, RelationType, EdgeNamespace)
+
+-- | Temporal scope for projected edges.
+data TemporalScope
+  = TemporalPoint
+  | TemporalInterval
+  | TemporalEternal
+  | AncientPeriod
+  | ClassicalPeriod
+  | MedievalPeriod
+  | RenaissancePeriod
+  | EarlyModernPeriod
+  | ModernPeriod
+  | ContemporaryPeriod
+  | TranshistoricalPeriod
+  | SpecificEra Text
+  deriving stock (Eq, Show, Ord, Generic)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Provenance of a semantic edge, distinguishing curated, corpus,
 -- substrate, and externally-ingested origins.
@@ -47,6 +98,9 @@ data EdgeProvenance
   | ProvenanceIngested
   | ProvenanceSelfPlay
   | ProvenanceDialogueFeedback
+  | ProvenanceRuntimeLLM
+  | ProvenanceHumanCorrection
+  | ProvenanceDerived
   deriving stock (Eq, Show, Ord, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -72,6 +126,10 @@ data SemanticEdge = SemanticEdge
   , seSynthesis    :: !(Maybe Text)
   , seConfidence   :: !Double
   , seProvenance   :: !EdgeProvenance
+  , seDomain       :: !(Maybe DomainTag)
+  , seTemporalScope :: !(Maybe TemporalScope)
+  , seNamespace    :: !(Maybe EdgeNamespace)
+  , seLineage      :: !(Maybe [EdgeRef])
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
@@ -89,6 +147,10 @@ instance ToJSON SemanticEdge where
     , "synthesis"      .= seSynthesis e
     , "confidence"     .= seConfidence e
     , "provenance"     .= seProvenance e
+    , "seDomain"      .= seDomain e
+    , "seTemporalScope" .= seTemporalScope e
+    , "seNamespace"   .= seNamespace e
+    , "seLineage"     .= seLineage e
     ]
 
 instance FromJSON SemanticEdge where
@@ -106,13 +168,29 @@ instance FromJSON SemanticEdge where
       <*> o .:? "synthesis"
       <*> o .:? "confidence" .!= 1.0
       <*> o .:? "provenance" .!= ProvenanceCurated
+      <*> o .:? "seDomain"
+      <*> o .:? "seTemporalScope"
+      <*> o .:? "seNamespace"
+      <*> o .:? "seLineage"
+
+-- | Build a lineage reference from a semantic edge.
+-- Identity role: constructs a reference for lineage tracking.
+-- Relation type absence defaults to 'RelRelatedTo' (legitimate unspecified kind).
+-- Namespace absence defaults to 'NamespaceSessionLocal' (conservative minimum scope).
+edgeRefOf :: SemanticEdge -> EdgeRef
+edgeRefOf e =
+  ( seFrom e
+  , seTo e
+  , fromMaybe RelRelatedTo (seRelationType e)
+  , fromMaybe NamespaceSessionLocal (seNamespace e)
+  )
 
 -- | Convenience constructor for edges that do not carry rich relation
 -- semantics. Optional fields are left empty, confidence is 1.0, and
 -- provenance is inferred from the edge source.
 semanticEdge :: Text -> Text -> Double -> Int -> EdgeSource -> SemanticEdge
 semanticEdge from to weight cooc source =
-  SemanticEdge from to weight cooc source Nothing Nothing Nothing Nothing Nothing 1.0 provenance
+  SemanticEdge from to weight cooc source Nothing Nothing Nothing Nothing Nothing 1.0 provenance Nothing Nothing Nothing Nothing
   where
     provenance = case source of
       ExplicitEdge  -> ProvenanceCorpus

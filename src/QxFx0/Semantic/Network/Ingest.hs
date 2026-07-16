@@ -335,6 +335,11 @@ objectCaseFor rt = case rt of
   RelSupports       -> CaseAccusative
   RelSets           -> CaseAccusative
   RelNotJustCopies  -> CaseSpecial
+  RelEnables        -> CaseAccusative
+  RelCauses         -> CaseAccusative
+  RelInfluences     -> CaseAccusative
+  RelPartOf         -> CaseGenitive
+  RelOpposes        -> CaseDative
 
 -- | Convert a 'LoadedRelation' into the existing 'Relation' type,
 -- resolving atom identifiers via the curated atom store.
@@ -428,6 +433,10 @@ semanticNetworkFromLoaded ont rawRels =
             , seSynthesis    = lrSynthesis lr
             , seConfidence   = lrConfidence lr
             , seProvenance   = ProvenanceIngested
+            , seDomain       = Nothing
+            , seTemporalScope = Nothing
+            , seNamespace    = Nothing
+            , seLineage      = Nothing
             }
       in case M.lookup key acc of
            Nothing -> M.insert key edge acc
@@ -479,6 +488,10 @@ buildNetworkFromAtomGraph g =
             , seSynthesis    = relSynthesis r
             , seConfidence   = w
             , seProvenance   = ProvenanceCurated
+            , seDomain       = Nothing
+            , seTemporalScope = Nothing
+            , seNamespace    = Nothing
+            , seLineage      = Nothing
             }
       in case M.lookup key acc of
            Nothing -> M.insert key edge acc
@@ -552,6 +565,10 @@ semanticNetworkFromSelfPlay rawRels =
             , seSynthesis    = lrSynthesis lr
             , seConfidence   = lrConfidence lr
             , seProvenance   = ProvenanceSelfPlay
+            , seDomain       = Nothing
+            , seTemporalScope = Nothing
+            , seNamespace    = Nothing
+            , seLineage      = Nothing
             }
       in M.insert key edge acc
 

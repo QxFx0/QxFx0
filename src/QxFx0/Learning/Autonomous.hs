@@ -44,6 +44,8 @@ module QxFx0.Learning.Autonomous
   , enqueueStarvingTopics
   , maybeEnqueueStarvingTopic
   , spawnDensityAudit
+  , CircuitBreakerState(..)
+  , isCircuitOpen
   ) where
 
 import Control.Applicative ((<|>))
@@ -127,6 +129,9 @@ data NetworkUpdateEvent = NetworkUpdateEvent
   { nueTopic     :: Text
   , nueEdges     :: [SemanticEdge]
   , nueTimestamp :: UTCTime
+  , nueRequestId :: Text
+  , nuePromptHash :: Maybe Text
+  , nueResponseHash :: Maybe Text
   }
   deriving stock (Eq, Show)
 
@@ -152,6 +157,22 @@ defaultAutonomousWorkerConfig = AutonomousWorkerConfig
   , awcQueueCap           = 100
   , awcHourResetDelaySec  = 60
   }
+
+-- | Circuit breaker state for autonomous learning.
+-- Used by the breaker watcher to determine if the learning queue should
+-- drain pending tasks or remain blocked.
+data CircuitBreakerState
+  = CircuitClosed
+  | CircuitOpen
+  | CircuitHalfOpen
+  deriving stock (Eq, Show)
+
+-- | Check if the circuit breaker is in an open state.
+-- Returns 'True' when the breaker is open (blocking new requests).
+isCircuitOpen :: CircuitBreakerState -> UTCTime -> Bool
+isCircuitOpen CircuitOpen     _ = True
+isCircuitOpen CircuitHalfOpen _ = True
+isCircuitOpen CircuitClosed   _ = False
 
 -- | Read configuration from environment variables.  Mirrors the
 -- quota semantics described in ADR-0054 §M1.
@@ -191,8 +212,9 @@ readIntWithDefault Nothing d = d
 newLearningQueue :: IO LearningQueue
 newLearningQueue = LearningQueue <$> atomically newTQueue
 
-enqueueLearningTask :: LearningQueue -> LearningTask -> IO ()
-enqueueLearningTask (LearningQueue q) t = atomically (writeTQueue q t)
+-- | Enqueue a learning task. Always succeeds since the underlying TQueue is unbounded.
+enqueueLearningTask :: LearningQueue -> LearningTask -> IO Bool
+enqueueLearningTask (LearningQueue q) t = atomically (writeTQueue q t) >> pure True
 
 -- | Non-blocking drain — returns all tasks currently in the queue.
 drainLearningQueue :: LearningQueue -> IO [LearningTask]
@@ -291,6 +313,10 @@ autonomousApplyLLMResponse store morph need resp =
               , seSynthesis    = Nothing
               , seConfidence   = 0.6
               , seProvenance   = ProvenanceIngested
+              , seDomain       = Nothing
+              , seTemporalScope = Nothing
+              , seNamespace    = Nothing
+              , seLineage      = Nothing
               }
         in case M.lookup key acc of
              Nothing -> M.insert key edge acc
@@ -449,6 +475,9 @@ processOneTask cfg store morph qsRef taskQ updateQ task = do
                 { nueTopic     = ltTopic task
                 , nueEdges     = truncated
                 , nueTimestamp = now
+                , nueRequestId = ltRequestId task
+                , nuePromptHash = Nothing
+                , nueResponseHash = Nothing
                 }
           atomically (writeTQueue updateQ evt)
 
@@ -510,7 +539,7 @@ enqueueStarvingTopics queue lemmaMap cfg network = do
           , ltRequestId = "audit:" <> t
           })
         topics
-  mapM_ (enqueueLearningTask queue) tasks
+  mapM_ (\t -> void (enqueueLearningTask queue t)) tasks
   pure (length tasks)
 
 -- | Convenience wrapper for the per-turn call site: same as

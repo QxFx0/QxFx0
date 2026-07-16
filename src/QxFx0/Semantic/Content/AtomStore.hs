@@ -143,7 +143,12 @@ data RelationType
   | RelSupports          -- поддерживает (acc)
   | RelSets              -- задаёт (acc)
   | RelNotJustCopies     -- реконструирует а не просто копирует (special)
-  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic)
+  | RelEnables           -- позволяет (acc)
+  | RelCauses            -- вызывает (acc)
+  | RelInfluences        -- влияет на (acc)
+  | RelPartOf            -- часть (gen)
+  | RelOpposes           -- противоречит (dat)
+  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic, Read)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Grammatical case of the object for verbalization.
@@ -2380,6 +2385,11 @@ verbForType rt = case rt of
   RelSupports       -> "поддерживает"
   RelSets           -> "задаёт"
   RelNotJustCopies  -> "реконструирует"
+  RelEnables        -> "позволяет"
+  RelCauses         -> "вызывает"
+  RelInfluences     -> "влияет"
+  RelPartOf         -> "часть"
+  RelOpposes        -> "противоречит"
 
 -- | Verbalize in English (for round-trip on en side).
 verbalizeRelationEn :: Relation -> Text
