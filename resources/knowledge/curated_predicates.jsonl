@@ -3845,3 +3845,23 @@
 {"topic":"выставка","predicates":[{"ru":"выставка демонстрирует произведения","en":"exhibition displays works","kind":"prop"},{"ru":"выставка посещается зрителями","en":"exhibition is visited by viewers","kind":"rel"}]}
 {"topic":"музей","predicates":[{"ru":"музей хранит произведения искусства","en":"museum stores works of art","kind":"prop"},{"ru":"музей открыт для посетителей","en":"museum is open to visitors","kind":"rel"}]}
 {"topic":"культура","predicates":[{"ru":"культура объединяет традиции","en":"culture unites traditions","kind":"prop"},{"ru":"культура передается из поколения в поколение","en":"culture is passed from generation to generation","kind":"rel"}]}
+{"topic":"общество","predicates":[{"ru":"общество состоит из людей","en":"society consists of people","kind":"prop"},{"ru":"общество развивается во времени","en":"society evolves over time","kind":"rel"}]}
+{"topic":"государство","predicates":[{"ru":"государство управляет территорией","en":"state governs territory","kind":"prop"},{"ru":"государство имеет институты","en":"state has institutions","kind":"rel"}]}
+{"topic":"закон","predicates":[{"ru":"закон регулирует поведение","en":"law regulates behavior","kind":"prop"},{"ru":"закон принимается законодателями","en":"law is adopted by legislators","kind":"rel"}]}
+{"topic":"право","predicates":[{"ru":"право защищает интересы","en":"right protects interests","kind":"prop"},{"ru":"право гарантируется государством","en":"right is guaranteed by the state","kind":"rel"}]}
+{"topic":"гражданин","predicates":[{"ru":"гражданин имеет права и обязанности","en":"citizen has rights and duties","kind":"prop"},{"ru":"гражданин живёт в обществе","en":"citizen lives in society","kind":"rel"}]}
+{"topic":"нация","predicates":[{"ru":"нация объединена культурой","en":"nation is united by culture","kind":"prop"},{"ru":"нация имеет историю","en":"nation has a history","kind":"rel"}]}
+{"topic":"народ","predicates":[{"ru":"народ создаёт культуру","en":"people create culture","kind":"prop"},{"ru":"народ говорит на одном языке","en":"people speak the same language","kind":"rel"}]}
+{"topic":"история","predicates":[{"ru":"история изучает прошлое","en":"history studies the past","kind":"prop"},{"ru":"история учит уроки","en":"history teaches lessons","kind":"rel"}]}
+{"topic":"война","predicates":[{"ru":"война приносит разрушения","en":"war brings destruction","kind":"prop"},{"ru":"война ведётся между государствами","en":"war is waged between states","kind":"rel"}]}
+{"topic":"мир","predicates":[{"ru":"мир это отсутствие войны","en":"peace is the absence of war","kind":"prop"},{"ru":"мир способствует развитию","en":"peace promotes development","kind":"rel"}]}
+{"topic":"революция","predicates":[{"ru":"революция изменяет общественный строй","en":"revolution changes the social order","kind":"prop"},{"ru":"революция происходит быстро","en":"revolution happens quickly","kind":"rel"}]}
+{"topic":"империя","predicates":[{"ru":"империя объединяет территории","en":"empire unites territories","kind":"prop"},{"ru":"империя имеет центр","en":"empire has a center","kind":"rel"}]}
+{"topic":"экономика","predicates":[{"ru":"экономика изучает производство","en":"economics studies production","kind":"prop"},{"ru":"экономика влияет на жизнь людей","en":"economics affects people's lives","kind":"rel"}]}
+{"topic":"рынок","predicates":[{"ru":"рынок регулирует цены","en":"market regulates prices","kind":"prop"},{"ru":"рынок существует для обмена","en":"market exists for exchange","kind":"rel"}]}
+{"topic":"деньги","predicates":[{"ru":"деньги служат средством обмена","en":"money serves as a means of exchange","kind":"prop"},{"ru":"деньги имеют ценность","en":"money has value","kind":"rel"}]}
+{"topic":"труд","predicates":[{"ru":"труд создаёт блага","en":"labor creates goods","kind":"prop"},{"ru":"труд оплачивается зарплатой","en":"labor is paid with salary","kind":"rel"}]}
+{"topic":"работа","predicates":[{"ru":"работа занимает время","en":"work takes time","kind":"prop"},{"ru":"работа приносит доход","en":"work brings income","kind":"rel"}]}
+{"topic":"класс","predicates":[{"ru":"класс делит общество","en":"class divides society","kind":"prop"},{"ru":"класс имеет интересы","en":"class has interests","kind":"rel"}]}
+{"topic":"власть","predicates":[{"ru":"власть принимает решения","en":"power makes decisions","kind":"prop"},{"ru":"власть контролирует ресурсы","en":"power controls resources","kind":"rel"}]}
+{"topic":"олигархия","predicates":[{"ru":"олигархия это правление меньшинства","en":"oligarchy is rule by minority","kind":"prop"},{"ru":"олигархия концентрирует власть","en":"oligarchy concentrates power","kind":"rel"}]}
