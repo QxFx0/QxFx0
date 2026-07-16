@@ -4022,3 +4022,23 @@
 {"topic":"часы","predicates":[{"ru":"часы это устройство для измерения времени","en":"watch is a device for measuring time","kind":"prop"},{"ru":"часы бывают наручными или настенными","en":"watch can be wrist or wall","kind":"rel"}]}
 {"topic":"сумка","predicates":[{"ru":"сумка это аксессуар для переноски","en":"bag is an accessory for carrying","kind":"prop"},{"ru":"сумка бывает разного размера","en":"bag comes in different sizes","kind":"rel"}]}
 {"topic":"рюкзак","predicates":[{"ru":"рюкзак это сумка для спины","en":"backpack is a bag for the back","kind":"prop"},{"ru":"рюкзак удобен для путешествий","en":"backpack is convenient for travel","kind":"rel"}]}
+{"topic":"еда","predicates":[{"ru":"еда это то что мы едим","en":"food is what we eat","kind":"prop"},{"ru":"еда дает энергию","en":"food provides energy","kind":"rel"}]}
+{"topic":"пища","predicates":[{"ru":"пища это синоним еды","en":"food is synonymous with nourishment","kind":"prop"},{"ru":"пища необходима для жизни","en":"nourishment is essential for life","kind":"rel"}]}
+{"topic":"хлеб","predicates":[{"ru":"хлеб это основной продукт","en":"bread is a staple food","kind":"prop"},{"ru":"хлеб пекут из муки","en":"bread is baked from flour","kind":"rel"}]}
+{"topic":"вода","predicates":[{"ru":"вода это жидкость для питья","en":"water is a drinkable liquid","kind":"prop"},{"ru":"вода необходима для жизни","en":"water is essential for life","kind":"rel"}]}
+{"topic":"молоко","predicates":[{"ru":"молоко это жидкость от животных","en":"milk is a liquid from animals","kind":"prop"},{"ru":"молоко богато кальцием","en":"milk is rich in calcium","kind":"rel"}]}
+{"topic":"мясо","predicates":[{"ru":"мясо это животный белок","en":"meat is animal protein","kind":"prop"},{"ru":"мясо бывает разных видов","en":"meat comes in different types","kind":"rel"}]}
+{"topic":"рыба","predicates":[{"ru":"рыба это водный продукт","en":"fish is an aquatic food","kind":"prop"},{"ru":"рыба богата омега-3","en":"fish is rich in omega-3","kind":"rel"}]}
+{"topic":"яйцо","predicates":[{"ru":"яйцо это источник белка","en":"egg is a source of protein","kind":"prop"},{"ru":"яйцо бывает куриное или перепелиное","en":"egg can be chicken or quail","kind":"rel"}]}
+{"topic":"овощи","predicates":[{"ru":"овощи это растительная пища","en":"vegetables are plant-based food","kind":"prop"},{"ru":"овощи полезны для здоровья","en":"vegetables are good for health","kind":"rel"}]}
+{"topic":"фрукты","predicates":[{"ru":"фрукты это сладкая пища","en":"fruits are sweet food","kind":"prop"},{"ru":"фрукты богаты витаминами","en":"fruits are rich in vitamins","kind":"rel"}]}
+{"topic":"суп","predicates":[{"ru":"суп это жидкое блюдо","en":"soup is a liquid dish","kind":"prop"},{"ru":"суп бывает горячим или холодным","en":"soup can be hot or cold","kind":"rel"}]}
+{"topic":"каша","predicates":[{"ru":"каша это крупа с водой или молоком","en":"porridge is grain with water or milk","kind":"prop"},{"ru":"каша полезна на завтрак","en":"porridge is good for breakfast","kind":"rel"}]}
+{"topic":"салат","predicates":[{"ru":"салат это смесь овощей","en":"salad is a mix of vegetables","kind":"prop"},{"ru":"салат бывает с заправкой","en":"salad can have dressing","kind":"rel"}]}
+{"topic":"десерт","predicates":[{"ru":"десерт это сладкое блюдо","en":"dessert is a sweet dish","kind":"prop"},{"ru":"десерт подают после основного блюда","en":"dessert is served after the main course","kind":"rel"}]}
+{"topic":"торт","predicates":[{"ru":"торт это сладкий десерт","en":"cake is a sweet dessert","kind":"prop"},{"ru":"торт бывает многослойным","en":"cake can have multiple layers","kind":"rel"}]}
+{"topic":"мороженое","predicates":[{"ru":"мороженое это холодный десерт","en":"ice cream is a cold dessert","kind":"prop"},{"ru":"мороженое делают из молока","en":"ice cream is made from milk","kind":"rel"}]}
+{"topic":"шоколад","predicates":[{"ru":"шоколад это сладкий продукт","en":"chocolate is a sweet product","kind":"prop"},{"ru":"шоколад делают из какао","en":"chocolate is made from cocoa","kind":"rel"}]}
+{"topic":"кофе","predicates":[{"ru":"кофе это напиток из зерен","en":"coffee is a drink from beans","kind":"prop"},{"ru":"кофе бодрит","en":"coffee is invigorating","kind":"rel"}]}
+{"topic":"чай","predicates":[{"ru":"чай это напиток из листьев","en":"tea is a drink from leaves","kind":"prop"},{"ru":"чай бывает черный или зеленый","en":"tea can be black or green","kind":"rel"}]}
+{"topic":"соль","predicates":[{"ru":"соль это минерал для еды","en":"salt is a mineral for food","kind":"prop"},{"ru":"соль придает вкус","en":"salt adds flavor","kind":"rel"}]}
