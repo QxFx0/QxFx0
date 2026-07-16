@@ -4238,3 +4238,24 @@
 {"topic":"аккорд","predicates":[{"ru":"аккорд это несколько нот вместе","en":"chord is several notes together","kind":"prop"},{"ru":"аккорд создает гармонию","en":"chord creates harmony","kind":"rel"}]}
 {"topic":"гамма","predicates":[{"ru":"гамма это последовательность нот","en":"scale is a sequence of notes","kind":"prop"},{"ru":"гамма бывает мажорной или минорной","en":"scale can be major or minor","kind":"rel"}]}
 {"topic":"темп","predicates":[{"ru":"темп это скорость музыки","en":"tempo is the speed of music","kind":"prop"},{"ru":"темп бывает быстрым или медленным","en":"tempo can be fast or slow","kind":"rel"}]}
+{"topic":"год","predicates":[{"ru":"год это период в 12 месяцев","en":"year is a period of 12 months","kind":"prop"},{"ru":"год состоит из сезонов","en":"year consists of seasons","kind":"rel"}]}
+{"topic":"месяц","predicates":[{"ru":"месяц это период в 30 дней","en":"month is a period of 30 days","kind":"prop"},{"ru":"месяц входит в год","en":"month is part of a year","kind":"rel"}]}
+{"topic":"неделя","predicates":[{"ru":"неделя это период в 7 дней","en":"week is a period of 7 days","kind":"prop"},{"ru":"неделя состоит из дней","en":"week consists of days","kind":"rel"}]}
+{"topic":"день","predicates":[{"ru":"день это период в 24 часа","en":"day is a period of 24 hours","kind":"prop"},{"ru":"день состоит из часов","en":"day consists of hours","kind":"rel"}]}
+{"topic":"час","predicates":[{"ru":"час это период в 60 минут","en":"hour is a period of 60 minutes","kind":"prop"},{"ru":"час состоит из минут","en":"hour consists of minutes","kind":"rel"}]}
+{"topic":"минута","predicates":[{"ru":"минута это период в 60 секунд","en":"minute is a period of 60 seconds","kind":"prop"},{"ru":"минута состоит из секунд","en":"minute consists of seconds","kind":"rel"}]}
+{"topic":"секунда","predicates":[{"ru":"секунда это основная единица времени","en":"second is the basic unit of time","kind":"prop"},{"ru":"секунда измеряет короткие промежутки","en":"second measures short intervals","kind":"rel"}]}
+{"topic":"утро","predicates":[{"ru":"утро это время после ночи","en":"morning is the time after night","kind":"prop"},{"ru":"утро начинается с рассветом","en":"morning begins with sunrise","kind":"rel"}]}
+{"topic":"день","predicates":[{"ru":"день это время суток","en":"day is the time of day","kind":"prop"},{"ru":"день бывает солнечным или пасмурным","en":"day can be sunny or cloudy","kind":"rel"}]}
+{"topic":"вечер","predicates":[{"ru":"вечер это время перед ночью","en":"evening is the time before night","kind":"prop"},{"ru":"вечер начинается с закатом","en":"evening begins with sunset","kind":"rel"}]}
+{"topic":"ночь","predicates":[{"ru":"ночь это время суток","en":"night is the time of day","kind":"prop"},{"ru":"ночь бывает темной","en":"night can be dark","kind":"rel"}]}
+{"topic":"рассвет","predicates":[{"ru":"рассвет это начало дня","en":"dawn is the beginning of the day","kind":"prop"},{"ru":"рассвет бывает красивым","en":"dawn can be beautiful","kind":"rel"}]}
+{"topic":"закат","predicates":[{"ru":"закат это конец дня","en":"sunset is the end of the day","kind":"prop"},{"ru":"закат бывает красным","en":"sunset can be red","kind":"rel"}]}
+{"topic":"календарь","predicates":[{"ru":"календарь это система измерения времени","en":"calendar is a time measurement system","kind":"prop"},{"ru":"календарь показывает даты","en":"calendar shows dates","kind":"rel"}]}
+{"topic":"дата","predicates":[{"ru":"дата это конкретный день","en":"date is a specific day","kind":"prop"},{"ru":"дата состоит из числа месяца и года","en":"date consists of day month and year","kind":"rel"}]}
+{"topic":"вчера","predicates":[{"ru":"вчера это прошедший день","en":"yesterday is the past day","kind":"prop"},{"ru":"вчера было перед сегодня","en":"yesterday was before today","kind":"rel"}]}
+{"topic":"сегодня","predicates":[{"ru":"сегодня это текущий день","en":"today is the current day","kind":"prop"},{"ru":"сегодня находится между вчера и завтра","en":"today is between yesterday and tomorrow","kind":"rel"}]}
+{"topic":"завтра","predicates":[{"ru":"завтра это будущий день","en":"tomorrow is the future day","kind":"prop"},{"ru":"завтра будет после сегодня","en":"tomorrow will be after today","kind":"rel"}]}
+{"topic":"прошлое","predicates":[{"ru":"прошлое это то что уже было","en":"past is what has already happened","kind":"prop"},{"ru":"прошлое влияет на настоящее","en":"past affects the present","kind":"rel"}]}
+{"topic":"настоящее","predicates":[{"ru":"настоящее это то что происходит сейчас","en":"present is what is happening now","kind":"prop"},{"ru":"настоящее находится между прошлым и будущим","en":"present is between past and future","kind":"rel"}]}
+{"topic":"будущее","predicates":[{"ru":"будущее это то что будет","en":"future is what will happen","kind":"prop"},{"ru":"будущее зависит от настоящего","en":"future depends on the present","kind":"rel"}]}
