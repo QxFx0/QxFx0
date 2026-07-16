@@ -4318,3 +4318,23 @@
 {"topic":"муж","predicates":[{"ru":"муж это супруг","en":"husband is a spouse","kind":"prop"},{"ru":"муж заботится о семье","en":"husband takes care of family","kind":"rel"}]}
 {"topic":"жена","predicates":[{"ru":"жена это супруга","en":"wife is a spouse","kind":"prop"},{"ru":"жена заботится о семье","en":"wife takes care of family","kind":"rel"}]}
 {"topic":"род","predicates":[{"ru":"род это поколение семьи","en":"generation is a family generation","kind":"prop"},{"ru":"род передает традиции","en":"generation passes traditions","kind":"rel"}]}
+{"topic":"дом","predicates":[{"ru":"дом это место для проживания","en":"house is a place for living","kind":"prop"},{"ru":"дом защищает от погоды","en":"house protects from weather","kind":"rel"}]}
+{"topic":"квартира","predicates":[{"ru":"квартира это часть дома","en":"apartment is part of a house","kind":"prop"},{"ru":"квартира имеет комнаты","en":"apartment has rooms","kind":"rel"}]}
+{"topic":"комната","predicates":[{"ru":"комната это помещение в доме","en":"room is a space in a house","kind":"prop"},{"ru":"комната имеет стены","en":"room has walls","kind":"rel"}]}
+{"topic":"кухня","predicates":[{"ru":"кухня это место для приготовления еды","en":"kitchen is a place for cooking","kind":"prop"},{"ru":"кухня имеет плиту и раковину","en":"kitchen has a stove and sink","kind":"rel"}]}
+{"topic":"спальня","predicates":[{"ru":"спальня это комната для сна","en":"bedroom is a room for sleeping","kind":"prop"},{"ru":"спальня имеет кровать","en":"bedroom has a bed","kind":"rel"}]}
+{"topic":"гостиная","predicates":[{"ru":"гостиная это комната для отдыха","en":"living room is a room for relaxation","kind":"prop"},{"ru":"гостиная имеет диван","en":"living room has a sofa","kind":"rel"}]}
+{"topic":"ванная","predicates":[{"ru":"ванная это комната для гигиены","en":"bathroom is a room for hygiene","kind":"prop"},{"ru":"ванная имеет ванну или душ","en":"bathroom has a bath or shower","kind":"rel"}]}
+{"topic":"туалет","predicates":[{"ru":"туалет это место для естественных нужд","en":"toilet is a place for natural needs","kind":"prop"},{"ru":"туалет имеет унитаз","en":"toilet has a toilet bowl","kind":"rel"}]}
+{"topic":"կорридор","predicates":[{"ru":"коридор это соединение между комнатами","en":"corridor is a connection between rooms","kind":"prop"},{"ru":"коридор имеет двери","en":"corridor has doors","kind":"rel"}]}
+{"topic":"лестница","predicates":[{"ru":"лестница это соединитель между этажами","en":"stairs is a connector between floors","kind":"prop"},{"ru":"лестница имеет ступеньки","en":"stairs has steps","kind":"rel"}]}
+{"topic":"окно","predicates":[{"ru":"окно это отверстие в стене","en":"window is an opening in the wall","kind":"prop"},{"ru":"окно пропускает свет","en":"window lets light in","kind":"rel"}]}
+{"topic":"дверь","predicates":[{"ru":"дверь это вход в помещение","en":"door is an entrance to a room","kind":"prop"},{"ru":"дверь открывается и закрывается","en":"door opens and closes","kind":"rel"}]}
+{"topic":"потолок","predicates":[{"ru":"потолок это верхняя часть комнаты","en":"ceiling is the upper part of a room","kind":"prop"},{"ru":"потолок имеет лампу","en":"ceiling has a lamp","kind":"rel"}]}
+{"topic":"пол","predicates":[{"ru":"пол это нижняя часть комнаты","en":"floor is the lower part of a room","kind":"prop"},{"ru":"пол имеет покрытие","en":"floor has covering","kind":"rel"}]}
+{"topic":"стена","predicates":[{"ru":"стена это вертикальная поверхность","en":"wall is a vertical surface","kind":"prop"},{"ru":"стена отделяет комнаты","en":"wall separates rooms","kind":"rel"}]}
+{"topic":"кровля","predicates":[{"ru":"кровля это верхнее покрытие дома","en":"roof is the upper covering of a house","kind":"prop"},{"ru":"кровля защищает от дождя","en":"roof protects from rain","kind":"rel"}]}
+{"topic":"фундамент","predicates":[{"ru":"фундамент это основа дома","en":"foundation is the base of a house","kind":"prop"},{"ru":"фундамент обеспечивает устойчивость","en":"foundation provides stability","kind":"rel"}]}
+{"topic":"мебель","predicates":[{"ru":"мебель это предметы для обстановки","en":"furniture are items for decoration","kind":"prop"},{"ru":"мебель бывает разной","en":"furniture comes in different types","kind":"rel"}]}
+{"topic":"кровать","predicates":[{"ru":"кровать это место для сна","en":"bed is a place for sleeping","kind":"prop"},{"ru":"кровать имеет матрас","en":"bed has a mattress","kind":"rel"}]}
+{"topic":"стол","predicates":[{"ru":"стол это поверхность для работы или еды","en":"table is a surface for work or eating","kind":"prop"},{"ru":"стол имеет ножки","en":"table has legs","kind":"rel"}]}
