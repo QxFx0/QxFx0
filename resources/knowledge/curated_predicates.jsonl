@@ -4298,3 +4298,23 @@
 {"topic":"неудовлетворение","predicates":[{"ru":"неудовлетворение это отрицательное чувство","en":"dissatisfaction is a negative feeling","kind":"prop"},{"ru":"неудовлетворение вызывает жалобы","en":"dissatisfaction causes complaints","kind":"rel"}]}
 {"topic":"восторг","predicates":[{"ru":"восторг это сильная положительная эмоция","en":"delight is a strong positive emotion","kind":"prop"},{"ru":"восторг выражается восклицаниями","en":"delight is expressed with exclamations","kind":"rel"}]}
 {"topic":"разочарование","predicates":[{"ru":"разочарование это отрицательная эмоция","en":"disappointment is a negative emotion","kind":"prop"},{"ru":"разочарование вызывает грусть","en":"disappointment causes sadness","kind":"rel"}]}
+{"topic":"семья","predicates":[{"ru":"семья это группа родственников","en":"family is a group of relatives","kind":"prop"},{"ru":"семья проживает вместе","en":"family lives together","kind":"rel"}]}
+{"topic":"родитель","predicates":[{"ru":"родитель это отец или мать","en":"parent is father or mother","kind":"prop"},{"ru":"родитель заботится о ребенке","en":"parent takes care of child","kind":"rel"}]}
+{"topic":"отец","predicates":[{"ru":"отец это мужской родитель","en":"father is a male parent","kind":"prop"},{"ru":"отец воспитывает ребенка","en":"father raises child","kind":"rel"}]}
+{"topic":"мать","predicates":[{"ru":"мать это женский родитель","en":"mother is a female parent","kind":"prop"},{"ru":"мать рожает ребенка","en":"mother gives birth to child","kind":"rel"}]}
+{"topic":"ребенок","predicates":[{"ru":"ребенок это молодой человек","en":"child is a young person","kind":"prop"},{"ru":"ребенок учится и растет","en":"child learns and grows","kind":"rel"}]}
+{"topic":"сын","predicates":[{"ru":"сын это мужской ребенок","en":"son is a male child","kind":"prop"},{"ru":"сын является наследником","en":"son is a heir","kind":"rel"}]}
+{"topic":"дочь","predicates":[{"ru":"дочь это женский ребенок","en":"daughter is a female child","kind":"prop"},{"ru":"дочь является наследницей","en":"daughter is a heiress","kind":"rel"}]}
+{"topic":"брат","predicates":[{"ru":"брат это мужской родственник","en":"brother is a male relative","kind":"prop"},{"ru":"брат имеет общих родителей","en":"brother has common parents","kind":"rel"}]}
+{"topic":"сестра","predicates":[{"ru":"сестра это женский родственник","en":"sister is a female relative","kind":"prop"},{"ru":"сестра имеет общих родителей","en":"sister has common parents","kind":"rel"}]}
+{"topic":"дедушка","predicates":[{"ru":"дедушка это отец родителя","en":"grandfather is father of parent","kind":"prop"},{"ru":"дедушка заботится о внуках","en":"grandfather takes care of grandchildren","kind":"rel"}]}
+{"topic":"бабушка","predicates":[{"ru":"бабушка это мать родителя","en":"grandmother is mother of parent","kind":"prop"},{"ru":"бабушка заботится о внуках","en":"grandmother takes care of grandchildren","kind":"rel"}]}
+{"topic":"внук","predicates":[{"ru":"внук это ребенок ребенка","en":"grandson is child of child","kind":"prop"},{"ru":"внук является наследником","en":"grandson is a heir","kind":"rel"}]}
+{"topic":"внучка","predicates":[{"ru":"внучка это ребенок ребенка","en":"granddaughter is child of child","kind":"prop"},{"ru":"внучка является наследницей","en":"granddaughter is a heiress","kind":"rel"}]}
+{"topic":"дядя","predicates":[{"ru":"дядя это брат родителя","en":"uncle is brother of parent","kind":"prop"},{"ru":"дядя помогает семье","en":"uncle helps family","kind":"rel"}]}
+{"topic":"тетя","predicates":[{"ru":"тетя это сестра родителя","en":"aunt is sister of parent","kind":"prop"},{"ru":"тетя помогает семье","en":"aunt helps family","kind":"rel"}]}
+{"topic":"племянник","predicates":[{"ru":"племянник это ребенок брата или сестры","en":"nephew is child of brother or sister","kind":"prop"},{"ru":"племянник является родственником","en":"nephew is a relative","kind":"rel"}]}
+{"topic":"племянница","predicates":[{"ru":"племянница это ребенок брата или сестры","en":"niece is child of brother or sister","kind":"prop"},{"ru":"племянница является родственницей","en":"niece is a relative","kind":"rel"}]}
+{"topic":"муж","predicates":[{"ru":"муж это супруг","en":"husband is a spouse","kind":"prop"},{"ru":"муж заботится о семье","en":"husband takes care of family","kind":"rel"}]}
+{"topic":"жена","predicates":[{"ru":"жена это супруга","en":"wife is a spouse","kind":"prop"},{"ru":"жена заботится о семье","en":"wife takes care of family","kind":"rel"}]}
+{"topic":"род","predicates":[{"ru":"род это поколение семьи","en":"generation is a family generation","kind":"prop"},{"ru":"род передает традиции","en":"generation passes traditions","kind":"rel"}]}
