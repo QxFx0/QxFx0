@@ -49,6 +49,8 @@ data InputPartOfSpeech
   | PosPreposition
   | PosConjunction
   | PosParticle
+  | PosParticiple
+  | PosGerund
   | PosInterjection
   | PosUnknown
   deriving stock (Eq, Ord, Show, Read, Enum, Bounded, Generic)

@@ -208,6 +208,8 @@ mapInputPos Pron = PosPronoun
 mapInputPos Prep = PosPreposition
 mapInputPos Conj = PosConjunction
 mapInputPos Part = PosParticle
+mapInputPos Participle = PosParticiple
+mapInputPos Gerund = PosGerund
 mapInputPos Num = PosNumeral
 mapInputPos UnknownPOS = PosUnknown
 

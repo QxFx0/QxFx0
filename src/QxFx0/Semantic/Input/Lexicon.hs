@@ -88,6 +88,8 @@ semanticClassesForLemmaAndPos token lemma pos =
              PosVerb -> [SemAction]
              PosAdjective -> [SemState, SemQualityProperty]
              PosAdverb -> [SemState]
+             PosParticiple -> [SemState, SemQualityProperty]
+             PosGerund -> [SemAction]
              PosNoun
                | isAbstractNounLike lemma -> [SemAbstractConcept]
                | isPhysicalNounLike lemma -> [SemPhysicalObject, SemWorldObject]
