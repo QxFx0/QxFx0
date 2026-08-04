@@ -335,6 +335,8 @@ library
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
+      QxFx0.Semantic.ContentSelector.Cache
+      QxFx0.Semantic.ContentSelector.Optimized
       QxFx0.Semantic.Syntax.Combinators
     QxFx0.Semantic.Logic
     QxFx0.Semantic.Logic.BeliefRevision
@@ -344,6 +346,7 @@ library
     QxFx0.Semantic.DialogMeaning
     QxFx0.Semantic.Ontology
     QxFx0.Semantic.Ontology.Philosophy
+    QxFx0.Semantic.Ontology.Dynamic
     QxFx0.Semantic.Input.Parse
     QxFx0.Semantic.Lexicon.RuntimeParadigms
      QxFx0.Semantic.Embedding
