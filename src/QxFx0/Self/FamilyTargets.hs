@@ -26,18 +26,15 @@ module QxFx0.Self.FamilyTargets
   ( FamilyTarget (..)
   , familyTargets
   , familyTargetFor
+  , familyTargetForWith
   , mkTargetField
   , fieldDistance
   , fmarDistanceThreshold
   , closestFamilyByField
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.List (foldl')
-import GHC.Generics (Generic)
 
-import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
 import QxFx0.Self.AdaptivePosition (AdaptivePosition (..), SpectralEncoding (..))
 import QxFx0.Self.Field
   ( Atmosphere (..)
@@ -53,21 +50,10 @@ import QxFx0.Self.Field
   , mkResonance
   )
 import QxFx0.Types.Domain.R5 (CanonicalMoveFamily (..))
+import QxFx0.Types.Self.FamilyTargets
 
 -- | A move family together with the Field state characteristic of it and
 -- the Conatus/counterfactual admissibility bounds used during selection.
-data FamilyTarget = FamilyTarget
-  { ftFamily            :: !CanonicalMoveFamily
-  , ftTargetField       :: !Field
-    -- ^ The equilibrium Field for this family.
-  , ftMinConatus        :: !Double
-    -- ^ Minimum @ceScalar@ for this family to be permitted.
-  , ftMaxCounterfactual :: !Double
-    -- ^ Maximum current counterfactual tolerated before this family is
-    -- excluded as a fallback target.
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | Build a target Field from raw component values, routing each through
 -- its smart constructor so the result is always in range.
 mkTargetField :: Double -> Double -> Double -> Double -> Double -> Double -> Field
@@ -115,17 +101,10 @@ builtinFamilyTargets =
       (mkTargetField 0.60 0.30 0.45 0.80 0.70 0.20) 2.5 0.5
   ]
 
--- | The 14 per-family target Fields, loaded from
--- 'resources/config/family_targets.json' if present, otherwise
--- falling back to 'builtinFamilyTargets'.
---
--- The NOINLINE pragma is required to prevent GHC from inlining
--- the 'unsafePerformIO' call and potentially evaluating it
--- multiple times.
+-- | Pure builtin per-family target Fields. Runtime configuration is loaded
+-- explicitly by session bootstrap and injected into 'SelfState'.
 familyTargets :: [FamilyTarget]
-familyTargets =
-  loadConfigOrBuiltin "resources/config/family_targets.json" builtinFamilyTargets
-{-# NOINLINE familyTargets #-}
+familyTargets = builtinFamilyTargets
 
 -- | Look up the 'FamilyTarget' for a family. Total over all 14 families,
 -- since 'familyTargets' covers every 'CanonicalMoveFamily' constructor.
@@ -133,8 +112,12 @@ familyTargets =
 -- a bare 'head' to satisfy the partial-function architecture rule: it
 -- returns a neutral CMContact target.
 familyTargetFor :: CanonicalMoveFamily -> FamilyTarget
-familyTargetFor fam =
-  case filter ((== fam) . ftFamily) familyTargets of
+familyTargetFor = familyTargetForWith familyTargets
+
+-- | Look up a target in an explicitly supplied runtime configuration.
+familyTargetForWith :: [FamilyTarget] -> CanonicalMoveFamily -> FamilyTarget
+familyTargetForWith targets fam =
+  case filter ((== fam) . ftFamily) targets of
     (t : _) -> t
     []      -> neutralContactTarget
 

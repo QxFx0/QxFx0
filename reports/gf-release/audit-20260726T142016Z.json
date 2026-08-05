@@ -1,0 +1,51 @@
+{
+  "run_id": "20260726T142016Z",
+  "binary": "/home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main",
+  "prompt_count": 30,
+  "warm_p95_limit_ms": 10000.0,
+  "persistent_bootstrap": {
+    "wall_ms": 10539.192883999931,
+    "bootstrap_ms": "10534",
+    "pgf_preload_ms": "53",
+    "session_id": "gf-surface-20260726T142016Z",
+    "state_origin": "FreshOrigin",
+    "turn_count": "0"
+  },
+  "surface_summary": {
+    "turns": 30,
+    "canonical_rate": 1.0,
+    "fallback_histogram": {
+      "none": 30
+    },
+    "recovery_rate": 0.0,
+    "quality_issue_count": 0,
+    "semantic_substitution_count": 0,
+    "warm_wall_median_ms": 6610.154459000114,
+    "warm_wall_p95_ms": 7563.701214001412,
+    "phases": {
+      "prepare": {
+        "median_ms": 7.0,
+        "p95_ms": 42.0
+      },
+      "plan": {
+        "median_ms": 41.0,
+        "p95_ms": 42.0
+      },
+      "render": {
+        "median_ms": 3885.0,
+        "p95_ms": 5547.0
+      },
+      "finalize": {
+        "median_ms": 1131.0,
+        "p95_ms": 2091.0
+      },
+      "total": {
+        "median_ms": 5476.5,
+        "p95_ms": 6600.0
+      }
+    }
+  },
+  "surface_artifact": "/home/liskil/my-haskell-project/QxFx0/reports/gf-release/surfaces-20260726T142016Z.jsonl",
+  "golden_mismatches": [],
+  "passed": true
+}

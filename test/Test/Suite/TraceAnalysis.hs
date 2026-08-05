@@ -32,7 +32,7 @@ import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), emptySemanticNetwork)
+import QxFx0.Semantic.Network.Types (ActivationArtifact(..))
 
 traceAnalysisTests :: [Test]
 traceAnalysisTests =
@@ -213,6 +213,11 @@ minimalTrace = TurnReplayTrace
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+          , trcSelectorDiagnostics = []
+          , trcResponsePlan = Nothing
   }
 
 testRecoveryNoTrigger :: Test
@@ -289,6 +294,11 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
         { trcActivatedConcepts = ["свобода", "выбор"]
         , trcMissingPredicates = ["выбор"]
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+          , trcSelectorDiagnostics = []
+          , trcResponsePlan = Nothing
         }
   let decoded = decode (encode trace)
   assertEqual "Activated concepts round-trip" (Just ["свобода", "выбор"]) (trcActivatedConcepts <$> decoded)
@@ -312,13 +322,12 @@ testTraceBackwardCompatibility = TestCase $ do
 -- | P0.2: concepts whose activation exceeds the 0.05 threshold are reported.
 testActivatedConcepts :: Test
 testActivatedConcepts = TestCase $ do
-  let net = emptySemanticNetwork { snActivation = Map.fromList [("свобода", 0.1), ("выбор", 0.04)] }
-  assertEqual "Activated concepts above threshold" ["свобода"] (activatedConcepts (Just net))
+  let artifact = ActivationArtifact [] (Map.fromList [("свобода", 0.1), ("выбор", 0.04)]) Seq.empty []
+  assertEqual "Activated concepts above threshold" ["свобода"] (activatedConcepts (Just artifact))
 
 -- | P0.2: only activated concepts absent from the definition corpus are flagged
 -- as missing predicates.
 testMissingPredicateConcepts :: Test
 testMissingPredicateConcepts = TestCase $ do
-  let net = emptySemanticNetwork { snActivation = Map.fromList [("выбор", 0.1), ("ответственность", 0.1)] }
-  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts definitionCorpus (Just net))
-
+  let artifact = ActivationArtifact [] (Map.fromList [("выбор", 0.1), ("ответственность", 0.1)]) Seq.empty []
+  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts definitionCorpus (Just artifact))

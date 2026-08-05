@@ -4,6 +4,8 @@ Description : observer — Shared turn-pipeline phase types for input/signals/pl
 module QxFx0.Core.TurnPipeline.Types
   ( TurnInput(..)
   , TurnSignals(..)
+  , DetectedAnomaly(..)
+  , AnomalyStateEffect(..)
   , TurnPlan(..)
   , TurnArtifacts(..)
   , TurnResult(..)
@@ -38,7 +40,11 @@ import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Deliberation (Deliberation)
 import QxFx0.Self.Field (Field, FieldHeuristics)
 import QxFx0.Self.Salience (SelfVerdict)
-import QxFx0.Self.Essence (Essence)
+import QxFx0.Self.Essence
+  ( Essence
+  , EssenceResetEvent
+  , EssenceTrajectory
+  )
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
 -- import QxFx0.Semantic.Sense (SenseVector)
@@ -49,9 +55,11 @@ import QxFx0.Core.ResponseContentAdmission (ResponseContentAdmissionDecision)
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
 import QxFx0.Memory.Episodic (EpisodicEvent)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement)
-import QxFx0.Semantic.Network.Types (SemanticNetwork)
+import QxFx0.Semantic.Network.Types (ActivationArtifact)
+import QxFx0.Semantic.ContentSelector.Types (SelectorDiagnostic)
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan)
 import QxFx0.Semantic.Intent.GeometricClassifier (ClassificationResult)
-import QxFx0.Types.Anomaly (AnomalySurface, AnomalyTrace)
+import QxFx0.Types.Anomaly (Anomaly, AnomalySurface, AnomalyTrace)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
@@ -155,11 +163,6 @@ data TurnInput = TurnInput
     --   re-asking established facts or repeating recent decisions.
     --   Empty list when 'episodicRecallActive' is False or no relevant
     --   episodes exist.  Living consumer of 'QxFx0.Memory.Episodic.retrieve'.
-  , tiActivatedNetwork :: !(Maybe SemanticNetwork)
-    -- ^ Phase 1: semantic network after spreading activation, populated
-    --   when 'contentDensityGate' passes.  Enables content selection
-    --   to use activated atoms for predicate filtering.  Nothing when
-    --   gate fails or network is empty.
   , tiGeoResult :: !(Maybe ClassificationResult)
     -- ^ Phase 2: geometric classifier result for A/B validation.
     --   Populated in Prepare stage, consumed in Finalize for metrics.
@@ -174,6 +177,17 @@ data TurnSignals = TurnSignals
   , tsIntuitionState :: !IntuitiveState
   , tsApiHealthy :: !Bool
   }
+
+-- | Pure route-stage anomaly result, including any state transition that
+-- finalize must apply. The transition carries its computed result so finalize
+-- does not repeat anomaly handling.
+data DetectedAnomaly = DetectedAnomaly
+  { daAnomaly :: !Anomaly
+  , daStateEffect :: !(Maybe AnomalyStateEffect)
+  }
+
+data AnomalyStateEffect
+  = ResetEssence !EssenceTrajectory !EssenceResetEvent
 
 {-| Route-phase plan: cascade snapshot plus shadow/legitimacy/render derivations. -}
 data TurnPlan = TurnPlan
@@ -224,6 +238,10 @@ data TurnPlan = TurnPlan
   , tpAnomalyTrace :: !(Maybe AnomalyTrace)
     -- ^ Anomaly detection: trace information for observability when anomaly detected.
     --   Populated alongside tpAnomalySurface. Nothing on normal path.
+  , tpAnomalyStateEffect :: !(Maybe AnomalyStateEffect)
+    -- ^ State transition computed by anomaly detection and applied once in
+    --   finalize. In particular, Essence collapse carries the reset trajectory
+    --   rather than asking finalize to recompute it.
   , tpSemanticFirstDisabled :: !Bool
     -- ^ B2 Control-A ablation: when True, render pipeline skips semantic-first
     --   path and uses assembly/template fallback only. Set from env var
@@ -309,7 +327,13 @@ data TurnArtifacts = TurnArtifacts
   , taEmittedPredicates :: ![Text]
     -- ^ P2.2: predicate surface forms (spRu) emitted by the rendered
     --   artifact this turn.  Used for cross-turn coherence.
-  }
+  , taSelectorDiagnostics :: ![SelectorDiagnostic]
+    -- ^ Actual selector decision path for the rendered semantic artifact.
+   , taActivationArtifact :: !(Maybe ActivationArtifact)
+     -- ^ Single activation value consumed by selection, trace, and feedback.
+   , taResponsePlan :: !(Maybe ResponseSemanticPlan)
+     -- ^ Grounded content plan used by a content-producing surface.
+   }
 
 data RenderedTurn = RenderedTurn !TurnInput !TurnSignals !TurnPlan !TurnArtifacts
 

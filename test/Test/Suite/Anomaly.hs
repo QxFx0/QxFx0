@@ -1,27 +1,69 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Test.Suite.Anomaly (anomalyTests) where
+module Test.Suite.Anomaly
+  ( anomalyTests
+  , anomalyProductionBoundaryTests
+  ) where
 
 import Test.HUnit
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Sequence as Seq
+import qualified Data.Vector as V
+import Data.IORef (atomicModifyIORef', newIORef, readIORef)
 
+import QxFx0.Core.PipelineIO
+  ( TestPipelineConfig(..)
+  , defaultTestPipelineConfig
+  , mkTestPipelineIO
+  , pipelineParseAuthoritySurface
+  , pipelineUpdateHistory
+  )
+import QxFx0.Core.TurnPipeline.Finalize.State (computeNextEssence)
+import QxFx0.Core.TurnPipeline.Protocol
+  ( FinalizePrecommitBundle(..)
+  , AnomalyStateEffect(..)
+  , PreparedTurn(..)
+  , PlannedTurn(..)
+  , RenderedTurn(..)
+  , TurnArtifacts
+  , TurnInput(..)
+  , TurnPlan(..)
+  , TurnSignals
+  , TurnEffectRequest(..)
+  , buildFinalizePrecommit
+  , planFinalizePrecommit
+  , planTurn
+  , renderTurn
+  , resolveFinalizePrecommit
+  )
 import QxFx0.Core.TurnPipeline.Route.Anomaly
 import QxFx0.Core.TurnPipeline.Route.Render (renderAnomalySurface)
+import QxFx0.Learning.Need (LearningNeedState(..), emptyLearningNeedState)
+import QxFx0.Learning.Signal (CalibrationDecision(..), CalibrationSnapshot(..))
 import QxFx0.Types.Anomaly
+import QxFx0.Types.Domain.Atoms (AtomSet(..), AtomTag(..), MeaningAtom(..), Register(..))
 import QxFx0.Types.State.Stance
 import QxFx0.Types.State.System
+import QxFx0.Runtime.StateDefaults (emptySelfState, emptySystemState)
 import QxFx0.Types.State.SemanticCommitment
 import QxFx0.Types.Collection.BoundedSet
-import QxFx0.Self.Essence (EssenceTrajectory(..), EssenceWitness(..), FieldSignature(..), FieldBand(..), ValenceBand(..), EssenceResetEvent(..), emptyTrajectory, collapseEssence)
+import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), EssenceMode(..), EssenceTrajectory(..), EssenceWitness(..), FieldSignature(..), FieldBand(..), ValenceBand(..), TrajectoryHash(..), CommitmentTrigger(..), EssenceResetEvent(..), emptyTrajectory, collapseEssence)
 import QxFx0.Types (InputPropositionFrame(..), emptyInputPropositionFrame)
-import QxFx0.Types.State.SelfState (SelfState(..), emptySelfState)
-import QxFx0.Self.Salience (SalienceDriver(..))
+import QxFx0.Types.State.SelfState (SelfState(..))
+import QxFx0.Self.Salience (SalienceDriver(..), adaptSalienceWeights)
 import QxFx0.Self.Deliberation (ReconcileRule(..), Agreement(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Semantic.ContentSelector.Types (emptyContentSelector)
-import QxFx0.Self.Field (emptyField)
+import QxFx0.Self.Field (Counterfactual(..), Field(..), adaptFieldHeuristics, emptyField)
+import Test.Support.TurnPipelineFixtures
+  ( buildRenderedFixtureWithState
+  , buildPreparedFixtureWithState
+  , testProtocolInterpreter
+  , testProtocolPipelineIO
+  , withDeterministicEmbedding
+  )
 import qualified Data.Text as T
 
 anomalyTests :: Test
@@ -32,11 +74,25 @@ anomalyTests = TestList
   , "BoundedSet: FIFO eviction" ~: testBoundedSetFIFO
   , "SelfReferentialCollapse: trigger conditions" ~: testSelfReferentialCollapseTrigger
   , "SelfReferentialCollapse: collapseEssence" ~: testCollapseEssence
+  , "SelfReferentialCollapse: production plan/finalize path" ~: testSelfReferentialCollapseProductionPath
   , "AntiConatusChoice: trigger conditions" ~: testAntiConatusChoiceTrigger
   , "Anomaly rendering: Unclassifiable" ~: testRenderUnclassifiable
   , "Anomaly rendering: AntiConatus" ~: testRenderAntiConatus
   , "Anomaly rendering: SelfReferential" ~: testRenderSelfReferential
   , "Anomaly rendering: Temporal" ~: testRenderTemporal
+  , "Finalize: computed SelfState survives without collapse" ~: testFinalizePreservesComputedSelfState
+  , "Finalize: stance challenge and recovery persist" ~: testFinalizePersistsStanceTransitions
+  , "Finalize: collapse preserves new adaptive SelfState" ~: testFinalizeCollapsePreservesAdaptiveSelfState
+  ]
+
+-- | Representative production chains promoted into the integration manifest.
+-- The remaining tests above retain focused coverage of the underlying laws.
+anomalyProductionBoundaryTests :: [Test]
+anomalyProductionBoundaryTests =
+  [ "SelfReferentialCollapse: production plan/finalize path" ~: testSelfReferentialCollapseProductionPath
+  , "Finalize: computed SelfState survives without collapse" ~: testFinalizePreservesComputedSelfState
+  , "Finalize: stance challenge and recovery persist" ~: testFinalizePersistsStanceTransitions
+  , "Finalize: collapse preserves new adaptive SelfState" ~: testFinalizeCollapsePreservesAdaptiveSelfState
   ]
 
 testStanceConfidence :: Assertion
@@ -119,6 +175,49 @@ testCollapseEssence = do
   assertEqual "previous angst should be 0.95" 0.95 (erePreviousAngst resetEvent)
   assertEqual "previous witness count should be 2" 2 (erePreviousWitnessCount resetEvent)
   assertEqual "reset turn should be 0" 0 (ereTurn resetEvent)
+
+testSelfReferentialCollapseProductionPath :: Assertion
+testSelfReferentialCollapseProductionPath =
+  withDeterministicEmbedding $ do
+    routeCounts <- newIORef (0 :: Int, 0 :: Int)
+    let traj = emptyTrajectory
+          { etAngstLevel = 0.95
+          , etConatusFloor = 4.0
+          }
+        selfState = emptySelfState { selfEssence = EssenceUncommitted traj }
+        ss0 = emptySystemState
+          { ssSessionId = "self-ref-production"
+          , ssSelfState = selfState
+          }
+        routePio = mkTestPipelineIO defaultTestPipelineConfig
+          { tpcInterpreter = \request -> do
+              case request of
+                TurnReqShadow _ _ _ -> atomicModifyIORef' routeCounts (\(shadow, agda) -> ((shadow + 1, agda), ()))
+                TurnReqAgdaVerify -> atomicModifyIORef' routeCounts (\(shadow, agda) -> ((shadow, agda + 1), ()))
+                _ -> pure ()
+              testProtocolInterpreter request
+          }
+    (_ss, ti, ts) <- buildPreparedFixtureWithState ss0 "кто ты"
+    let selfFrame = (tiFrame ti) { ipfSemanticSubject = "ты" }
+        prepared = PreparedTurn (ti { tiFrame = selfFrame }) ts
+    planned@(PlannedTurn plannedTi plannedTs tp) <- planTurn routePio ss0 prepared
+    counts <- readIORef routeCounts
+    assertEqual "production planTurn must resolve shadow and Agda exactly once" (1, 1) counts
+    assertBool "self-referential anomaly must reach TurnPlan"
+      (case tpAnomalySurface tp of Just SurfaceSelfReferential{} -> True; _ -> False)
+    case tpAnomalyStateEffect tp of
+      Just (ResetEssence resetTrajectory resetEvent) -> do
+        assertEqual "planned reset must clear angst" 0.0 (etAngstLevel resetTrajectory)
+        assertEqual "planned reset must restore the conatus floor" 1.0 (etConatusFloor resetTrajectory)
+        assertEqual "reset event must retain previous angst" 0.95 (erePreviousAngst resetEvent)
+      Nothing -> assertFailure "self-referential anomaly must carry a typed reset effect"
+    RenderedTurn _ _ _ artifacts <- renderTurn routePio ss0 planned
+    bundle <- finalizeFixture ss0 plannedTi plannedTs tp artifacts
+    case selfEssence (ssSelfState (fpbNextSs bundle)) of
+      EssenceUncommitted resetTrajectory -> do
+        assertEqual "finalize must apply the planned reset trajectory" 0.0 (etAngstLevel resetTrajectory)
+        assertEqual "finalize must not witness over the planned reset" 1.0 (etConatusFloor resetTrajectory)
+      EssenceCommitted{} -> assertFailure "collapse turn must remain EssenceUncommitted"
 
 -- Helper: create test witness
 testWitness :: Int -> EssenceWitness
@@ -221,3 +320,173 @@ testRenderTemporal = do
     (T.isInfixOf "пересматриваю свою позицию" rendered)
   assertBool "should contain 'противоречит тому, что я говорю сейчас'"
     (T.isInfixOf "противоречит тому, что я говорю сейчас" rendered)
+
+testFinalizePreservesComputedSelfState :: Assertion
+testFinalizePreservesComputedSelfState =
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp0, ta) <- buildRenderedFixtureWithState calibrationReadyState "что такое свобода"
+    let ti = ti0 { tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 } }
+        tp = tp0 { tpCommitmentEngagement = emptyCommitmentEngagement }
+        (expectedEssence, _) = computeNextEssence ss ti tp
+        oldSelf = ssSelfState ss
+    bundle <- finalizeFixture ss ti ts tp ta
+    let nextSs = fpbNextSs bundle
+        nextSelf = ssSelfState nextSs
+    assertEqual "finalize must persist this turn's witnessed Essence"
+      expectedEssence (selfEssence nextSelf)
+    case ssCalibrationSnapshots nextSs of
+      snapshot : _ -> do
+        assertEqual "fixture must exercise adaptive calibration" CdApplySignal (csDecision snapshot)
+        assertEqual "adapted salience weights must survive commitment finalization"
+          (adaptSalienceWeights (csSignal snapshot) (selfSalienceWeights oldSelf))
+          (selfSalienceWeights nextSelf)
+        assertEqual "adapted Field heuristics must survive commitment finalization"
+          (adaptFieldHeuristics (csSignal snapshot) (selfFieldHeuristics oldSelf))
+          (selfFieldHeuristics nextSelf)
+      [] -> assertFailure "finalize must record a calibration snapshot"
+
+testFinalizePersistsStanceTransitions :: Assertion
+testFinalizePersistsStanceTransitions =
+  withDeterministicEmbedding $ do
+    let topic = "challenged-topic"
+        cid = CommitmentId 1
+        challenged = emptyStanceDefense
+          { sdStance = StanceHeld 0.8
+          , sdRecoveryCounter = 4
+          }
+        unchallenged = emptyStanceDefense
+          { sdStance = StanceDoubted 0.4
+          , sdRecoveryCounter = 4
+          }
+        startState = withCommitment cid topic calibrationReadyState
+          { ssStanceDefenses = Map.fromList
+              [ (topic, challenged)
+              , ("unchallenged-topic", unchallenged)
+              ]
+          }
+    (ss, ti0, ts, tp0, ta) <- buildRenderedFixtureWithState startState "a b c d e"
+    let ti = ti0
+          { tiBestTopic = topic
+          , tiAtomSet = strongChallengeAtoms
+          , tiConatusEnergy = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+          }
+        tp = tp0
+          { tpCommitmentEngagement = CommitmentEngagement [cid] True ContradictedStrong }
+    bundle <- finalizeFixture ss ti ts tp ta
+    let defenses = ssStanceDefenses (fpbNextSs bundle)
+    case Map.lookup topic defenses of
+      Nothing -> assertFailure "challenged stance defense must remain present"
+      Just actual -> do
+        case sdStance actual of
+          StanceDoubted confidence ->
+            assertBool "strong challenge must persist Held -> Doubted"
+              (abs (confidence - 0.64) < 1e-12)
+          other -> assertFailure ("expected challenged stance to be Doubted, got " ++ show other)
+        assertEqual "challenged topic must reset recovery counter" 0 (sdRecoveryCounter actual)
+        assertEqual "challenged topic must persist attack count" 1 (sdAttackCount actual)
+        assertEqual "challenged topic must persist observed evidence"
+          (Set.fromList ["a", "b", "c", "d", "e"])
+          (sdEvidenceSeen actual)
+    case Map.lookup "unchallenged-topic" defenses of
+      Nothing -> assertFailure "unchallenged stance defense must remain present"
+      Just actual -> do
+        case sdStance actual of
+          StanceHeld confidence ->
+            assertBool "unchallenged topic reaching its window must recover"
+              (abs (confidence - 0.44) < 1e-12)
+          other -> assertFailure ("expected unchallenged stance to recover to Held, got " ++ show other)
+        assertEqual "unchallenged topic must increment recovery counter" 5 (sdRecoveryCounter actual)
+
+testFinalizeCollapsePreservesAdaptiveSelfState :: Assertion
+testFinalizeCollapsePreservesAdaptiveSelfState =
+  withDeterministicEmbedding $ do
+    let topic = "collapse-topic"
+        cid = CommitmentId 1
+        collapsingDefense = emptyStanceDefense
+          { sdStance = StanceDoubted 0.4
+          , sdRecoveryCounter = 4
+          }
+        startState = withCommitment cid topic calibrationReadyState
+          { ssStanceDefenses = Map.singleton topic collapsingDefense }
+    (ss, ti0, ts, tp0, ta) <- buildRenderedFixtureWithState startState "a b c d e"
+    let ti = ti0
+          { tiBestTopic = topic
+          , tiAtomSet = strongChallengeAtoms
+          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75)
+          , tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 }
+          }
+        tp = tp0
+          { tpCommitmentEngagement = CommitmentEngagement [cid] True ContradictedStrong }
+        oldSelf = ssSelfState ss
+    bundle <- finalizeFixture ss ti ts tp ta
+    let nextSs = fpbNextSs bundle
+        nextSelf = ssSelfState nextSs
+    case selfEssence nextSelf of
+      EssenceCommitted _ _ -> assertFailure "collapse must reset committed Essence"
+      EssenceUncommitted trajectory -> do
+        assertEqual "collapse must clear the newly computed trajectory" Seq.empty (etWitnesses trajectory)
+        assertEqual "collapse must reset angst" 0.0 (etAngstLevel trajectory)
+        assertEqual "collapse must reset conatus floor" 1.0 (etConatusFloor trajectory)
+    case ssCalibrationSnapshots nextSs of
+      snapshot : _ -> do
+        assertEqual "collapse fixture must exercise adaptive calibration" CdApplySignal (csDecision snapshot)
+        assertEqual "collapse must not roll back adapted salience weights"
+          (adaptSalienceWeights (csSignal snapshot) (selfSalienceWeights oldSelf))
+          (selfSalienceWeights nextSelf)
+        assertEqual "collapse must not roll back adapted Field heuristics"
+          (adaptFieldHeuristics (csSignal snapshot) (selfFieldHeuristics oldSelf))
+          (selfFieldHeuristics nextSelf)
+      [] -> assertFailure "finalize must record a calibration snapshot"
+    case Map.lookup topic (ssStanceDefenses nextSs) of
+      Nothing -> assertFailure "collapsing stance defense must remain present"
+      Just actual -> assertEqual "a collapsing challenge must reset, not increment, recovery"
+        0 (sdRecoveryCounter actual)
+
+finalizeFixture
+  :: SystemState
+  -> TurnInput
+  -> TurnSignals
+  -> TurnPlan
+  -> TurnArtifacts
+  -> IO FinalizePrecommitBundle
+finalizeFixture ss ti ts tp ta = do
+  let plan = planFinalizePrecommit ss ti ts tp ta
+  results <- resolveFinalizePrecommit testProtocolPipelineIO plan
+  buildFinalizePrecommit
+    (pipelineUpdateHistory testProtocolPipelineIO)
+    (pipelineParseAuthoritySurface testProtocolPipelineIO)
+    ss ti ts tp ta plan results
+
+calibrationReadyState :: SystemState
+calibrationReadyState = emptySystemState
+  { ssSelfState = emptySelfState { selfEssence = committedTestEssence }
+  , ssLearningNeedState = emptyLearningNeedState
+      { lnsHistory = [(3, 1.0), (2, 0.5), (1, 0.0)] }
+  }
+
+committedTestEssence :: Essence
+committedTestEssence = EssenceCommitted
+  (emptyTrajectory { etWitnesses = Seq.singleton (testWitness 0), etAngstLevel = 0.4 })
+  EssenceCommitment
+    { ecMode = EssenceIntegrative
+    , ecTrigger = TriggerAngstThreshold
+    , ecCommittedAt = 0
+    , ecWitnessHash = TrajectoryHash "finalize-regression"
+    }
+
+withCommitment :: CommitmentId -> T.Text -> SystemState -> SystemState
+withCommitment cid topic ss = ss
+  { ssSemanticCommitments = Just emptySemanticCommitmentStore
+      { scsActive = HashMap.singleton cid
+          (FactualClaimPayload topic 0.9 OriginManual (TurnSeq 0) [] topic, TurnSeq 0)
+      , scsNextId = 2
+      }
+  }
+
+strongChallengeAtoms :: AtomSet
+strongChallengeAtoms = AtomSet
+  [ MeaningAtom atom (NeedMeaning atom) V.empty
+  | atom <- ["a", "b", "c", "d", "e"]
+  ]
+  1.0
+  Neutral

@@ -27,7 +27,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Types.Persistence (PersistenceStage)
+import QxFx0.Types.Persistence (PersistenceStage, StateVersion(..))
 
 -- | Structured error details for persistence failures
 data PersistenceErrorDetails = PersistenceErrorDetails
@@ -84,7 +84,7 @@ data QxFx0Exception
   = PersistenceError Text
   | PersistenceErrorStructured !PersistenceErrorDetails
   | PersistenceTxError !PersistenceStage !Text
-  | PersistenceConflict !Text !Int !Int !Int
+  | PersistenceConflict !Text !StateVersion !StateVersion
   | SQLiteError Text
   | SQLiteErrorStructured !SQLiteErrorDetails
   | RuntimeInitError Text
@@ -137,7 +137,7 @@ toErrorCode ex =
     PersistenceError _ -> T.pack "PERSISTENCE_ERROR"
     PersistenceErrorStructured details -> pedErrorCode details
     PersistenceTxError _ _ -> T.pack "PERSISTENCE_TX_ERROR"
-    PersistenceConflict _ _ _ _ -> T.pack "PERSISTENCE_CONFLICT"
+    PersistenceConflict _ _ _ -> T.pack "PERSISTENCE_CONFLICT"
     SQLiteError _ -> T.pack "SQLITE_ERROR"
     SQLiteErrorStructured details -> sedErrorCode details
     RuntimeInitError _ -> T.pack "RUNTIME_INIT_ERROR"
@@ -204,11 +204,12 @@ renderQxFx0ExceptionForLog ex =
       <> T.pack ", code=" <> pedErrorCode details
       <> T.pack ", context=<redacted>"
     PersistenceTxError stage _ -> T.pack "category=PersistenceTxError, stage=" <> T.pack (show stage) <> T.pack ", detail=<redacted>"
-    PersistenceConflict sid expected actual priorTurn ->
+    PersistenceConflict sid expected actual ->
       T.pack "category=PersistenceConflict, session=" <> sid
-      <> T.pack ", expected_revision=" <> T.pack (show expected)
-      <> T.pack ", actual_revision=" <> T.pack (show actual)
-      <> T.pack ", expected_prior_turn=" <> T.pack (show priorTurn)
+      <> T.pack ", expected_revision=" <> T.pack (show (stateRevision expected))
+      <> T.pack ", actual_revision=" <> T.pack (show (stateRevision actual))
+      <> T.pack ", expected_turn=" <> T.pack (show (stateTurn expected))
+      <> T.pack ", actual_turn=" <> T.pack (show (stateTurn actual))
     SQLiteError _ -> T.pack "category=SQLiteError, detail=<redacted>"
     SQLiteErrorStructured details ->
       T.pack "category=SQLiteError, operation=" <> sedOperation details

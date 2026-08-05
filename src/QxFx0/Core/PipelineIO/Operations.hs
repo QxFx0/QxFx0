@@ -58,9 +58,9 @@ import QxFx0.Types.ShadowDivergence
   , ShadowSnapshotId(..)
   , emptyShadowDivergence
   )
-import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..))
+import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(..), StateVersion)
 import QxFx0.Types.TurnProjection (TurnProjection)
-import QxFx0.Runtime.Mode (RuntimeMode(..))
+import QxFx0.Types.RuntimeMode (RuntimeMode(..))
 
 import Data.Sequence (Seq)
 import Data.Text (Text)
@@ -143,9 +143,9 @@ verifyPipelineAgda pio = do
     TurnResAgdaVerify agdaStatus -> pure agdaStatus
     _ -> pure AgdaInvalid
 
-savePipelineState :: PipelineIO -> SystemState -> Text -> Int -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
-savePipelineState pio ss sid expectedRevision mProj = do
-  result <- resolveTurnEffect pio (TurnReqSaveState ss sid expectedRevision mProj)
+savePipelineState :: PipelineIO -> SystemState -> Text -> StateVersion -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
+savePipelineState pio ss sid expectedVersion mProj = do
+  result <- resolveTurnEffect pio (TurnReqSaveState ss sid expectedVersion mProj)
   case result of
     TurnResSaveState saved -> pure saved
     _ -> pure (Left (PdSaveFailed StageUnknown (Just "savePipelineState") (Just "unexpected_save_state_effect_result")))

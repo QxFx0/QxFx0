@@ -18,17 +18,22 @@ import QxFx0.Runtime.Gate
   )
 import QxFx0.Runtime.Mode (resolveRuntimeMode, isStrictRuntimeMode)
 import QxFx0.Types.Thresholds (maxInputLength)
-import QxFx0.Runtime.Wiring (RuntimeContext, withRuntimeDb, withRuntimeSession, toPipelineIO)
-import qualified QxFx0.Bridge.StatePersistence as StatePersistence
+import QxFx0.Runtime.Wiring (RuntimeContext, withRuntimeSession, toPipelineIO)
+import QxFx0.Types.Persistence (StateVersion(..), corruptStateRepairVersion)
 import QxFx0.Runtime.Session
   ( Session(..)
   , RuntimeOutputMode(..)
+  , StateOrigin(..)
   , checkSessionReadiness
   , printHelp
   , printStateSummary
   , runtimeToDialogueMode
   )
-import QxFx0.Runtime.Session.Autonomous (applyPendingUpdatesForSession)
+import QxFx0.Runtime.Session.Autonomous
+  ( beginSemanticNetworkTurn
+  , commitSemanticNetworkTurn
+  , enqueueAutonomousLearningForTopic
+  )
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), mkRuntimeInitError, throwQxFx0)
 import qualified QxFx0.Observability.Logging as Log
 import qualified QxFx0.Observability.Metrics as Metrics
@@ -38,22 +43,22 @@ import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import Control.Exception (IOException, try)
+import Control.Exception (AsyncException, IOException, SomeException, fromException, throwIO, try)
+import Control.Monad (when)
 import System.IO (hPutStrLn, stderr, hIsEOF, stdin)
 import System.Exit (exitSuccess)
 import Data.Time.Clock (getCurrentTime, diffUTCTime)
 import Data.IORef (newIORef)
 
-runTurn :: RuntimeContext -> SystemState -> Text -> Text -> IO (SystemState, Text)
-runTurn ctx ss input sessionId = do
+runTurn :: RuntimeContext -> SystemState -> StateVersion -> Text -> Text -> IO (SystemState, Text)
+runTurn ctx ss expectedVersion input sessionId = do
   Log.logDebug "Starting turn execution"
     (Log.addContext "session_id" sessionId $
      Log.addContext "input_length" (T.pack $ show $ T.length input) Log.emptyContext)
-  expectedRevision <- StatePersistence.loadStateRevision (withRuntimeDb ctx) sessionId
-  runTurnWithRevision ctx ss input sessionId expectedRevision
+  runTurnWithVersion ctx ss input sessionId expectedVersion
 
-runTurnWithRevision :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
-runTurnWithRevision ctx ss input sessionId expectedRevision
+runTurnWithVersion :: RuntimeContext -> SystemState -> Text -> Text -> StateVersion -> IO (SystemState, Text)
+runTurnWithVersion ctx ss input sessionId expectedVersion
   | T.length input > maxInputLength = do
       Log.logWarn "Input exceeds maximum length"
         (Log.addContext "input_length" (T.pack $ show $ T.length input) $
@@ -61,7 +66,7 @@ runTurnWithRevision ctx ss input sessionId expectedRevision
       return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
   | otherwise = withRuntimeSession ctx sessionId $ do
       startTime <- getCurrentTime
-      turnResult <- try (runTurnBody ctx ss input sessionId expectedRevision) :: IO (Either QxFx0Exception (SystemState, Text))
+      turnResult <- try (runTurnBody ctx ss input sessionId expectedVersion) :: IO (Either QxFx0Exception (SystemState, Text))
       endTime <- getCurrentTime
       let duration = diffUTCTime endTime startTime
       
@@ -97,8 +102,8 @@ runTurnWithRevision ctx ss input sessionId expectedRevision
           Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
           pure result
 
-runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> Int -> IO (SystemState, Text)
-runTurnBody ctx ss input sessionId expectedRevision = do
+runTurnBody :: RuntimeContext -> SystemState -> Text -> Text -> StateVersion -> IO (SystemState, Text)
+runTurnBody ctx ss input sessionId expectedVersion = do
   let pio = toPipelineIO ctx
   
   Log.logDebug "Turn pipeline: resolving request ID" Log.emptyContext
@@ -121,7 +126,7 @@ runTurnBody ctx ss input sessionId expectedRevision = do
   
   Log.logDebug "Turn pipeline: finalizing turn" Log.emptyContext
   finalizeStart <- getCurrentTime
-  tr <- finalizeTurn pio ss sessionId expectedRevision reqId rendered
+  tr <- finalizeTurn pio ss sessionId expectedVersion reqId rendered
   finalizeEnd <- getCurrentTime
   
   -- Log phase timings
@@ -131,7 +136,9 @@ runTurnBody ctx ss input sessionId expectedRevision = do
       finalizeDuration = diffUTCTime finalizeEnd finalizeStart
   
   Log.logDebug "Turn pipeline phases completed"
-    (Log.addContext "prepare_ms" (T.pack $ show $ round (realToFrac prepareDuration * 1000 :: Double)) $
+    (Log.addContext "session_id" sessionId $
+     Log.addContext "total_ms" (T.pack $ show $ round (realToFrac (diffUTCTime finalizeEnd prepareStart) * 1000 :: Double)) $
+     Log.addContext "prepare_ms" (T.pack $ show $ round (realToFrac prepareDuration * 1000 :: Double)) $
      Log.addContext "plan_ms" (T.pack $ show $ round (realToFrac planDuration * 1000 :: Double)) $
      Log.addContext "render_ms" (T.pack $ show $ round (realToFrac renderDuration * 1000 :: Double)) $
      Log.addContext "finalize_ms" (T.pack $ show $ round (realToFrac finalizeDuration * 1000 :: Double)) Log.emptyContext)
@@ -169,7 +176,9 @@ runTurnInSession session text = do
       let ss = sessSystemState s
           runtime = sessRuntime s
           sid = sessSessionId s
-          expectedRevision = sessStateRevision s
+          expectedVersion = case sessStateOrigin s of
+            RecoveredCorruptOrigin -> corruptStateRepairVersion (sessStateRevision s)
+            _ -> StateVersion (sessStateRevision s) (ssTurnCount ss)
       if strictMode
         then do
           health <- checkHealth runtime
@@ -180,11 +189,12 @@ runTurnInSession session text = do
                 , renderTurnGateFailure failure
                 )
             Right _ ->
-              continueTurn s readiness ss runtime sid expectedRevision
-        else continueTurn s readiness ss runtime sid expectedRevision
+              continueTurn s readiness ss runtime sid expectedVersion
+        else continueTurn s readiness ss runtime sid expectedVersion
 
-    continueTurn s readiness ss runtime sid expectedRevision = do
-      turnResult <- try (runTurnWithRevision runtime ss text sid expectedRevision) :: IO (Either QxFx0Exception (SystemState, Text))
+    continueTurn s readiness ss runtime sid expectedVersion = do
+      (networkTurn, turnSs) <- beginSemanticNetworkTurn (sessAutonomousHandles s) ss
+      turnResult <- try (runTurnWithVersion runtime turnSs text sid expectedVersion) :: IO (Either QxFx0Exception (SystemState, Text))
       case turnResult of
         Left (AgdaGateError detail) ->
           pure
@@ -204,10 +214,37 @@ runTurnInSession session text = do
         Left err ->
           throwQxFx0 err
         Right (nextSs, response) -> do
-          hPutStrLn stderr "[engine] Applying pending autonomous updates..."
-          nextSsWithUpdates <- applyPendingUpdatesForSession (sessAutonomousHandles s) nextSs
-          hPutStrLn stderr "[engine] Pending updates applied."
-          let !session' = s { sessSystemState = nextSsWithUpdates, sessStateRevision = expectedRevision + 1, sessReadinessMode = readiness }
+          -- Finalize has already durably committed this turn. Autonomous
+          -- follow-up is post-commit work, so a failure must not turn a
+          -- committed response into an apparently safe-to-retry failure.
+          followUp <- try (do
+              hPutStrLn stderr "[engine] Applying pending autonomous updates..."
+              nextSsWithUpdates <- commitSemanticNetworkTurn
+                (sessAutonomousHandles s) networkTurn nextSs
+              hPutStrLn stderr "[engine] Pending updates applied."
+              learningEnqueued <- enqueueAutonomousLearningForTopic
+                (sessAutonomousHandles s)
+                (ssLastTopic nextSsWithUpdates)
+                nextSsWithUpdates
+              when learningEnqueued $
+                hPutStrLn stderr $ "[engine] Autonomous learning queued for topic '"
+                  <> T.unpack (ssLastTopic nextSsWithUpdates) <> "'."
+              pure nextSsWithUpdates) :: IO (Either SomeException SystemState)
+          nextSsWithUpdates <- case followUp of
+            Right updated -> pure updated
+            Left err
+              | Just async <- (fromException err :: Maybe AsyncException) -> throwIO async
+              | otherwise -> do
+                  hPutStrLn stderr $ "[engine] Post-commit autonomous follow-up failed; turn remains committed: " <> show err
+                  pure nextSs
+          let !session' = s
+                { sessSystemState = nextSsWithUpdates
+                , sessStateRevision = stateRevision expectedVersion + 1
+                , sessStateOrigin = case sessStateOrigin s of
+                    RecoveredCorruptOrigin -> RestoredOrigin
+                    origin -> origin
+                , sessReadinessMode = readiness
+                }
           pure (session', response)
 
 loop :: Session -> IO ()

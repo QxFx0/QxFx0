@@ -16,7 +16,7 @@ module Test.Support
   ) where
 
 import Test.HUnit (assertFailure)
-import Control.Exception (bracket_)
+import Control.Exception (bracket_, finally)
 import System.Directory
   ( Permissions(..)
   , createDirectoryIfMissing
@@ -37,6 +37,7 @@ import qualified Data.Text as T
 import qualified QxFx0.Bridge.AgdaWitness as AW
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Runtime as Runtime
+import Test.Support.SessionRegistry (closeRegisteredTestSessions)
 
 freshTestPath :: FilePath -> IO FilePath
 freshTestPath stem = do
@@ -134,8 +135,9 @@ withRuntimeEnv dbName action = do
   stateDir <- freshTestPath (dbName <> ".state")
   bracket_
     (do
-      mapM_ removeIfExists (runtimeArtifacts dbPath)
-      removeDirIfExists stateDir)
+      closeRegisteredTestSessions `finally` do
+        mapM_ removeIfExists (runtimeArtifacts dbPath)
+        removeDirIfExists stateDir)
     (do
       mapM_ removeIfExists (runtimeArtifacts dbPath)
       removeDirIfExists stateDir)
@@ -155,8 +157,9 @@ withStrictRuntimeEnv dbName action = do
       cleanup = witnessPath : runtimeArtifacts dbPath
   bracket_
     (do
-      mapM_ removeIfExists cleanup
-      removeDirIfExists stateDir)
+      closeRegisteredTestSessions `finally` do
+        mapM_ removeIfExists cleanup
+        removeDirIfExists stateDir)
     (do
       mapM_ removeIfExists cleanup
       removeDirIfExists stateDir)

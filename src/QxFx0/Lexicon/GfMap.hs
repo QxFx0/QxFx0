@@ -26,7 +26,8 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 import Paths_qxfx0 (getDataFileName)
-import QxFx0.ExceptionPolicy (catchIO)
+import QxFx0.ExceptionPolicy (catchIO, tryQxFx0)
+import QxFx0.Resources.Paths (ResourcePaths(..), resolveResourcePaths)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>))
 import System.IO (hPutStrLn, stderr)
@@ -171,14 +172,26 @@ readCanonicalFunmap = do
   case explicitContent of
     Just content -> pure (Just content)
     Nothing -> do
-      dataPath <- catchIO (Just <$> getDataFileName "spec/gf/lexicon_funmap.tsv") (\e -> hPutStrLn stderr ("[gfmap] getDataFileName failed: " ++ show e) >> pure Nothing)
-      case dataPath of
-        Just path ->
-          catchIO
-            (Just . T.pack <$> readFile path)
-            (\e -> hPutStrLn stderr ("[gfmap] data path read failed: " ++ path ++ ": " ++ show e) >> readRepoFallback)
-        Nothing ->
-          readRepoFallback
+      resolvedContent <- do
+        pathsResult <- tryQxFx0 resolveResourcePaths
+        case pathsResult of
+          Right paths ->
+            let path = rpResourceDir paths </> "spec" </> "gf" </> "lexicon_funmap.tsv"
+            in catchIO
+                 (Just . T.pack <$> readFile path)
+                 (\e -> hPutStrLn stderr ("[gfmap] resolved path read failed: " ++ path ++ ": " ++ show e) >> pure Nothing)
+          Left _ -> pure Nothing
+      case resolvedContent of
+        Just content -> pure (Just content)
+        Nothing -> do
+          dataPath <- catchIO (Just <$> getDataFileName "spec/gf/lexicon_funmap.tsv") (\e -> hPutStrLn stderr ("[gfmap] getDataFileName failed: " ++ show e) >> pure Nothing)
+          case dataPath of
+            Just path ->
+              catchIO
+                (Just . T.pack <$> readFile path)
+                (\e -> hPutStrLn stderr ("[gfmap] data path read failed: " ++ path ++ ": " ++ show e) >> readRepoFallback)
+            Nothing ->
+              readRepoFallback
   where
     readRepoFallback =
       catchIO

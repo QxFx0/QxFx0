@@ -43,6 +43,7 @@ import qualified Data.Text as T
 import Data.Vector (Vector)
 
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..), SelectedPredicate(..))
+import QxFx0.Semantic.ContentSelector (scorePred)
 import QxFx0.Semantic.Content (CanonicalPredicateRelation(..), SemanticPredicate(..))
 import QxFx0.Semantic.Space (SemanticSpace(..), buildVector)
 import QxFx0.Semantic.Network (SemanticNetwork(..))
@@ -127,13 +128,12 @@ scorePredWithCache cs field topic topicAtoms pred cache =
       baseScore = fromMaybe (computeScore cs field topic topicAtoms pred) mCached
   in (Just (pred, baseScore), if mCached == Just baseScore then cache else M.insert key baseScore cache)
   where
-    -- Fallback score computation (simplified version of the original scorePred)
+    -- Use the real scorePred function from ContentSelector
     computeScore :: ContentSelector -> Field -> Text -> Set Text -> SemanticPredicate -> Double
-    computeScore cs' field' topic' topicAtoms' pred' =
-      -- This is a placeholder - in practice, use the existing scorePred function
-      -- from ContentSelector, but we'd need to import it properly
-      -- For now, return a neutral score
-      0.5
+    computeScore cs' field' _topic' _topicAtoms' pred' =
+      case scorePred field' (csSpace cs') (csLemmaMap cs') Nothing pred' of
+        Just (_, score) -> score
+        Nothing -> 0.0
 
 -- | Select predicates for a topic with caching
 selectPredicatesWithCache 
@@ -181,9 +181,12 @@ warmCacheForTopic cs field topic mNetwork initialCache =
              in M.insert key score cache
           initialCache preds
   where
-    -- Simplified score computation
+    -- Use the real scorePred function from ContentSelector
     computeScore :: ContentSelector -> Field -> Text -> Set Text -> SemanticPredicate -> Double
-    computeScore cs' field' topic' topicAtoms' pred' = 0.5
+    computeScore cs' field' _topic' _topicAtoms' pred' =
+      case scorePred field' (csSpace cs') (csLemmaMap cs') Nothing pred' of
+        Just (_, score) -> score
+        Nothing -> 0.0
 
 -- ==========================================================================
 -- Lazy Evaluation Utilities
@@ -199,10 +202,9 @@ lazyScorePred
   -> Set Text
   -> SemanticPredicate
   -> Maybe (SemanticPredicate, Double)
-lazyScorePred cs field topic mNetwork topicAtoms pred =
-  -- This is just a type-compatible wrapper for now
-  -- In practice, would use the actual scorePred from ContentSelector
-  Just (pred, 0.5)
+lazyScorePred cs field _topic _mNetwork _topicAtoms pred =
+  -- Use the actual scorePred from ContentSelector
+  scorePred field (csSpace cs) (csLemmaMap cs) Nothing pred
 
 -- | Lazy vector builder - defers vector computation until needed
 lazyBuildVector 

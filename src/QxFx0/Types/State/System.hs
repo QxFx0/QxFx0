@@ -1,12 +1,12 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 {-| Canonical top-level persisted system state plus compatibility accessors. -}
 module QxFx0.Types.State.System
   ( SystemState(..)
+  , CuratedOverlayRuntime(..)
   , ssHistory
   , ssRawInputHistory
   , ssTurnCount
@@ -43,31 +43,17 @@ module QxFx0.Types.State.System
   , appendAdaptiveMutationRecords
   , commitGovernedPerspectiveProjection
   , appendGovernanceEventRecord
-  , emptySystemState
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson
-  ( FromJSON(..)
-  , ToJSON(..)
-  , object
-  , withObject
-  , (.:)
-  , (.:?)
-  , (.!=)
-  , (.=)
-  )
-import qualified Data.Aeson.Key as AK
-import qualified Data.Aeson.KeyMap as KM
 import qualified Data.Map.Strict as M
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Control.Monad (when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Types.Decision (DialogueOutputMode(..), dialogueOutputModeText, parseDialogueOutputMode, SemanticAnchor, TurnDecision)
+import QxFx0.Types.Decision (DialogueOutputMode, SemanticAnchor, TurnDecision)
 import QxFx0.Types.Domain
   ( AtomTrace
   , CanonicalMoveFamily
@@ -80,51 +66,35 @@ import QxFx0.Types.Domain
   , SemanticScene
   , UserState
   )
-import QxFx0.Types.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
-import QxFx0.Types.Bayesian (BeliefState, initialBeliefs)
+import QxFx0.Types.Lexicon.RuntimeParadigms (RuntimeParadigms)
+import QxFx0.Types.Bayesian (BeliefState)
 import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
-import QxFx0.Types.Intuition (IntuitiveState, defaultIntuitiveState)
+import QxFx0.Types.Intuition (IntuitiveState)
 import QxFx0.Types.Observability
   ( KernelPulse
   , MeaningGraph
   , ObservabilityState
-  , TruthContractStatus(..)
-  , emptyObservabilityState
+  , TruthContractStatus
   )
 import QxFx0.Types.Orbital (OrbitalMemory)
-import QxFx0.Types.State.Dialogue
-  ( DialogueState(..)
-  , emptyDialogueState
-  )
+import QxFx0.Types.State.Dialogue (DialogueState(..))
 import QxFx0.Types.State.AdaptiveMutation
   ( AdaptiveMutationRecord
   )
 import QxFx0.Types.State.DialogueDevelopment
   ( BeliefStore
   , DialogueCommitmentLedger
-  , DialoguePhase(..)
+  , DialoguePhase
   , DialogueThread
   , DialogueOutcomeLearningState
   , SpeechPolicyState
-  , emptyDialogueCommitmentLedger
-  , emptyDialogueThread
-  , emptyBeliefStore
-  , emptyDialogueOutcomeLearningState
-  , emptySpeechPolicyState
-  )
-import QxFx0.Types.State.Perspective
-  ( PerspectiveRegistry
-  , emptyPerspectiveRegistry
   )
 import QxFx0.Types.State.Governance
   ( GovernanceEvent
   , GovernanceProjection(..)
   , GovernanceRuntimeFault
-  , ProjectionMeta(..)
   , appendGovernanceEventToHistory
-  , currentProjectionVersion
-  , currentReducerVersion
   )
 import QxFx0.Types.State.Discourse
   ( DiscourseState(..)
@@ -133,61 +103,52 @@ import QxFx0.Types.State.Discourse
   , recomputeDiscourse
   )
 import QxFx0.Types.SemanticConfig
-  ( SemanticConfig
-  , defaultSemanticConfig
-  )
+  ( SemanticConfig )
 import QxFx0.Types.State.Identity
   ( EgoState
   , IdentityState(..)
-  , emptyIdentityState
   )
 import QxFx0.Types.State.Semantic
   ( SemanticState(..)
-  , emptySemanticState
   )
-import QxFx0.Types.Vec (zeroVec)
-import QxFx0.Types.Dream (emptyDreamState)
-import QxFx0.Self.Essence (Essence, emptyEssence)
-import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
-import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom)
 import QxFx0.Types.State.SelfState
   ( SelfState(..)
-  , defaultSelfState
   )
-import QxFx0.Learning.Need (LearningNeedState, emptyLearningNeedState)
-import QxFx0.Learning.Guardrails (GuardrailState, emptyGuardrailState)
-import QxFx0.Learning.Calibration (CalibrationLog(..), emptyCalibrationLog)
-import QxFx0.Learning.KnowledgeTree (KnowledgeTree, emptyKnowledgeTree)
-import QxFx0.Learning.Signal (CalibrationSnapshot, emptySignalComponents)
-import QxFx0.Types.ShadowDivergence (ShadowVetoState, defaultShadowVetoState)
+import QxFx0.Types.Learning.Need (LearningNeedState)
+import QxFx0.Types.Learning.Guardrails (GuardrailState)
+import QxFx0.Types.Learning.Calibration (CalibrationLog)
+import QxFx0.Types.Learning.KnowledgeTree (KnowledgeTree)
+import QxFx0.Types.Learning.Signal (CalibrationSnapshot)
+import QxFx0.Types.ShadowDivergence (ShadowVetoState)
 import QxFx0.Types.State.SemanticCommitment (SemanticCommitmentStore)
-import QxFx0.Policy.Metacognition (MetacognitionContour)
-import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicIndex, emptyIndex)
-import qualified Data.HashSet as HS
-import qualified Data.Sequence as Seq
+import QxFx0.Types.Policy.Metacognition (MetacognitionContour)
+import QxFx0.Types.Memory.Episodic (EpisodicStore)
 import Data.Set (Set)
-import qualified Data.Set as Set
-import QxFx0.Types.RuntimeRegime (RuntimeRegime(..), defaultRuntimeRegime)
-import QxFx0.Semantic.Network.Types (SemanticNetwork, emptySemanticNetwork)
-import QxFx0.Semantic.Network.Seed (seedFromCorpus)
-import QxFx0.Semantic.Space.Types (SemanticSpace, emptySemanticSpace)
-import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics, emptyIntentClassifierMetrics)
-import QxFx0.Semantic.Content (DefinitionContent)
-import QxFx0.Semantic.ContentSelector.Types (ContentSelector, emptyContentSelector)
-import QxFx0.Semantic.Content.Category (ConceptCategory)
-import QxFx0.Semantic.Content.AtomStore (AtomGraph, seedGraph)
-import QxFx0.Semantic.Ontology (Ontology, emptyOntology)
-import QxFx0.Semantic.DialogueContext (emptyContext)
+import QxFx0.Types.RuntimeRegime (RuntimeRegime)
+import QxFx0.Types.Semantic.Network (ActivationArtifact, SemanticNetwork)
+import QxFx0.Types.Semantic.Space (SemanticSpace)
+import QxFx0.Types.Semantic.IntentMetrics (IntentClassifierMetrics)
+import QxFx0.Types.Semantic.Content (ConceptCategory, DefinitionContent)
+import QxFx0.Types.Semantic.ContentSelector (ContentSelector)
+import QxFx0.Types.Semantic.AtomGraph (AtomGraph)
+import QxFx0.Semantic.ContentSelector.Integration (ContentSelectorState)
+import QxFx0.Types.Semantic.Ontology (Ontology)
 import QxFx0.Types.State.Stance
   ( StanceState
   , StanceDefense
   , UserStanceTracker
   , StanceLineage
-  , emptyStanceDefense
-  , emptyUserStanceTracker
-  , emptyStanceLineage
   )
+
+-- | Bootstrap-derived provenance for the explicitly active promotion overlay.
+-- This is intentionally runtime-only: the overlay is reconstructed from the
+-- promotion store at every bootstrap and must not inflate persisted sessions.
+data CuratedOverlayRuntime = CuratedOverlayRuntime
+  { corVersion :: !Text
+  , corPredicateIdsBySurface :: !(M.Map Text Text)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (NFData)
 
 data SystemState = SystemState
   { ssDialogue :: !DialogueState
@@ -204,7 +165,7 @@ data SystemState = SystemState
   , ssSelfState :: !SelfState
     -- ^ Phase 4.1.3: Grouped Self-layer state containing essence,
     --   salience weights, field heuristics, and perspective registry.
-    --   Initialised to 'defaultSelfState'.
+    --   Runtime initialization is owned by 'QxFx0.Runtime.StateDefaults'.
   , ssShadowVetoState :: !ShadowVetoState
     -- ^ WP2 (GAP2): bounded shadow-veto counter and window anchor.
     --   Tracks gate-trigger count within a sliding window to prevent
@@ -296,12 +257,15 @@ data SystemState = SystemState
   , ssCurrentRegime :: !RuntimeRegime
     -- ^ M5: the runtime regime active for this session. Records which
     --   math version and feature flags are in effect, making governance
-    --   machine-visible. Initialised to 'defaultRuntimeRegime' on
-    --   bootstrap; updated when a promotion ADR is executed.
+    --   machine-visible. Selected at bootstrap and updated when a promotion
+    --   ADR is executed.
   , ssSemanticNetwork :: !SemanticNetwork
     -- ^ Phase 1: semantic network built from MeaningGraph edges.
     --   Used for spreading activation and content density gating.
     --   Initialised to 'emptySemanticNetwork'.
+  , ssLastActivationArtifact :: !(Maybe ActivationArtifact)
+    -- ^ Exact activation used by the preceding rendered turn. Kept separate
+    --   from graph ownership so the next user feedback consumes that artifact.
   , ssOntology :: !Ontology
     -- ^ ADR-0052 Phase IV: loaded once at bootstrap and passed to the
     --   ontology-driven category classifier.
@@ -313,6 +277,10 @@ data SystemState = SystemState
     -- ^ Phase 1: selects predicates based on Field state and topic.
     --   Replaces direct definitionCorpus lookup in rendering.
     --   Initialised to 'emptyContentSelector'.
+  , ssContentSelectorState :: !(Maybe ContentSelectorState)
+    -- ^ ContentSelector optimization state with caching and dynamic learning.
+    --   Contains predicate indexes, score cache, and ontology learning state.
+    --   Initialised to Nothing, populated in Bootstrap when optimizations enabled.
   , ssGeometricMetrics :: !IntentClassifierMetrics
     -- ^ Phase 2: A/B validation metrics for geometric intent classifier.
     --   Tracks agreement/disagreement with runSemanticLogic.
@@ -346,221 +314,20 @@ data SystemState = SystemState
   , ssRuntimeGraph :: !AtomGraph
     -- ^ Runtime atom graph: seed relations + promoted substrate relations.
     --   Used by PathFinder for generative composition. Initialised to
-    --   'seedGraph', updated in Bootstrap with promoted substrate.
+    --   Runtime construction and promoted-substrate updates occur in Bootstrap.
   , ssDefinitionCorpus :: !(M.Map Text DefinitionContent)
     -- ^ P1.2: extended definition corpus = hardcoded seed corpus merged with
     --   curated predicates loaded from @resources/knowledge/curated_predicates.jsonl@.
     --   Used by projection to report missing predicates and by rendering paths.
+  , ssCuratedOverlay :: !(Maybe CuratedOverlayRuntime)
+    -- ^ Active promotion overlay provenance, rebuilt from the local promotion
+    -- store on bootstrap. It is never persisted as session authority.
   , ssEmittedPredicates :: !(Set Text)
     -- ^ P2.2: cross-turn coherence buffer. Tracks predicate surface forms
     --   (spRu) emitted in recent turns on the same topic, so the renderer
     --   can avoid repeating them. Cleared on topic change.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
-
-instance ToJSON SystemState where
-  toJSON ss = object
-    [ "schemaVersion" .= currentSystemStateSchemaVersion
-    , "history" .= dsHistory (ssDialogue ss)
-    , "rawInputHistory" .= dsRawInputHistory (ssDialogue ss)
-    , "turnCount" .= dsTurnCount (ssDialogue ss)
-    , "lastFamily" .= dsLastFamily (ssDialogue ss)
-    , "lastTopic" .= dsLastTopic (ssDialogue ss)
-    , "lastForce" .= dsLastForce (ssDialogue ss)
-    , "lastLayer" .= dsLastLayer (ssDialogue ss)
-    , "lastEmbedding" .= dsLastEmbedding (ssDialogue ss)
-    , "consecutiveReflect" .= dsConsecutiveReflect (ssDialogue ss)
-    , "recentFamilies" .= dsRecentFamilies (ssDialogue ss)
-    , "activeScene" .= dsActiveScene (ssDialogue ss)
-     , "userState" .= dsUserState (ssDialogue ss)
-     , "lastSalienceBias" .= dsLastSalienceBias (ssDialogue ss)
-     , "holisticStreak" .= dsHolisticStreak (ssDialogue ss)
-     , "recentNarrativeSuccess" .= dsRecentNarrativeSuccess (ssDialogue ss)
-     , "ego" .= idsEgo (ssIdentity ss)
-    , "identityClaims" .= idsIdentityClaims (ssIdentity ss)
-    , "orbitalMemory" .= idsOrbitalMemory (ssIdentity ss)
-    , "lastGuardReport" .= idsLastGuardReport (ssIdentity ss)
-    , "trace" .= semTrace (ssSemantic ss)
-    , "meaningGraph" .= semMeaningGraph (ssSemantic ss)
-    , "kernelPulse" .= semKernelPulse (ssSemantic ss)
-    , "blockedConcepts" .= semBlockedConcepts (ssSemantic ss)
-    , "clusters" .= semClusters (ssSemantic ss)
-    , "dreamState" .= semDreamState (ssSemantic ss)
-    , "intuitionState" .= semIntuitionState (ssSemantic ss)
-    , "semanticAnchor" .= semSemanticAnchor (ssSemantic ss)
-    , "lastTurnDecision" .= semLastTurnDecision (ssSemantic ss)
-    , "intuitConfidence" .= semIntuitConfidence (ssSemantic ss)
-    , "sessionId" .= ssSessionId ss
-     , "outputMode" .= dialogueOutputModeText (ssOutputMode ss)
-     , "morphology" .= ssMorphology ss
-     , "observability" .= ssObservability ss
-     -- Phase 4.1.3: Grouped Self-layer state (single source of truth)
-     , "ssSelfState" .= ssSelfState ss
-     , "shadowVetoState" .= ssShadowVetoState ss
-     , "provisionalAtoms" .= ssProvisionalAtoms ss
-     , "learningNeedState" .= ssLearningNeedState ss
-     , "guardrailState" .= ssGuardrailState ss
-     , "calibrationLog" .= ssCalibrationLog ss
-      , "knowledgeTree" .= ssKnowledgeTree ss
-      , "toolReliability" .= ssToolReliability ss
-      , "calibrationSnapshots" .= ssCalibrationSnapshots ss
-      , "adaptiveMutationLog" .= ssAdaptiveMutationLog ss
-        , "dialogueOutcomeLearning" .= ssDialogueOutcomeLearning ss
-        , "dialogueThread" .= ssDialogueThread ss
-        , "dialogueCommitmentLedger" .= ssDialogueCommitmentLedger ss
-        , "dialoguePhase" .= ssDialoguePhase ss
-        , "truthContractStatus" .= ssTruthContractStatus ss
-         , "speechPolicyState" .= ssSpeechPolicyState ss
-         , "beliefStore" .= ssBeliefStore ss
-         , "governanceHistory" .= ssGovernanceHistory ss
-         , "governanceRuntimeFault" .= ssGovernanceRuntimeFault ss
-          , "semanticCommitments" .= ssSemanticCommitments ss
-           , "metacognition" .= ssMetacognition ss
-           , "episodic" .= ssEpisodic ss
-            , "userModel" .= ssUserModel ss
-            , "mood" .= ssMood ss
-            , "currentRegime" .= ssCurrentRegime ss
-            , "runtimeParadigms" .= ssRuntimeParadigms ss
-            , "semanticNetwork" .= ssSemanticNetwork ss
-            , "ontology" .= ssOntology ss
-            , "semanticSpace" .= ssSemanticSpace ss
-             , "contentSelector" .= ssContentSelector ss
-              , "lemmaMap" .= ssLemmaMap ss
-              , "categoryMap" .= ssCategoryMap ss
-              , "stances" .= ssStances ss
-              , "stanceDefenses" .= ssStanceDefenses ss
-              , "userStanceTrackers" .= ssUserStanceTrackers ss
-              , "stanceLineages" .= ssStanceLineages ss
-              , "runtimeGraph" .= ssRuntimeGraph ss
-              , "definitionCorpus" .= ssDefinitionCorpus ss
-              , "emittedPredicates" .= ssEmittedPredicates ss
-              ]
-
-instance FromJSON SystemState where
-  parseJSON = withObject "SystemState" $ \o -> do
-    schemaVersion <- o .:? "schemaVersion" .!= 1
-    let requiredTopLevelFields
-          | schemaVersion >= currentSystemStateSchemaVersion =
-              [ "morphology"
-              , "ssSelfState"
-              , "learningNeedState"
-              , "knowledgeTree"
-              , "truthContractStatus"
-              , "dialogueOutcomeLearning"
-              , "dialogueThread"
-              , "dialogueCommitmentLedger"
-              , "dialoguePhase"
-              , "speechPolicyState"
-              , "beliefStore"
-              , "governanceHistory"
-              ]
-          | otherwise =
-              -- Legacy (pre-v2) required set. 'salienceWeights' and
-              -- 'fieldHeuristics' are intentionally NOT here: in the legacy
-              -- branch they parse via '.:? .!= default' (folded into ssSelfState
-              -- in v2), so demanding them rejected genuinely-old state that
-              -- never carried them top-level.
-              [ "morphology"
-              , "learningNeedState"
-              , "knowledgeTree"
-              , "truthContractStatus"
-              ]
-        missingTopLevel = filter (\k -> not (KM.member (AK.fromText k) o)) requiredTopLevelFields
-    when (not (null missingTopLevel)) $
-      fail ("missing required top-level fields: " <> show missingTopLevel)
-    ds <- DialogueState
-      <$> o .: "history"
-      <*> o .: "rawInputHistory"
-      <*> o .: "turnCount"
-      <*> o .: "lastTopic"
-      <*> o .: "lastFamily"
-      <*> o .: "lastForce"
-      <*> o .: "lastLayer"
-      <*> o .: "lastEmbedding"
-      <*> o .: "consecutiveReflect"
-      <*> o .: "recentFamilies"
-      <*> o .: "activeScene"
-      <*> o .: "userState"
-      <*> o .:? "lastSalienceBias" .!= 0.0
-      <*> o .:? "holisticStreak" .!= 0
-      <*> o .:? "recentNarrativeSuccess" .!= []
-      <*> o .:? "dsContext" .!= emptyContext
-    ids <- IdentityState
-      <$> o .: "ego"
-      <*> o .: "identityClaims"
-      <*> o .: "orbitalMemory"
-      <*> o .:? "lastGuardReport" .!= Nothing
-    sem <- SemanticState
-      <$> o .: "trace"
-      <*> o .: "meaningGraph"
-      <*> o .: "kernelPulse"
-      <*> o .: "blockedConcepts"
-      <*> o .: "clusters"
-      <*> o .:? "dreamState" .!= emptyDreamState zeroVec
-      <*> o .:? "intuitionState" .!= Just defaultIntuitiveState
-      <*> o .:? "semanticAnchor" .!= Nothing
-      <*> o .:? "lastTurnDecision" .!= Nothing
-      <*> o .: "intuitConfidence"
-      <*> o .:? "semanticConfig" .!= defaultSemanticConfig
-    -- Phase 4.1.3: Read SelfState with backward compatibility fallback
-    selfState <- (o .:? "ssSelfState") >>= \case
-      Just s -> pure s
-      Nothing -> SelfState
-        <$> (if schemaVersion >= currentSystemStateSchemaVersion
-             then o .: "salienceWeights"
-             else o .:? "salienceWeights" .!= defaultSalienceWeights)
-        <*> (if schemaVersion >= currentSystemStateSchemaVersion
-             then o .: "fieldHeuristics"
-             else o .:? "fieldHeuristics" .!= defaultFieldHeuristics)
-        <*> pure emptyPerspectiveRegistry
-        <*> o .:? "essence" .!= emptyEssence
-    
-    SystemState ds ids sem
-      <$> o .: "sessionId"
-      <*> (parseDialogueOutputMode <$> o .: "outputMode")
-      <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "morphology" else o .:? "morphology" .!= MorphologyData M.empty M.empty M.empty M.empty)
-      <*> o .:? "runtimeParadigms" .!= emptyRuntimeParadigms
-      <*> o .: "observability"
-      <*> pure selfState
-       <*> o .:? "shadowVetoState" .!= defaultShadowVetoState
-       <*> o .:? "provisionalAtoms" .!= []
-       <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "learningNeedState" else o .:? "learningNeedState" .!= emptyLearningNeedState)
-       <*> o .:? "guardrailState" .!= emptyGuardrailState
-       <*> o .:? "calibrationLog" .!= emptyCalibrationLog
-          <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "knowledgeTree" else o .:? "knowledgeTree" .!= emptyKnowledgeTree)
-          <*> o .:? "toolReliability" .!= M.empty
-          <*> o .:? "calibrationSnapshots" .!= []
-          <*> o .:? "adaptiveMutationLog" .!= []
-           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueOutcomeLearning" else o .:? "dialogueOutcomeLearning" .!= emptyDialogueOutcomeLearningState)
-           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueThread" else o .:? "dialogueThread" .!= emptyDialogueThread)
-           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialogueCommitmentLedger" else o .:? "dialogueCommitmentLedger" .!= emptyDialogueCommitmentLedger)
-           <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "dialoguePhase" else o .:? "dialoguePhase" .!= Exploring)
-            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "truthContractStatus" else o .:? "truthContractStatus" .!= LegacyIncompleteSurface)
-            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "speechPolicyState" else o .:? "speechPolicyState" .!= emptySpeechPolicyState)
-            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "beliefStore" else o .:? "beliefStore" .!= emptyBeliefStore)
-            <*> pure emptyGovernanceProjection
-            <*> (if schemaVersion >= currentSystemStateSchemaVersion then o .: "governanceHistory" else o .:? "governanceHistory" .!= [])
-            <*> o .:? "governanceRuntimeFault" .!= Nothing
-            <*> o .:? "semanticCommitments" .!= Nothing
-            <*> o .:? "metacognition" .!= Nothing
-            <*> o .:? "episodic" .!= Nothing
-            <*> o .:? "userModel" .!= initialBeliefs
-            <*> o .:? "mood" .!= 0.0
-            <*> o .:? "currentRegime" .!= defaultRuntimeRegime
-            <*> o .:? "semanticNetwork" .!= emptySemanticNetwork
-            <*> o .:? "ontology" .!= emptyOntology
-            <*> o .:? "semanticSpace" .!= emptySemanticSpace
-             <*> o .:? "contentSelector" .!= emptyContentSelector
-              <*> o .:? "geometricMetrics" .!= emptyIntentClassifierMetrics
-              <*> o .:? "lemmaMap" .!= M.empty
-              <*> o .:? "categoryMap" .!= M.empty
-              <*> o .:? "stances" .!= M.empty
-              <*> o .:? "stanceDefenses" .!= M.empty
-              <*> o .:? "userStanceTrackers" .!= M.empty
-              <*> o .:? "stanceLineages" .!= M.empty
-              <*> o .:? "runtimeGraph" .!= seedGraph
-              <*> o .:? "definitionCorpus" .!= M.empty
-              <*> o .:? "emittedPredicates" .!= Set.empty
 
 ssHistory :: SystemState -> Seq Text
 ssHistory = dsHistory . ssDialogue
@@ -683,9 +450,6 @@ ssRecentNarrativeSuccess = dsRecentNarrativeSuccess . ssDialogue
 adaptiveMutationLogLimit :: Int
 adaptiveMutationLogLimit = 100
 
-currentSystemStateSchemaVersion :: Int
-currentSystemStateSchemaVersion = 2
-
 appendAdaptiveMutationRecord :: AdaptiveMutationRecord -> SystemState -> SystemState
 appendAdaptiveMutationRecord record ss =
   ss { ssAdaptiveMutationLog = take adaptiveMutationLogLimit (record : ssAdaptiveMutationLog ss) }
@@ -706,70 +470,3 @@ appendGovernanceEventRecord :: GovernanceEvent -> SystemState -> Either Text Sys
 appendGovernanceEventRecord event ss = do
   history <- appendGovernanceEventToHistory event (ssGovernanceHistory ss)
   pure ss { ssGovernanceHistory = history }
-
-emptySystemState :: SystemState
-emptySystemState = SystemState
-  { ssDialogue = emptyDialogueState
-  , ssIdentity = emptyIdentityState
-  , ssSemantic = emptySemanticState
-  , ssSessionId = ""
-  , ssOutputMode = DialogueOutput
-  , ssMorphology = MorphologyData M.empty M.empty M.empty M.empty
-  , ssRuntimeParadigms = emptyRuntimeParadigms
-  , ssObservability = emptyObservabilityState
-  , ssSelfState = defaultSelfState
-  , ssShadowVetoState = defaultShadowVetoState
-  , ssProvisionalAtoms = []
-  , ssLearningNeedState = emptyLearningNeedState
-  , ssGuardrailState = emptyGuardrailState
-  , ssCalibrationLog = emptyCalibrationLog
-  , ssKnowledgeTree = emptyKnowledgeTree
-  , ssToolReliability = M.empty
-  , ssCalibrationSnapshots = []
-  , ssAdaptiveMutationLog = []
-  , ssDialogueOutcomeLearning = emptyDialogueOutcomeLearningState
-  , ssDialogueThread = emptyDialogueThread
-  , ssDialogueCommitmentLedger = emptyDialogueCommitmentLedger
-  , ssDialoguePhase = Exploring
-  , ssTruthContractStatus = LegacyIncompleteSurface
-  , ssSpeechPolicyState = emptySpeechPolicyState
-  , ssBeliefStore = emptyBeliefStore
-  , ssGovernanceProjection = emptyGovernanceProjection
-  , ssGovernanceHistory = []
-  , ssGovernanceRuntimeFault = Nothing
-  , ssSemanticCommitments = Nothing
-  , ssMetacognition = Nothing
-  , ssEpisodic = Just (EpisodicStore Seq.empty emptyIndex HS.empty 0)
-    -- ^ WP-B R-B4: explicit initialization instead of lazy Nothing.
-    --   Empty store with session-id 0 (will be updated on first encode).
-  , ssUserModel = initialBeliefs
-  , ssMood = 0.0
-  , ssCurrentRegime = defaultRuntimeRegime
-  , ssSemanticNetwork = seedFromCorpus M.empty
-  , ssOntology = emptyOntology
-  , ssSemanticSpace = emptySemanticSpace
-  , ssContentSelector = emptyContentSelector
-  , ssGeometricMetrics = emptyIntentClassifierMetrics
-  , ssLemmaMap = M.empty
-  , ssCategoryMap = M.empty
-  , ssStances = M.empty
-  , ssStanceDefenses = M.empty
-  , ssUserStanceTrackers = M.empty
-  , ssStanceLineages = M.empty
-  , ssRuntimeGraph = seedGraph
-  , ssDefinitionCorpus = M.empty
-  , ssEmittedPredicates = Set.empty
-  }
-
-emptyGovernanceProjection :: GovernanceProjection
-emptyGovernanceProjection = GovernanceProjection
-  { gpMeta = ProjectionMeta
-      { pmProjectionVersion = currentProjectionVersion
-      , pmReducerVersion = currentReducerVersion
-      , pmSnapshotTurn = Just 0
-      }
-  , gpPerspectiveRegistry = emptyPerspectiveRegistry
-  , gpActivePerspectiveProjections = []
-  , gpGovernedRefs = []
-  , gpProjectionChecksum = "governance_projection_empty"
-  }

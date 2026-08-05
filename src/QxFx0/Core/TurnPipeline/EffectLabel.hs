@@ -32,6 +32,7 @@ data PipelineEffectLabel
   | PelSemanticIntrospection
   | PelWarnMorphology
   | PelFmarMode
+  | PelFeedbackLoop
   deriving stock (Eq, Ord, Show, Read, Generic)
 
 -- | Render a label to the same snake_case string used historically for the
@@ -50,6 +51,7 @@ pipelineEffectLabelText PelExplore              = "explore"
 pipelineEffectLabelText PelSemanticIntrospection = "semantic_introspection"
 pipelineEffectLabelText PelWarnMorphology       = "warn_morphology"
 pipelineEffectLabelText PelFmarMode             = "fmar_mode"
+pipelineEffectLabelText PelFeedbackLoop         = "feedback_loop"
 
 -- | Inverse of 'pipelineEffectLabelText'.
 parsePipelineEffectLabel :: Text -> Maybe PipelineEffectLabel
@@ -67,6 +69,7 @@ parsePipelineEffectLabel t =
     "semantic_introspection" -> Just PelSemanticIntrospection
     "warn_morphology"        -> Just PelWarnMorphology
     "fmar_mode"              -> Just PelFmarMode
+    "feedback_loop"          -> Just PelFeedbackLoop
     _                        -> Nothing
 
 instance ToJSON PipelineEffectLabel where

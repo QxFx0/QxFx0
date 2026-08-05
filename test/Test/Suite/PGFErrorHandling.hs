@@ -17,7 +17,7 @@ import Test.HUnit
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
-import QxFx0.Runtime.PGF (linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
+import QxFx0.Runtime.PGF (dialogAtomsToGfExpr, linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
 import QxFx0.Types (ClaimAst(..))
 import QxFx0.Semantic.DialogAtom (DialogAtoms(..), AtomTag(..), plainSlot)
 
@@ -26,6 +26,7 @@ pgfErrorHandlingTests =
   [ TestLabel "PGFFileNotFound - non-existent file" testPGFFileNotFound
   , TestLabel "PGFParseError - invalid language" testPGFParseErrorLang
   , TestLabel "PGFParseError - invalid topic" testPGFParseErrorExpr
+  , TestLabel "Define dialog atoms preserve MoveDefine arity" testDefineDialogAtomsArity
   , TestLabel "Successful linearization" testSuccessfulLinearization
   ]
 
@@ -85,6 +86,20 @@ testPGFParseErrorExpr = TestCase $ do
     Right _ -> 
       -- If it succeeds, the lexeme might exist or fallback worked
       pure ()
+
+testDefineDialogAtomsArity :: Test
+testDefineDialogAtomsArity = TestCase $ do
+  let atoms = DialogAtoms
+        { daSlots = M.fromList
+            [ (TTopic, [plainSlot TTopic "воля"])
+            , (TUserIntent, [plainSlot TUserIntent "define"])
+            ]
+        , daUserRaw = "Определи понятие воли"
+        , daTurn = 2
+        }
+  assertEqual "MoveDefine requires NP, Relation, and NP arguments"
+    (Right "MoveDefine (MkNP volya_N) RelIdentity (MkNP volya_N)")
+    (dialogAtomsToGfExpr atoms)
 
 -- | Test successful linearization with valid inputs
 testSuccessfulLinearization :: Test

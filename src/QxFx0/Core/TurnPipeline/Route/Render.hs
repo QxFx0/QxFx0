@@ -54,8 +54,11 @@ import QxFx0.Core.TurnRender
   , snapshotIdentitySignal
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
-import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradient)
+import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradientWith)
+import QxFx0.Types.State.SelfState (selfConatusWeights)
+import QxFx0.Types.State.DialogueDevelopment (DialogueThread(..))
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
+import QxFx0.Learning.Loop (legacyExternalLearningEnabled)
 import QxFx0.Learning.Tool (ExternalTool(..), ToolDomain(..), selectToolWithReliability, defaultAvailableTools, updateToolReliability)
 import QxFx0.Learning.Guardrails
   ( ExternalActionDecision(..)
@@ -73,17 +76,16 @@ import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
 import QxFx0.Semantic.Content (SemanticPredicate(..))
+import QxFx0.Semantic.ContentSelector (buildSelectorActivationArtifact)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..))
-import System.Environment (lookupEnv)
 import QxFx0.Self.Field (Field(..))
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
   , hasStructuredDialogueSurface
-  , renderArtifactViaAssembly
-  , renderDialogueArtifact
-  , generateFromFrame
-  , generateFromFrameWithEmitted
+  , renderArtifactViaAssemblyWithActiveQuestion
+  , renderDialogueArtifactWithActiveQuestion
+  , generateFromFrameWithActivation
+  , semanticFrameActivationTopics
   )
 import QxFx0.Semantic.Intent.Features (extractFeatures)
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily)
@@ -95,6 +97,13 @@ import QxFx0.Semantic.Analogy (findNearestCoveredTopic)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
 import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
+import QxFx0.Semantic.ResponsePlan
+  ( buildResponseSemanticPlanWithActiveQuestion
+  , isGenerativeRequestText
+  , renderResponseSemanticPlan
+  , responsePlanQualityIssues
+  )
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan(..), responsePlanTags)
 import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
 import QxFx0.Legal.Adapter
   ( retrieveLegalFact
@@ -168,6 +177,7 @@ data RenderEffectPlan = RenderEffectPlan
     -- ^ AS1: shared pre-effect decision for request/exploratory outbound actions.
   , repExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
     -- ^ AS1-03: typed reason model for allow/deny/no-action on outbound actions.
+  , repSemanticFirstDisabled :: !Bool
   }
 
 data RenderTimeline = RenderTimeline
@@ -245,9 +255,30 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticMorph = ssMorphology ss
       semanticIntent = semanticIntentForRender (ipfPropositionType (tiFrame ti)) semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
-      (semanticText, semanticEmittedPredicates) = generateFromFrameWithEmitted (ssContentSelector ss) (tiField ti) (Just (ssSemanticNetwork ss)) (ssRuntimeGraph ss) ss semanticFrame semanticMorph
+      activationTopics = semanticFrameActivationTopics semanticFrame
+      mActivationArtifact =
+        if null activationTopics
+          then Nothing
+          else Just (buildSelectorActivationArtifact (ssContentSelector ss) (tiField ti) activationTopics (ssSemanticNetwork ss))
+      (semanticText, semanticEmittedPredicates, semanticSelectorDiagnostics) =
+        generateFromFrameWithActivation (ssContentSelector ss) (tiField ti) mActivationArtifact (ssRuntimeGraph ss) ss semanticFrame semanticMorph
+      generativeRequest = ipfPropositionType (tiFrame ti) == GenerativePrompt || isGenerativeRequestText input
+      mActiveQuestion = dtActiveQuestion (tiDialogueThread ti)
+      mResponsePlan =
+        buildResponseSemanticPlanWithActiveQuestion
+          (ssContentSelector ss)
+          (tiField ti)
+          input
+          mActivationArtifact
+          mActiveQuestion
+          semanticFrame
+          semanticIntent
+      responsePlanText = case mResponsePlan of
+        Just plan | null (responsePlanQualityIssues plan) -> renderResponseSemanticPlan plan
+        Just plan -> renderResponseSemanticPlan plan
+        Nothing -> semanticText
       semanticNonUnknown = case semanticIntent of
-        IntentUnknown _ -> False
+        IntentUnknown _ -> generativeRequest
         _               -> True
       -- M4-SEMANTIC-CORE-003 Phase C: content source classification for trace
       semanticContentSource =
@@ -266,24 +297,19 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         Just sourceTopic | isNothing (lookupDefinitionContent bestTopic) ->
           ["analogical_source=" <> sourceTopic]
         _ -> []
-      -- Substrate trace: count substrate edges in network, identify activated topics
-      substrateEdges = [ (seFrom e, seTo e) | e <- Data.Map.elems (snEdges (ssSemanticNetwork ss)), seSource e == SubstrateEdge ]
-      substrateEdgeCount = length substrateEdges
-      -- Topics reachable via substrate edges from bestTopic
-      substrateActivatedTopics = [ to | (from, to) <- substrateEdges, from == bestTopic ]
       -- Only fire semantic-first when morphology has real data (not test fixture).
       -- This prevents regression in tests that use minimal MorphologyData.
       semanticMorphReady = not (Data.Map.null (mdNominative semanticMorph))
       semanticFirstAblated = tpSemanticFirstDisabled tp
       viaSemantic
-        | semanticNonUnknown && semanticMorphReady && not semanticFirstAblated && not (T.null semanticText) =
-            Just mkSemanticArtifact
+         | semanticNonUnknown && semanticMorphReady && not semanticFirstAblated && not (T.null responsePlanText) =
+             Just mkSemanticArtifact
         | otherwise = Nothing
       mkSemanticArtifact = DialogueRenderArtifact
-        { draRenderedText = semanticText
+         { draRenderedText = responsePlanText
         , draQuestionLike = False
         , draStylePrefixText = ""
-        , draTemplateBodyText = semanticText
+         , draTemplateBodyText = responsePlanText
         , draClaimText = ""
         , draClaimAst = Nothing
         , draLinearizationLang = Just "semantic_intent"
@@ -291,17 +317,12 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         , draFallbackReason = Nothing
         , draContractProvenance = AssembledClaim
         , draSurfaceProvenance = FromDB
-        , draDerivationTags =
-            [ "surface=semantic_intent"
+         , draDerivationTags =
+             [ "surface=semantic_intent"
             , "intent=" <> T.pack (show semanticIntent)
             , "frame=" <> frameTypeText semanticFrame
             , "content_source=" <> semanticContentSource
-            ] ++ mAnalogicalSourceTag
-              ++ (if not (null substrateActivatedTopics)
-                  then [ "substrate_activated=" <> T.intercalate "," substrateActivatedTopics
-                       , "substrate_edges_used=" <> T.pack (show substrateEdgeCount)
-                       ]
-                  else [])
+             ] ++ mAnalogicalSourceTag ++ maybe [] responsePlanTags mResponsePlan
         , draDialogAtoms = emptyDialogAtoms
         , draGenerationTrace =
             [ GenerationAttempt "semantic_intent" "ok"
@@ -309,15 +330,18 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , GenerationAttempt "compositional_generator" "ok"
             ]
         , draEmittedPredicates = semanticEmittedPredicates
-        }
-      viaAssembly = renderArtifactViaAssembly rp ss (tiFrame ti) rmpAfterLegit rcpFinal
+         , draSelectorDiagnostics = semanticSelectorDiagnostics
+         , draActivationArtifact = mActivationArtifact
+         , draResponsePlan = mResponsePlan
+         }
+      viaAssembly = renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss (tiFrame ti) rmpAfterLegit rcpFinal
                         bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti)
       assemblyFallbackReason = fromMaybe "assembly_empty_fallback" (draFallbackReason viaAssembly)
       dialogueArtifact
         | Just semanticArtifact <- viaSemantic = semanticArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
-            (renderDialogueArtifact (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) (ssContentSelector ss) (tiActivatedNetwork ti))
+            (renderDialogueArtifactWithActiveQuestion mActiveQuestion (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) (ssContentSelector ss) mActivationArtifact)
               { draFallbackReason = Just assemblyFallbackReason }
       forceFinalized =
         if structuredSurface
@@ -369,17 +393,19 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
               then Just "already_known_tree"
               else Nothing
       mExternalQueryRequest =
-        case mDedupSkipReason of
-          Just _ -> Nothing
-          Nothing ->
-            case localRecoveryPlan of
-              Just plan | isRequestStrategy (lrpStrategy plan) ->
-                let need = lnsCurrentNeed (ssLearningNeedState ss)
-                in buildExternalActionRequest
-                    RequestDrivenExternalAction
-                    need
-                    (buildExternalQueryText need (tiBestTopic ti))
-              _ -> Nothing
+        if not legacyExternalLearningEnabled
+          then Nothing
+          else case mDedupSkipReason of
+            Just _ -> Nothing
+            Nothing ->
+              case localRecoveryPlan of
+                Just plan | isRequestStrategy (lrpStrategy plan) ->
+                  let need = lnsCurrentNeed (ssLearningNeedState ss)
+                  in buildExternalActionRequest
+                      RequestDrivenExternalAction
+                      need
+                      (buildExternalQueryText need (tiBestTopic ti))
+                _ -> Nothing
       -- Phase 9: autonomous exploratory learning query.
       -- Triggered when:
       --   1. No request-driven external query already planned
@@ -389,22 +415,24 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       exploratoryDecision =
         canIssueExternalAction (ssGuardrailState ss) ExploratoryExternalAction (ssTurnCount ss)
       mExploratoryQueryRequest =
-        case mDedupSkipReason of
-          Just _ -> Nothing
-          Nothing ->
-            case mExternalQueryRequest of
-              Just _ -> Nothing  -- request-driven query takes priority
-              Nothing ->
-                let need = lnsCurrentNeed (ssLearningNeedState ss)
-                in if need == NeedNone
-                      then Nothing
-                      else case exploratoryDecision of
-                        ExternalActionDenied _ -> Nothing
-                        ExternalActionAllowed ->
-                          buildExternalActionRequest
-                            ExploratoryExternalAction
-                            need
-                            (buildExploratoryQueryText need (tiBestTopic ti))
+        if not legacyExternalLearningEnabled
+          then Nothing
+          else case mDedupSkipReason of
+            Just _ -> Nothing
+            Nothing ->
+              case mExternalQueryRequest of
+                Just _ -> Nothing  -- request-driven query takes priority
+                Nothing ->
+                  let need = lnsCurrentNeed (ssLearningNeedState ss)
+                  in if need == NeedNone
+                        then Nothing
+                        else case exploratoryDecision of
+                          ExternalActionDenied _ -> Nothing
+                          ExternalActionAllowed ->
+                            buildExternalActionRequest
+                              ExploratoryExternalAction
+                              need
+                              (buildExploratoryQueryText need (tiBestTopic ti))
       mExternalActionDecision
         | mExternalQueryRequest /= Nothing = Just ExternalActionAllowed
         | repLikeExploratory = Just exploratoryDecision
@@ -436,11 +464,14 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
               Just (ExternalActionDenied reason) -> reasonText reason
               _ -> Nothing
       repLikeExploratory =
-        mExternalQueryRequest == Nothing && lnsCurrentNeed (ssLearningNeedState ss) /= NeedNone
+        legacyExternalLearningEnabled
+          && mExternalQueryRequest == Nothing
+          && lnsCurrentNeed (ssLearningNeedState ss) /= NeedNone
       isRequestRecovery =
-        case localRecoveryPlan of
-          Just plan -> isRequestStrategy (lrpStrategy plan)
-          Nothing -> False
+        legacyExternalLearningEnabled
+          && case localRecoveryPlan of
+               Just plan -> isRequestStrategy (lrpStrategy plan)
+               Nothing -> False
     in RenderEffectPlan
         { repRenderStatic = RenderStatic
            { rsRenderWithBg = renderWithBg
@@ -476,6 +507,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repExternalQuerySkipReason = externalQuerySkipReason
       , repExternalActionDecision = mExternalActionDecision
       , repExternalActionDecisionTrace = mExternalActionDecisionTrace
+      , repSemanticFirstDisabled = tpSemanticFirstDisabled tp
         }
   where
     isRequestStrategy StrategyRequestCalibration = True
@@ -537,9 +569,6 @@ resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
   let tRender0 = tiStartTime (repTurnInput effectPlan)
   warnMorphologyFallback <- shouldWarnMorphologyFallback pio
-  -- B2 Control-A ablation: check if semantic-first path should be disabled
-  mSemanticDisable <- lookupEnv "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST"
-  let semanticFirstDisabled = mSemanticDisable == Just "1"
   case repRenderMorphologyWarning effectPlan of
     Just bestTopic | warnMorphologyFallback ->
       hPutStrLnWarning ("Morphology fallback: unknown topic lexeme: " <> bestTopic)
@@ -552,15 +581,17 @@ resolveRenderEffects pio effectPlan = do
   mLegalFact <- retrieveLegalFact (repKnowledgeTopic effectPlan)
   let mKnowledgeFact = legalFactToKnowledgeFragment <$> mLegalFact
       mKnowledgeSource = lfSourceId <$> mLegalFact
-  let scheduledRequests =
-        scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
-          (  [ (PelRequest, TurnReqExternalQuery tool need queryText)
-             | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
-             ]
-          <> [ (PelExplore, TurnReqExternalQuery tool need queryText)
-             | Just (tool, need, queryText) <- [repExploratoryQueryRequest effectPlan]
-             ]
-          )
+  let scheduledRequests
+        | not legacyExternalLearningEnabled = []
+        | otherwise =
+            scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
+              (  [ (PelRequest, TurnReqExternalQuery tool need queryText)
+                 | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
+                 ]
+              <> [ (PelExplore, TurnReqExternalQuery tool need queryText)
+                 | Just (tool, need, queryText) <- [repExploratoryQueryRequest effectPlan]
+                 ]
+              )
   resolvedEffects <- forConcurrently scheduledRequests $ \(label, request) -> do
     result <- resolveTurnEffect pio request
     pure (label, result)
@@ -587,7 +618,7 @@ resolveRenderEffects pio effectPlan = do
     , rerExploratoryQueryResult = mExploratoryQueryResult
     , rerExternalQuerySkipReason = repExternalQuerySkipReason effectPlan
     , rerExternalActionDecisionTrace = repExternalActionDecisionTrace effectPlan
-    , rerSemanticFirstDisabled = semanticFirstDisabled
+    , rerSemanticFirstDisabled = repSemanticFirstDisabled effectPlan
     }
 
 renderAnomalySurface :: ContentSelector -> Field -> Set.Set Text -> AnomalySurface -> Text
@@ -653,7 +684,8 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       !metrics4 = addPhase (recordPhase "render" (rtlRenderStart timeline) (rtlRenderEnd timeline)) (tpMetrics tp)
       guardSafety = Guard.postRenderSafetyCheckSurface preSafetySurface (F.toList (ssHistory ss))
       templateArtifact = rsTemplateArtifact renderStatic
-      (renderedSurface, finalizeSurfaceProv) = finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) (tiBestTopic ti)
+      qualityTopic = fromMaybe (tiBestTopic ti) (draResponsePlan templateArtifact >>= rspTopic)
+      (renderedSurface, finalizeSurfaceProv) = finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) qualityTopic
       surfaceProv = case finalizeSurfaceProv of
         FromRecovery -> FromRecovery
         _ -> draSurfaceProvenance templateArtifact
@@ -757,7 +789,10 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
         , taGenerationTrace = draGenerationTrace (rsTemplateArtifact renderStatic)
         , taEmittedPredicates = draEmittedPredicates (rsTemplateArtifact renderStatic)
-         }
+         , taSelectorDiagnostics = draSelectorDiagnostics (rsTemplateArtifact renderStatic)
+         , taActivationArtifact = draActivationArtifact (rsTemplateArtifact renderStatic)
+         , taResponsePlan = draResponsePlan (rsTemplateArtifact renderStatic)
+          }
 
 deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath
 deriveAssemblyPath renderStatic artifact finalizeSurfaceProv
@@ -896,7 +931,9 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
         case () of
           _
             | tiConatusGateFired ti ->
-                let gradient = computeConatusGradient (computeSelfBlanket ss)
+                let gradient = computeConatusGradientWith
+                      (selfConatusWeights (ssSelfState ss))
+                      (computeSelfBlanket ss)
                     strategy = selectConatusRecoveryStrategy gradient
                     evidence =
                       conatusEvidence
@@ -1139,15 +1176,28 @@ resolveRuntimeGfLinearization pio renderStatic = do
   if not runtimeEnabled
     then pure Nothing
     else do
-      gfLang <- resolveGfLang pio (rsPreferredGfLang renderStatic)
-      mPgfPath <- resolveGfPgfPath pio
-      let da = draDialogAtoms (rsTemplateArtifact renderStatic)
+       gfLang <- resolveGfLang pio (rsPreferredGfLang renderStatic)
+       mPgfPath <- resolveGfPgfPath pio
+       let artifact = rsTemplateArtifact renderStatic
+       case draResponsePlan artifact of
+         Just plan -> do
+           resultPlan <- resolveTurnEffect pio (TurnReqLinearizeResponsePlan mPgfPath gfLang plan)
+           case resultPlan of
+             TurnResLinearizeResponsePlan (Right gfResult) | not (T.null (T.strip (glrText gfResult))) ->
+               pure (Just (applyRuntimeGfResult gfLang renderStatic resultPlan))
+             -- A failed plan realization must preserve the already approved
+             -- plan surface, never substitute an unrelated legacy move.
+             _ -> pure (Just (applyRuntimeGfResult gfLang renderStatic resultPlan))
+         Nothing -> resolveLegacyGf gfLang mPgfPath artifact
+  where
+    resolveLegacyGf gfLang mPgfPath artifact = do
+      let da = draDialogAtoms artifact
       resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath gfLang da)
       case resultDa of
         TurnResLinearizeDialogAtoms (Right gfResult) | not (T.null (T.strip (glrText gfResult))) ->
           pure (Just (applyRuntimeGfResult gfLang renderStatic resultDa))
         _ ->
-          case draClaimAst (rsTemplateArtifact renderStatic) of
+          case draClaimAst artifact of
             Nothing -> pure Nothing
             Just claimAst -> do
               result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath gfLang claimAst)
@@ -1159,6 +1209,8 @@ shouldUseGfRuntime pio = do
   case result of
     TurnResReadEnv (Just rawValue) ->
       pure (normalizeBool rawValue)
+    TurnResReadEnv Nothing ->
+      pure True
     _ ->
       pure False
 
@@ -1273,8 +1325,47 @@ applyRuntimeGfResult gfLang renderStatic result =
                 , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
                 , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
                 , rsArtifactManifest = Just (glrArtifactManifest gfResult)
-                , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
-                }
+                 , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
+                 }
+    TurnResLinearizeResponsePlan (Right gfResult)
+      | not (T.null (T.strip (glrText gfResult))) ->
+          let baseArtifact = rsTemplateArtifact renderStatic
+              updatedArtifact =
+                baseArtifact
+                  { draRenderedText = glrText gfResult
+                  , draTemplateBodyText = glrText gfResult
+                  , draLinearizationLang = Just (glrLanguage gfResult)
+                  , draLinearizationOk = True
+                  , draFallbackReason = glrFallbackReason gfResult
+                  , draContractProvenance = BuiltClaim
+                  , draSurfaceProvenance = FromDB
+                  , draDerivationTags = draDerivationTags baseArtifact
+                      <> [ "gf_authority=" <> T.pack (show (glrAuthorityClass gfResult))
+                         , "gf_assembly_path=" <> T.pack (show (glrAssemblyPath gfResult))
+                         , "gf_response_plan=canonical"
+                         ]
+                  , draGenerationTrace = draGenerationTrace baseArtifact
+                      <> [GenerationAttempt "pgf_response_plan" "ok"]
+                  }
+          in renderStatic
+               { rsTemplateArtifact = updatedArtifact
+               , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
+               , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
+               , rsArtifactManifest = Just (glrArtifactManifest gfResult)
+               , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
+               }
+    TurnResLinearizeResponsePlan (Left err) ->
+      let baseArtifact = rsTemplateArtifact renderStatic
+      in renderStatic
+           { rsTemplateArtifact =
+               baseArtifact
+                 { draLinearizationLang = Just (langTag <> "_GF_PGF")
+                 , draLinearizationOk = False
+                 , draFallbackReason = Just ("gf_response_plan:" <> err)
+                 , draGenerationTrace = draGenerationTrace baseArtifact
+                     <> [GenerationAttempt "pgf_response_plan" ("error:" <> err)]
+                 }
+           }
     TurnResLinearizeClaimAst (Left err) ->
       let baseArtifact = rsTemplateArtifact renderStatic
       in renderStatic

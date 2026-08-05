@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 {-|
 Module      : QxFx0.Semantic.LLMDiscovery
@@ -25,18 +26,27 @@ module QxFx0.Semantic.LLMDiscovery
   , defaultLLMConfig
   , discoverFromLLM
   , parseLLMRelations
+  , parseStructuredLLMRelations
   , buildDiscoveryPrompt
+  , buildDiscoveryPromptWithCandidates
+  , buildGapAwareDiscoveryPrompt
+  , buildCorroborationPrompt
+  , responseViolatesTopicLanguage
   ) where
 
 import Control.DeepSeq (NFData)
+import Control.Exception (bracket)
 import Data.Aeson
 import qualified Data.Aeson as A
 import Data.Aeson.KeyMap (KeyMap)
+import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import Data.List (intercalate, isInfixOf, find)
+import Data.Char (isAlpha, isAscii)
 import Data.Maybe (fromMaybe, mapMaybe, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Vector as V
 import GHC.Generics (Generic)
 import Network.HTTP.Client
@@ -86,8 +96,7 @@ discoverFromLLM config concept = do
             , ("Authorization", "Bearer " <> BS8.pack (T.unpack (llmApiKey config)))
             ]
         }
-  manager <- newManager tlsManagerSettings
-  response <- httpLbs request manager
+  response <- bracket (newManager tlsManagerSettings) closeManager (httpLbs request)
   let body = responseBody response
   case A.eitherDecode body of
     Right (LLMResponse { lrChoices = choices }) ->
@@ -103,7 +112,7 @@ discoverFromLLM config concept = do
               let choices = KeyMap.lookup "choices" obj
               case choices of
                 Just (A.Array arr) -> do
-                  let firstChoice = if V.null arr then Nothing else Just (V.head arr)
+                  let firstChoice = arr V.!? 0
                   case firstChoice of
                     Just (A.Object choiceObj) -> do
                       let msg = KeyMap.lookup "message" choiceObj
@@ -134,34 +143,144 @@ discoverFromLLM config concept = do
 
 -- | Build a structured prompt for the LLM to extract relations.
 buildDiscoveryPrompt :: Text -> Text
-buildDiscoveryPrompt concept =
-  "Ты философский анализатор. Извлеки отношения концепта \"" <> concept <> "\" к философским темам.\n"
-  <> "Темы L1: свобода, истина, сознание, ответственность, страх, вера, память, "
-  <> "смерть, время, разум, бытие, язык, воля, любовь, труд, долг, доверие, "
-  <> "надежда, справедливость, власть, красота, одиночество, покой, правда, молчание.\n\n"
-  <> "Для каждого отношения выведи строку в формате:\n"
-  <> "SUBJECT | VERB | OBJECT | TYPE\n\n"
-  <> "Где:\n"
-  <> "- SUBJECT: \"" <> concept <> "\" или связанная L1 тема\n"
-  <> "- VERB: один из: предполагает, ограничена, требует, претендует, "
-  <> "проверяется, сигнализирует, выражает, отличается, связана, "
-  <> "сохраняет, ориентирует, предписывает, обозначает, структурирует, "
-  <> "определяет, преобразует, придаёт, обнаруживает, признаёт, "
-  <> "объединяет, связывает, предшествует, зависит, включает, "
-  <> "вызывает, означает, говорит, отрицает, направляет, указывает, "
-  <> "делает, поддерживает, задаёт, разрушает\n"
-  <> "- OBJECT: L1 тема или конкретный концепт\n"
-  <> "- TYPE: один из: presupposes, limitedBy, requires, claims, "
+buildDiscoveryPrompt concept = buildDiscoveryPromptWithCandidates concept []
+
+-- | Add a compact local endpoint whitelist without exposing the complete
+-- corpus to the external provider.  The caller derives candidates locally;
+-- normal admission remains the authoritative enforcement point.
+buildDiscoveryPromptWithCandidates :: Text -> [Text] -> Text
+buildDiscoveryPromptWithCandidates concept candidates =
+  "Ты аналитик семантических связей. Для темы \"" <> concept <> "\" предложи 3-7 "
+  <> "кратких, проверяемых отношений с общеупотребимыми понятиями из той же предметной области.\n"
+  <> "Верни только JSON без markdown и текста вне JSON: "
+  <> "{\"schema_version\":1,\"relations\":[{\"from\":\"...\",\"verb\":\"...\",\"to\":\"...\",\"type\":\"...\"}]}.\n"
+  <> "В каждом отношении один конец должен быть \"" <> concept <> "\". Не создавай новые термины, "
+  <> "не выдумывай факты, не давай советов и не пиши объяснений.\n"
+  <> "Для кириллической темы from, to и verb должны быть кириллическими; type оставь латинским идентификатором схемы.\n"
+  <> "Допустимые type: presupposes, limitedBy, requires, claims, "
   <> "verifiedBy, signals, expresses, differsFrom, relatedTo, "
   <> "preserves, orientsToward, prescribes, denotes, structures, "
   <> "determines, transforms, gives, reveals, recognizes, "
   <> "unifies, connects, precedes, dependsOn, includes, "
   <> "evokes, means, says, negates, directedAt, pointsTo, "
-  <> "makes, supports, sets, destroys, contrastsWith, notReducibleTo\n\n"
-  <> "Выведи 3-7 отношений. Только факты, никаких рассуждений.\n"
-  <> "Пример:\n"
-  <> "свобода | предполагает | возможность выбора | presupposes\n"
-  <> "свобода | ограничена | ответственностью | limitedBy\n"
+  <> "makes, supports, sets, destroys, contrastsWith, notReducibleTo.\n"
+  <> candidateConstraint
+  <> "Пример: {\"schema_version\":1,\"relations\":[{\"from\":\"ремонт\",\"verb\":\"требует\",\"to\":\"инструмент\",\"type\":\"requires\"}]}.\n"
+  where
+    candidateConstraint
+      | null candidates = ""
+      | otherwise = "Второй конец каждого отношения выбери строго из локально известных тем: "
+          <> T.intercalate ", " (take 24 candidates) <> ".\n"
+
+-- | Ask only for missing, locally admissible relation slots. The prompt is a
+-- bounded hint; local preflight and admission remain authoritative.
+buildGapAwareDiscoveryPrompt :: Text -> [Text] -> [Text] -> [Text] -> Text
+buildGapAwareDiscoveryPrompt concept candidates basePredicates missingSlots =
+  "Ты аналитик семантических связей. Тема: \"" <> concept <> "\".\n"
+  <> "Найди только недостающие содержательные связи; не перефразируй и не повторяй существующие predicates.\n"
+  <> "Текущий base predicate темы (запрещено повторять или перефразировать): "
+  <> if null basePredicates then "нет данных" else T.intercalate " | " (take 1 basePredicates)
+  <> ".\n"
+  <> "Приоритетные недостающие relation slots: "
+  <> if null missingSlots then "causes, presupposes, requires, dependsOn, limitedBy, partOf, contrastsWith"
+       else T.intercalate ", " (take 6 missingSlots)
+  <> ".\n"
+  <> "Предложи максимум 3 связи только из этих slots и только с локально известными endpoints."
+  <> " Каждая связь должна добавлять новый object, constraint, cause, condition, consequence, part или contrast.\n"
+  <> "Новая связь должна дополнять текущий base predicate, а не заменять его.\n"
+  <> "Верни только JSON без markdown: {\"schema_version\":1,\"relations\":[{\"from\":\"...\",\"verb\":\"...\",\"to\":\"...\",\"type\":\"...\"}]}\n"
+  <> "Один конец должен быть \"" <> concept <> "\". Не создавай новые термины и не пиши объяснений.\n"
+  <> "Если тема написана кириллицей, значения from, to и verb также пиши кириллицей; латинские relation type оставь как в схеме.\n"
+  <> "Допустимые type: causes, presupposes, requires, dependsOn, limitedBy, partOf, contrastsWith.\n"
+  <> "Локальные endpoints: " <> T.intercalate ", " (take 24 candidates)
+
+-- | One-shape confirmation prompt. A response may confirm the exact shape or
+-- explicitly report a conflict; it may not introduce arbitrary graph edges.
+buildCorroborationPrompt :: Text -> Text -> Text -> Text -> Text
+buildCorroborationPrompt topic edgeFrom relationType edgeTo =
+  "Проверь только одну семантическую связь для темы \"" <> topic <> "\": "
+  <> edgeFrom <> " | " <> relationType <> " | " <> edgeTo <> ".\n"
+  <> "Не предлагай других связей, объектов или тем. Независимо подтверди связь либо сообщи конфликт.\n"
+  <> "Сохрани язык endpoints: для кириллической темы from, to и verb должны быть кириллическими.\n"
+  <> "Верни только JSON: {\"schema_version\":1,\"relations\":[{\"from\":\""
+  <> edgeFrom <> "\",\"verb\":\"...\",\"to\":\"" <> edgeTo
+  <> "\",\"type\":\"" <> relationType <> "\"}]} либо {\"schema_version\":1,\"relations\":[]}."
+
+-- | Parse a versioned JSON response, retaining the legacy line format as a
+-- compatibility fallback during provider/prompt migration.
+parseStructuredLLMRelations :: Text -> Text -> [Relation]
+parseStructuredLLMRelations topic responseText =
+  if T.length responseText > 65536
+    then []
+    else case A.decodeStrict' (TE.encodeUtf8 responseText) of
+      Just (Object obj) | schemaVersionOne obj ->
+        case KeyMap.lookup "relations" obj of
+          Just (Array values) -> filter (relationLanguageCompatible topic) (mapMaybe relationFromValue (take 32 (V.toList values)))
+          _ -> []
+      Just (Object _) -> []
+      _ | T.isPrefixOf "{" (T.strip responseText) -> []
+        | otherwise -> filter (relationLanguageCompatible topic) (parseLLMRelations topic responseText)
+  where
+    relationFromValue (Object obj) = do
+      from <- textField "from" obj
+      verb <- textField "verb" obj
+      to <- textField "to" obj
+      type_ <- textField "type" obj
+      let rationale = optionalTextField "rationale" obj
+      case parseLLMRelations topic (T.intercalate " | " [from, verb, to, type_]) of
+        relation : _ -> Just (relation { relRationale = rationale })
+        [] -> Nothing
+    relationFromValue _ = Nothing
+
+    textField key obj =
+      case KeyMap.lookup (Key.fromText key) obj of
+        Just (String value)
+          | not (T.null (T.strip value)) && T.length value <= 256 -> Just (T.strip value)
+        _ -> Nothing
+
+    optionalTextField key obj =
+      case KeyMap.lookup (Key.fromText key) obj of
+        Just (String value) | T.length value <= 2048 -> Just (T.strip value)
+        _ -> Nothing
+
+    schemaVersionOne obj =
+      case KeyMap.lookup "schema_version" obj of
+        Just (Number n) -> n == 1
+        _ -> False
+
+relationLanguageCompatible :: Text -> Relation -> Bool
+relationLanguageCompatible topic relation
+  | not (hasCyrillic topic) = True
+  | otherwise = endpointOk from && endpointOk to && maybe True endpointOk (relVerbText relation)
+  where
+    AtomId from = relFrom relation
+    AtomId to = relTo relation
+    endpointOk value = hasCyrillic value && not (latinOnly value)
+    latinOnly value = T.any (\c -> isAscii c && isAlpha c) value && not (hasCyrillic value)
+
+hasCyrillic :: Text -> Bool
+hasCyrillic = T.any (\c -> c >= '\x0400' && c <= '\x04ff')
+
+-- | Detect a provider contract violation before endpoint admission. This is
+-- intentionally stricter than endpoint registry admission and is paired with
+-- the parser filter above so malformed language can never reach graph gates.
+responseViolatesTopicLanguage :: Text -> Text -> Bool
+responseViolatesTopicLanguage topic responseBody
+  | not (hasCyrillic topic) = False
+  | otherwise = any latinOnlyEndpoint (jsonEndpoints responseBody)
+  where
+    latinOnlyEndpoint value =
+      T.any (\c -> isAscii c && isAlpha c) value && not (hasCyrillic value)
+    jsonEndpoints body = case A.eitherDecodeStrict (TE.encodeUtf8 body) of
+      Right (Object obj) -> case KeyMap.lookup "relations" obj of
+        Just (Array values) -> concatMap endpoints (V.toList values)
+        _ -> []
+      _ -> []
+    endpoints (Object obj) = mapMaybe textValue
+      [KeyMap.lookup "from" obj, KeyMap.lookup "to" obj, KeyMap.lookup "verb" obj]
+    endpoints _ = []
+    textValue (Just (String value)) = Just value
+    textValue _ = Nothing
 
 -- | Parse LLM response text into Relation candidates.
 -- Expected format: "SUBJECT | VERB | OBJECT | TYPE" per line.
@@ -178,14 +297,14 @@ parseLLMRelations topic responseText =
              makeRelation subject verb object_ typeStr
            _ -> Nothing
 
-    makeRelation subject verb object_ typeStr =
-      let relType = parseRelType typeStr
-          fromId = subject
+    makeRelation subject verb object_ typeStr = do
+      relType <- parseRelType typeStr
+      let fromId = subject
           toId = if T.toLower object_ `elem` map T.toLower allTopics
                    then object_  -- L1 topic: use directly
                    else T.toLower object_  -- concept: lowercase
           ruOriginal = subject <> " " <> verb <> " " <> object_
-      in Just $ Relation
+      pure $ Relation
            { relFrom = AtomId (T.toLower fromId)
            , relTo = AtomId toId
            , relType = relType
@@ -201,45 +320,47 @@ parseLLMRelations topic responseText =
            , relSynthesis = Nothing
            }
 
-    parseRelType :: Text -> RelationType
+    parseRelType :: Text -> Maybe RelationType
     parseRelType t = case T.toLower (T.strip t) of
-      "presupposes" -> RelPresupposes
-      "limitedby" -> RelLimitedBy
-      "requires" -> RelRequires
-      "claims" -> RelClaims
-      "verifiedby" -> RelVerifiedBy
-      "signals" -> RelSignals
-      "expresses" -> RelExpresses
-      "differsfrom" -> RelDiffersFrom
-      "relatedto" -> RelRelatedTo
-      "preserves" -> RelPreserves
-      "orientstoward" -> RelOrientsToward
-      "prescribes" -> RelPrescribes
-      "denotes" -> RelDenotes
-      "structures" -> RelStructures
-      "determines" -> RelDetermines
-      "transforms" -> RelTransforms
-      "gives" -> RelGives
-      "reveals" -> RelReveals
-      "recognizes" -> RelRecognizes
-      "unifies" -> RelUnifies
-      "connects" -> RelConnects
-      "precedes" -> RelPrecedes
-      "dependson" -> RelDependsOn
-      "includes" -> RelIncludes
-      "evokes" -> RelEvokes
-      "means" -> RelMeans
-      "says" -> RelSays
-      "negates" -> RelNegates
-      "directedat" -> RelDirectedAt
-      "pointsto" -> RelPointsTo
-      "makes" -> RelMakes
-      "supports" -> RelSupports
-      "sets" -> RelSets
-      "destroys" -> RelDestroys
-      "contrastswith" -> RelContrastsWith
-      "notreducibleto" -> RelNotReducibleTo
-      _ -> RelRelatedTo  -- safe default
+      "presupposes" -> Just RelPresupposes
+      "causes" -> Just RelCauses
+      "limitedby" -> Just RelLimitedBy
+      "requires" -> Just RelRequires
+      "partof" -> Just RelPartOf
+      "claims" -> Just RelClaims
+      "verifiedby" -> Just RelVerifiedBy
+      "signals" -> Just RelSignals
+      "expresses" -> Just RelExpresses
+      "differsfrom" -> Just RelDiffersFrom
+      "relatedto" -> Just RelRelatedTo
+      "preserves" -> Just RelPreserves
+      "orientstoward" -> Just RelOrientsToward
+      "prescribes" -> Just RelPrescribes
+      "denotes" -> Just RelDenotes
+      "structures" -> Just RelStructures
+      "determines" -> Just RelDetermines
+      "transforms" -> Just RelTransforms
+      "gives" -> Just RelGives
+      "reveals" -> Just RelReveals
+      "recognizes" -> Just RelRecognizes
+      "unifies" -> Just RelUnifies
+      "connects" -> Just RelConnects
+      "precedes" -> Just RelPrecedes
+      "dependson" -> Just RelDependsOn
+      "includes" -> Just RelIncludes
+      "evokes" -> Just RelEvokes
+      "means" -> Just RelMeans
+      "says" -> Just RelSays
+      "negates" -> Just RelNegates
+      "directedat" -> Just RelDirectedAt
+      "pointsto" -> Just RelPointsTo
+      "makes" -> Just RelMakes
+      "supports" -> Just RelSupports
+      "sets" -> Just RelSets
+      "destroys" -> Just RelDestroys
+      "contrastswith" -> Just RelContrastsWith
+      "notreducibleto" -> Just RelNotReducibleTo
+      _ -> Nothing
 
 -- | LLM API response types (compatible with OpenAI/Cerebras format).
 data LLMResponse = LLMResponse

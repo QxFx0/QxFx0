@@ -30,7 +30,6 @@ module QxFx0.Semantic.Network.Ingest
 
 import Control.Applicative ((<|>))
 import Control.DeepSeq (NFData)
-import Control.Exception (SomeException, try)
 import Data.Aeson (FromJSON(parseJSON), ToJSON(toJSON), eitherDecodeStrict, object, withObject, (.:), (.:?), (.=))
 import Data.Foldable (foldl')
 import Data.List (sortOn)
@@ -72,6 +71,12 @@ import QxFx0.Semantic.Network.Types
   )
 import qualified QxFx0.Semantic.Network.Types as NetTypes
 import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), loadOntology)
+import QxFx0.ExceptionPolicy
+  ( mkRuntimeInitError
+  , throwQxFx0
+  , tryIO
+  , tryQxFx0
+  )
 
 -- ============================================================
 -- LoadedRelation
@@ -196,8 +201,16 @@ loadRelations path = do
     parseLine :: Text -> IO LoadedRelation
     parseLine line =
       case eitherDecodeStrict (TE.encodeUtf8 line) of
-        Left err  -> fail ("Failed to parse relation line: " ++ err)
+        Left err  -> throwRelationParseError (T.pack err)
         Right rel -> pure rel
+
+throwRelationParseError :: Text -> IO a
+throwRelationParseError detail =
+  throwQxFx0 (mkRuntimeInitError
+    "semantic_network_ingest"
+    "parse_relation"
+    "RELATION_PARSE_ERROR"
+    (M.singleton "detail" detail))
 
 -- ============================================================
 -- Atom lookup
@@ -511,12 +524,15 @@ buildNetworkFromAtomGraph g =
 -- returns 'Nothing'.
 ingestExternalKnowledge :: FilePath -> FilePath -> IO (Maybe SemanticNetwork)
 ingestExternalKnowledge ontologyPath relationsPath = do
-  result <- try (do
+  result <- tryIO (tryQxFx0 (do
     ont      <- loadOntology ontologyPath
     rawRels  <- loadRelations relationsPath
-    pure (semanticNetworkFromLoaded ont rawRels)) :: IO (Either SomeException SemanticNetwork)
+    pure (semanticNetworkFromLoaded ont rawRels)))
   case result of
-    Right sn -> pure (Just sn)
+    Right (Right sn) -> pure (Just sn)
+    Right (Left exc) -> do
+      hPutStrLn stderr ("Warning: ingestExternalKnowledge failed: " ++ show exc)
+      pure Nothing
     Left exc -> do
       hPutStrLn stderr ("Warning: ingestExternalKnowledge failed: " ++ show exc)
       pure Nothing

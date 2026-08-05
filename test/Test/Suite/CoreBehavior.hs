@@ -33,6 +33,7 @@ import qualified Data.Text as T
 import qualified Data.Set as S
 
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Semantic.ContentSelector (emptyContentSelector)
 import QxFx0.Types.PropositionType (PropositionType(..), propositionTypeText)
 import QxFx0.Types.Sense (ImplicationDirection(..), RhetoricalMove(..), FallbackPolicy(..))

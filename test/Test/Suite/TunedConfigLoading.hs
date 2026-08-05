@@ -9,7 +9,7 @@ Module      : Test.Suite.TunedConfigLoading
 Description : Runtime loading of tuned config files with fallback.
 
 Verifies the three-level fallback implemented in
-'QxFx0.Self.ConfigLoad.loadTunedOrDefault':
+'QxFx0.Runtime.Session.SelfConfig.loadTunedOrDefaultIO':
 
   * a valid tuned config is used when present;
   * a missing or unparseable tuned config falls back to the base
@@ -31,7 +31,7 @@ import qualified Data.ByteString.Lazy as BL
 import GHC.Generics (Generic)
 import Test.HUnit
 
-import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
+import QxFx0.Runtime.Session.SelfConfig (loadTunedOrDefaultIO)
 import Test.Support (freshTestPath, removeIfExists)
 
 -- ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ testTunedValidWins = TestCase $ do
     [ (tunedPath, Just (encode tunedCfg))
     , (basePath,  Just (encode baseCfg))
     ] $ do
-      let result = loadTunedOrDefault tunedPath basePath builtinCfg
+      result <- loadTunedOrDefaultIO tunedPath basePath builtinCfg
       assertEqual "valid tuned file must be loaded" tunedCfg result
 
 testMissingTunedFallsBackToBase :: Test
@@ -83,7 +83,7 @@ testMissingTunedFallsBackToBase = TestCase $ do
     [ (tunedPath, Nothing)
     , (basePath,  Just (encode baseCfg))
     ] $ do
-      let result = loadTunedOrDefault tunedPath basePath builtinCfg
+      result <- loadTunedOrDefaultIO tunedPath basePath builtinCfg
       assertEqual "missing tuned file must fall back to base" baseCfg result
 
 testMalformedTunedFallsBackToBase :: Test
@@ -94,7 +94,7 @@ testMalformedTunedFallsBackToBase = TestCase $ do
     [ (tunedPath, Just "not json")
     , (basePath,  Just (encode baseCfg))
     ] $ do
-      let result = loadTunedOrDefault tunedPath basePath builtinCfg
+      result <- loadTunedOrDefaultIO tunedPath basePath builtinCfg
       assertEqual "malformed tuned file must fall back to base" baseCfg result
 
 testBothMissingFallsBackToBuiltin :: Test
@@ -105,7 +105,7 @@ testBothMissingFallsBackToBuiltin = TestCase $ do
     [ (tunedPath, Nothing)
     , (basePath,  Nothing)
     ] $ do
-      let result = loadTunedOrDefault tunedPath basePath builtinCfg
+      result <- loadTunedOrDefaultIO tunedPath basePath builtinCfg
       assertEqual "missing tuned and base must fall back to builtin" builtinCfg result
 
 testMissingTunedMalformedBaseFallsBackToBuiltin :: Test
@@ -116,7 +116,7 @@ testMissingTunedMalformedBaseFallsBackToBuiltin = TestCase $ do
     [ (tunedPath, Nothing)
     , (basePath,  Just "not json")
     ] $ do
-      let result = loadTunedOrDefault tunedPath basePath builtinCfg
+      result <- loadTunedOrDefaultIO tunedPath basePath builtinCfg
       assertEqual "malformed base with missing tuned must fall back to builtin"
         builtinCfg result
 

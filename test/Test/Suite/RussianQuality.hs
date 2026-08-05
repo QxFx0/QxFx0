@@ -11,6 +11,7 @@ import qualified Data.Text as T
 import qualified Data.Set as Set
 
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Self.Field (emptyField)
 import qualified QxFx0.Core.TurnPlanning as TurnPlanning

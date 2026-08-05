@@ -75,10 +75,12 @@ defaultConatusPrior conatus request =
         TurnReqNixGuard _ _ _ -> 55
         TurnReqLinearizeClaimAst _ _ _ -> 50
         TurnReqLinearizeDialogAtoms _ _ _ -> 50
+        TurnReqLinearizeResponsePlan _ _ _ -> 50
         TurnReqExternalQuery _ _ _ -> 45
         TurnReqCommitRuntimeState _ _ _ -> 40
         TurnReqSaveState _ _ _ _ -> 35
-        TurnReqRollbackTurnProjections _ _ -> 30
+        TurnReqRollbackCommittedTurn _ _ _ _ -> 30
+        TurnReqPersistFeedbackMirror _ _ -> 25
         TurnReqCheckpoint _ -> 25
         TurnReqTestMarkOnceFile _ -> 20
 

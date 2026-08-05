@@ -16,55 +16,13 @@ module QxFx0.Policy.Metacognition
   , runMetacognitionLoop
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (ToJSON, FromJSON)
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 import Prelude (Bool(..), Double, Eq(..), Int, Maybe(..), Num(..), Ord(..), Show, (&&), ($), (.), (++), (+), (==), (||), any, maybe, not, null, otherwise, pure)
 
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
-
--- | Outcome of a previous turn, observed from the user's response.
-data Outcome
-  = OutcomeAccepted
-  | OutcomeRefined
-  | OutcomeRejected
-  | OutcomeContradicted
-  | OutcomeIgnored
-  | OutcomeNoFeedback
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Self-evaluation of a decision given its outcome.
-data Evaluation
-  = EvaluationAligned
-  | EvaluationMisaligned
-  | EvaluationAmbiguous
-  | EvaluationUncalibrated
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | A metacognitive correction update (placeholder until P8 lands).
--- When Package 8 (bounded learning) is in place, this will be
--- replaced by or extended to a 'LearningUpdate' routed through
--- 'applyLearningUpdate'.
-data MetacognitionUpdate
-  = MetacognitionNoUpdate
-  | MetacognitionDecrementConfidence
-  | MetacognitionClipThreshold
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Running metacognitive state within a session.
-data MetacognitionContour = MetacognitionContour
-  { mcRecentEvaluations :: !(Seq (TurnSeq, Evaluation, Maybe MetacognitionUpdate))
-  , mcMisalignCount     :: !Int
-  , mcTotalCount        :: !Int
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Policy.Metacognition
 
 emptyMetacognitionContour :: MetacognitionContour
 emptyMetacognitionContour = MetacognitionContour

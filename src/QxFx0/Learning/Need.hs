@@ -36,104 +36,20 @@ module QxFx0.Learning.Need
   , learningNeedPersistence
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
 import QxFx0.Self.Field (Field(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Self.Salience (Salience(..), salienceHolisticBias)
+import QxFx0.Types.Learning.Need
 
 -- | A typed deficit that the system can report to itself (and
 -- optionally to an external tool) as a reason to acquire new
 -- knowledge.
-data LearningNeed
-  = NeedSalienceCalibration
-    -- ^ Salience weights may be mis-calibrated; calibration data is
-    --   needed to adjust 'SalienceWeights' empirically.
-  | NeedKeywordEnrichment
-    -- ^ Atom trace shows unresolved Searching / Doubt patterns with
-    --   low consolidation; keyword coverage is insufficient.
-  | NeedLexiconExtension
-    -- ^ Morphology gaps cause repeated unknown-topic recovery or
-    --   template fallback.
-  | NeedNone
-    -- ^ No persistent deficit detected in the current window.
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | Trend of a need across the observation window.
-data NeedTrend
-  = TrendRising
-    -- ^ Deficit metric is increasing (getting worse).
-  | TrendStable
-    -- ^ Deficit metric is within a dead band.
-  | TrendFalling
-    -- ^ Deficit metric is decreasing (improving).
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | State of the diagnostic drive.  Kept in 'SystemState' and
 -- updated once per turn in 'buildNextSystemState'.
-data LearningNeedState = LearningNeedState
-  { lnsCurrentNeed :: !LearningNeed
-    -- ^ The currently active need (or 'NeedNone').
-    --   This is the threshold-gated need exposed to downstream.
-  , lnsCandidateNeed :: !LearningNeed
-    -- ^ The raw dominant need before persistence threshold is applied.
-    --   Used internally so that persistence can accumulate across turns
-    --   even when the threshold has not yet been met.
-  , lnsLevel :: !Double
-    -- ^ Normalised deficit severity in [0, 1].  0 = no deficit.
-  , lnsTrend :: !NeedTrend
-    -- ^ Direction of change over the observation window.
-  , lnsPersistence :: !Int
-    -- ^ How many consecutive turns this need has been observed.
-    --   Resets to 0 when the need class changes or drops to None.
-  , lnsLastSeenTurn :: !Int
-    -- ^ Turn count of the most recent observation.
-  , lnsHistory :: ![(Int, Double)]
-    -- ^ (turn, level) pairs for the last N turns (capped at 20).
-  , lnsUnknownWindowCount :: !Int
-    -- ^ WP6.1: count of unknown-topic mentions in the current window.
-  , lnsWindowStartTurn :: !Int
-    -- ^ WP6.1: turn when the current observation window started.
-  , lnsWindowGraftBaseline :: !Int
-    -- ^ WP6.1: grafted count at window start (for stagnation detection).
-  }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
-instance ToJSON LearningNeedState where
-  toJSON s = object
-    [ "currentNeed" .= lnsCurrentNeed s
-    , "candidateNeed" .= lnsCandidateNeed s
-    , "level" .= lnsLevel s
-    , "trend" .= lnsTrend s
-    , "persistence" .= lnsPersistence s
-    , "lastSeenTurn" .= lnsLastSeenTurn s
-    , "history" .= lnsHistory s
-    , "unknownWindowCount" .= lnsUnknownWindowCount s
-    , "windowStartTurn" .= lnsWindowStartTurn s
-    , "windowGraftBaseline" .= lnsWindowGraftBaseline s
-    ]
-
-instance FromJSON LearningNeedState where
-  parseJSON = withObject "LearningNeedState" $ \o ->
-    LearningNeedState
-      <$> o .:? "currentNeed" .!= NeedNone
-      <*> o .:? "candidateNeed" .!= NeedNone
-      <*> o .:? "level" .!= 0.0
-      <*> o .:? "trend" .!= TrendStable
-      <*> o .:? "persistence" .!= 0
-      <*> o .:? "lastSeenTurn" .!= 0
-      <*> o .:? "history" .!= []
-      <*> o .:? "unknownWindowCount" .!= 0
-      <*> o .:? "windowStartTurn" .!= 0
-      <*> o .:? "windowGraftBaseline" .!= 0
-
 emptyLearningNeedState :: LearningNeedState
 emptyLearningNeedState = LearningNeedState
   { lnsCurrentNeed = NeedNone
@@ -149,16 +65,6 @@ emptyLearningNeedState = LearningNeedState
   }
 
 -- | WP6.1: configuration for learning-pressure-driven triggers.
-data LearningPressureConfig = LearningPressureConfig
-  { lpcWindowSize :: !Int
-    -- ^ Turns in the observation window (default 10).
-  , lpcMinUnknownCount :: !Int
-    -- ^ Minimum unknown mentions to raise pressure (default 2).
-  , lpcStagnationTurns :: !Int
-    -- ^ Max turns without grafts before stagnation is flagged (default 5).
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 defaultLearningPressureConfig :: LearningPressureConfig
 defaultLearningPressureConfig = LearningPressureConfig
   { lpcWindowSize = 10

@@ -7,6 +7,7 @@ GF_TOOLCHAIN_ID="${QXFX0_GF_TOOLCHAIN_ID:-gf2}"
 SYNTAX_CONCRETE="$ROOT/spec/gf/QxFx0SyntaxRus.gf"
 OUT_PGF="$ROOT/spec/gf/QxFx0Syntax.pgf"
 MANIFEST_FILE="$ROOT/spec/gf/QxFx0Syntax.pgf.manifest"
+GENERATED_PGF="$ROOT/QxFx0Syntax.pgf"
 
 # Add ~/.cabal/bin to PATH to find gf binary (avoid shell alias 'gf=git fetch')
 export PATH="$HOME/.cabal/bin:$PATH"
@@ -14,6 +15,13 @@ export PATH="$HOME/.cabal/bin:$PATH"
 if [ ! -f "$SYNTAX_CONCRETE" ]; then
   echo "GF_GRAMMAR_INPUT_MISSING: $SYNTAX_CONCRETE" >&2
   exit 1
+fi
+
+# GF writes the PGF beside the process working directory, not beside the
+# concrete source. Promote a just-built root artifact before checking freshness
+# so the runtime resource and manifest always name the same grammar.
+if [ -f "$GENERATED_PGF" ] && { [ ! -f "$OUT_PGF" ] || [ "$GENERATED_PGF" -nt "$OUT_PGF" ]; }; then
+  mv "$GENERATED_PGF" "$OUT_PGF"
 fi
 
 compile_with_gf() {
@@ -79,6 +87,12 @@ fi
 if [ ! -f "$OUT_PGF" ]; then
   echo "GF_GRAMMAR_COMPILE_FAILED: GF compile finished but PGF output was not created: $OUT_PGF" >&2
   exit 1
+fi
+
+# See the promotion above: successful GF compilation emits at the repository
+# root, while runtime resource resolution reads spec/gf.
+if [ -f "$GENERATED_PGF" ]; then
+  mv "$GENERATED_PGF" "$OUT_PGF"
 fi
 
 manifest_hash="$(sha256sum "$ROOT/spec/gf/"*.gf | sha256sum | cut -d' ' -f1):$GF_TOOLCHAIN_ID"

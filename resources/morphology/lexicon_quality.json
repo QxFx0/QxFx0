@@ -3,12 +3,12 @@
     "p1_domain_seed_hit_count": 188,
     "p1_lemma_count": 3997,
     "p1_long_lemma_count": 0,
-    "p1_mostly_proper_count": 0,
+    "p1_mostly_proper_count": 4,
     "p1_patronymic_like_count": 0,
     "p1_technical_compound_count": 0,
     "p2_domain_seed_hit_count": 50,
     "p2_lemma_count": 17498,
-    "p2_mostly_proper_count": 2,
+    "p2_mostly_proper_count": 10,
     "p2_patronymic_like_count": 0
   },
   "auto_source_enabled": true,
@@ -60,7 +60,8 @@
     "spec/gf/lexicon_funmap.tsv",
     "spec/LexiconData.agda",
     "spec/LexiconProof.agda",
-    "src/QxFx0/Lexicon/Generated.hs"
+    "src/QxFx0/Lexicon/Generated.hs",
+    "src/QxFx0/Lexicon/Generated/SemanticSlots.hs"
   ],
   "harmless_collision_count": 0,
   "invalid_rows": 0,
@@ -69,6 +70,8 @@
   "sources": [
     "spec/sql/lexicon/schema.sql",
     "spec/sql/lexicon/seed_ru_curated.sql",
+    "spec/gf/curated_predicate_slots.tsv",
+    "spec/gf/argued_leaf_slots.tsv",
     "spec/sql/lexicon/seed_brain_kb_reviewed.sql"
   ],
   "target_lemma_count": 70,

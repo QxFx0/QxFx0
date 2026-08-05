@@ -120,11 +120,10 @@ buildSubstrateEdges entries explicitTopicSet =
       topicPairs = concatMap (extractPhilosophicalPairs explicitTopicList) filtered
       -- Count co-occurrences
       coocMap = countCooccurrences topicPairs
-      -- Build edges with cooc >= 2, weight = 0.3
+      -- Every admitted entry already has at least two philosophical triggers.
       edges =
         [ SubstrateEdgeInfo t1 t2 0.3 cooc
         | ((t1, t2), cooc) <- M.toList coocMap
-        , cooc >= 2
         ]
   in edges
 
@@ -137,7 +136,12 @@ isRelevantEntry explicitTopicList entry =
 -- | Find philosophical triggers in a trigger list using substring matching.
 findPhilosophicalTriggers :: [Text] -> [Text] -> [Text]
 findPhilosophicalTriggers explicitTopicList triggers =
-  filter (\t -> any (`T.isInfixOf` t) explicitTopicList) triggers
+  S.toList . S.fromList $
+    [ topic
+    | trigger <- triggers
+    , topic <- explicitTopicList
+    , topic `T.isInfixOf` trigger
+    ]
 
 -- | Extract bidirectional pairs of philosophical triggers from an entry.
 extractPhilosophicalPairs :: [Text] -> BrainKBEntry -> [((Text, Text), Int)]

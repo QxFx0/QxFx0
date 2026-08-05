@@ -80,7 +80,6 @@ import QxFx0.Types.State
   , emptyBeliefStore
   , emptyDialogueOutcomeLearningState
   , emptySpeechPolicyState
-  , emptySystemState
   , appendAdaptiveMutationRecords
   , ssKnowledgeTree
   , ssLastGuardReport
@@ -113,9 +112,12 @@ import QxFx0.Types.State
   )
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
+  , applyExternalLearning
   , emptyLearningTelemetry
+  , legacyExternalLearningEnabled
   , runLearningStep
   )
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Learning.Validator
   ( KnowledgeFruitPayload(..)
   , MorphologyPayload(..)
@@ -190,13 +192,8 @@ learningLoopTests =
    , testInflatedRemotePredictiveDeltaDoesNotForceAcceptance
    , testInflatedRemoteConatusDeltaDoesNotForceAcceptance
    , testLocalAuthorityDeltasDriveSandboxVerdict
-   , testGraftUpdatesTreeAndMorph
-   , testTelemetryFieldsPopulated
-   , testExecutedToolMatchesPlannedToolAttribution
-   , testExecutedToolOverridesPlannedToolAttribution
-   , testFailClosedOnExternalError
-   , testFallbackFailureKeepsActorClean
-   , testNoResultKeepsActorClean
+   , testLegacyLearningStepDisabled
+   , testLegacyExternalLearningApplyDisabled
    -- Phase 8 hardening + Phase 9 start tests
   , testExplicitConfigFallbackReason
   , testConfigRedactsApiKey
@@ -207,11 +204,8 @@ learningLoopTests =
   , testCalibrationSnapshotBoundedness
   , testCalibrationGatedApplyLowConfidence
   , testCalibrationGatedApplyRateLimit
-  , testRealPathMiniEvalScenario1
-  , testRealPathMiniEvalScenario2
-  , testRealPathMiniEvalScenario3
   , testRealPathMiniEvalScenario4
-        , testRealPathMiniEvalScenario5
+  , testRealPathMiniEvalScenario5
    -- WP1-WP5 cumulative learning tests
    , testSystemStatePersistenceRoundTrip
    , testSystemStateJsonOmitsDerivedGovernanceViews
@@ -233,9 +227,6 @@ learningLoopTests =
   , testMorphologyRetentionMerge
   , testDedupBlocksExternalQueryForKnownMorphology
   , testDedupBlocksExternalQueryForKnownTreeTerm
-   , testConatusDeltaDerivedFromStateNotPayload
-   , testStoredFruitDoesNotPersistRemotePredictiveAuthority
-   , testQuarantinePromotionIgnoresInflatedRemotePredictiveClaim
    -- WP6.1 learning-pressure trigger + dedup + telemetry tests
   , testLearningPressureRaisesLexiconExtension
   , testLearningPressureIgnoresLowUnknownCount
@@ -465,6 +456,41 @@ mkFruit prop src valid cDelta pDelta =
 -- ============================================================
 -- Phase 8 vertical slice tests
 -- ============================================================
+
+testLegacyLearningStepDisabled :: Test
+testLegacyLearningStepDisabled = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода — способность\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      response = ExternalQueryResponse validJson validJson "llm-augment" 0
+      state = emptySystemState
+        { ssLearningNeedState = emptyLearningNeedState
+            { lnsCurrentNeed = NeedLexiconExtension }
+        }
+      (nextState, telemetry) =
+        runLearningStep
+          state
+          (ExternalTool "llm-augment" DomainLexicon 0.70 True)
+          NeedLexiconExtension
+          "что значит свобода"
+          (Just (Right response))
+  assertBool "legacy external learning policy must be disabled" (not legacyExternalLearningEnabled)
+  assertEqual "disabled legacy learning step must preserve the exact SystemState" state nextState
+  assertEqual "disabled legacy learning step must report its policy verdict"
+    "disabled_by_policy" (ltValidationStatus telemetry)
+  assertEqual "disabled legacy learning step must not attribute an external actor"
+    Nothing (ltExternalTool telemetry)
+
+testLegacyExternalLearningApplyDisabled :: Test
+testLegacyExternalLearningApplyDisabled = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода требует выбора\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле и отвечать за выбор\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2,\"relations\":[{\"from\":\"свобода\",\"to\":\"выбор\",\"type\":\"requires\"}]}"
+      response = ExternalQueryResponse validJson validJson "llm-augment" 0
+      state = emptySystemState
+        { ssLearningNeedState = emptyLearningNeedState
+            { lnsCurrentNeed = NeedLexiconExtension }
+        }
+      nextState = applyExternalLearning state (Just (Right response))
+  assertEqual "disabled legacy finalize application must preserve the exact SystemState" state nextState
+  assertEqual "disabled legacy finalize application must preserve the semantic graph"
+    (ssSemanticNetwork state) (ssSemanticNetwork nextState)
 
 -- | WP2: mock transport returns a deterministic success.
 testMockTransportSuccess :: Test

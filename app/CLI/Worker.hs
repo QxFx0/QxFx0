@@ -25,7 +25,7 @@ import QxFx0.ExceptionPolicy
   , tryAsync
   )
 
-import Control.Exception (AsyncException(ThreadKilled), fromException, throwIO)
+import Control.Exception (AsyncException(..), fromException, throwIO)
 import Control.Exception (bracketOnError)
 import Control.Monad (unless, when)
 import Data.Aeson (ToJSON, Value, encode, object, (.=))
@@ -95,12 +95,10 @@ runWorkerStdio sessionId = do
               Right (nextState, shouldStop) ->
                 unless shouldStop (loop nextState)
               Left err
-                | isTurnCommand cmd ->
-                    case fromException err of
-                      Just ThreadKilled -> throwIO ThreadKilled
-                      _ -> do
-                        T.putStrLn (workerErrorWithCode "worker_turn_exception" (textShow err))
-                        pure ()
+                | Just async <- (fromException err :: Maybe AsyncException) -> throwIO async
+                | isTurnCommand cmd -> do
+                    T.putStrLn (workerErrorWithCode "worker_turn_exception" (textShow err))
+                    pure ()
                 | otherwise -> do
                     T.putStrLn (workerError (textShow err))
                     loop state
@@ -112,6 +110,9 @@ isTurnCommand _ = False
 handleWorkerCommand :: LiveWorkerState -> WorkerCommand -> IO (LiveWorkerState, Bool)
 handleWorkerCommand state@LiveWorkerState{..} = \case
   WorkerShutdown -> do
+    -- The sidecar treats this acknowledgement as proof that session cleanup
+    -- has completed. The enclosing bracket's second close remains a no-op.
+    Runtime.closeSession lwsSession
     T.putStrLn (workerStatus lwsRuntimeEpoch lwsRuntimeTurnIndex "ok" "shutdown")
     pure (state, True)
   WorkerHello version capabilities -> do

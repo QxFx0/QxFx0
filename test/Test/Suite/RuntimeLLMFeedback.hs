@@ -34,13 +34,16 @@ mkEdge prov conf cooc = SemanticEdge
   , seCoOccurrence = cooc
   , seSource = ExplicitEdge
   , seRelationType = Just RelRequires
+  , seDomain = Nothing
+  , seTemporalScope = Nothing
   , seVerb = Nothing
   , seRationale = Nothing
   , seCounter = Nothing
   , seSynthesis = Nothing
   , seConfidence = conf
   , seProvenance = prov
-  , seNamespace = NamespaceSessionLocal
+  , seNamespace = Just NamespaceSessionLocal
+  , seLineage = Nothing
   }
 
 mkNetwork :: SemanticEdge -> SemanticNetwork

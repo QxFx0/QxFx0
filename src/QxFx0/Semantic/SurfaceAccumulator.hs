@@ -25,7 +25,7 @@ module QxFx0.Semantic.SurfaceAccumulator
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (isJust, fromJust)
+import Data.Maybe (isJust, fromJust, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -163,11 +163,11 @@ inferTopicCase md t =
   case M.lookup (T.toLower t) (mdFormsBySurface md) of
     Nothing   -> Nothing
     Just []   -> Nothing
-    Just forms -> Just (lfCase (bestForm forms))
+    Just forms -> lfCase <$> bestForm forms
 
 -- | Pick the highest-quality candidate form; ties are left to the resolver.
-bestForm :: [LexemeForm] -> LexemeForm
-bestForm forms = head (sortOn rankingKey forms)
+bestForm :: [LexemeForm] -> Maybe LexemeForm
+bestForm forms = listToMaybe (sortOn rankingKey forms)
   where
     rankingKey f =
       ( negate (tierPriority (lfTier f))

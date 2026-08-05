@@ -13,7 +13,8 @@ module QxFx0.Bridge.SQLite.Pool
   , execOrThrow
   ) where
 
-import Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
+import Control.Concurrent (ThreadId, myThreadId, threadDelay)
+import Control.Concurrent.MVar (MVar, modifyMVar, newMVar, putMVar, takeMVar)
 import Control.Exception (finally, mask, mask_, onException, throwIO)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -30,6 +31,7 @@ import QxFx0.ExceptionPolicy
   , throwQxFx0
   )
 import System.Timeout (timeout)
+import System.IO.Unsafe (unsafePerformIO)
 
 data QxFx0DB = QxFx0DB
   { qdbPath :: !FilePath
@@ -41,6 +43,48 @@ data WorkerDBPool = WorkerDBPool
   , poolPath :: !FilePath
   , poolSize :: !Int
   }
+
+-- | SQLite permits only one writer.  Autonomous audit, worker, and governed
+-- apply all use 'withDB', so serialize their local process actions before
+-- relying on SQLite's cross-process busy handling.  A process-global lock is
+-- deliberate here: it protects a single state database without widening any
+-- domain authority or changing transaction contents.
+databaseActionLock :: MVar (Maybe (ThreadId, Int))
+{-# NOINLINE databaseActionLock #-}
+databaseActionLock = unsafePerformIO (newMVar Nothing)
+
+-- | Serialize all local SQLite actions while permitting the same thread to
+-- re-enter the lock.  Bootstrap uses a pooled connection and, in a few
+-- compatibility paths, invokes a helper implemented with 'withDB' inside it;
+-- a plain MVar would deadlock there.
+withDatabaseActionLock :: IO a -> IO a
+withDatabaseActionLock action = mask $ \restore -> do
+  owner <- myThreadId
+  acquireDatabaseActionLock owner
+  value <- restore action `onException` releaseDatabaseActionLock owner
+  releaseDatabaseActionLock owner
+  pure value
+
+acquireDatabaseActionLock :: ThreadId -> IO ()
+acquireDatabaseActionLock owner = do
+  acquired <- modifyMVar databaseActionLock $ \state ->
+    case state of
+      Nothing -> pure (Just (owner, 1), True)
+      Just (heldBy, depth)
+        | heldBy == owner -> pure (Just (heldBy, depth + 1), True)
+        | otherwise -> pure (state, False)
+  if acquired
+    then pure ()
+    else threadDelay 1000 >> acquireDatabaseActionLock owner
+
+releaseDatabaseActionLock :: ThreadId -> IO ()
+releaseDatabaseActionLock owner =
+  modifyMVar databaseActionLock $ \state ->
+    case state of
+      Just (heldBy, depth)
+        | heldBy == owner && depth > 1 -> pure (Just (heldBy, depth - 1), ())
+        | heldBy == owner -> pure (Nothing, ())
+      _ -> pure (state, ())
 
 newDBPool :: FilePath -> Int -> IO WorkerDBPool
 newDBPool path size = do
@@ -61,29 +105,35 @@ newDBPool path size = do
 closeDBPool :: WorkerDBPool -> IO ()
 closeDBPool pool = mask_ $ do
   conns <- takeMVar (poolMVar pool)
-  finally
-    (mapM_ NSQL.close conns)
-    (putMVar (poolMVar pool) [])
+  results <- mapM (tryAsync . NSQL.close) conns
+    `finally` putMVar (poolMVar pool) []
+  case [err | Left err <- results] of
+    err : _ -> throwIO err
+    [] -> pure ()
 
 withDB :: FilePath -> (NSQL.Database -> IO a) -> IO (Either Text a)
-withDB path action = do
-  mDb <- NSQL.open path
-  case mDb of
-    Left err -> pure (Left err)
-    Right db ->
-      finally
-        (catchIO
-          (do
-            qxfx0Result <- tryQxFx0 $ do
-              execOrThrow db "PRAGMA journal_mode=WAL;"
-              execOrThrow db "PRAGMA busy_timeout=5000;"
-              execOrThrow db "PRAGMA foreign_keys=ON;"
-              action db
-            case qxfx0Result of
-              Right value -> pure (Right value)
-              Left ex -> pure (Left (renderDbActionFailure ex)))
-          (\err -> pure (Left ("db action failed: " <> T.pack (show err)))))
-        (safeClose db)
+withDB path action = withDatabaseActionLock runOnce
+  where
+    runOnce = do
+      mDb <- NSQL.open path
+      case mDb of
+        Left err -> pure (Left err)
+        Right db ->
+          finally
+            (catchIO
+              (do
+                qxfx0Result <- tryQxFx0 $ do
+                  -- journal_mode changes need an exclusive lock.  Bootstrap and
+                  -- pooled connections establish WAL once; repeating it for each
+                  -- worker write races normal turn transactions.
+                  execOrThrow db "PRAGMA busy_timeout=5000;"
+                  execOrThrow db "PRAGMA foreign_keys=ON;"
+                  action db
+                case qxfx0Result of
+                  Right value -> pure (Right value)
+                  Left ex -> pure (Left (renderDbActionFailure ex)))
+              (\err -> pure (Left ("db action failed: " <> T.pack (show err)))))
+            (safeClose db)
 
 renderDbActionFailure :: QxFx0Exception -> Text
 renderDbActionFailure ex =
@@ -94,7 +144,7 @@ renderDbActionFailure ex =
     _ -> "db action failed"
 
 withPooledDB :: WorkerDBPool -> (NSQL.Database -> IO a) -> IO a
-withPooledDB pool action = mask $ \restore -> do
+withPooledDB pool action = withDatabaseActionLock $ mask $ \restore -> do
   mConns <- timeout poolAcquireTimeoutMicros (takeMVar (poolMVar pool))
   conns <-
     case mConns of

@@ -36,7 +36,8 @@ import QxFx0.Types.State.SemanticCommitment
   , emptySemanticCommitmentStore
   , emptyCommitmentEngagement
   )
-import QxFx0.Types.State.System (SystemState(..), emptySystemState, ssSemanticCommitments)
+import QxFx0.Types.State.System (SystemState(..), ssSemanticCommitments)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.TurnProjection
   ( tqpReplayTrace
   , trcCommitmentEngaged

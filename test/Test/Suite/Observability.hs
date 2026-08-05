@@ -73,6 +73,17 @@ loggingTests =
       let entry = LogEntry timestamp LogError "error" emptyContext (Just "ERR001")
           formatted = formatLogEntry entry
       assertBool "formatted output should contain error code" ("ERR001" `T.isInfixOf` formatted)
+
+  , TestCase $ do
+      timestamp <- getCurrentTime
+      let ctx = addContext "render_ms" "12" $
+                addContext "failure" "PGF path unavailable" emptyContext
+          entry = LogEntry timestamp LogInfo "latency" ctx Nothing
+          formatted = formatLogEntry entry
+      assertBool "formatted output should expose structured timing context"
+        ("render_ms=12" `T.isInfixOf` formatted)
+      assertBool "context values should stay within one machine-readable field"
+        ("failure=PGF_path_unavailable" `T.isInfixOf` formatted)
   ]
 
 -- | Test metrics functionality

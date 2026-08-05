@@ -59,7 +59,7 @@ import QxFx0.Types.Recovery
   ( LocalRecoveryCause (..)
   , renderLocalRecoveryCause
   )
-import QxFx0.Types.State (emptySystemState)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 
 -- ---------------------------------------------------------------------------
 -- Fixtures

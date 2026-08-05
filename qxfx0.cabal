@@ -337,6 +337,7 @@ library
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.ContentSelector.Cache
       QxFx0.Semantic.ContentSelector.Optimized
+      QxFx0.Semantic.ContentSelector.Integration
       QxFx0.Semantic.Syntax.Combinators
     QxFx0.Semantic.Logic
     QxFx0.Semantic.Logic.BeliefRevision

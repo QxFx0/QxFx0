@@ -15,6 +15,7 @@ module QxFx0.Render.Dialogue
   , GenerationAttempt(..)
   , hasStructuredDialogueSurface
   , renderDialogueArtifact
+  , renderDialogueArtifactWithActiveQuestion
   , renderDialogueUtterance
   , renderOperatorAwareDialogue
   , moveToText
@@ -24,9 +25,12 @@ module QxFx0.Render.Dialogue
   , linearizeClaimAstRus
   -- v2 assembly path
   , renderArtifactViaAssembly
+  , renderArtifactViaAssemblyWithActiveQuestion
   -- M4-SEMANTIC-CORE-003: compositional generator
   , generateFromFrame
   , generateFromFrameWithEmitted
+  , generateFromFrameWithActivation
+  , semanticFrameActivationTopics
   -- Semantic selection supplement helpers
   , formatSelectedPredicates
   , semanticSupplement
@@ -52,8 +56,30 @@ import QxFx0.Semantic.Content
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), AtomGraph(..), seedGraph)
 import QxFx0.Semantic.DialogueContext (emptyContext, addSystemEntry, DialogueContext(..))
 import QxFx0.Semantic.Content.GeneratedPredicateGate (filterAdmissiblePredicates)
-import QxFx0.Semantic.ContentSelector (ContentSelector, selectPredicates, composeFromActivation, emptyContentSelector, SelectedPredicate(..), csTopicPredicates)
-import QxFx0.Semantic.Network (SemanticNetwork, spreadingActivationActive)
+import QxFx0.Semantic.ContentSelector
+  ( ContentSelector
+  , SelectorDiagnostic(..)
+  , SelectedPredicate(..)
+  , buildSelectorActivationArtifact
+  , composeFromArtifactWithDiagnostics
+  , csTopicPredicates
+  , emptyContentSelector
+  , selectPredicates
+  , selectPredicatesWithDiagnostics
+  )
+import QxFx0.Semantic.Network
+  ( ActivationArtifact
+  , SemanticNetwork
+  , activationArtifactNetwork
+  , spreadingActivationActive
+  )
+import QxFx0.Semantic.ResponsePlan
+  ( buildGenerativeResponsePlan
+  , buildGenerativeResponsePlanWithActiveQuestion
+  , renderResponseSemanticPlan
+  , responsePlanQualityIssues
+  )
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan, responsePlanTags)
 import QxFx0.Semantic.SurfaceAccumulator (VerbalizationMode(..), accumulateSurface)
 import QxFx0.Semantic.Analogy (analogicalResponse, fallbackSimilarity, findNearestCoveredTopic)
 import qualified Data.Set as Set
@@ -61,7 +87,7 @@ import qualified Data.Map.Strict as M
 import QxFx0.Render.FieldModulation (applyFieldModulations)
 import qualified Data.Text as T
 import qualified Data.Char as Char
-import Data.Maybe (fromMaybe, listToMaybe, isJust)
+import Data.Maybe (fromMaybe, listToMaybe, isJust, mapMaybe)
 import Control.Applicative ((<|>))
 import Data.Char (isAlpha)
 import QxFx0.Types
@@ -144,7 +170,14 @@ data DialogueRenderArtifact = DialogueRenderArtifact
   , draEmittedPredicates :: ![Text]
     -- ^ P2.2: predicate surface forms (spRu) rendered in this artifact.
     --   Used to avoid repeating predicates across turns on the same topic.
-  } deriving stock (Eq, Show)
+  , draSelectorDiagnostics :: ![SelectorDiagnostic]
+    -- ^ Selector decisions from the exact deterministic path used to render
+    -- this artifact. Empty when this artifact did not invoke the selector.
+   , draActivationArtifact :: !(Maybe ActivationArtifact)
+     -- ^ Exact activation consumed by predicate selection for this artifact.
+   , draResponsePlan :: !(Maybe ResponseSemanticPlan)
+     -- ^ Grounded semantic plan used by content-producing moves.
+   } deriving stock (Eq, Show)
 
 -- | Detect whether input text is English (pure Latin, no Cyrillic).
 isEnglishInput :: Text -> Bool
@@ -217,8 +250,7 @@ linearizeClaimAstEn ast =
       let left  = maybe "" glfNom (lookupGfLexemeForms gfLeft)
           right = maybe "" glfNom (lookupGfLexemeForms gfRight)
       in if T.null left || T.null right then Nothing else Just ("Comparison of " <> left <> " and " <> right <> " is stable only within an explicit frame.")
-    MoveGenerativeThought ->
-      Just "One thought: meaning holds on the connection between words and experience. Another thought: the strength of thinking lies in holding distinctions. A new thought: development begins when we are ready to change our own frame. A logical thought: output quality is verified by the link between premises and conclusion."
+    MoveGenerativeThought -> Nothing
     MoveContemplative (MkNP gfTopic) ->
       let topic = maybe "topic" glfNom (lookupGfLexemeForms gfTopic)
       in Just ("If we hold to the word " <> topic <> ", I hear in it not only an object but a field of meanings, including subjectivity as a way to hold inner form.")
@@ -258,9 +290,22 @@ renderDialogueUtterance :: ResponseMeaningPlan -> ResponseContentPlan -> Text ->
 renderDialogueUtterance rmp rcp topic claims morph =
   draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph emptyRuntimeParadigms emptyField emptyContentSelector Nothing)
 
-renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> DialogueRenderArtifact
-renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector mActivatedNetwork =
-  case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph rp field contentSelector mActivatedNetwork of
+renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe ActivationArtifact -> DialogueRenderArtifact
+renderDialogueArtifact = renderDialogueArtifactWithActiveQuestion Nothing
+
+-- | Render with a question derived for the current turn. The old entry point
+-- deliberately supplies no context so standalone callers keep their behavior.
+renderDialogueArtifactWithActiveQuestion :: Maybe Text -> InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe ActivationArtifact -> DialogueRenderArtifact
+renderDialogueArtifactWithActiveQuestion mActiveQuestion frame rmp rcp topic claims morph rp field contentSelector mActivatedArtifact =
+  let mPlan = if ipfPropositionType frame == GenerativePrompt
+                then Just (buildGenerativeResponsePlanWithActiveQuestion contentSelector field (ipfRawText frame) mActivatedArtifact mActiveQuestion)
+                else Nothing
+      attachPlan artifact = artifact
+        { draResponsePlan = mPlan
+        , draDerivationTags = draDerivationTags artifact
+            <> maybe [] responsePlanTags mPlan
+        }
+  in attachPlan $ case renderStructuredDialogueArtifact frame rmp rcp (rcpStyle rcp) morph rp field contentSelector mActivatedArtifact of
     Just artifact -> artifact
     Nothing ->
       let fallbackReason =
@@ -289,6 +334,9 @@ renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector
             , draDialogAtoms = emptyDialogAtoms
             , draGenerationTrace = []
             , draEmittedPredicates = []
+            , draSelectorDiagnostics = []
+            , draActivationArtifact = mActivatedArtifact
+            , draResponsePlan = Nothing
             }
       else
         let cleanedTopic = cleanTopic topic
@@ -327,23 +375,30 @@ renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector
             , draDialogAtoms = emptyDialogAtoms
             , draGenerationTrace = []
             , draEmittedPredicates = []
+            , draSelectorDiagnostics = []
+            , draActivationArtifact = mActivatedArtifact
+            , draResponsePlan = Nothing
             }
 
 hasStructuredDialogueSurface :: InputPropositionFrame -> Bool
 hasStructuredDialogueSurface frame =
   structuredDialogueType (ipfPropositionType frame)
 
-renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> Maybe DialogueRenderArtifact
-renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field contentSelector mActivatedNetwork =
+renderStructuredDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe ActivationArtifact -> Maybe DialogueRenderArtifact
+renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field contentSelector mActivatedArtifact =
   let propositionType = ipfPropositionType frame
   in if not (structuredDialogueType propositionType)
      then Nothing
      else
       let (body0, claimAst, mLang, linearizationOk, fallbackReason) =
-            structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork
-          body1 = applyMicroPlanToStructuredBody rmp renderStyle field body0
+            structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedArtifact
+          body1 = if propositionType == GenerativePrompt
+                    then body0
+                    else applyMicroPlanToStructuredBody rmp renderStyle field body0
           continuationText = structuredContinuationText frame rmp rcp rp morph
-          body = appendContinuation (rmpMicroPlan rmp) body1 continuationText
+          body = if propositionType == GenerativePrompt
+                   then body1
+                   else appendContinuation (rmpMicroPlan rmp) body1 continuationText
           rendered = finalizeForce IFAssert (T.strip body)
           contractProv = contractProvenanceForArtifact fallbackReason claimAst
           surfaceProv = surfaceProvenanceForArtifact fallbackReason claimAst
@@ -364,7 +419,10 @@ renderStructuredDialogueArtifact frame rmp rcp renderStyle morph rp field conten
               , draDialogAtoms = emptyDialogAtoms
               , draGenerationTrace = []
               , draEmittedPredicates = []
-              }
+               , draSelectorDiagnostics = []
+               , draActivationArtifact = mActivatedArtifact
+               , draResponsePlan = Nothing
+               }
 
 structuredDialogueType :: PropositionType -> Bool
 structuredDialogueType propositionType =
@@ -395,9 +453,9 @@ structuredDialogueType propositionType =
 -- | P4 Option A: Gate-enforced selectPredicates wrapper. Filters predicates through
 -- GeneratedPredicateGate before use in structuredBody. Drops SelectedPredicate entries
 -- whose predicates all fail the gate.
-selectPredicatesGated :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> [SelectedPredicate]
-selectPredicatesGated cs field topic mNet =
-  let raw = selectPredicates cs field topic mNet
+selectPredicatesGated :: ContentSelector -> Field -> Text -> Maybe ActivationArtifact -> [SelectedPredicate]
+selectPredicatesGated cs field topic mArtifact =
+  let raw = selectPredicates cs field topic (activationArtifactNetwork <$> mArtifact)
       gated = [ sp { spPredicates = filterAdmissiblePredicates (spPredicates sp) }
               | sp <- raw
               ]
@@ -424,20 +482,48 @@ selectorHasTopic cs topic =
 -- | Build a semantic supplement for a single topic. Combines ContentSelector
 -- scoring with the existing predicate gate. Returns empty text if the topic is
 -- not selected, not covered, or no predicates are admissible.
-semanticSupplement :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
-semanticSupplement cs field topic mNet isEn =
+semanticSupplement :: ContentSelector -> Field -> Text -> Maybe ActivationArtifact -> Bool -> Text
+semanticSupplement cs field topic mArtifact isEn =
+  fst (semanticSupplementWithDiagnostics cs field topic mArtifact isEn)
+
+semanticSupplementWithDiagnostics
+  :: ContentSelector
+  -> Field
+  -> Text
+  -> Maybe ActivationArtifact
+  -> Bool
+  -> (Text, [SelectorDiagnostic])
+semanticSupplementWithDiagnostics cs field topic mArtifact isEn =
   if T.null (T.strip topic) || not (selectorHasTopic cs topic)
-    then ""
-    else formatSelectedPredicates isEn (selectPredicatesGated cs field topic mNet)
+    then ("", [SelectorDiagnostic topic topic Nothing Nothing False "topic_absent" Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing])
+    else
+      let (rawSelected, diagnostics) = selectPredicatesWithDiagnostics cs field topic (activationArtifactNetwork <$> mArtifact)
+          gated = [ sp { spPredicates = filterAdmissiblePredicates (spPredicates sp) }
+                  | sp <- rawSelected
+                  ]
+          selected = filter (not . null . spPredicates) gated
+          renderedSurfaces = Set.fromList [spRu pred | sp <- selected, pred <- spPredicates sp]
+          withGateOutcome diagnostic = case sdPredicateSurface diagnostic of
+            Just surface | sdSelected diagnostic && not (Set.member surface renderedSurfaces) ->
+              diagnostic { sdSelected = False, sdReason = "generated_predicate_gate_rejected" }
+            _ -> diagnostic
+      in (formatSelectedPredicates isEn selected, map withGateOutcome diagnostics)
+
+selectedDiagnosticSurfaces :: [SelectorDiagnostic] -> [Text]
+selectedDiagnosticSurfaces = mapMaybe selectedSurface
+  where
+    selectedSurface diagnostic
+      | sdSelected diagnostic = sdPredicateSurface diagnostic
+      | otherwise = Nothing
 
 -- | Build a supplement from the ContentSelector only. A static corpus entry is
 -- no longer used as an ungated fallback: if the selector has not selected the
 -- topic, the supplement stays empty so the original template is preserved.
-semanticSupplementFromCorpus :: (Text -> Maybe a) -> (a -> [SemanticPredicate]) -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
-semanticSupplementFromCorpus _lookupFn _getPreds cs field topic mNet isEn =
+semanticSupplementFromCorpus :: (Text -> Maybe a) -> (a -> [SemanticPredicate]) -> ContentSelector -> Field -> Text -> Maybe ActivationArtifact -> Bool -> Text
+semanticSupplementFromCorpus _lookupFn _getPreds cs field topic mArtifact isEn =
   if T.null (T.strip topic) || not (selectorHasTopic cs topic)
     then ""
-    else semanticSupplement cs field topic mNet isEn
+    else semanticSupplement cs field topic mArtifact isEn
 
 -- | Append a non-empty supplement to a base text with appropriate punctuation.
 -- If the supplement is empty, the base text is returned unchanged.
@@ -458,7 +544,9 @@ appendSupplement base supplement =
 -- This is the exported version without cross-turn filtering.
 frameSupplement :: VerbalizationMode -> MorphologyData -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
 frameSupplement mode morph cs field topic mNetwork isEn =
-  fst (frameSupplementWithEmitted mode morph cs field builtinFieldHeuristics topic mNetwork isEn Set.empty)
+  let mArtifact = buildSelectorActivationArtifact cs field [topic] <$> mNetwork
+      (surface, _, _) = frameSupplementWithEmitted mode morph cs field builtinFieldHeuristics topic mArtifact isEn Set.empty
+  in surface
 
 -- | Internal version that accepts a set of already-emitted predicate surface
 -- forms (spRu) and returns both the rendered text and the list of predicates
@@ -470,23 +558,31 @@ frameSupplementWithEmitted
   -> Field
   -> FieldHeuristics
   -> Text
-  -> Maybe SemanticNetwork
+  -> Maybe ActivationArtifact
   -> Bool
   -> Set.Set Text
-  -> (Text, [Text])
-frameSupplementWithEmitted mode morph cs field heuristics topic mNetwork isEn emittedSet =
-  case mNetwork of
-    Just network | spreadingActivationActive ->
-      let composed = composeFromActivation cs field heuristics topic network
+  -> (Text, [Text], [SelectorDiagnostic])
+frameSupplementWithEmitted mode morph cs field heuristics topic mArtifact isEn emittedSet =
+  case mArtifact of
+    Just artifact | spreadingActivationActive ->
+      let (composed, diagnostics) = composeFromArtifactWithDiagnostics cs field heuristics topic artifact
           filtered = filter (\p -> not (Set.member (spRu p) emittedSet)) composed
+          renderedDiagnostics = map markPriorEmission diagnostics
       in if null filtered
-           then (semanticSupplement cs field topic mNetwork isEn, [])
+           then let (surface, fallbackDiagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+                in (surface, [], renderedDiagnostics ++ fallbackDiagnostics)
            else let surface = accumulateSurface morph field mode topic filtered
-                in (surface, map spRu filtered)
-    _ -> (semanticSupplement cs field topic mNetwork isEn, [])
+                in (surface, map spRu filtered, renderedDiagnostics)
+    _ -> let (surface, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+         in (surface, [], diagnostics)
+  where
+    markPriorEmission diagnostic = case sdPredicateSurface diagnostic of
+      Just surface | sdSelected diagnostic && Set.member surface emittedSet ->
+        diagnostic { sdSelected = False, sdReason = "already_emitted_on_prior_turn" }
+      _ -> diagnostic
 
-structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe SemanticNetwork -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
-structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedNetwork =
+structuredBody :: PropositionType -> InputPropositionFrame -> ResponseMeaningPlan -> RenderStyle -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe ActivationArtifact -> (Text, Maybe ClaimAst, Maybe Text, Bool, Maybe Text)
+structuredBody propositionType frame rmp renderStyle morph rp field contentSelector mActivatedArtifact =
   let isEn = isEnglishInput (ipfRawText frame)
       hardKnowledgeTone = truthContractAllowsHardKnowledgeTone (rmpTruthContractStatus rmp)
   in case propositionType of
@@ -613,7 +709,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                    else "Да, в локальной понятийной рамке солнце — это звезда и источник света и тепла для Земли. Для меня это не текущее наблюдение, а рабочее общеизвестное описание внешнего мира.")
         | isEn ->
             let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "concept")
-                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
+                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedArtifact
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme topicRef)) RelIdentity (MkNP "concept_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallbackTaggedEn "concept_knowledge" ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
@@ -624,7 +720,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                <> clText claim <> contentText) ast claim "en_GF_MVP"
         | otherwise ->
             let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
-                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
+                selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedArtifact
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
                 contentText = case selectedPreds of
@@ -738,7 +834,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                  else "Различение требует явной рамки критериев. " <> rmpPrimaryClaim rmp)
     MisunderstandingReport ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
+          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedArtifact
           acknowledgePrior = case selectedPreds of
             (sp:_) ->
               if isEn
@@ -760,7 +856,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     ConfrontQ ->
       let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) (if isEn then "topic" else "тема"))
-          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedNetwork
+          selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedArtifact
           objectionText = ipfRawText frame
           -- Phase E: try challenge-response first, fall back to old template
           mChallengeResp = if not isEn
@@ -795,13 +891,17 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
           claim = linFn "confront" ast renderStyle morph rp fallback
       in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
     GenerativePrompt ->
-      let ast = claimAstOrFallback MoveGenerativeThought (rmpPrimaryClaimAst rmp)
-          linFn = if isEn then linearizeOrFallbackTaggedEn else linearizeOrFallbackTagged
-          fallback = if isEn
-                       then "One thought: meaning holds on the connection between words and experience. Another thought: the strength of thinking lies in holding distinctions. A new thought: development begins when we are ready to change our own frame. A logical thought: output quality is verified by the link between premises and conclusion."
-                       else generativeThought frame
-          claim = linFn "generative_prompt" ast renderStyle morph rp fallback
-      in withClaimLang (clText claim) ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
+      let plan = buildGenerativeResponsePlan contentSelector field (ipfRawText frame) mActivatedArtifact
+          issues = responsePlanQualityIssues plan
+          renderedPlan = if null issues
+                         then renderResponseSemanticPlan plan
+                         else renderResponseSemanticPlan plan
+      in ( renderedPlan
+         , Nothing
+         , Just "semantic_plan"
+         , null issues
+         , if null issues then Nothing else Just (T.intercalate "," issues)
+         )
     ContemplativeTopic ->
       let fallbackTopic = nonEmptyOr (ipfSemanticSubject frame) (if isEn then "topic" else "тема")
           fallbackAst = MoveContemplative (MkNP (resolveTopicLexeme fallbackTopic))
@@ -1783,18 +1883,27 @@ rightToMaybe (Right a) = Just a
 rightToMaybe (Left _)  = Nothing
 
 renderArtifactViaAssembly :: RuntimeParadigms -> SystemState -> InputPropositionFrame
-                           -> ResponseMeaningPlan -> ResponseContentPlan
-                           -> Text -> [IdentityClaimRef]
-                           -> MorphologyData -> RenderStyle -> ParsedInput
-                           -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
-renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field =
+                            -> ResponseMeaningPlan -> ResponseContentPlan
+                            -> Text -> [IdentityClaimRef]
+                            -> MorphologyData -> RenderStyle -> ParsedInput
+                            -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
+renderArtifactViaAssembly = renderArtifactViaAssemblyWithActiveQuestion Nothing
+
+-- | The route stage supplies the current dialogue question to preserve the
+-- same next-move plan whether semantic rendering or assembly fallback wins.
+renderArtifactViaAssemblyWithActiveQuestion :: Maybe Text -> RuntimeParadigms -> SystemState -> InputPropositionFrame
+                                               -> ResponseMeaningPlan -> ResponseContentPlan
+                                               -> Text -> [IdentityClaimRef]
+                                               -> MorphologyData -> RenderStyle -> ParsedInput
+                                               -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
+renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field =
    let contentSelector = ssContentSelector ss
    in
     -- For EN input, skip Russian-only assembly path and use template rendering directly.
     -- Template rendering now supports EN via structuredBody language detection.
       if isEnglishInput (ipfRawText frame)
       then
-        let templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector Nothing
+        let templateArtifact = renderDialogueArtifactWithActiveQuestion mActiveQuestion frame rmp rcp topic claims morph rp field contentSelector Nothing
         in templateArtifact { draFallbackReason = Just "en_skip_assembly"
                             , draGenerationTrace = [GenerationAttempt "assembly" "skipped_en_input"]
                             }
@@ -1805,8 +1914,8 @@ renderArtifactViaAssembly rp ss frame rmp rcp topic claims morph style parsedInp
                 Right txt | not (T.null (T.strip txt)) -> Just txt
                 _ -> Nothing
               factualText = factBySubject (T.toLower (T.strip t)) >>= \fact -> rightToMaybe (assembleExplanation rp fact style)
-              -- WP2: GF-first with telemetry. Fallback chain records exact reason.
-              templateArtifact = renderDialogueArtifact frame rmp rcp topic claims morph rp field contentSelector Nothing
+               -- WP2: GF-first with telemetry. Fallback chain records exact reason.
+              templateArtifact = renderDialogueArtifactWithActiveQuestion mActiveQuestion frame rmp rcp topic claims morph rp field contentSelector Nothing
               templateText = let txt = draTemplateBodyText templateArtifact
                              in if T.null (T.strip txt) then Nothing else Just txt
               structuredFallback
@@ -1942,7 +2051,8 @@ gfMapAuthorityTags =
 -- Invariant: same frame + same morph → same output. Pure, deterministic.
 generateFromFrame :: ContentSelector -> Field -> Maybe SemanticNetwork -> AtomGraph -> SystemState -> FT.SemanticFrame -> MorphologyData -> Text
 generateFromFrame cs field mNetwork runtimeGraph ss frame morph =
-  fst (generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph)
+  let (surface, _, _) = generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph
+  in surface
 
 -- | Version of 'generateFromFrame' that also returns the predicate surface
 -- forms (spRu) emitted by the rendered frame.  Used by P2.2 cross-turn
@@ -1955,15 +2065,30 @@ generateFromFrameWithEmitted
   -> SystemState
   -> FT.SemanticFrame
   -> MorphologyData
-  -> (Text, [Text])
-generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = case frame of
+  -> (Text, [Text], [SelectorDiagnostic])
+generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph =
+  let mArtifact = buildSelectorActivationArtifact cs field (semanticFrameActivationTopics frame) <$> mNetwork
+  in generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph
+
+-- | Production generator entry point. The supplied activation has already
+-- been computed and is consumed without any spreading-activation rerun.
+generateFromFrameWithActivation
+  :: ContentSelector
+  -> Field
+  -> Maybe ActivationArtifact
+  -> AtomGraph
+  -> SystemState
+  -> FT.SemanticFrame
+  -> MorphologyData
+  -> (Text, [Text], [SelectorDiagnostic])
+generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph = case frame of
   FT.DefinitionFrame topic scope authority ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         authorityText = renderFrameAuthority authority
         fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-        (supplement, emitted) = frameSupplementWithEmitted VmDefinition morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mNetwork isEn (ssEmittedPredicates ss)
-    in (appendSupplement fallback supplement, emitted)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmDefinition morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss)
+    in (appendSupplement fallback supplement, emitted, diagnostics)
 
   FT.DistinctionFrame left right criteria ->
     let leftNom = toNominative morph left
@@ -1975,10 +2100,10 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
                <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
-        (leftSup, leftEmitted) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mNetwork isEn (ssEmittedPredicates ss)
-        (rightSup, rightEmitted) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mNetwork isEn (ssEmittedPredicates ss)
+        (leftSup, leftEmitted, leftDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mArtifact isEn (ssEmittedPredicates ss)
+        (rightSup, rightEmitted, rightDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mArtifact isEn (ssEmittedPredicates ss)
         supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
-    in (appendSupplement base supplement, leftEmitted ++ rightEmitted)
+    in (appendSupplement base supplement, leftEmitted ++ rightEmitted, leftDiagnostics ++ rightDiagnostics)
 
   FT.ChallengeFrame target basis strength rawObj ->
     let targetText = T.strip target
@@ -1992,10 +2117,10 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
-        (supplement, emitted) = frameSupplementWithEmitted VmChallenge morph cs field (selfFieldHeuristics (ssSelfState ss)) rawObj mNetwork isEn (ssEmittedPredicates ss)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmChallenge morph cs field (selfFieldHeuristics (ssSelfState ss)) rawObj mArtifact isEn (ssEmittedPredicates ss)
     in case strength of
-         FT.Soft -> (appendSupplement softFallback supplement, emitted)
-         FT.Firm -> (appendSupplement firmFallback supplement, emitted)
+         FT.Soft -> (appendSupplement softFallback supplement, emitted, diagnostics)
+         FT.Firm -> (appendSupplement firmFallback supplement, emitted, diagnostics)
 
   FT.GroundFrame topic depth ->
     let topicNom = toNominative morph topic
@@ -2003,21 +2128,21 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         base = case depth of
                  FT.Shallow -> "Держу " <> topicNom <> " как устойчивую опору для дальнейшего разбора."
                  FT.Detailed -> "Конкретизирую " <> topicNom <> ": фиксирую это как рабочую опору и продолжаю от неё."
-        supplement = semanticSupplementFromCorpus lookupGroundContent gcPredicates cs field topic mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.RepairFrame ->
-    ("Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно.", [])
+    ("Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно.", [], [])
 
   FT.ContactFrame greeting ->
-    (greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.", [])
+    (greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.", [], [])
 
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-        (supplement, emitted) = frameSupplementWithEmitted VmReflection morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mNetwork isEn (ssEmittedPredicates ss)
-    in (appendSupplement fallback supplement, emitted)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmReflection morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss)
+    in (appendSupplement fallback supplement, emitted, diagnostics)
 
   FT.LearnFrame topic depth ->
     let topicNom = toNominative morph topic
@@ -2025,51 +2150,65 @@ generateFromFrameWithEmitted cs field mNetwork runtimeGraph ss frame morph = cas
         base = case depth of
                  FT.Shallow -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение."
                  FT.Detailed -> "Если говорить о " <> topicNom <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания."
-        supplement = semanticSupplement cs field topic mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.HelpFrame task ->
     let taskNom = toNominative morph task
         isEn = isEnglishInput task
         base = "Помогу с " <> taskNom <> ". Лучше всего я работаю, когда задача задана явно и можно удержать локальную рамку."
-        supplement = semanticSupplement cs field task mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field task mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.PurposeFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Функция " <> topicNom <> " проявляется через повторяемую роль в действии."
-        supplement = semanticSupplementFromCorpus lookupPurposeContent pcPredicates cs field topic mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.WorldCauseFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Если говорить о причине " <> topicNom <> ", различаю локальное рассуждение о механизме и полноценное знание о внешнем мире."
-        supplement = semanticSupplement cs field topic mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.DeepenFrame topic ->
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         base = "Углубимся в " <> topicNom <> " через одно устойчивое фокусирование."
-        supplement = semanticSupplement cs field topic mNetwork isEn
-    in (appendSupplement base supplement, [])
+        (supplement, diagnostics) = semanticSupplementWithDiagnostics cs field topic mArtifact isEn
+    in (appendSupplement base supplement, selectedDiagnosticSurfaces diagnostics, diagnostics)
 
   FT.NextStepFrame ->
-    ("Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его.", [])
+    ("Следующий шаг: конкретизируй задачу в одном действии. Назови одну цель, выбери минимальный шаг на 10-15 минут и сделай его.", [], [])
 
   FT.ExploratoryFrame ->
-    ("Если представить другой контекст, можно увидеть новые связи. Давай проследим одну гипотезу до конкретного следствия.", [])
+    ("Если представить другой контекст, можно увидеть новые связи. Давай проследим одну гипотезу до конкретного следствия.", [], [])
 
   FT.OperationalFrame ->
-    ("Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа.", [])
+    ("Я работаю. Ограничение сейчас не в запуске, а в том, что иногда теряется точность разбора входа.", [], [])
 
   FT.SelfReferenceFrame ->
-    ("Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора.", [])
+    ("Я — локальная система диалога. О себе я знаю свою роль, текущее состояние и способ, которым иду по ходу разговора.", [], [])
 
   FT.GenericFrame content ->
-    (content, [])
+    (content, [], [])
+
+semanticFrameActivationTopics :: FT.SemanticFrame -> [Text]
+semanticFrameActivationTopics frame = case frame of
+  FT.DefinitionFrame topic _ _ -> [topic]
+  FT.DistinctionFrame left right _ -> [left, right]
+  FT.ChallengeFrame _ _ _ rawObject -> [rawObject]
+  FT.GroundFrame topic _ -> [topic]
+  FT.ReflectFrame topic -> [topic]
+  FT.LearnFrame topic _ -> [topic]
+  FT.HelpFrame task -> [task]
+  FT.PurposeFrame topic -> [topic]
+  FT.WorldCauseFrame topic -> [topic]
+  FT.DeepenFrame topic -> [topic]
+  _ -> []
 
 -- | Render scope modifier.
 renderFrameScope :: FT.FrameScope -> Text

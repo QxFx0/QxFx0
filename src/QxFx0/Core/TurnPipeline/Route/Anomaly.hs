@@ -25,7 +25,11 @@ import QxFx0.Types.Anomaly
 import QxFx0.Types.State.Stance
 import QxFx0.Types.State.System
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
-import QxFx0.Core.TurnPipeline.Types (TurnInput(..))
+import QxFx0.Core.TurnPipeline.Types
+  ( AnomalyStateEffect(..)
+  , DetectedAnomaly(..)
+  , TurnInput(..)
+  )
 import QxFx0.Types.Decision.Model (InputPropositionFrame(..))
 import QxFx0.Types.Domain.Atoms (AtomSet(..), MeaningAtom(..))
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
@@ -37,7 +41,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 
 -- | Detect anomalies in priority order: Collapse > Temporal > Unclassifiable > AntiConatus
 -- Returns the first detected anomaly or Nothing if no anomalies found.
-detectAnomaly :: SystemState -> TurnInput -> Maybe Anomaly
+detectAnomaly :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectAnomaly ss ti =
   case detectSelfReferentialCollapse ss ti of
     Just anomaly -> Just anomaly
@@ -62,7 +66,7 @@ selfReferentialCollapse traj frame =
 -- | Detect SelfReferentialCollapse anomaly (Anomaly-3)
 -- Triggered when system encounters self-referential question at high angst
 -- Gate: subject ∈ ["я", "ты", "QxFx0", "система"] ∧ angst > 0.9
-detectSelfReferentialCollapse :: SystemState -> TurnInput -> Maybe Anomaly
+detectSelfReferentialCollapse :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectSelfReferentialCollapse ss ti =
   let selfState = ssSelfState ss
       essence = selfEssence selfState
@@ -71,15 +75,20 @@ detectSelfReferentialCollapse ss ti =
                EssenceCommitted t _ -> t
       frame = tiFrame ti
   in if selfReferentialCollapse traj frame
-     then let turnSeq = TurnSeq (ssTurnCount ss)
-              (_, resetEvent) = collapseEssence (ssTurnCount ss) traj
-          in Just $ mkSelfReferential
-                 (erePreviousWitnessCount resetEvent)
-                 (ipfRawText frame)
-                 turnSeq
-                 (extractAtomsFromInput ti)
-                 0.95  -- Very high confidence for collapse
-     else Nothing
+       then
+         let turnSeq = TurnSeq (ssTurnCount ss)
+             (resetTraj, resetEvent) = collapseEssence (ssTurnCount ss) traj
+             anomaly = mkSelfReferential
+               (erePreviousWitnessCount resetEvent)
+               (ipfRawText frame)
+               turnSeq
+               (extractAtomsFromInput ti)
+               0.95  -- Very high confidence for collapse
+         in Just DetectedAnomaly
+              { daAnomaly = anomaly
+              , daStateEffect = Just (ResetEssence resetTraj resetEvent)
+              }
+       else Nothing
 
 -- | Check if move triggers anti-conatus choice
 -- Triggered when: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧ angst > 0.8 ∧ conatus < 5.0
@@ -94,7 +103,7 @@ antiConatusMove stance conatus traj _family =
 -- | Detect AntiConatusChoice anomaly (Anomaly-2)
 -- Triggered when system chooses a move that weakens its position
 -- Gate: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧ angst > 0.8 ∧ conatus < 5.0
-detectAntiConatusChoice :: SystemState -> TurnInput -> Maybe Anomaly
+detectAntiConatusChoice :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectAntiConatusChoice ss ti =
   let topic = tiBestTopic ti
       mStance = Map.lookup topic (ssStances ss)
@@ -111,20 +120,20 @@ detectAntiConatusChoice ss ti =
          then let turnSeq = TurnSeq (ssTurnCount ss)
                   conf = stanceConfidence stance
                   energy = ceScalar conatus
-              in Just $ mkAntiConatus
-                     conf
-                     energy
-                     (ipfRawText $ tiFrame ti)
-                     turnSeq
-                     Nothing  -- No commitment ID in Safe Slice
-                     (extractAtomsFromInput ti)
-                     0.85  -- High confidence for anti-conatus
+               in Just $ withoutStateEffect $ mkAntiConatus
+                    conf
+                    energy
+                    (ipfRawText $ tiFrame ti)
+                    turnSeq
+                    Nothing  -- No commitment ID in Safe Slice
+                    (extractAtomsFromInput ti)
+                    0.85  -- High confidence for anti-conatus
          else Nothing
        Nothing -> Nothing
 
 -- | Detect UnclassifiableInput anomaly
 -- Triggered when input has very few atoms in semantic space
-detectUnclassifiableInput :: SystemState -> TurnInput -> Maybe Anomaly
+detectUnclassifiableInput :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectUnclassifiableInput ss ti =
   let inputAtoms = extractAtomsFromInput ti
       space = ssSemanticSpace ss
@@ -150,7 +159,7 @@ detectUnclassifiableInput ss ti =
       knownStructuredMove = ipfPropositionType (tiFrame ti) /= PlainAssert
         || tiRecommendedFamily ti `elem` [CMDefine, CMDistinguish, CMConfront, CMRepair]
   in if not isCovered && not hasChallengeMarker && not knownDialogueMove && not knownStructuredMove && ratio < threshold && totalCount > 0
-     then Just $ mkUnclassifiable
+     then Just $ withoutStateEffect $ mkUnclassifiable
             (ipfRawText $ tiFrame ti)
             (buildSimpleFamilyScores knownCount totalCount)
             turnSeq
@@ -171,7 +180,7 @@ detectUnclassifiableInput ss ti =
 
 -- | Detect TemporalAnomaly
 -- Triggered when current stance contradicts historical stance in lineage
-detectTemporalAnomaly :: SystemState -> TurnInput -> Maybe Anomaly
+detectTemporalAnomaly :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectTemporalAnomaly ss ti =
   let topic = tiBestTopic ti
       currentStance = Map.lookup topic (ssStances ss)
@@ -181,7 +190,7 @@ detectTemporalAnomaly ss ti =
     (Just current, Just lin) ->
       case findContradictoryHistoricalStance current lin of
         Just historical ->
-          Just $ mkTemporal
+          Just $ withoutStateEffect $ mkTemporal
             current
             historical
             (buildContradictionDescription current historical)
@@ -191,6 +200,9 @@ detectTemporalAnomaly ss ti =
             0.85  -- High confidence for temporal
         Nothing -> Nothing
     _ -> Nothing
+
+withoutStateEffect :: Anomaly -> DetectedAnomaly
+withoutStateEffect anomaly = DetectedAnomaly anomaly Nothing
 
 -- | Extract atoms from TurnInput
 extractAtomsFromInput :: TurnInput -> Set.Set Text

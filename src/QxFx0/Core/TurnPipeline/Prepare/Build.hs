@@ -37,7 +37,6 @@ import QxFx0.Semantic.Embedding
   , embeddingSourceText
   )
 import QxFx0.Types
-import QxFx0.Semantic.Network (activate, contentDensityGate)
 
 import Data.Text (Text)
 
@@ -102,12 +101,6 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       nixStatus = perNixStatus effectResults
       nixAvailable = case nixStatus of Unavailable _ -> False; _ -> True
       isNixBlocked = case nixStatus of Blocked _ -> True; _ -> False
-      -- Phase 1: spreading activation on semantic network
-      activatedNetwork =
-        let network = ssSemanticNetwork ss
-        in if contentDensityGate network
-           then Just (activate (psBestTopic prepareStatic) network)
-           else Nothing
    in TurnInput
       { tiStartTime = perTurnCurrentTime effectResults
       , tiEmbedding = emb
@@ -140,7 +133,6 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
           , tiGeoResult = psGeoResult prepareStatic
          , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
          , tiRetrievedEpisodes = retrievedEpisodes
-         , tiActivatedNetwork = activatedNetwork
          }
 
 buildTurnSignals :: PrepareEffectResults -> TurnSignals

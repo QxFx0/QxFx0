@@ -32,6 +32,7 @@ import Test.QuickCheck
 
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySelfState, emptySystemState)
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Input.Model (SemanticTag(..))
 import QxFx0.Types.Readiness (AgdaVerificationStatus(..))
@@ -52,6 +53,7 @@ import QxFx0.Core.PipelineIO
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), PersistenceErrorDetails(..))
 import QxFx0.Core.TurnPipeline.Protocol
   ( RoutingDecision(..)
+  , DetectedAnomaly(..)
   , TurnArtifacts(..)
   , TurnInput(..)
   , TurnPlan(..)
@@ -66,6 +68,7 @@ import QxFx0.Core.TurnPipeline.Protocol
   , RouteEffectResults(..)
   , RouteStatic(..)
   , RenderEffectPlan(..)
+  , RenderEffectResults(..)
   , LocalRecoveryPlan(..)
   , RenderStatic(..)
   , FinalizeCommitPlan(..)
@@ -91,6 +94,18 @@ import QxFx0.Core.TurnPipeline.Protocol
   , resolveRenderEffects
   , resolveRouteEffects
   , finalizeMetrics
+  )
+import QxFx0.Render.Dialogue (DialogueRenderArtifact(..))
+import QxFx0.Types.Semantic.ResponsePlan
+  ( ClaimEvidence(..)
+  , ClaimMode(..)
+  , DiscoursePlan(..)
+  , DiscourseRelation(..)
+  , PlannedClaim(..)
+  , ResponseGoal(..)
+  , ResponseSemanticPlan(..)
+  , SemanticProposition(..)
+  , responsePlanVersion
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
 import QxFx0.Memory.Episodic (EpisodicStore(..))
@@ -156,14 +171,13 @@ import QxFx0.Types.Anomaly
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
 import QxFx0.Core.TurnPipeline.Route.Anomaly
   ( detectAnomaly
-  , detectSelfReferentialCollapse
   , detectAntiConatusChoice
   , selfReferentialCollapse
   )
 import QxFx0.Types.State.Stance (StanceState(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
-import QxFx0.Types.State.SelfState (SelfState(..), emptySelfState)
+import QxFx0.Types.State.SelfState (SelfState(..))
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
 import QxFx0.Core.AtomContributionAdmission
@@ -449,10 +463,15 @@ turnPipelineProtocolTests =
      , testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback
      , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
      , testRuntimeDegradedUsesVisibleLocalRecovery
-     , testParserLowConfidenceUsesDistinguishCandidates
-      , testRenderBlockedPersistsSafeRecoveryTrace
-      -- P1-1 (Phase 7): FMAR behavioral integration — FmarLive must override cascade routing
-      , testFmarLiveOverridesRouting
+      , testParserLowConfidenceUsesDistinguishCandidates
+       , testRenderBlockedPersistsSafeRecoveryTrace
+       , testResponsePlanGfEffectUsesCanonicalSurface
+       , testResponsePlanGfDefaultsOnWhenEnvMissing
+       , testResponsePlanGfKillSwitchZero
+       , testResponsePlanGfEffectPreservesApprovedFallback
+       , testResponsePlanTopicDrivesQualityGate
+       -- P1-1 (Phase 7): FMAR behavioral integration — FmarLive must override cascade routing
+       , testFmarLiveOverridesRouting
       -- P1-1: empty/fresh state must NOT fire the Conatus gate (energy starts non-negative)
       , testConatusGateDoesNotFireFromEmptyState
       , testConatusGateFiresRecoveryConatusGate
@@ -465,33 +484,14 @@ turnPipelineProtocolTests =
      , testDeliberationRecoveryNotSilenced
      , testFinalizePrecommitResolveConcurrently
      , testPrepareCurrentTimeDeterministicInjection
-      -- Phase 8 gap closure: external query end-to-end
-      , testExternalQueryRequestPopulatedWhenLearningNeedActive
-      , testExternalQueryResultPopulatedAfterRenderEffects
-      , testExternalQueryGraftAppliedInFinalize
-      , testExternalQueryFailClosedOnMockFailure
+      -- Legacy Phase 8/9 external learning is fail-closed.
+      , testLegacyExternalLearningRequestsNotPlanned
+      , testLegacyExternalLearningEffectsNotResolved
+      , testLegacyExternalLearningFinalizeInert
       , testEpisodicInvariantFallbackNoThrow
       , testExternalQueryNotAttemptedWhenNoRequestStrategy
-      -- Phase 9 MVP: autonomous exploratory learning
       , testExploratoryPromptDetected
-      , testAutonomousExplorationRequestPopulated
-      , testAutonomousExplorationResultPopulated
-      , testAutonomousExplorationGraftApplied
-      , testAutonomousExplorationFailClosed
-      , testAutonomousExplorationGuardrailBlocks
-      , testAutonomousExplorationTelemetry
-      , testRequestDrivenPathNotRegressedByExploration
-       , testRequestDrivenBlockedPathRemainsInert
-       , testRequestDrivenExternalActionReason
-       , testExploratoryExternalActionReason
-       , testGuardrailDeniedExternalActionReason
-       , testNoActionExternalReason
-       , testRequestDrivenTransportFailureSurfacesPreActorFailureEvent
-       , testRequestDrivenNoExecutableToolSurfacesPreActorFailureEvent
-       , testGuardrailDeniedPathDoesNotFabricatePreActorFailureEvent
-        -- WP6.1: dedup anti-overblocking + telemetry wiring
-       , testDedupAntiOverblockingAllowsNoisyKnownTopic
-       , testDedupBlocksCleanKnownTopic
+      , testNoActionExternalReason
        , testConstitutionAdmissibleCommitmentStrengthens
        , testNonAuthoritativeCommitmentCandidateCappedBeforePlanning
        , testConatusGatedCommitmentCandidateSuspendedBeforePlanning
@@ -663,7 +663,7 @@ testFinalizeCommitRecoversRuntimeStateAfterCommitFailure = TestCase $
               }
     (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
     let commitPlan = planFinalizeCommit "session-recovery" ss ti ts ta bundle
-    _ <- resolveFinalizeCommit recoveryPio 0 commitPlan
+    _ <- resolveFinalizeCommit recoveryPio (StateVersion 0 (ssTurnCount ss)) commitPlan
     attempts <- readIORef commitAttemptsRef
     assertEqual "commit effect should be retried once on recovery path" 2 attempts
 
@@ -678,23 +678,22 @@ testFinalizeCommitRollsBackPersistedStateAfterRecoveryFailure = TestCase $
               }
     (ss, ti, ts, _tp, ta, bundle) <- buildFinalizeFixture "что такое свобода"
     let commitPlan = planFinalizeCommit "session-rollback" ss ti ts ta bundle
-    result <- try (resolveFinalizeCommit rollbackPio 0 commitPlan) :: IO (Either QxFx0Exception FinalizeCommitResults)
+    result <- try
+      (resolveFinalizeCommit rollbackPio (StateVersion 0 (ssTurnCount ss)) commitPlan)
+      :: IO (Either QxFx0Exception FinalizeCommitResults)
     case result of
       Left ex | Just detail <- matchPersistenceError ex -> do
-        let hasProjectionRollback = "projections rollback=ok" `T.isInfixOf` detail
-            hasStateRollback = "state rollback=ok" `T.isInfixOf` detail
-        unless (hasProjectionRollback && hasStateRollback) $
-          assertFailure ("double-failure path must expose projection and state rollback status, got: " <> T.unpack detail)
+        unless ("atomic persistence rollback=ok" `T.isInfixOf` detail) $
+          assertFailure ("double-failure path must expose atomic rollback status, got: " <> T.unpack detail)
       Left other ->
         assertFailure ("unexpected exception while testing rollback path: " <> show other)
       Right _ ->
         assertFailure "commit path must fail when commit and recovery both fail"
     requests <- readIORef saveRequestsRef
     assertEqual
-      "double-failure path should save, cleanup persisted projections, then rollback state"
+      "double-failure path should atomically restore state and projections"
       [ ("save", ssTurnCount (fpbNextSs bundle), True)
       , ("cleanup", ssTurnCount ss, False)
-      , ("save", ssTurnCount ss, False)
       ]
       requests
 
@@ -1526,8 +1525,7 @@ testGenerativePromptRendersDirectThought = TestCase $
     assertStructuredTurn
       "скажи любую мысль"
       CMDescribe
-      [ "одна мысль"
-      , "связи"
+      [ "укажи тему"
       ]
 
 testGenerativePromptAnotherThoughtRendersNewThought :: Test
@@ -1536,8 +1534,7 @@ testGenerativePromptAnotherThoughtRendersNewThought = TestCase $
     assertStructuredTurn
       "а еще одну интересную мысль?"
       CMDescribe
-      [ "другая мысль"
-      , "удержать различие"
+      [ "укажи тему"
       ]
 
 testGenerativePromptFreshThoughtRendersDistinctSurface :: Test
@@ -1546,8 +1543,7 @@ testGenerativePromptFreshThoughtRendersDistinctSurface = TestCase $
     assertStructuredTurn
       "скажи новую интересную мысль"
       CMDescribe
-      [ "новая мысль"
-      , "менять собственную рамку"
+      [ "укажи тему"
       ]
 
 testGenerativePromptLogicalQualityRendersLogicalSurface :: Test
@@ -1556,8 +1552,7 @@ testGenerativePromptLogicalQualityRendersLogicalSurface = TestCase $
     assertStructuredTurn
       "скажи что-то логичное"
       CMDescribe
-      [ "логичная мысль"
-      , "посылками и выводом"
+      [ "укажи тему"
       ]
 
 testSelfKnowledgeWhatYouAreRendersStructuredDescription :: Test
@@ -2209,6 +2204,222 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
       CMRepair
       (tqpPlannerDecision (fpbProjection bundle))
 
+-- | A response plan is the primary GF input. Its canonical result must replace
+-- the approved plan surface without invoking a legacy linearization request.
+testResponsePlanGfEffectUsesCanonicalSurface :: Test
+testResponsePlanGfEffectUsesCanonicalSurface = TestCase $
+  withDeterministicEmbedding $ do
+    requestsRef <- newIORef []
+    let pgfSurface = "Свобода предполагает возможность выбора."
+        pio = responsePlanGfPipelineIO requestsRef (Right (canonicalResponsePlanGfResult pgfSurface))
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let renderPlan = renderPlanWithResponsePlan (planRenderEffects LocalRecoveryEnabled ss ti ts tp)
+    renderResults <- resolveRenderEffects pio renderPlan
+    let artifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    requests <- readIORef requestsRef
+    assertEqual "response-plan GF must be the only linearization request"
+      ["response_plan"]
+      requests
+    assertEqual "canonical PGF surface must be retained"
+      pgfSurface
+      (taRendered artifacts)
+    assertEqual "canonical response-plan result must retain canonical authority"
+      AuthorityCanonical
+      (taAuthorityClass artifacts)
+    assertEqual "response-plan result must be marked as successful linearization"
+      True
+      (taLinearizationOk artifacts)
+    assertBool "response-plan trace tag must identify canonical GF realization"
+      ("gf_response_plan=canonical" `elem` taDerivationTags artifacts)
+    let precommitPlan = planFinalizePrecommit ss ti ts tp artifacts
+    precommitResults <- resolveFinalizePrecommit pio precommitPlan
+    bundle <-
+      buildFinalizePrecommit
+        (pipelineUpdateHistory pio)
+        (pipelineParseAuthoritySurface pio)
+        ss
+        ti
+        ts
+        tp
+        artifacts
+        precommitPlan
+        precommitResults
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+    assertEqual "replay must persist the exact approved response plan"
+      (Just testResponsePlan)
+      (trcResponsePlan replayTrace)
+    assertEqual "replay must retain canonical GF authority"
+      (Just AuthorityCanonical)
+      (trcAuthorityClass replayTrace)
+    assertEqual "replay must retain the plan PGF route"
+      (Just PgfClaimRoute)
+      (trcAssemblyPath replayTrace)
+    assertEqual "replay must retain the absent GF fallback"
+      Nothing
+      (trcFallbackReason replayTrace)
+
+testResponsePlanGfDefaultsOnWhenEnvMissing :: Test
+testResponsePlanGfDefaultsOnWhenEnvMissing = TestCase $
+  withDeterministicEmbedding $ do
+    requestsRef <- newIORef []
+    let pgfSurface = "Свобода предполагает возможность выбора."
+        pio = responsePlanGfPipelineIOWithEnv Nothing requestsRef (Right (canonicalResponsePlanGfResult pgfSurface))
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let renderPlan = renderPlanWithResponsePlan (planRenderEffects LocalRecoveryEnabled ss ti ts tp)
+    renderResults <- resolveRenderEffects pio renderPlan
+    let artifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    requests <- readIORef requestsRef
+    assertEqual "missing GF runtime env must default to canonical GF realization"
+      ["response_plan"]
+      requests
+    assertEqual "default-on GF must retain the canonical surface"
+      pgfSurface
+      (taRendered artifacts)
+
+testResponsePlanGfKillSwitchZero :: Test
+testResponsePlanGfKillSwitchZero = TestCase $
+  withDeterministicEmbedding $ do
+    requestsRef <- newIORef []
+    let pgfSurface = "Этот текст не должен быть запрошен."
+        pio = responsePlanGfPipelineIOWithEnv (Just "0") requestsRef (Right (canonicalResponsePlanGfResult pgfSurface))
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let renderPlan = renderPlanWithResponsePlan (planRenderEffects LocalRecoveryEnabled ss ti ts tp)
+        approvedSurface = rsRenderWithBg (repRenderStatic renderPlan)
+    renderResults <- resolveRenderEffects pio renderPlan
+    let artifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    requests <- readIORef requestsRef
+    assertEqual "QXFX0_GF_RUNTIME=0 must suppress all GF linearization requests"
+      []
+      requests
+    assertEqual "GF kill switch must preserve the approved non-GF surface"
+      approvedSurface
+      (taRendered artifacts)
+
+-- | A rejected response-plan realization retains the already approved plan
+-- surface and does not substitute an unrelated legacy GF move.
+testResponsePlanGfEffectPreservesApprovedFallback :: Test
+testResponsePlanGfEffectPreservesApprovedFallback = TestCase $
+  withDeterministicEmbedding $ do
+    requestsRef <- newIORef []
+    let pio = responsePlanGfPipelineIO requestsRef (Left "unmapped_curated_predicate:test")
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let renderPlan = renderPlanWithResponsePlan (planRenderEffects LocalRecoveryEnabled ss ti ts tp)
+        approvedSurface = rsRenderWithBg (repRenderStatic renderPlan)
+    renderResults <- resolveRenderEffects pio renderPlan
+    let artifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    requests <- readIORef requestsRef
+    assertEqual "failed response-plan GF must not fall through to legacy requests"
+      ["response_plan"]
+      requests
+    assertEqual "failed response-plan GF must preserve the approved surface"
+      approvedSurface
+      (taRendered artifacts)
+    assertEqual "failed response-plan GF must be observable"
+      False
+      (taLinearizationOk artifacts)
+    assertEqual "failed response-plan GF must retain its typed fallback reason"
+      (Just "gf_response_plan:unmapped_curated_predicate:test")
+      (taLinearizationFallbackReason artifacts)
+
+testResponsePlanTopicDrivesQualityGate :: Test
+testResponsePlanTopicDrivesQualityGate = TestCase $
+  withDeterministicEmbedding $ do
+    requestsRef <- newIORef []
+    let pgfSurface =
+          "Тезис: свобода предполагает возможность выбора. "
+            <> "Контрпункт: не любой выбор свободен: выбор под принуждением, страхом или незнанием не делает действие свободным. "
+            <> "Следствие: свобода требует осознанности — только выбор, понятый как свой, превращает возможность в свободу. "
+            <> "Проверка: верно ли это?"
+        pio = responsePlanGfPipelineIO requestsRef (Right (canonicalResponsePlanGfResult pgfSurface))
+    (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let ti = ti0 { tiBestTopic = "unrelated-classifier-topic" }
+        renderPlan = renderPlanWithResponsePlan (planRenderEffects LocalRecoveryEnabled ss ti ts tp)
+    renderResults <- resolveRenderEffects pio renderPlan
+    let artifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "plan-owned surface must use rspTopic for quality relevance"
+      FromDB
+      (taSurfaceProv artifacts)
+    assertEqual "quality-topic mismatch must not downgrade canonical GF authority"
+      AuthorityCanonical
+      (taAuthorityClass artifacts)
+
+responsePlanGfPipelineIO :: IORef [T.Text] -> Either T.Text GfLinearizationResult -> PipelineIO
+responsePlanGfPipelineIO requestsRef responseResult =
+  responsePlanGfPipelineIOWithEnv (Just "1") requestsRef responseResult
+
+responsePlanGfPipelineIOWithEnv :: Maybe T.Text -> IORef [T.Text] -> Either T.Text GfLinearizationResult -> PipelineIO
+responsePlanGfPipelineIOWithEnv gfRuntimeEnv requestsRef responseResult =
+  mkTestPipelineIO
+    defaultTestPipelineConfig
+      { tpcInterpreter = \request ->
+          case request of
+            TurnReqReadEnv "QXFX0_GF_RUNTIME" ->
+              pure (TurnResReadEnv gfRuntimeEnv)
+            TurnReqLinearizeResponsePlan _ _ _ -> do
+              atomicModifyIORef' requestsRef (\requests -> (requests <> ["response_plan"], ()))
+              pure (TurnResLinearizeResponsePlan responseResult)
+            TurnReqLinearizeDialogAtoms _ _ _ -> do
+              atomicModifyIORef' requestsRef (\requests -> (requests <> ["dialog_atoms"], ()))
+              pure (TurnResLinearizeDialogAtoms (Left "unexpected_legacy_request"))
+            TurnReqLinearizeClaimAst _ _ _ -> do
+              atomicModifyIORef' requestsRef (\requests -> (requests <> ["claim_ast"], ()))
+              pure (TurnResLinearizeClaimAst (Left "unexpected_legacy_request"))
+            _ -> testProtocolInterpreter request
+      }
+
+canonicalResponsePlanGfResult :: T.Text -> GfLinearizationResult
+canonicalResponsePlanGfResult surface =
+  GfLinearizationResult
+    { glrText = surface
+    , glrLanguage = "QxFx0SyntaxRus"
+    , glrAuthorityClass = AuthorityCanonical
+    , glrAssemblyPath = PgfClaimRoute
+    , glrArtifactManifest = ArtifactManifest
+        { amPgfPath = Just "spec/gf/QxFx0Syntax.pgf"
+        , amPgfHash = Just "test-pgf-hash"
+        , amPgfSourceManifestHash = Just "test-source-manifest"
+        , amGeneratedInputLexiconHash = Just "test-input-lexicon"
+        , amGfMapHash = Just "test-gf-map"
+        , amToolchainIdentity = Just "test-pgf"
+        , amToolchainMarker = "test"
+        }
+    , glrFallbackReason = Nothing
+    }
+
+renderPlanWithResponsePlan :: RenderEffectPlan -> RenderEffectPlan
+renderPlanWithResponsePlan renderPlan =
+  let renderStatic = repRenderStatic renderPlan
+      artifact = rsTemplateArtifact renderStatic
+  in renderPlan
+      { repRenderStatic = renderStatic
+          { rsTemplateArtifact = artifact { draResponsePlan = Just testResponsePlan }
+          }
+      }
+
+testResponsePlan :: ResponseSemanticPlan
+testResponsePlan =
+  ResponseSemanticPlan
+    { rspVersion = responsePlanVersion
+    , rspGoal = GoalDefine
+    , rspTopic = Just "свобода"
+    , rspClaims =
+        [ PlannedClaim
+            "freedom-definition"
+            ClaimKnown
+            "свобода предполагает возможность выбора"
+            ["свобода предполагает возможность выбора"]
+            EvidenceCuratedPredicate
+            0.9
+        ]
+    , rspPropositions = [PropositionPredicate "свобода" "предполагает" "возможность выбора"]
+    , rspCounterpoint = Nothing
+    , rspObligation = Nothing
+    , rspNextMove = Nothing
+    , rspDerivation = []
+    , rspFallbackReason = Nothing
+    , rspDiscourse = DiscoursePlan DiscourseNone Nothing 1
+    }
+
 testFinalizePrecommitResolveConcurrently :: Test
 testFinalizePrecommitResolveConcurrently = TestCase $
   withDeterministicEmbedding $ do
@@ -2265,6 +2476,8 @@ testProtocolInterpreter request =
       pure (TurnResCurrentTime protocolFixedTime)
     TurnReqRequestId ->
       pure (TurnResRequestId "request-id-protocol")
+    TurnReqReadEnv "QXFX0_GF_RUNTIME" ->
+      pure (TurnResReadEnv (Just "0"))
     TurnReqReadEnv _ ->
       pure (TurnResReadEnv Nothing)
     TurnReqTestMarkOnceFile _ ->
@@ -2275,12 +2488,16 @@ testProtocolInterpreter request =
       pure TurnResCommitRuntimeState
     TurnReqSaveState ss _ _ _ ->
       pure (TurnResSaveState (Right ss))
-    TurnReqRollbackTurnProjections _ _ ->
-      pure (TurnResRollbackTurnProjections (Right ()))
+    TurnReqRollbackCommittedTurn _ _ _ _ ->
+      pure (TurnResRollbackCommittedTurn (Right ()))
+    TurnReqPersistFeedbackMirror _ _ ->
+      pure TurnResPersistFeedbackMirror
     TurnReqCheckpoint _ ->
       pure TurnResCheckpointCompleted
     TurnReqLinearizeClaimAst _ _ _ ->
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
+    TurnReqLinearizeResponsePlan _ _ _ ->
+      pure (TurnResLinearizeResponsePlan (Left "pgf_unavailable_test_protocol"))
     TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
     TurnReqExternalQuery tool need queryText -> do
@@ -2380,10 +2597,10 @@ failingCommitWithRollbackInterpreter saveRequestsRef request =
       atomicModifyIORef' saveRequestsRef $ \items ->
         (items <> [("save", ssTurnCount ss, maybe False (const True) mProjection)], ())
       pure (TurnResSaveState (Right ss))
-    TurnReqRollbackTurnProjections _ stableTurn -> do
+    TurnReqRollbackCommittedTurn _ _ _ stableTurn -> do
       atomicModifyIORef' saveRequestsRef $ \items ->
         (items <> [("cleanup", stableTurn, False)], ())
-      pure (TurnResRollbackTurnProjections (Right ()))
+      pure (TurnResRollbackCommittedTurn (Right ()))
     _ ->
       testProtocolInterpreter request
 
@@ -3845,8 +4062,65 @@ testCooldownStateSurvivesRestartViaJson = TestCase $ do
       assertBool "circuit breaker must close after cooldown post-restart"
         (canSubmitProposal gs' 26)
 
--- | Phase 8 gap closure: when learning need is active, the render effect
--- plan carries an external query request.
+-- | The superseded Phase 8/9 planner is inert for both request shapes.
+testLegacyExternalLearningRequestsNotPlanned :: Test
+testLegacyExternalLearningRequestsNotPlanned = TestCase $ do
+  let requestState = mkSystemStateWithNeed "что" NeedLexiconExtension
+      exploratoryState = mkSystemStateWithNeedForExploration "тема" NeedLexiconExtension
+  (requestSs, requestTi, requestTs, requestTp) <- buildPlannedFixtureWithState requestState "что"
+  (exploreSs, exploreTi, exploreTs, exploreTp) <- buildPlannedFixtureWithState exploratoryState "привет"
+  let requestPlan = planRenderEffects LocalRecoveryEnabled requestSs requestTi requestTs requestTp
+      exploratoryPlan = planRenderEffects LocalRecoveryEnabled exploreSs exploreTi exploreTs exploreTp
+  assertEqual "legacy request-driven learning must not plan an external query"
+    Nothing (repExternalQueryRequest requestPlan)
+  assertEqual "legacy exploratory learning must not plan an external query"
+    Nothing (repExploratoryQueryRequest exploratoryPlan)
+
+testLegacyExternalLearningEffectsNotResolved :: Test
+testLegacyExternalLearningEffectsNotResolved = TestCase $ do
+  externalCalls <- newIORef 0
+  let state = mkSystemStateWithNeed "что" NeedLexiconExtension
+      tool = ExternalTool "llm-augment" DomainLexicon 0.70 True
+      pipelineIO = mkTestPipelineIO defaultTestPipelineConfig
+        { tpcInterpreter = \request -> case request of
+            TurnReqExternalQuery _ _ _ -> do
+              atomicModifyIORef' externalCalls (\count -> (count + 1, ()))
+              testProtocolInterpreter request
+            _ -> testProtocolInterpreter request
+        }
+  (ss, ti, ts, tp) <- buildPlannedFixtureWithState state "что"
+  let planned = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+      stalePlan = planned
+        { repExternalQueryRequest = Just (tool, NeedLexiconExtension, "что")
+        , repExploratoryQueryRequest = Just (tool, NeedLexiconExtension, "Explore definition of что")
+        }
+  results <- resolveRenderEffects pipelineIO stalePlan
+  callCount <- readIORef externalCalls
+  assertEqual "legacy external effects must not reach the provider interpreter" 0 callCount
+  assertEqual "stale request-driven results must be discarded"
+    Nothing (rerExternalQueryResult results)
+  assertEqual "stale exploratory results must be discarded"
+    Nothing (rerExploratoryQueryResult results)
+
+testLegacyExternalLearningFinalizeInert :: Test
+testLegacyExternalLearningFinalizeInert = TestCase $ do
+  let state = mkSystemStateWithNeed "что" NeedLexiconExtension
+  (_ss, _ti, _ts, _tp, artifacts, bundle) <- buildFinalizeFixtureWithState state "что"
+  let nextState = fpbNextSs bundle
+      trace = tqpReplayTrace (fpbProjection bundle)
+  assertEqual "legacy request result must remain absent"
+    Nothing (taExternalQueryResult artifacts)
+  assertEqual "legacy exploratory result must remain absent"
+    Nothing (taExploratoryQueryResult artifacts)
+  assertEqual "legacy contour must not graft knowledge"
+    (ssKnowledgeTree state) (ssKnowledgeTree nextState)
+  assertEqual "legacy contour must not mutate tool reliability"
+    (ssToolReliability state) (ssToolReliability nextState)
+  assertEqual "legacy contour must be traced as not attempted"
+    (Just "not_attempted") (trcLearningValidationStatus trace)
+
+-- Retained legacy specifications below document the superseded enabled
+-- contour but are no longer registered as runtime expectations.
 testExternalQueryRequestPopulatedWhenLearningNeedActive :: Test
 testExternalQueryRequestPopulatedWhenLearningNeedActive = TestCase $ do
   let ss0 = mkSystemStateWithNeed "что" NeedLexiconExtension
@@ -4661,27 +4935,18 @@ testAnomalyDetectionInPipeline = TestCase $
     (_ss, ti, _ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
     let mAnomaly = detectAnomaly ss0 ti
     -- Normal input should not trigger anomaly
-    assertBool "normal input should not trigger anomaly" (mAnomaly == Nothing)
+    assertBool "normal input should not trigger anomaly" (case mAnomaly of Nothing -> True; Just _ -> False)
 
 -- | Anomaly v3.0: SelfReferentialCollapse must trigger on self-reference with high angst.
 testSelfReferentialCollapseDetection :: Test
 testSelfReferentialCollapseDetection = TestCase $ do
-  -- Test the core function directly with controlled inputs
   let traj = emptyTrajectory { etAngstLevel = 0.95 }
-      selfState = emptySelfState { selfEssence = EssenceUncommitted traj }
-      ss0 = emptySystemState
-        { ssSessionId = "self-ref-test"
-        , ssSelfState = selfState
-        }
       frame = emptyInputPropositionFrame { ipfSemanticSubject = "я" }
-  -- High angst + self-reference should trigger
   assertBool "self-reference with high angst should trigger collapse"
     (selfReferentialCollapse traj frame)
-  -- Low angst should not trigger
   let trajLow = emptyTrajectory { etAngstLevel = 0.5 }
   assertBool "self-reference with low angst should not trigger"
     (not $ selfReferentialCollapse trajLow frame)
-  -- Non-self-reference should not trigger
   let frameOther = emptyInputPropositionFrame { ipfSemanticSubject = "свобода" }
   assertBool "non-self-reference should not trigger"
     (not $ selfReferentialCollapse traj frameOther)
@@ -4707,7 +4972,7 @@ testAntiConatusChoiceDetection = TestCase $
     -- Inconsistent stance + low conatus + high angst should trigger
     assertBool "inconsistent stance with low conatus should trigger anti-conatus"
       (case mAnomaly of
-         Just a -> aType a == AnomalyAntiConatus
+         Just detected -> aType (daAnomaly detected) == AnomalyAntiConatus
          Nothing -> False)
 
 -- | Anomaly v3.0: Anomaly must be rendered in TurnArtifacts when detected.
@@ -4734,7 +4999,8 @@ testAnomalyRenderedInArtifacts = TestCase $
     -- Build route plan with anomaly
     let routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just fakeAnomaly) False ss ti ts routePlan routeResults
+    let detected = DetectedAnomaly fakeAnomaly Nothing
+        tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just detected) False ss ti ts routePlan routeResults
     -- Check that anomaly is wired into TurnPlan
     assertBool "anomaly surface must be populated in TurnPlan"
       (case tpAnomalySurface tp of

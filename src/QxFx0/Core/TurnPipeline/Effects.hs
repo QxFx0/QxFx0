@@ -56,7 +56,7 @@ import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Types.SemanticConfig (SemanticConfig)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
 import QxFx0.Self.Blanket (computeSelfBlanket)
-import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergy)
+import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergyWith)
 import QxFx0.Self.Field
   ( Field (..)
   , FieldHeuristics
@@ -173,6 +173,9 @@ import QxFx0.Core.SemanticFrameAdmission
   , admitSemanticFrame
   )
 import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread, emptyDialogueCommitmentLedger, emptyDialogueThread)
+import QxFx0.Types.Persistence (StateVersion)
+import QxFx0.Semantic.Network.Types (SemanticNetwork)
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -194,11 +197,13 @@ data TurnEffectRequest
   | TurnReqTestMarkOnceFile !Text
   | TurnReqSemanticIntrospectionEnv
   | TurnReqCommitRuntimeState !ConsciousnessLoop !IntuitiveState !ResponseObservation
-  | TurnReqSaveState !SystemState !Text !Int !(Maybe TurnProjection)
-  | TurnReqRollbackTurnProjections !Text !Int
+  | TurnReqSaveState !SystemState !Text !StateVersion !(Maybe TurnProjection)
+  | TurnReqRollbackCommittedTurn !SystemState !Text !StateVersion !Int
+  | TurnReqPersistFeedbackMirror !SemanticNetwork !SemanticNetwork
   | TurnReqCheckpoint !Int
   | TurnReqLinearizeClaimAst !(Maybe FilePath) !Text !ClaimAst
   | TurnReqLinearizeDialogAtoms !(Maybe FilePath) !Text !DialogAtoms
+  | TurnReqLinearizeResponsePlan !(Maybe FilePath) !Text !ResponseSemanticPlan
   | TurnReqExternalQuery !ExternalTool !LearningNeed !Text
     -- ^ Phase 8: query an external tool (LLM, mentor, script).
   deriving stock (Show)
@@ -218,10 +223,12 @@ data TurnEffectResult
   | TurnResSemanticIntrospectionEnv !Bool
   | TurnResCommitRuntimeState
   | TurnResSaveState !(Either PersistenceDiagnostic SystemState)
-  | TurnResRollbackTurnProjections !(Either PersistenceDiagnostic ())
+  | TurnResRollbackCommittedTurn !(Either PersistenceDiagnostic ())
+  | TurnResPersistFeedbackMirror
   | TurnResCheckpointCompleted
   | TurnResLinearizeClaimAst !(Either Text GfLinearizationResult)
   | TurnResLinearizeDialogAtoms !(Either Text GfLinearizationResult)
+  | TurnResLinearizeResponsePlan !(Either Text GfLinearizationResult)
   | TurnResExternalQuery !(Either ExternalQueryError ExternalQueryResponse)
     -- ^ Phase 8: response envelope from external tool query.
 
@@ -390,7 +397,8 @@ buildPrepareEffectPlan ss input currentTime =
       atomLoad = asLoad atomSet
       blanket = computeSelfBlanket ss
       violations = checkInitialBlanket blanket
-      conatusEnergy = computeConatusEnergy blanket violations
+      conatusEnergy = computeConatusEnergyWith
+        (selfConatusWeights (ssSelfState ss)) blanket violations
       violationCount = length violations
       conatusGateFired = conatusGateFires conatusEnergy
       -- Phase 7: populate four of five Field components via

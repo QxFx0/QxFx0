@@ -56,6 +56,12 @@ sampleEvent = LearningEvent
   , leReason = Nothing
   , lePromptHash = Just "prompt"
   , leResponseHash = Just "response"
+  , leModel = Just "test-model"
+  , leParserDecision = Just "structured_relation_parser:accepted"
+  , leAdmissionDecision = Just "runtime_admitted"
+  , leEvidenceSource = Just "test"
+  , leEdgeNamespace = Just NamespaceSessionLocal
+  , leEdgeOwner = Just "session"
   }
 
 secondEvent :: LearningEvent
@@ -75,6 +81,12 @@ secondEvent = LearningEvent
   , leReason = Nothing
   , lePromptHash = Nothing
   , leResponseHash = Nothing
+  , leModel = Nothing
+  , leParserDecision = Nothing
+  , leAdmissionDecision = Nothing
+  , leEvidenceSource = Nothing
+  , leEdgeNamespace = Nothing
+  , leEdgeOwner = Nothing
   }
 
 mkEdge :: Text -> Text -> EdgeProvenance -> Double -> Int -> SemanticEdge
@@ -93,7 +105,7 @@ mkEdge from to prov conf cooc = SemanticEdge
   , seSynthesis = Nothing
   , seConfidence = conf
   , seProvenance = prov
-  , seNamespace = NamespaceSessionLocal
+  , seNamespace = Just NamespaceSessionLocal
   , seLineage = Nothing
   }
 
@@ -113,6 +125,7 @@ feedbackTs = UTCTime (fromGregorian 2026 7 11) 0
 testKindText :: Test
 testKindText = TestLabel "LearningEventKind has stable text" $ TestCase $ do
   assertEqual "admitted" "edge_admitted" (learningEventKindText EdgeAdmitted)
+  assertEqual "corroborated" "edge_corroborated" (learningEventKindText EdgeCorroborated)
   assertEqual "promoted" "edge_promoted" (learningEventKindText EdgePromoted)
   assertEqual "positive" "runtime_feedback_positive" (learningEventKindText RuntimeFeedbackPositive)
 
@@ -125,7 +138,7 @@ testTextRoundTrips :: Test
 testTextRoundTrips = TestLabel "kind/source text parsers round-trip" $ TestCase $ do
   mapM_
     (\k -> assertEqual "kind" (Just k) (learningEventKindFromText (learningEventKindText k)))
-    [ LlmEdgeProposed, EdgeAdmitted, EdgeRejected, EdgeQuarantined
+     [ LlmEdgeProposed, EdgeAdmitted, EdgeCorroborated, EdgeRejected, EdgeQuarantined
     , RuntimeFeedbackPositive, RuntimeFeedbackNegative, RuntimeFeedbackConflict
     , EdgePromoted, EdgeDecayed, EdgeRetired
     ]

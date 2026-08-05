@@ -11,9 +11,11 @@ module QxFx0.Semantic.Network.Seed
   , readDensityConfig
   , starvingTopics
   , buildTopicAtomsMap
+  , buildTopicAtomsMapFromCorpus
   ) where
 
 import Data.Map.Strict (Map)
+import Data.List (sortOn)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -24,6 +26,7 @@ import System.Environment (lookupEnv)
 
 import QxFx0.Semantic.Content (definitionCorpus, DefinitionContent(..), SemanticPredicate(..))
 import QxFx0.Semantic.Network.Types (SemanticNetwork(..), SemanticEdge(..), EdgeSource(..), semanticEdge)
+import QxFx0.Semantic.TopicRelations (allTopicRelationsList, convertToSemanticEdges)
 
 -- | Overlay persisted confidence values onto a freshly built semantic
 -- network.  For every edge that exists in both networks, the resulting
@@ -119,24 +122,39 @@ starvingTopics
   -> [Text]
 starvingTopics network topicAtomsMap cfg =
   [ topic
-  | (topic, atoms) <- M.toList topicAtomsMap
-  , contentDensity network atoms (dcKappa cfg) < dcThreshold cfg
+  | (_, topic) <- sortOn id
+      [ (contentDensity network atoms (dcKappa cfg), topic)
+      | (topic, atoms) <- M.toList topicAtomsMap
+      , contentDensity network atoms (dcKappa cfg) < dcThreshold cfg
+      ]
   ]
 
 -- | Build the topic → atoms map from the curated definition corpus by
 -- tokenising each topic's predicate surface forms.  Used by the
 -- density gate triggers.
 buildTopicAtomsMap :: Map Text Text -> Map Text (Set Text)
-buildTopicAtomsMap lemmaMap =
+buildTopicAtomsMap lemmaMap = buildTopicAtomsMapFromCorpus lemmaMap definitionCorpus
+
+-- | Build the density-gate view from the corpus actually loaded by the
+-- runtime.  Bootstrap extends the small seed corpus with curated predicates,
+-- so autonomous learning must not silently fall back to the seed-only list.
+buildTopicAtomsMapFromCorpus
+  :: Map Text Text
+  -> Map Text DefinitionContent
+  -> Map Text (Set Text)
+buildTopicAtomsMapFromCorpus lemmaMap corpus =
   M.fromList
-    [ (topic, S.unions [tokenizePredicate lemmaMap (spRu p) | p <- dcPredicates dc])
-    | (topic, dc) <- M.toList definitionCorpus
+    [ (T.toLower (T.strip topic), S.unions [tokenizePredicate lemmaMap (spRu p) | p <- dcPredicates dc])
+    | (topic, dc) <- M.toList corpus
     ]
 
 -- | Seed a SemanticNetwork from definitionCorpus.
 -- Creates edges between topics that share atoms in their predicates.
 -- Uses lemmaMap to normalize tokens to lemmas for consistency with runtime.
 seedFromCorpus :: Map Text Text -> SemanticNetwork
+-- | Seed a SemanticNetwork from definitionCorpus with additional topic relations
+-- Creates edges between topics that share atoms in their predicates, plus explicit
+-- semantic relations (synonyms, antonyms, etc.) from TopicRelations module.
 seedFromCorpus lemmaMap =
   let topicAtoms :: [(Text, Set Text)]
       topicAtoms =
@@ -160,9 +178,20 @@ seedFromCorpus lemmaMap =
 
       edgeMap :: Map (Text, Text) SemanticEdge
       edgeMap = M.fromList [((seFrom e, seTo e), e) | e <- corpusEdges]
+      
+      -- Add explicit semantic relations from TopicRelations
+      explicitEdges = convertToSemanticEdges allTopicRelationsList
+      explicitEdgeMap = M.fromList [((seFrom e, seTo e), e) | e <- explicitEdges]
+      
+      -- Merge corpus edges with explicit relations (explicit relations have priority)
+      mergedEdgeMap = M.union explicitEdgeMap edgeMap
+      
+      -- Combine all nodes
+      explicitNodes = S.fromList (concatMap (\e -> [seFrom e, seTo e]) explicitEdges)
+      allNodesCombined = S.union allNodes explicitNodes
   in SemanticNetwork
-    { snNodes = allNodes
-    , snEdges = edgeMap
+    { snNodes = allNodesCombined
+    , snEdges = mergedEdgeMap
     , snActivation = M.empty
     , snDecayRate = 0.5
     , snMaxHops = 3

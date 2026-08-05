@@ -48,7 +48,7 @@ parentChildOntology = Ontology
 
 semanticEdge :: Text -> Text -> Double -> Int -> EdgeSource -> SemanticEdge
 semanticEdge f t w cooc source =
-  SemanticEdge f t w cooc source Nothing Nothing Nothing Nothing Nothing 1.0 ProvenanceCurated Nothing Nothing Nothing
+  SemanticEdge f t w cooc source Nothing Nothing Nothing Nothing Nothing 1.0 ProvenanceCurated Nothing Nothing Nothing Nothing
 
 childOnlySelector :: Ontology -> SemanticSpace -> ContentSelector
 childOnlySelector ont space =
@@ -56,7 +56,7 @@ childOnlySelector ont space =
         [ ("child",  S.fromList ["child_atom"])
         , ("sibling", S.fromList ["sibling_atom"])
         ]
-      siblingPred = SemanticPredicate RoleProperty "sibling predicate" "sibling predicate" "sibling" Nothing Nothing Nothing
+      siblingPred = SemanticPredicate RoleProperty "sibling predicate" "sibling predicate" "sibling" Nothing Nothing Nothing Nothing
       topicPredicates = M.fromList
         [ ("sibling", [siblingPred])
         ]

@@ -187,7 +187,9 @@ isResourceRoot root = do
   hasMorphology <- doesDirectoryExist (root </> "resources" </> "morphology")
   hasConcepts <- doesFileExist (root </> "semantics" </> "concepts.nix")
   hasSchema <- doesFileExist (root </> "spec" </> "sql" </> "schema.sql")
-  pure (hasMigrations && hasMorphology && (hasConcepts || hasSchema))
+  hasGfMap <- doesFileExist (root </> "spec" </> "gf" </> "lexicon_funmap.tsv")
+  hasPgf <- doesFileExist (root </> "spec" </> "gf" </> "QxFx0Syntax.pgf")
+  pure (hasMigrations && hasMorphology && (hasConcepts || hasSchema) && hasGfMap && hasPgf)
 
 ancestors :: Int -> FilePath -> [FilePath]
 ancestors maxDepth start = go 0 (normalise start)

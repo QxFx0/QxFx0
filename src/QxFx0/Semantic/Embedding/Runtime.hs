@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 {-| Runtime embedding selection, health checks, and remote fetch logic. -}
 module QxFx0.Semantic.Embedding.Runtime
@@ -14,7 +15,7 @@ module QxFx0.Semantic.Embedding.Runtime
   ) where
 
 import Control.Concurrent.MVar (modifyMVar_, readMVar)
-import Control.Exception (try)
+import Control.Exception (bracket, try)
 import Data.Char (toLower)
 import Data.Text (Text)
 import qualified Data.Aeson as Aeson
@@ -25,7 +26,7 @@ import qualified Data.Text as T
 import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import qualified Data.Vector as V
 import qualified Data.CaseInsensitive as CI
-import Network.HTTP.Client (BodyReader, HttpException, Manager, ResponseTimeout, brRead, withResponse, responseStatus, responseHeaders, responseBody)
+import Network.HTTP.Client (BodyReader, HttpException, Manager, ResponseTimeout, brRead, closeManager, withResponse, responseStatus, responseHeaders, responseBody)
 import qualified Network.HTTP.Client as HTTPClient
 import qualified Network.HTTP.Simple as HTTP
 import Network.HTTP.Client.TLS (newTlsManager)
@@ -268,9 +269,7 @@ fetchRemoteEmbedding :: String -> Text -> IO (Either Text Embedding)
 fetchRemoteEmbedding url txt = withFreshEmbeddingManager (\manager -> fetchRemoteEmbeddingWithManager manager url txt)
 
 withFreshEmbeddingManager :: (Manager -> IO a) -> IO a
-withFreshEmbeddingManager action = do
-  manager <- newTlsManager
-  action manager
+withFreshEmbeddingManager = bracket newTlsManager closeManager
 
 fetchRemoteEmbeddingWithManager :: Manager -> String -> Text -> IO (Either Text Embedding)
 fetchRemoteEmbeddingWithManager manager =

@@ -35,7 +35,10 @@ import QxFx0.Types.Domain
   , SemanticScene
   , UserState
   )
-import QxFx0.Semantic.DialogueContext (DialogueContext, emptyContext)
+import QxFx0.Types.Semantic.DialogueContext
+  ( DialogueContext
+  , emptyDialogueContext
+  )
 
 data DialogueState = DialogueState
   { dsHistory :: !(Seq Text)
@@ -80,7 +83,7 @@ emptyDialogueState = DialogueState
   , dsLastSalienceBias = 0.0
   , dsHolisticStreak = 0
   , dsRecentNarrativeSuccess = []
-  , dsContext = emptyContext
+  , dsContext = emptyDialogueContext
   }
 
 appendHistoryBounded :: Int -> Seq Text -> Text -> Seq Text

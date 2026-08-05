@@ -25,7 +25,7 @@ import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(Writ
 import System.Posix.Types (FileMode)
 
 import QxFx0.Bridge.SQLite (maybeCheckpoint)
-import QxFx0.Bridge.StatePersistence (rollbackTurnProjections, saveStateWithProjectionExpected)
+import QxFx0.Bridge.StatePersistence (rollbackCommittedTurn, saveStateWithProjectionExpected)
 import qualified QxFx0.Bridge.Datalog as Datalog
 import QxFx0.ExceptionPolicy (catchIO)
 import QxFx0.Core.ConsciousnessLoop (clLastNarrative, runConsciousnessLoopWithSalience)
@@ -37,6 +37,7 @@ import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Runtime.PGF
   ( linearizeClaimAstGfLangWithCache
   , linearizeDialogAtomsGfLangWithCache
+  , linearizeResponseSemanticPlanGfLangWithCache
   )
 import QxFx0.Runtime.Wiring.Context
   ( RuntimeContext(..)
@@ -57,6 +58,9 @@ import QxFx0.Runtime.Wiring.Context
 import QxFx0.Runtime.Wiring.Readiness (checkNixWithCache, wireVerifyAgda)
 import QxFx0.Semantic.Embedding (textToEmbeddingResultWithManager)
 import QxFx0.Bridge.ExternalLLM (buildTransportFromEnvWithManager, queryExternalTool)
+import QxFx0.Learning.Loop (legacyExternalLearningEnabled)
+import QxFx0.Semantic.Network.Feedback.Persist (persistFeedbackNetwork)
+import QxFx0.Types.ExternalQuery (ExternalQueryError(..))
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Domain (r5Family, r5Force)
 import QxFx0.Types.ShadowDivergence
@@ -138,10 +142,17 @@ handleTurnEffect ctx request =
       case envResult of
         TurnResReadEnv value -> pure (TurnResSemanticIntrospectionEnv (maybe False (const True) value))
         _ -> pure (TurnResSemanticIntrospectionEnv False)
-    TurnReqSaveState ss sid expectedRevision mProj ->
-      TurnResSaveState <$> saveStateWithProjectionExpected (withRuntimeDb ctx) ss sid expectedRevision mProj
-    TurnReqRollbackTurnProjections sid stableTurn ->
-      TurnResRollbackTurnProjections <$> rollbackTurnProjections (withRuntimeDb ctx) sid stableTurn
+    TurnReqSaveState ss sid expectedVersion mProj ->
+      TurnResSaveState <$> saveStateWithProjectionExpected (withRuntimeDb ctx) ss sid expectedVersion mProj
+    TurnReqRollbackCommittedTurn previousState sid expectedVersion stableTurn ->
+      TurnResRollbackCommittedTurn <$>
+        rollbackCommittedTurn (withRuntimeDb ctx) previousState sid expectedVersion stableTurn
+    TurnReqPersistFeedbackMirror previousNetwork updatedNetwork -> do
+      persistFeedbackNetwork
+        "resources/config/tuned_relation_weights.jsonl"
+        previousNetwork
+        updatedNetwork
+      pure TurnResPersistFeedbackMirror
     TurnReqCheckpoint turnCount -> do
       withRuntimeDb ctx $ \db -> maybeCheckpoint db turnCount
       pure TurnResCheckpointCompleted
@@ -149,10 +160,15 @@ handleTurnEffect ctx request =
       TurnResLinearizeClaimAst <$> linearizeClaimAstGfLangWithCache (rtcPgf (rcCaches ctx)) mPgfPath lang claimAst
     TurnReqLinearizeDialogAtoms mPgfPath lang da ->
       TurnResLinearizeDialogAtoms <$> linearizeDialogAtomsGfLangWithCache (rtcPgf (rcCaches ctx)) mPgfPath lang da
+    TurnReqLinearizeResponsePlan mPgfPath lang plan ->
+      TurnResLinearizeResponsePlan <$> linearizeResponseSemanticPlanGfLangWithCache (rtcPgf (rcCaches ctx)) mPgfPath lang plan
     TurnReqExternalQuery tool need query -> do
-      transport <- buildTransportFromEnvWithManager (rtwHttpManager (rcWorkers ctx))
-      result <- queryExternalTool transport tool need query
-      pure (TurnResExternalQuery result)
+      if not legacyExternalLearningEnabled
+        then pure (TurnResExternalQuery (Left EqeEmptyResponse))
+        else do
+          transport <- buildTransportFromEnvWithManager (rtwHttpManager (rcWorkers ctx))
+          result <- queryExternalTool transport tool need query
+          pure (TurnResExternalQuery result)
 
 generateRequestId :: TimeSource -> IO T.Text
 generateRequestId timeSource = do

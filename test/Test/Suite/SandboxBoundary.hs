@@ -21,7 +21,8 @@ import QxFx0.Learning.Sandbox
 import QxFx0.Learning.Validator (KnowledgeFruitPayload(..), MorphologyPayload(..))
 import QxFx0.Learning.KnowledgeTree (KnowledgeSource(..))
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), emptyLearningNeedState)
-import QxFx0.Types.State.System (SystemState, emptySystemState, ssLearningNeedState)
+import QxFx0.Types.State.System (SystemState, ssLearningNeedState)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 
 sandboxBoundaryTests :: [Test]
 sandboxBoundaryTests =

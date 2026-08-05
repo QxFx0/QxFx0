@@ -97,6 +97,7 @@ httpRuntimeTests =
   , testWorkerSessionCapRejectsNewSessions
   , testPostCommitTailFailureDoesNotFlipCommittedTurnToError
   , testTurnPostSendFailureHasNoAutoRetry
+  , testInitialUnknownTurnRetainsSessionToken
   , testTurnExplicitErrorPoisonsWorker
   , testServeHttpRejectsZeroBindWithoutExplicitOptIn
   , testDirectSidecarRejectsHttpEnvZeroBindWithoutExplicitOptIn
@@ -421,6 +422,33 @@ testTurnPostSendFailureHasNoAutoRetry = TestCase $
     withRuntimeEnv "qxfx0_test_http_post_send_unknown.db" $ do
       port <- allocatePort
       markerPath <- pure ("/tmp/qxfx0_test_worker_crash_once_" <> show port <> ".flag")
+      removeIfExists markerPath
+
+testInitialUnknownTurnRetainsSessionToken :: Test
+testInitialUnknownTurnRetainsSessionToken = TestCase $
+  withHttpSocketCapability $
+    withRuntimeEnv "qxfx0_test_http_unknown_token.db" $ do
+      port <- allocatePort
+      let markerPath = "/tmp/qxfx0_test_worker_unknown_token_once_" <> show port <> ".flag"
+      removeIfExists markerPath
+      withEnvVar "QXFX0_API_KEY" (Just "test-api-key") $
+        withEnvVar "QXFX0_TEST_MODE" (Just "1") $
+          withEnvVar "QXFX0_TEST_WORKER_CRASH_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $
+            withSidecarOnPort port [] $ do
+              waitUntilSidecarHealthy port
+              (unknownCode, unknownValue) <- postTurnRawAuthenticated
+                port "test-api-key" Nothing "unknown-owned" "Первый turn имеет неизвестный исход"
+              assertBool "initial unknown outcome should surface as 502/504"
+                (unknownCode == 502 || unknownCode == 504)
+              unknownFlag <- requireBoolField "unknown result flag" "result_unknown" unknownValue
+              assertBool "initial failure must remain unknown" unknownFlag
+              sessionToken <- requireTextField
+                "unknown initial outcome must retain and return ownership token" "session_token" unknownValue
+              (retryCode, retryValue) <- postTurnRawAuthenticated
+                port "test-api-key" (Just sessionToken) "unknown-owned" "Следующий turn использует тот же token"
+              assertEqual "retained token must authorize the next request" 200 retryCode
+              echoedToken <- requireTextField "recovery response token" "session_token" retryValue
+              assertEqual "ownership token must remain stable after unknown outcome" sessionToken echoedToken
       removeIfExists markerPath
       withEnvVar "QXFX0_TEST_MODE" (Just "1") $
         withEnvVar "QXFX0_TEST_WORKER_CRASH_AFTER_ACCEPT_ONCE_FILE" (Just markerPath) $

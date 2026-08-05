@@ -1,14 +1,14 @@
 {-# LANGUAGE DerivingStrategies, OverloadedStrings, StrictData, RankNTypes, LambdaCase #-}
 module QxFx0.Bridge.StatePersistence
-  ( saveState
-  , saveStateExpected
-  , saveStateWithProjection
+  ( saveStateExpected
   , saveStateWithProjectionExpected
-  , rollbackTurnProjections
+  , rollbackCommittedTurn
   , loadState
+  , loadStateWithVersion
   , loadStateRevision
   , stateBlobDiagnostics
   , canonicalizePersistedState
+  , StateVersion(..)
   -- Re-exported from QxFx0.Types.Persistence for backward compatibility
   , PersistenceDiagnostic(..)
   , PersistenceStage(..)
@@ -18,7 +18,8 @@ module QxFx0.Bridge.StatePersistence
   , DbRunner
   ) where
 
-import QxFx0.Types.State (SystemState(..), emptySystemState, ssTurnCount)
+import QxFx0.Types.State (SystemState(..), ssTurnCount)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.State.Perspective (emptyPerspectiveRegistry)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Identity (IdentityState(..))
@@ -26,14 +27,21 @@ import QxFx0.Types.State.Semantic (SemanticState(..))
 import QxFx0.Types.Thresholds (legitimacyStatusText, scenePressureText)
 import QxFx0.Types.Decision (DialogueOutputMode(..), decisionDispositionText, renderStyleText, shadowStatusText, legitimacyReasonText, plannerModeText, parserModeText)
 import QxFx0.Types.ShadowDivergence (shadowDivergenceKindText, shadowSnapshotIdText)
-import QxFx0.Types.TurnProjection (TurnProjection(..), TurnReplayTrace(..))
+import QxFx0.Types.TurnProjection
+  ( TurnProjection(..)
+  , TurnReplayTrace(..)
+  , encodePersistedReplayTrace
+  )
 import QxFx0.Types.Observability (AuthorityClass(..), TruthContractStatus(..), ReplayProvenanceStatus(..))
 import QxFx0.Types.Persistence
   ( PersistenceDiagnostic(..)
   , PersistenceEnvelope(..)
   , PersistenceStage(..)
   , LoadStateResult(..)
+  , StateVersion(..)
   , currentPersistenceEnvelopeVersion
+  , corruptStateRepairVersion
+  , isCorruptStateRepairVersion
   , renderPersistenceDiagnostics
   )
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree(..))
@@ -47,6 +55,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.Aeson.Key as AK
 import qualified Data.Aeson.KeyMap as KM
 import qualified Data.ByteString.Lazy as BL
@@ -88,30 +97,19 @@ logPersistenceCounts label ss = do
     , " guard_quarantine=", show guardQuarantine
     ]
 
-saveState :: DbRunner -> SystemState -> Text -> IO (Either PersistenceDiagnostic SystemState)
-saveState withDb ss sessionId = saveStateWithProjection withDb ss sessionId Nothing
+saveStateExpected :: DbRunner -> SystemState -> Text -> StateVersion -> IO (Either PersistenceDiagnostic SystemState)
+saveStateExpected withDb ss sessionId expectedVersion =
+  saveStateWithProjectionExpected withDb ss sessionId expectedVersion Nothing
 
-saveStateExpected :: DbRunner -> SystemState -> Text -> Int -> IO (Either PersistenceDiagnostic SystemState)
-saveStateExpected withDb ss sessionId expectedRevision = saveStateWithProjectionExpected withDb ss sessionId expectedRevision Nothing
-
-saveStateWithProjection :: DbRunner -> SystemState -> Text -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
-saveStateWithProjection withDb ss sessionId mProjection = do
-  expectedRevision <- loadStateRevision withDb sessionId
-  saveStateWithProjectionExpected withDb ss sessionId expectedRevision mProjection
-
-saveStateWithProjectionExpected :: DbRunner -> SystemState -> Text -> Int -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
-saveStateWithProjectionExpected withDb ss sessionId expectedRevision mProjection = do
+saveStateWithProjectionExpected :: DbRunner -> SystemState -> Text -> StateVersion -> Maybe TurnProjection -> IO (Either PersistenceDiagnostic SystemState)
+saveStateWithProjectionExpected withDb ss sessionId expectedVersion mProjection = do
   logPersistenceCounts "pre_save" ss
   let liveState = ss { ssSessionId = sessionId }
       persistedState = canonicalizePersistedState liveState
-      _envelope = PersistenceEnvelope
-        { peVersion = currentPersistenceEnvelopeVersion
-        , peState = persistedState
-        }
   result <- tryQxFx0 $ withDb $ \db -> do
     withImmediateTransaction db $ do
       let jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState
-      bumpStateRevisionCas db sessionId expectedRevision (ssTurnCount ss - 1)
+      bumpStateRevisionCas db sessionId expectedVersion
       touchRuntimeSessionActivity db sessionId
       saveKV db sessionId "__system_state__" jsonBlob
 
@@ -127,18 +125,26 @@ saveStateWithProjectionExpected withDb ss sessionId expectedRevision mProjection
     Left (PersistenceTxError stage msg) -> do
       hPutStrLn stderr $ "[persistence_debug] save_tx_error session=" <> T.unpack sessionId <> " stage=" <> show stage <> " detail=" <> T.unpack msg
       pure (Left (diagnoseSave stage (Just msg)))
-    Left (PersistenceConflict sid expected actual priorTurn) -> do
-      hPutStrLn stderr $ "[persistence_debug] save_conflict session=" <> T.unpack sid <> " expected_revision=" <> show expected <> " actual_revision=" <> show actual <> " expected_prior_turn=" <> show priorTurn
-      pure (Left (PdStateRevisionConflict sid expected actual priorTurn))
+    Left (PersistenceConflict sid expected actual) -> do
+      hPutStrLn stderr $ "[persistence_debug] save_conflict session=" <> T.unpack sid <> " expected_version=" <> show expected <> " actual_version=" <> show actual
+      pure (Left (PdStateVersionConflict sid expected actual))
     Left other -> do
       hPutStrLn stderr $ "[persistence_debug] save_unknown_qxfx0_exception session=" <> T.unpack sessionId <> " detail=" <> T.unpack (renderQxFx0ExceptionForLog other)
       pure (Left (PdSaveFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))
     Right savedSs -> pure $ Right savedSs
 
-rollbackTurnProjections :: DbRunner -> Text -> Int -> IO (Either PersistenceDiagnostic ())
-rollbackTurnProjections withDb sessionId stableTurn = do
+-- | Atomically restore the previous state and remove projections from the
+-- failed committed turn. The CAS targets the just-persisted state, so a newer
+-- writer prevents rollback rather than being overwritten.
+rollbackCommittedTurn :: DbRunner -> SystemState -> Text -> StateVersion -> Int -> IO (Either PersistenceDiagnostic ())
+rollbackCommittedTurn withDb previousState sessionId expectedVersion stableTurn = do
   result <- tryQxFx0 $ withDb $ \db -> do
     withImmediateTransaction db $ do
+      let persistedState = canonicalizePersistedState (previousState { ssSessionId = sessionId })
+          jsonBlob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ persistedState
+      bumpStateRevisionCas db sessionId expectedVersion
+      touchRuntimeSessionActivity db sessionId
+      saveKV db sessionId "__system_state__" jsonBlob
       deleteTurnQualityAbove db sessionId stableTurn
       deleteShadowDivergenceAbove db sessionId stableTurn
   case result of
@@ -189,20 +195,63 @@ touchRuntimeSessionActivity db sessionId = do
   bindTextOrFail ts 1 sessionId
   stepOrFail ts
 
-bumpStateRevisionCas :: NSQL.Database -> Text -> Int -> Int -> IO ()
-bumpStateRevisionCas db sessionId expectedRevision expectedPriorTurn = do
+bumpStateRevisionCas :: NSQL.Database -> Text -> StateVersion -> IO ()
+bumpStateRevisionCas db sessionId expectedVersion
+  | isCorruptStateRepairVersion expectedVersion =
+      bumpCorruptStateRepairRevisionCas db sessionId expectedVersion
+  | otherwise = do
+      actualVersion <- loadStateVersionDirect db sessionId
+      when (actualVersion /= expectedVersion) $
+        throwQxFx0 (PersistenceConflict sessionId expectedVersion actualVersion)
+      bumpRevisionOnlyCas db sessionId expectedVersion
+
+bumpCorruptStateRepairRevisionCas :: NSQL.Database -> Text -> StateVersion -> IO ()
+bumpCorruptStateRepairRevisionCas db sessionId expectedVersion = do
+  revision <- loadStateRevisionDirect db sessionId
+  mBlob <- loadKV db sessionId "__system_state__"
+  let stillCorrupt = case mBlob of
+        Just blob -> case decodePersistedTurn blob of
+          Left _ -> True
+          Right _ -> False
+        Nothing -> False
+      actualVersion = case mBlob of
+        Nothing -> StateVersion revision 0
+        Just blob -> case decodePersistedTurn blob of
+          Right turn -> StateVersion revision turn
+          Left _ -> corruptStateRepairVersion revision
+  when (revision /= stateRevision expectedVersion || not stillCorrupt) $
+    throwQxFx0 (PersistenceConflict sessionId expectedVersion actualVersion)
+  bumpRevisionOnlyCas db sessionId expectedVersion
+
+bumpRevisionOnlyCas :: NSQL.Database -> Text -> StateVersion -> IO ()
+bumpRevisionOnlyCas db sessionId expectedVersion = do
   let sql = "UPDATE runtime_sessions SET state_revision = state_revision + 1 WHERE id = ? AND state_revision = ?"
   ts <- prepareTx db "state_revision_cas" sql
   bindTextOrFail ts 1 sessionId
-  bindIntOrFail ts 2 expectedRevision
+  bindIntOrFail ts 2 (stateRevision expectedVersion)
   stepOrFail ts
   changed <- sqliteChanges db
   when (changed /= 1) $ do
-    actualRevision <- loadStateRevisionDirect db sessionId
-    throwQxFx0 (PersistenceConflict sessionId expectedRevision actualRevision expectedPriorTurn)
+    racedVersion <- loadStateVersionForCasDirect db sessionId
+    throwQxFx0 (PersistenceConflict sessionId expectedVersion racedVersion)
 
 loadState :: DbRunner -> Text -> IO LoadStateResult
-loadState withDb sessionId = withDb $ \db -> do
+loadState withDb sessionId = fst <$> loadStateWithVersion withDb sessionId
+
+-- | Load the state and its write version from one SQLite snapshot.  Callers
+-- that intend to write the loaded state must retain and present this version.
+loadStateWithVersion :: DbRunner -> Text -> IO (LoadStateResult, StateVersion)
+loadStateWithVersion withDb sessionId = withDb $ \db -> withImmediateTransaction db $ do
+  loaded <- loadStateDirect db sessionId
+  revision <- loadStateRevisionDirect db sessionId
+  let turn = case loaded of
+        LoadStateRestored ss -> ssTurnCount ss
+        LoadStateMissing -> 0
+        LoadStateCorrupt _ -> stateTurn (corruptStateRepairVersion revision)
+  pure (loaded, StateVersion revision turn)
+
+loadStateDirect :: NSQL.Database -> Text -> IO LoadStateResult
+loadStateDirect db sessionId = do
   mBlobResult <- try (loadKV db sessionId "__system_state__") :: IO (Either UnicodeException (Maybe Text))
   case mBlobResult of
     Left err -> do
@@ -239,6 +288,39 @@ loadState withDb sessionId = withDb $ \db -> do
 
 loadStateRevision :: DbRunner -> Text -> IO Int
 loadStateRevision withDb sessionId = withDb $ \db -> loadStateRevisionDirect db sessionId
+
+loadStateVersionDirect :: NSQL.Database -> Text -> IO StateVersion
+loadStateVersionDirect db sessionId = do
+  revision <- loadStateRevisionDirect db sessionId
+  mBlob <- loadKV db sessionId "__system_state__"
+  turn <- case mBlob of
+    Nothing -> pure 0
+    Just blob ->
+      case decodePersistedTurn blob of
+        Right turn -> pure turn
+        Left err -> throwQxFx0
+          (PersistenceTxError StageStateBlobUpsert ("cannot read persisted turn lineage: " <> T.pack err))
+  pure (StateVersion revision turn)
+
+loadStateVersionForCasDirect :: NSQL.Database -> Text -> IO StateVersion
+loadStateVersionForCasDirect db sessionId = do
+  revision <- loadStateRevisionDirect db sessionId
+  mBlob <- loadKV db sessionId "__system_state__"
+  pure $ case mBlob of
+    Nothing -> StateVersion revision 0
+    Just blob -> case decodePersistedTurn blob of
+      Right turn -> StateVersion revision turn
+      Left _ -> corruptStateRepairVersion revision
+
+decodePersistedTurn :: Text -> Either String Int
+decodePersistedTurn blob =
+  let bytes = TE.encodeUtf8 blob
+  in case Aeson.eitherDecodeStrict' bytes of
+      Right ss -> Right (ssTurnCount (ss :: SystemState))
+      Left _ ->
+        case Aeson.eitherDecodeStrict' bytes of
+          Right envelope -> Right (ssTurnCount (peState (envelope :: PersistenceEnvelope)))
+          Left err -> Left err
 
 -- | Optional backward-compatibility fields: present in the canonical encoding,
 -- but read leniently (@.:? .!= default@) so older blobs still decode. Their
@@ -282,7 +364,7 @@ persistTurnQuality db sessionId p = do
           { trcReplayProvenanceStatus =
               normalizeReplayProvenanceStatus (trcReplayProvenanceStatus replayTrace0) replayAuthority
           }
-      replayTraceJson = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ replayTrace
+      replayTraceJson = TE.decodeUtf8 . BL.toStrict $ encodePersistedReplayTrace replayTrace
   ts <- prepareTx db "turn_quality" sql
   bindTextOrFail ts 1 sessionId
   bindInt64OrFail ts 2 (fromIntegral (tqpTurn p))
@@ -398,6 +480,22 @@ canonicalizePersistedState ss =
     , ssGovernanceProjection = ssGovernanceProjection emptySystemState
     , ssOutputMode = DialogueOutput
     , ssGovernanceRuntimeFault = Nothing
+    -- These are bootstrap resources, not session authority.  Persisting them
+    -- once per session duplicated the curated corpus and derived indexes into
+    -- ~60 MiB JSON blobs.  Bootstrap reconstructs the exact live versions
+    -- from resources and the runtime-edge projection on every restore.
+    , ssMorphology = ssMorphology emptySystemState
+    , ssRuntimeParadigms = ssRuntimeParadigms emptySystemState
+    , ssSemanticNetwork = ssSemanticNetwork emptySystemState
+    , ssOntology = ssOntology emptySystemState
+    , ssSemanticSpace = ssSemanticSpace emptySystemState
+    , ssContentSelector = ssContentSelector emptySystemState
+    , ssContentSelectorState = Nothing
+    , ssCuratedOverlay = Nothing
+    , ssLemmaMap = M.empty
+    , ssCategoryMap = M.empty
+    , ssRuntimeGraph = ssRuntimeGraph emptySystemState
+    , ssDefinitionCorpus = M.empty
     }
 
 -- | Compatibility-only identity fields are cleared before persistence.
@@ -448,7 +546,7 @@ decodePersistedState blob = do
                   [ "schemaVersion", "history", "rawInputHistory", "turnCount"
                   , "lastTopic", "lastFamily", "lastForce", "lastLayer"
                   , "lastEmbedding", "consecutiveReflect", "recentFamilies"
-                  , "activeScene", "sessionId", "stateOrigin", "ssSelfState"
+                  , "activeScene", "sessionId", "ssSelfState"
                   , "morphology", "learningNeedState", "knowledgeTree"
                   , "truthContractStatus", "dialogueOutcomeLearning"
                   , "dialogueThread", "dialogueCommitmentLedger", "dialoguePhase"
@@ -458,21 +556,35 @@ decodePersistedState blob = do
             in if null missing
                then Right ()
                else Left ("strict_decode_missing_required_fields: " <> show missing)
-  -- Canonical write shape is PersistenceEnvelope (versioned state).
-  -- Bare top-level SystemState is accepted as a legacy read fallback.
-  case Aeson.decode (BL.fromStrict bytes) :: Maybe Aeson.Object of
-    Just obj -> do
-      case validateStrict obj of
-        Left err -> pure (Left err)
-        Right () ->
-          case Aeson.eitherDecodeStrict bytes of
-            Right (PersistenceEnvelope _ ss) -> pure (Right ss)
-            Left _ ->
-              case Aeson.eitherDecodeStrict bytes of
-                Right ss -> pure (Right ss)
-                Left e -> pure (Left e)
-    Nothing ->
-      pure (Left "strict_decode_failed_to_parse_json_object")
+      decodeStateObject obj =
+        case validateStrict obj of
+          Left err -> Left err
+          Right () -> AesonTypes.parseEither Aeson.parseJSON (Aeson.Object obj)
+      decodeEnvelope outer = do
+        versionValue <- maybe
+          (Left "persistence_envelope_missing_version")
+          Right
+          (KM.lookup (AK.fromText "persistenceEnvelopeVersion") outer)
+        version <- AesonTypes.parseEither Aeson.parseJSON versionValue
+        if version /= currentPersistenceEnvelopeVersion
+          then Left ("unsupported persistence envelope version: " <> show (version :: Int))
+          else do
+            stateValue <- maybe
+              (Left "persistence_envelope_missing_state")
+              Right
+              (KM.lookup (AK.fromText "state") outer)
+            case stateValue of
+              Aeson.Object stateObj -> decodeStateObject stateObj
+              _ -> Left "persistence_envelope_state_must_be_object"
+  -- The canonical writer emits a bare SystemState. Versioned envelopes remain
+  -- accepted for migration/import, with strict validation applied to `state`.
+  case Aeson.eitherDecodeStrict' bytes :: Either String Aeson.Value of
+    Right (Aeson.Object obj)
+      | KM.member (AK.fromText "persistenceEnvelopeVersion") obj ->
+          pure (decodeEnvelope obj)
+      | otherwise -> pure (decodeStateObject obj)
+    Right _ -> pure (Left "persisted_state_must_be_json_object")
+    Left err -> pure (Left err)
 
 loadStateRevisionDirect :: NSQL.Database -> Text -> IO Int
 loadStateRevisionDirect db sessionId = do

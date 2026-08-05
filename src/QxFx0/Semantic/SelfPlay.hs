@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 {-|
 Module      : QxFx0.Semantic.SelfPlay
@@ -34,6 +35,7 @@ module QxFx0.Semantic.SelfPlay
   ) where
 
 import Control.DeepSeq (NFData)
+import Control.Exception (bracket)
 import Data.Aeson
 import qualified Data.Aeson as A
 import Data.List (intercalate, sortBy, nub, filter)
@@ -221,8 +223,7 @@ callLLM config prompt = do
             , ("Authorization", "Bearer " <> BS8.pack (T.unpack (llmApiKey config)))
             ]
         }
-  manager <- newManager tlsManagerSettings
-  response <- httpLbs request manager
+  response <- bracket (newManager tlsManagerSettings) closeManager (httpLbs request)
   let body = responseBody response
   case A.eitherDecode body of
     Right (LLMResponse { lrChoices = choices }) ->
@@ -274,4 +275,3 @@ data LLMMessage = LLMMessage
   { mContent :: !Text
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON)
-

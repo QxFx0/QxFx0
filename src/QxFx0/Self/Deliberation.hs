@@ -109,10 +109,7 @@ module QxFx0.Self.Deliberation
    , defaultDeliberation
    ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import GHC.Generics (Generic)
 
 import QxFx0.Self.Adjunction
   ( Field
@@ -133,6 +130,7 @@ import QxFx0.Self.Salience
 import QxFx0.Types.Decision.Enums.Render (RenderStyle (..))
 import QxFx0.Types.Domain (CanonicalMoveFamily (..))
 import QxFx0.Types.Recovery (LocalRecoveryCause (..))
+import QxFx0.Types.Self.Deliberation
 
 -- ---------------------------------------------------------------------------
 -- Narrative tone
@@ -148,15 +146,6 @@ import QxFx0.Types.Recovery (LocalRecoveryCause (..))
 -- Constructors are prefixed @Narrative*@ to keep the namespace
 -- distinct from the existing 'EmotionalTone' tags exported by
 -- 'QxFx0.Types.Decision.Enums.Render'.
-data NarrativeTone
-  = NarrativeNeutral
-  | NarrativeWarm
-  | NarrativeFormal
-  | NarrativeTerse
-  | NarrativeRecovery
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- ---------------------------------------------------------------------------
 -- Plan: hemispheric proposal payload
 -- ---------------------------------------------------------------------------
@@ -175,23 +164,6 @@ data NarrativeTone
 --     does not. Whether the merged plan emits recovery is decided
 --     by 'pickHigherSeverity' across both sides, not by either
 --     side alone.
-data Plan = Plan
-  { planFamily        :: !CanonicalMoveFamily
-    -- ^ The proposed canonical move family for the turn.
-  , planRenderStyle   :: !RenderStyle
-    -- ^ The proposed render style.
-  , planRecoveryCause :: !(Maybe LocalRecoveryCause)
-    -- ^ A proposed recovery cause, or 'Nothing' to abstain.
-    --   Recovery is never silenced by 'reconcile' — see
-    --   'pickHigherSeverity' / 'RuleConatusOverride'.
-  , planNarrativeTone :: !NarrativeTone
-    -- ^ The proposed narrative tone.
-  , planConfidence    :: !Double
-    -- ^ How confident the proposing hemisphere is in this 'Plan',
-    --   in @[0, 1]@.
-  }
-  deriving stock (Eq, Show)
-
 -- | The neutral 'Plan' used as a safe fallback by callers
 -- bootstrapping a hemispheric projection without strong signals.
 --
@@ -273,71 +245,21 @@ formalProposal = Formal
 --
 -- Tag set is closed and trace-stable: any change is a breaking
 -- change to the replay-trace JSON schema.
-data Agreement
-  = Agree
-  | DivergeOnFamily
-  | DivergeOnStyle
-  | DivergeOnRecovery
-  | DivergeOnTone
-  | DivergeMultiple
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Closed enumeration of the rule that produced the reconciled
 -- 'Plan'. Exactly one is chosen per call to 'reconcile'; rules
 -- are tried in priority order (see module-level overview).
 --
 -- Tag set is closed and trace-stable.
-data ReconcileRule
-  = RuleAgreement
-  | RuleConatusOverride
-  | RuleSalienceLead
-  | RuleHolisticAdvantage
-  | RuleFormalAdvantage
-  | RuleTiedFallback
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Per-turn observability record produced by 'reconcile'. Carried
 -- alongside the reconciled 'Plan' in 'Deliberation'; intended to
 -- be projected into 'QxFx0.Types.TurnProjection.TurnReplayTrace'
 -- by the B.7 milestone.
-data DeliberationTrace = DeliberationTrace
-  { dtAgreement      :: !Agreement
-    -- ^ How the two proposals related, classified by axes.
-  , dtDivergence     :: !Double
-    -- ^ Number of differing axes among
-    --   @{family, style, recovery, tone}@ divided by @4@; in
-    --   @[0, 1]@.
-  , dtRule           :: !ReconcileRule
-    -- ^ Which rule produced 'delibReconciled'.
-  , dtSalienceDriver :: !SalienceDriver
-    -- ^ Echo of 'salienceDriver' for compactness in the trace —
-    --   so 'TurnReplayTrace' consumers do not have to join two
-    --   records.
-  }
-  deriving stock (Eq, Show)
-
 -- | The result of one deliberation. Carries both proposals in
 -- their projected (value-level) form and the reconciled 'Plan'.
 --
 -- Single-output discipline (ADR-0010 §5): 'delibReconciled' is
 -- the value the caller forwards downstream; 'delibHolistic' and
 -- 'delibFormal' exist for trace and for diagnostics.
-data Deliberation = Deliberation
-  { delibHolistic    :: !Plan
-    -- ^ 'groundIn' projection of the right-hemispheric proposal.
-  , delibFormal      :: !Plan
-    -- ^ 'probe' projection of the left-hemispheric proposal at
-    --   the per-turn 'Field'.
-  , delibReconciled  :: !Plan
-    -- ^ The reconciled outgoing 'Plan'. Always exactly one of
-    --   the four reconciliation paths.
-  , delibTrace       :: !DeliberationTrace
-    -- ^ Structured per-turn audit record.
-  }
-  deriving stock (Eq, Show)
-
 -- ---------------------------------------------------------------------------
 -- Recovery severity ladder
 -- ---------------------------------------------------------------------------

@@ -29,7 +29,8 @@ import Prelude
 import QxFx0.Types.State.SemanticCommitment
   ( SemanticCommitmentStore (..)
   )
-import QxFx0.Types.State.System (SystemState, emptySystemState, ssSemanticCommitments)
+import QxFx0.Types.State.System (SystemState, ssSemanticCommitments)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.TurnProjection (tqpReplayTrace, trcSemanticCommitmentCount)
 import QxFx0.Core.TurnPipeline.Protocol (FinalizePrecommitBundle(..))
 import Test.Suite.TurnPipelineProtocol (withDeterministicEmbedding)

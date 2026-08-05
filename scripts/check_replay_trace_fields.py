@@ -29,11 +29,19 @@ def load_trace(raw: str) -> dict:
     if not raw.strip():
         raise SystemExit("empty replay trace payload")
     try:
-        trace = json.loads(raw)
+        payload = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise SystemExit(f"invalid replay trace json: {exc}") from exc
-    if not isinstance(trace, dict):
+    if not isinstance(payload, dict):
         raise SystemExit("replay trace payload must be a JSON object")
+    if "replayTraceEnvelopeVersion" not in payload:
+        return payload
+    version = payload.get("replayTraceEnvelopeVersion")
+    if version != 1:
+        raise SystemExit(f"unsupported replay trace envelope version: {version}")
+    trace = payload.get("trace")
+    if not isinstance(trace, dict):
+        raise SystemExit("replay trace envelope field 'trace' must be a JSON object")
     return trace
 
 

@@ -12,6 +12,7 @@ module QxFx0.Learning.Quarantine
   , sha256Hex
   , ensureQuarantineSchema
   , recordQuarantine
+  , recordQuarantinesOnConnection
   , trimQuarantine
   ) where
 
@@ -46,6 +47,7 @@ data QuarantineReason
   = QRContradiction
   | QRLowerAuthorityConflict
   | QRSameAuthorityReplaced
+  | QRRelationConflict
   | QRParseFailure
   | QRCircuitOpenDrop
   deriving stock (Eq, Show, Ord, Generic)
@@ -55,6 +57,7 @@ entryReasonText :: QuarantineReason -> Text
 entryReasonText QRContradiction = "contradiction"
 entryReasonText QRLowerAuthorityConflict = "lower_authority_conflict"
 entryReasonText QRSameAuthorityReplaced = "same_authority_replaced"
+entryReasonText QRRelationConflict = "relation_conflict"
 entryReasonText QRParseFailure = "parse_failure"
 entryReasonText QRCircuitOpenDrop = "circuit_open_drop"
 
@@ -126,28 +129,37 @@ ensureQuarantineSchema db = do
 
 recordQuarantine :: QxFx0DB -> QuarantineEntry -> IO ()
 recordQuarantine db entry = do
-  result <- withDB (qdbPath db) $ \conn -> do
-    stmt <- prepareTx conn "insert_quarantine"
-      "INSERT INTO quarantine (ts, turn_seq, request_id, topic, edge_from, edge_to, edge_provenance, edge_relation_type, edge_confidence, conflicting_from, conflicting_to, conflicting_provenance, reason, source, prompt_hash, response_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-    bindInt64OrFail stmt 1 (utcMicros (qeTimestamp entry))
-    bindMaybeInt stmt 2 (qeTurnSeq entry)
-    bindTextOrFail stmt 3 (qeRequestId entry)
-    bindTextOrFail stmt 4 (qeTopic entry)
-    bindTextOrFail stmt 5 (qeEdgeFrom entry)
-    bindTextOrFail stmt 6 (qeEdgeTo entry)
-    bindTextOrFail stmt 7 (provenanceText (qeEdgeProvenance entry))
-    bindMaybeText stmt 8 (qeEdgeRelationType entry)
-    bindDoubleOrFail stmt 9 (qeEdgeConfidence entry)
-    bindMaybeText stmt 10 (qeConflictingFrom entry)
-    bindMaybeText stmt 11 (qeConflictingTo entry)
-    bindMaybeText stmt 12 (qeConflictingProv entry)
-    bindTextOrFail stmt 13 (entryReasonText (qeReason entry))
-    bindTextOrFail stmt 14 (qeSource entry)
-    bindMaybeText stmt 15 (qePromptHash entry)
-    bindMaybeText stmt 16 (qeResponseHash entry)
-    stepOrFail stmt
-    trimQuarantineConn conn 10000
+  result <- withDB (qdbPath db) $ \conn -> recordQuarantinesOnConnection conn [entry]
   either (fail . T.unpack) pure result
+
+-- | Append quarantine records through a caller-owned transaction.
+recordQuarantinesOnConnection :: NSQL.Database -> [QuarantineEntry] -> IO ()
+recordQuarantinesOnConnection _ [] = pure ()
+recordQuarantinesOnConnection conn entries = do
+  mapM_ (insertQuarantineOnConnection conn) entries
+  trimQuarantineConn conn 10000
+
+insertQuarantineOnConnection :: NSQL.Database -> QuarantineEntry -> IO ()
+insertQuarantineOnConnection conn entry = do
+  stmt <- prepareTx conn "insert_quarantine"
+    "INSERT INTO quarantine (ts, turn_seq, request_id, topic, edge_from, edge_to, edge_provenance, edge_relation_type, edge_confidence, conflicting_from, conflicting_to, conflicting_provenance, reason, source, prompt_hash, response_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  bindInt64OrFail stmt 1 (utcMicros (qeTimestamp entry))
+  bindMaybeInt stmt 2 (qeTurnSeq entry)
+  bindTextOrFail stmt 3 (qeRequestId entry)
+  bindTextOrFail stmt 4 (qeTopic entry)
+  bindTextOrFail stmt 5 (qeEdgeFrom entry)
+  bindTextOrFail stmt 6 (qeEdgeTo entry)
+  bindTextOrFail stmt 7 (provenanceText (qeEdgeProvenance entry))
+  bindMaybeText stmt 8 (qeEdgeRelationType entry)
+  bindDoubleOrFail stmt 9 (qeEdgeConfidence entry)
+  bindMaybeText stmt 10 (qeConflictingFrom entry)
+  bindMaybeText stmt 11 (qeConflictingTo entry)
+  bindMaybeText stmt 12 (qeConflictingProv entry)
+  bindTextOrFail stmt 13 (entryReasonText (qeReason entry))
+  bindTextOrFail stmt 14 (qeSource entry)
+  bindMaybeText stmt 15 (qePromptHash entry)
+  bindMaybeText stmt 16 (qeResponseHash entry)
+  stepOrFail stmt
 
 trimQuarantine :: QxFx0DB -> Int -> IO ()
 trimQuarantine db cap = do

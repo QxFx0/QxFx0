@@ -4,6 +4,7 @@
 
 module Test.Suite.RuntimeInfrastructure
   ( runtimeInfrastructureTests
+  , runtimeLifecycleTests
   ) where
 
 import qualified Data.Sequence as Seq
@@ -24,8 +25,8 @@ import Test.QuickCheck
   , stdArgs
   )
 import Control.Exception (AsyncException(ThreadKilled), finally, throwIO, try)
-import Control.Monad (forM_)
-import System.Directory (createDirectoryIfMissing, findExecutable, getCurrentDirectory, getPermissions, setPermissions, Permissions(..))
+import Control.Monad (forM_, when)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, findExecutable, getCurrentDirectory, getPermissions, listDirectory, setPermissions, Permissions(..))
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), takeFileName)
 import System.Process (readProcessWithExitCode)
@@ -44,8 +45,9 @@ import QxFx0.Learning.KnowledgeTree
   )
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), emptyLearningNeedState)
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
-import QxFx0.Types.Persistence (LoadStateResult(..))
+import QxFx0.Types.Persistence (LoadStateResult(..), PersistenceDiagnostic, StateVersion(..))
 import QxFx0.Types.ShadowDivergence
   ( ShadowDivergence(..)
   , ShadowDivergenceKind(..)
@@ -55,7 +57,7 @@ import QxFx0.Types.ShadowDivergence
   , mkShadowSnapshotId
   , shadowSnapshotIdText
   )
-import qualified QxFx0.Runtime as Runtime
+import qualified Test.Support.Runtime as Runtime
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.EmbeddedSQL as EmbeddedSQL
@@ -128,7 +130,7 @@ runtimeInfrastructureTests =
   , testStateRevisionConflictDoesNotOverwriteTurnQuality
   , testStepRowPropagatesSqliteStepErrors
    , testRunTurnPersistsTurnQuality
-  , testStateSummaryShowsTypedPreActorFailure
+  , testStateSummaryDoesNotInventPreActorFailure
   , testStateSummaryShowsRestartAuthorityStatus
    , testPersistedSystemStateSessionIdMatchesBootstrapId
   , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
@@ -170,8 +172,30 @@ runtimeInfrastructureTests =
   , testAgdaR5MalformedSnapshotRowReportsMismatch
   , testHealthShLlmDecisionPathReflectsReality
   , testProbeRuntimeReadinessExposesGfMapStatus
-  , testWriteAgdaWitnessErrorGivesNonzeroExit
+  , testWriteAgdaWitnessReportsActualOutcome
   ]
+
+runtimeLifecycleTests :: [Test]
+runtimeLifecycleTests =
+  [ testCloseDBPoolIsIdempotent
+  , testCloseSessionIsIdempotent
+  , testWithBootstrappedSessionClosesRuntime
+  , testBootstrapSessionCorruptStateFailsClosed
+  ]
+
+observedSessionVersion :: Runtime.Session -> StateVersion
+observedSessionVersion session =
+  StateVersion
+    (Runtime.sessStateRevision session)
+    (ssTurnCount (Runtime.sessSystemState session))
+
+saveSessionState :: Runtime.Session -> SystemState -> T.Text -> IO (Either PersistenceDiagnostic SystemState)
+saveSessionState session state sessionId =
+  StatePersistence.saveStateExpected
+    (Runtime.withRuntimeDb (Runtime.sessRuntime session))
+    state
+    sessionId
+    (observedSessionVersion session)
 
 -- | Match both plain and structured RuntimeInitError variants for
 -- backward-compatible test assertions.
@@ -625,7 +649,7 @@ testLoadStatePreservesAuthorityRetainedSemanticFields = TestCase $ do
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "last turn decision should be populated after a real turn"
       (ssLastTurnDecision ss1 /= Nothing)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "load_semantic_authority"
+    saveResult <- saveSessionState session1 ss1 "load_semantic_authority"
     case saveResult of
       Left err -> assertFailure ("failed to persist authoritative semantic fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -655,7 +679,7 @@ testLoadStatePreservesAuthorityRetainedSemanticFieldsForNonAuthoritativeState = 
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "non-authoritative last turn decision should be populated after a real turn"
       (ssLastTurnDecision ss1 /= Nothing)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "load_semantic_non_authoritative"
+    saveResult <- saveSessionState session1 ss1 "load_semantic_non_authoritative"
     case saveResult of
       Left err -> assertFailure ("failed to persist non-authoritative semantic authority fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -679,7 +703,7 @@ testLoadStateAcceptsNonAuthoritativePersistedState = TestCase $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative"
     let rt = Runtime.sessRuntime session0
         ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative"
     case saveResult of
       Left err -> assertFailure ("failed to persist non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -706,7 +730,7 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "governed fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_load_rebuild"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -742,7 +766,7 @@ testLoadStateRebuildsDerivedGovernanceViewsFromAssembledHistory = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "assembled fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild_assembled"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_load_rebuild_assembled"
     case saveResult of
       Left err -> assertFailure ("failed to persist assembled governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -772,7 +796,7 @@ testSaveStatePersistsCanonicalGovernanceSubset = TestCase $ do
                   { idsLastGuardReport = Just (IdentityGuardReport 0.1 0.2 False [])
                   }
             }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) governedState "persist_canonical_subset"
+    saveResult <- saveSessionState session0 governedState "persist_canonical_subset"
     case saveResult of
       Left err -> assertFailure ("failed to persist canonical-subset fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right savedState -> do
@@ -827,7 +851,7 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "bootstrap governed fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_bootstrap_restore"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -864,7 +888,7 @@ testBootstrapSessionRestoresAssembledGovernanceViews = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "assembled bootstrap fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore_assembled"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_bootstrap_restore_assembled"
     case saveResult of
       Left err -> assertFailure ("failed to persist assembled bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -899,7 +923,7 @@ testBootstrapSessionPreservesAuthorityRetainedSemanticFields = TestCase $ do
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "last turn decision should be populated before bootstrap restore"
       (ssLastTurnDecision ss1 /= Nothing)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "bootstrap_semantic_authority"
+    saveResult <- saveSessionState session1 ss1 "bootstrap_semantic_authority"
     case saveResult of
       Left err -> assertFailure ("failed to persist authoritative semantic bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -930,7 +954,7 @@ testBootstrapSessionPreservesAuthorityRetainedSemanticFieldsForNonAuthoritativeS
       (ssSemanticAnchor ss1 /= Nothing)
     assertBool "non-authoritative last turn decision should be populated before bootstrap restore"
       (ssLastTurnDecision ss1 /= Nothing)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss1 "bootstrap_semantic_non_authoritative"
+    saveResult <- saveSessionState session1 ss1 "bootstrap_semantic_non_authoritative"
     case saveResult of
       Left err -> assertFailure ("failed to persist non-authoritative semantic bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -955,7 +979,7 @@ testBootstrapSessionStrictRestoresNonAuthoritativePersistedState = TestCase $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_strict"
     let rt = Runtime.sessRuntime session0
         ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative_strict"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative_strict"
     case saveResult of
       Left err -> assertFailure ("failed to persist strict non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -973,7 +997,7 @@ testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState = TestCase $ 
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_degraded"
     let rt = Runtime.sessRuntime session0
         ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative_degraded"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative_degraded"
     case saveResult of
       Left err -> assertFailure ("failed to persist degraded non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -1212,6 +1236,7 @@ testAgdaWitnessReportDetectsMissingInputs = TestCase $ do
   createDirectoryIfMissing True (fakeRoot </> "semantics")
   createDirectoryIfMissing True specDir
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "datalog")
+  createDirectoryIfMissing True (fakeRoot </> "spec" </> "gf")
   createDirectoryIfMissing True (fakeRoot </> "spec" </> "sql")
   createDirectoryIfMissing True domainDir
   TIO.writeFile (fakeRoot </> "migrations" </> "001_initial_schema.sql") "SELECT 1;"
@@ -1229,6 +1254,8 @@ testAgdaWitnessReportDetectsMissingInputs = TestCase $ do
   TIO.writeFile (specDir </> "LexiconProof.agda") "module LexiconProof where"
   TIO.writeFile (specDir </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
   TIO.writeFile (fakeRoot </> "spec" </> "datalog" </> "semantic_rules.dl") ""
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "lexicon_funmap.tsv") "TestFun\ttestlemma\tpos\ttestlemma\ttestlemma\ttestlemma\n"
+  TIO.writeFile (fakeRoot </> "spec" </> "gf" </> "QxFx0Syntax.pgf") ""
   TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
   TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "seed_clusters.sql") ""
   TIO.writeFile (fakeRoot </> "spec" </> "sql" </> "seed_templates.sql") ""
@@ -1485,13 +1512,21 @@ testBootstrapSessionCorruptStateFailsClosed = TestCase $ do
           _ <- NSQL.step stmt
           NSQL.finalize stmt
           pure ()
+    procAvailable <- doesDirectoryExist "/proc/self/fd"
+    descriptorsBefore <- if procAvailable then length <$> listDirectory "/proc/self/fd" else pure 0
     result <- try (Runtime.bootstrapSession True "test_corrupt_bootstrap") :: IO (Either QxFx0Exception Runtime.Session)
+    descriptorsAfter <- if procAvailable then length <$> listDirectory "/proc/self/fd" else pure 0
     case result of
       Left ex | Just detail <- matchRuntimeInitError ex ->
         assertBool "corrupt persisted state should fail closed during bootstrap"
           ("Persisted state is corrupt:" `T.isInfixOf` detail || detail == "STATE_CORRUPT")
       other ->
         assertFailure ("expected RuntimeInitError for corrupt persisted state bootstrap, got Left/Right mismatch")
+    when procAvailable $
+      assertBool
+        ("failed bootstrap leaked descriptors: before=" <> show descriptorsBefore
+          <> ", after=" <> show descriptorsAfter)
+        (descriptorsAfter <= descriptorsBefore + 2)
 
 testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
 testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do
@@ -1533,7 +1568,7 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
     session0 <- Runtime.bootstrapSession True "test_save_ok"
     let rt = Runtime.sessRuntime session0
         ss0 = Runtime.sessSystemState session0
-    result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "test_save_ok"
+    result <- saveSessionState session0 ss0 "test_save_ok"
     case result of
       Left err -> assertFailure $ "saveState should return Right on success, got Left: " <> T.unpack (renderPersistenceDiagnostics [err])
       Right ss -> assertBool "Saved state should preserve turn count" (ssTurnCount ss == ssTurnCount ss0)
@@ -1721,6 +1756,11 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+           , trcSelectorDiagnostics = []
+           , trcResponsePlan = Nothing
                   }
            , tqpDivergence = True
            }
@@ -1732,7 +1772,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
       (Runtime.withRuntimeDb rt)
       ss0
       sessionId
-      (Runtime.sessStateRevision session0)
+      (observedSessionVersion session0)
       (Just projection)
     case result of
       Left _ -> pure ()
@@ -1913,8 +1953,8 @@ testRunTurnPersistsTurnQuality = TestCase $ do
     assertBool "replay trace json should include typed pre-actor failure field"
       ("\"trcPreActorFailureEvent\"" `T.isInfixOf` replayTraceJson)
 
-testStateSummaryShowsTypedPreActorFailure :: Test
-testStateSummaryShowsTypedPreActorFailure = TestCase $ do
+testStateSummaryDoesNotInventPreActorFailure :: Test
+testStateSummaryDoesNotInventPreActorFailure = TestCase $ do
   withRuntimeEnv "qxfx0_test_state_summary_pre_actor_failure.db" $ do
     let sessionId = "test_state_summary_pre_actor_failure"
     session0 <- Runtime.bootstrapSession True sessionId
@@ -1931,10 +1971,10 @@ testStateSummaryShowsTypedPreActorFailure = TestCase $ do
     (session1, _output1) <- Runtime.runTurnInSession failSession "fail"
     summaryLines <- Runtime.stateSummaryLines session1
     let summary = T.unlines summaryLines
-    assertBool "state summary must surface pre-actor failure kind"
-      ("external_action.pre_actor_failure.kind: PreActorTransportFailure" `T.isInfixOf` summary)
-    assertBool "state summary must surface pre-actor failure action"
-      ("external_action.pre_actor_failure.action: request_driven" `T.isInfixOf` summary)
+    assertBool ("disabled legacy learning must not invent a pre-actor failure:\n" <> T.unpack summary)
+      ("external_action.pre_actor_failure.kind: n/a" `T.isInfixOf` summary)
+    assertBool "disabled legacy learning must not claim an external action"
+      ("external_action.pre_actor_failure.action: n/a" `T.isInfixOf` summary)
     assertBool "state summary must keep actor-clean learning status contour visible"
       ("replay_trace_load_status: loaded" `T.isInfixOf` summary)
 
@@ -1945,7 +1985,7 @@ testStateSummaryShowsRestartAuthorityStatus = TestCase $ do
     session0 <- Runtime.bootstrapSession True sessionId
     let rt = Runtime.sessRuntime session0
         ss0 = (Runtime.sessSystemState session0) { ssTruthContractStatus = LegacyIncompleteSurface }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 sessionId
+    saveResult <- saveSessionState session0 ss0 sessionId
     case saveResult of
       Left err -> assertFailure ("failed to persist restart-authority fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -2258,6 +2298,11 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+           , trcSelectorDiagnostics = []
+           , trcResponsePlan = Nothing
                   }
            , tqpDivergence = True
            }
@@ -2265,7 +2310,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
       (Runtime.withRuntimeDb rt)
       ss0
       sessionId
-      (Runtime.sessStateRevision session0)
+      (observedSessionVersion session0)
       (Just projection)
     case result of
       Left err -> assertFailure $ "saveStateWithProjection should succeed, got: " <> T.unpack (renderPersistenceDiagnostics [err])
@@ -2463,6 +2508,7 @@ testMorphologyCacheSwitchesWithRoot = TestCase $ do
     TIO.writeFile (root </> "spec" </> "r5-snapshot.tsv") "CMGround\tIFAssert\tDeclarative\tContentLayer\tAlwaysWarranted\n"
     TIO.writeFile (root </> "spec" </> "datalog" </> "semantic_rules.dl") ""
     TIO.writeFile (root </> "spec" </> "gf" </> "lexicon_funmap.tsv") "TestFun\ttestlemma\tpos\ttestlemma\ttestlemma\ttestlemma\n"
+    TIO.writeFile (root </> "spec" </> "gf" </> "QxFx0Syntax.pgf") ""
     TIO.writeFile (root </> "spec" </> "sql" </> "schema.sql") "CREATE TABLE example(id INTEGER);"
     TIO.writeFile (root </> "spec" </> "sql" </> "seed_clusters.sql") ""
     TIO.writeFile (root </> "spec" </> "sql" </> "seed_templates.sql") ""
@@ -2504,8 +2550,8 @@ testNixGuardUnknownSafeConceptAllowedStrict = TestCase $ do
         , "  prev=\"$arg\""
         , "done"
         , "case \"$expr\" in"
-        , "  *'else false'*) printf 'false\\n' ;;"
-        , "  *) printf 'true\\n' ;;"
+        , "  *'unknownsafeconcept'*) printf 'true\\n' ;;"
+        , "  *) printf 'false\\n' ;;"
         , "esac"
         ]
   createDirectoryIfMissing True fakeBinDir
@@ -2641,10 +2687,14 @@ normalizeReplayTraceJson label payload =
 
 normalizeReplayTraceValue :: Value -> Value
 normalizeReplayTraceValue (Object objectValue) =
-  Object
-    ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
-    $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
-    )
+  case KeyMap.lookup "trace" objectValue of
+    Just traceValue ->
+      Object (KeyMap.insert "trace" (normalizeReplayTraceValue traceValue) objectValue)
+    Nothing ->
+      Object
+        ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
+        $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
+        )
 normalizeReplayTraceValue other = other
 
 quickCheckTest :: Testable prop => Int -> String -> prop -> Test
@@ -2706,24 +2756,17 @@ testProbeRuntimeReadinessExposesGfMapStatus = TestCase $ do
   assertBool "runtime readiness must expose GF map entry count" (Runtime.shGfMapEntries health > 0)
   assertEqual "healthy GF map must not report issue" Nothing (Runtime.shGfMapIssue health)
 
-testWriteAgdaWitnessErrorGivesNonzeroExit :: Test
-testWriteAgdaWitnessErrorGivesNonzeroExit = TestCase $ do
+testWriteAgdaWitnessReportsActualOutcome :: Test
+testWriteAgdaWitnessReportsActualOutcome = TestCase $ do
   mBin <- findExecutable "qxfx0-main"
-  -- resolveTrustedExecutable removed with Internal.Process module (dead code cleanup)
-  -- Test disabled until alternative Agda resolution is implemented
-  let mAgda = Nothing :: Maybe FilePath
   case mBin of
     Nothing -> pure ()
     Just bin -> do
       (exitCode, stdout, stderr) <- readProcessWithExitCode bin ["--write-agda-witness"] ""
-      case (exitCode, mAgda) of
-        (ExitSuccess, Just _) ->
+      case exitCode of
+        ExitSuccess ->
           assertBool "--write-agda-witness on success should produce witness path on stdout"
             (not (null stdout))
-        (ExitFailure _, Nothing) ->
+        ExitFailure _ ->
           assertBool "--write-agda-witness on failure should report error on stderr"
             (not (null stderr))
-        (ExitSuccess, Nothing) ->
-          assertFailure "--write-agda-witness succeeded unexpectedly (agda not in PATH)"
-        (ExitFailure _, Just _) ->
-          assertFailure "--write-agda-witness failed unexpectedly (agda is in PATH)"

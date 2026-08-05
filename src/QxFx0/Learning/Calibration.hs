@@ -32,11 +32,8 @@ module QxFx0.Learning.Calibration
   , currentCalibrationVersion
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.:), (.:?), (.!=), (.=))
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 
 import QxFx0.Self.Salience
   ( SalienceWeights(..)
@@ -44,82 +41,13 @@ import QxFx0.Self.Salience
 import QxFx0.Self.Field
   ( FieldHeuristics(..)
   )
+import QxFx0.Types.Learning.Calibration
 
 -- | Monotonically increasing calibration version number.
-newtype CalibrationId = CalibrationId { unCalibrationId :: Int }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | A proposal received from an external tool (or human mentor).
-data CalibrationProposal
-  = ProposalSalienceWeights !SalienceWeights
-    -- ^ Adjust salience weights empirically.
-  | ProposalFieldHeuristics !FieldHeuristics
-    -- ^ Adjust field heuristics empirically.
-  | ProposalRule !Text
-    -- ^ Add or modify a deliberation / routing rule.
-  | ProposalConcept !Text
-    -- ^ Add a new keyword or concept to the local ontology.
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | Stage of a proposal in the closed loop.
-data CalibrationStatus
-  = Pending
-    -- ^ Just received; not yet validated.
-  | Verified
-    -- ^ Passed basic syntactic / range sanity checks.
-  | Simulated
-    -- ^ Dry-run against synthetic or historical trace succeeded.
-  | Accepted
-    -- ^ Passed verify + simulate; persisted to runtime config.
-  | Rejected
-    -- ^ Failed at verify or simulate stage.
-  | RolledBack
-    -- ^ Was Accepted but later degraded; reverted to previous version.
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | Single record in the calibration ledger.
-data CalibrationEntry = CalibrationEntry
-  { ceId          :: !CalibrationId
-  , ceProposal    :: !CalibrationProposal
-  , ceStatus      :: !CalibrationStatus
-  , ceCreatedTurn :: !Int
-    -- ^ Turn when the proposal was received.
-  , ceDecidedTurn :: !(Maybe Int)
-    -- ^ Turn when the proposal reached Accepted / Rejected / RolledBack.
-  , cePrevId      :: !(Maybe CalibrationId)
-    -- ^ Previous version to roll back to (Nothing for the first entry).
-  }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
-instance ToJSON CalibrationEntry where
-  toJSON e = object
-    [ "id"          .= unCalibrationId (ceId e)
-    , "proposal"    .= ceProposal e
-    , "status"      .= ceStatus e
-    , "createdTurn" .= ceCreatedTurn e
-    , "decidedTurn" .= ceDecidedTurn e
-    , "prevId"      .= fmap unCalibrationId (cePrevId e)
-    ]
-
-instance FromJSON CalibrationEntry where
-  parseJSON = withObject "CalibrationEntry" $ \o ->
-    CalibrationEntry
-      <$> (CalibrationId <$> o .: "id")
-      <*> o .: "proposal"
-      <*> o .:? "status" .!= Pending
-      <*> o .:? "createdTurn" .!= 0
-      <*> o .:? "decidedTurn" .!= Nothing
-      <*> (fmap CalibrationId <$> o .:? "prevId" .!= Nothing)
-
 -- | The calibration ledger kept in 'SystemState'.
-newtype CalibrationLog = CalibrationLog { unCalibrationLog :: [CalibrationEntry] }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
 emptyCalibrationLog :: CalibrationLog
 emptyCalibrationLog = CalibrationLog []
 

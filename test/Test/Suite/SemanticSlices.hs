@@ -17,7 +17,7 @@ import Data.Text.Encoding (encodeUtf8)
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString.Lazy as BL
 
-import qualified QxFx0.Runtime as Runtime
+import qualified Test.Support.Runtime as Runtime
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Learning.KnowledgeTree
@@ -31,7 +31,7 @@ import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types
-import QxFx0.Types.Persistence (LoadStateResult(..))
+import QxFx0.Types.Persistence (LoadStateResult(..), PersistenceDiagnostic, StateVersion(..))
 import QxFx0.Types.Observability (emptyMeaningGraph, MeaningGraph(..))
 
 import Test.Support (withFakeNixInstantiateForConcepts, withFixedRuntimeTime, withRuntimeEnv)
@@ -53,6 +53,20 @@ semanticSliceTests =
   , testIntuitionStateImmediateRuns
   , testIntuitionStateShortHorizonRuns
   ]
+
+observedSessionVersion :: Runtime.Session -> StateVersion
+observedSessionVersion session =
+  StateVersion
+    (Runtime.sessStateRevision session)
+    (ssTurnCount (Runtime.sessSystemState session))
+
+saveSessionState :: Runtime.Session -> SystemState -> T.Text -> IO (Either PersistenceDiagnostic SystemState)
+saveSessionState session state sessionId =
+  StatePersistence.saveStateExpected
+    (Runtime.withRuntimeDb (Runtime.sessRuntime session))
+    state
+    sessionId
+    (observedSessionVersion session)
 
 boolText :: Bool -> T.Text
 boolText True = "PASS"
@@ -347,7 +361,7 @@ qualifyBase baseId build = do
   session0 <- Runtime.bootstrapSession True baseId
   let rt = Runtime.sessRuntime session0
       baseState = build (Runtime.sessSystemState session0)
-  saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState baseId
+  saveResult <- saveSessionState session0 baseState baseId
   case saveResult of
     Left err -> assertFailure ("failed to persist authoritative base fixture: " <> show err)
     Right _ -> pure ()
@@ -395,7 +409,7 @@ qualifySyntheticCandidate baseMap donor candidate = do
         session0 <- Runtime.bootstrapSession True (scCandidateId candidate)
         let rt = Runtime.sessRuntime session0
             baseState = applyBaseBuilder candidate (Runtime.sessSystemState session0)
-        saveBaseResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState (scCandidateId candidate)
+        saveBaseResult <- saveSessionState session0 baseState (scCandidateId candidate)
         case saveBaseResult of
           Left err -> assertFailure ("failed to persist synthetic base candidate: " <> show err)
           Right _ -> pure ()
@@ -575,7 +589,7 @@ runImmediateSyntheticAnchorScenarios =
     session0 <- Runtime.bootstrapSession True seedSessionId
     let rt = Runtime.sessRuntime session0
         baseState = canonicalAuthoritativeBase (Runtime.sessSystemState session0)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState session0 baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist AN-SYN-B1 control base: " <> show err)
       Right _ -> pure ()
@@ -637,7 +651,7 @@ comparability left right
 runLoadScenario :: Runtime.RuntimeContext -> T.Text -> T.Text -> Maybe (Aeson.Object -> Aeson.Object) -> T.Text -> IO ImmediateRunRecord
 runLoadScenario rt sessionId input mutate scenarioId = do
   maybe (pure ()) (mutatePersistedStateObject rt sessionId) mutate
-  loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) sessionId
+  (loaded, version) <- StatePersistence.loadStateWithVersion (Runtime.withRuntimeDb rt) sessionId
   case loaded of
     LoadStateRestored restored -> do
       let contour = contourStatusText (ssTruthContractStatus restored)
@@ -646,7 +660,7 @@ runLoadScenario rt sessionId input mutate scenarioId = do
           let carriedSemantic = ssSemanticAnchor restored /= Nothing || ssLastTurnDecision restored /= Nothing
           pure (if carriedSemantic then inconclusiveRun scenarioId else preservedLossRun scenarioId contour)
         else do
-          (nextState, output) <- Runtime.runTurn rt restored input sessionId
+          (nextState, output) <- Runtime.runTurn rt restored version input sessionId
           assertBool ("scenario should produce non-empty output: " <> T.unpack scenarioId) (not (T.null output))
           let outcome = classifyOutcome nextState output
           pure ImmediateRunRecord
@@ -873,7 +887,7 @@ runShortHorizonSyntheticAnchorScenarios =
     session0 <- Runtime.bootstrapSession True seedSessionId
     let rt = Runtime.sessRuntime session0
         baseState = canonicalAuthoritativeBase (Runtime.sessSystemState session0)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState session0 baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist AN-SYN-B1 short-horizon base: " <> show err)
       Right _ -> pure ()
@@ -895,7 +909,7 @@ runShortHorizonSyntheticAnchorScenarios =
 
 runLoadTrajectoryScenario :: Runtime.RuntimeContext -> T.Text -> [T.Text] -> T.Text -> IO ShortHorizonRunRecord
 runLoadTrajectoryScenario rt sessionId prompts scenarioId = do
-  loaded <- StatePersistence.loadState (Runtime.withRuntimeDb rt) sessionId
+  (loaded, version) <- StatePersistence.loadStateWithVersion (Runtime.withRuntimeDb rt) sessionId
   case loaded of
     LoadStateRestored restored -> do
       let contour = contourStatusText (ssTruthContractStatus restored)
@@ -904,7 +918,7 @@ runLoadTrajectoryScenario rt sessionId prompts scenarioId = do
           let carriedSemantic = ssSemanticAnchor restored /= Nothing || ssLastTurnDecision restored /= Nothing
           pure (if carriedSemantic then (inconclusiveShortHorizon scenarioId) { shrContourStatus = contour } else preservedLossShortHorizon scenarioId contour)
         else do
-          steps <- runTrajectoryFromLoaded rt sessionId restored prompts
+          steps <- runTrajectoryFromLoaded rt sessionId restored version prompts
           pure (trajectoryOnlyShortHorizon scenarioId steps)
     _ -> pure (inconclusiveShortHorizon scenarioId)
 
@@ -921,15 +935,16 @@ runBootstrapTrajectoryScenario sessionId prompts scenarioId = do
       steps <- runTrajectoryFromSession restored prompts
       pure (trajectoryOnlyShortHorizon scenarioId steps)
 
-runTrajectoryFromLoaded :: Runtime.RuntimeContext -> T.Text -> SystemState -> [T.Text] -> IO [SliceOutcomeClass]
-runTrajectoryFromLoaded rt sessionId restored prompts =
-  go restored prompts []
+runTrajectoryFromLoaded :: Runtime.RuntimeContext -> T.Text -> SystemState -> StateVersion -> [T.Text] -> IO [SliceOutcomeClass]
+runTrajectoryFromLoaded rt sessionId restored initialVersion prompts =
+  go restored initialVersion prompts []
   where
-    go _ [] acc = pure (reverse acc)
-    go state (prompt:rest) acc = do
-      (nextState, output) <- Runtime.runTurn rt state prompt sessionId
+    go _ _ [] acc = pure (reverse acc)
+    go state version (prompt:rest) acc = do
+      (nextState, output) <- Runtime.runTurn rt state version prompt sessionId
       assertBool ("short-horizon step should produce non-empty output: " <> T.unpack prompt) (not (T.null output))
-      go nextState rest (classifyOutcome nextState output : acc)
+      let nextVersion = StateVersion (stateRevision version + 1) (ssTurnCount nextState)
+      go nextState nextVersion rest (classifyOutcome nextState output : acc)
 
 runTrajectoryFromSession :: Runtime.Session -> [T.Text] -> IO [SliceOutcomeClass]
 runTrajectoryFromSession session0 prompts =
@@ -1062,7 +1077,7 @@ runMeaningGraphImmediateScenarios =
     fixtureSession <- foldTurns session0 prompts
     let rt = Runtime.sessRuntime fixtureSession
         baseState = canonicalAuthoritativeBase (Runtime.sessSystemState fixtureSession)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist MG authoritative base: " <> show err)
       Right _ -> pure ()
@@ -1120,7 +1135,7 @@ runMeaningGraphShortHorizonScenarios =
     fixtureSession <- foldTurns session0 ["Что такое свобода?", "А что тогда несвобода?", "Как это связано с выбором?"]
     let rt = Runtime.sessRuntime fixtureSession
         baseState = canonicalAuthoritativeBase (Runtime.sessSystemState fixtureSession)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist MG short-horizon authoritative base: " <> show err)
       Right _ -> pure ()
@@ -1155,7 +1170,7 @@ runBlockedConceptsImmediateScenarios =
           fixtureState = Runtime.sessSystemState fixtureSession
           baseState = canonicalAuthoritativeBase fixtureState
       assertBool "blocked-concepts fixture must have non-empty blockedConcepts before ablation" (not (null (ssBlockedConcepts fixtureState)))
-      saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+      saveBase <- saveSessionState fixtureSession baseState seedSessionId
       case saveBase of
         Left err -> assertFailure ("failed to persist BC authoritative base: " <> show err)
         Right _ -> pure ()
@@ -1198,7 +1213,7 @@ runBlockedConceptsShortHorizonScenarios =
           fixtureState = Runtime.sessSystemState fixtureSession
           baseState = canonicalAuthoritativeBase fixtureState
       assertBool "blocked-concepts short-horizon fixture must have non-empty blockedConcepts before ablation" (not (null (ssBlockedConcepts fixtureState)))
-      saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+      saveBase <- saveSessionState fixtureSession baseState seedSessionId
       case saveBase of
         Left err -> assertFailure ("failed to persist BC short-horizon authoritative base: " <> show err)
         Right _ -> pure ()
@@ -1237,7 +1252,7 @@ runDreamStateShortHorizonScenarios =
       assertBool "dream fixture must have non-empty dream axiom before ablation" (ssDreamAxiom fixtureState /= "")
       assertBool "dream fixture must have positive dream cycle count before ablation" (dsDreamCycleCount (ssDreamState fixtureState) > 0)
       assertBool "dream fixture must have non-trivial meaningGraph before ablation" (meaningGraphNonTrivial (ssMeaningGraph fixtureState))
-      saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+      saveBase <- saveSessionState fixtureSession baseState seedSessionId
       case saveBase of
         Left err -> assertFailure ("failed to persist DR short-horizon authoritative base: " <> show err)
         Right _ -> pure ()
@@ -1281,7 +1296,7 @@ runDreamStateImmediateScenarios =
       assertBool "dream fixture must have non-empty dream axiom before ablation" (ssDreamAxiom fixtureState /= "")
       assertBool "dream fixture must have positive dream cycle count before ablation" (dsDreamCycleCount (ssDreamState fixtureState) > 0)
       assertBool "dream fixture must have non-trivial meaningGraph before ablation" (meaningGraphNonTrivial (ssMeaningGraph fixtureState))
-      saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+      saveBase <- saveSessionState fixtureSession baseState seedSessionId
       case saveBase of
         Left err -> assertFailure ("failed to persist DR authoritative base: " <> show err)
         Right _ -> pure ()
@@ -1323,7 +1338,7 @@ runTurnDecisionImmediateScenarios =
         fixtureState = Runtime.sessSystemState fixtureSession
         baseState = canonicalAuthoritativeBase fixtureState
     assertBool "turn decision fixture must have lastTurnDecision before ablation" (ssLastTurnDecision fixtureState /= Nothing)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist TD authoritative base: " <> show err)
       Right _ -> pure ()
@@ -1365,7 +1380,7 @@ runTurnDecisionShortHorizonScenarios =
         fixtureState = Runtime.sessSystemState fixtureSession
         baseState = canonicalAuthoritativeBase fixtureState
     assertBool "turn decision short-horizon fixture must have lastTurnDecision before ablation" (ssLastTurnDecision fixtureState /= Nothing)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist TD short-horizon authoritative base: " <> show err)
       Right _ -> pure ()
@@ -1399,7 +1414,7 @@ runIntuitionImmediateScenarios =
         fixtureState = Runtime.sessSystemState fixtureSession
         baseState = canonicalAuthoritativeBase fixtureState
     assertBool "intuition fixture must differ from default state before ablation" (ssIntuitionState fixtureState /= Just defaultIntuitiveState)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist IS authoritative base: " <> show err)
       Right _ -> pure ()
@@ -1441,7 +1456,7 @@ runIntuitionShortHorizonScenarios =
         fixtureState = Runtime.sessSystemState fixtureSession
         baseState = canonicalAuthoritativeBase fixtureState
     assertBool "intuition short-horizon fixture must differ from default state before ablation" (ssIntuitionState fixtureState /= Just defaultIntuitiveState)
-    saveBase <- StatePersistence.saveState (Runtime.withRuntimeDb rt) baseState seedSessionId
+    saveBase <- saveSessionState fixtureSession baseState seedSessionId
     case saveBase of
       Left err -> assertFailure ("failed to persist IS short-horizon authoritative base: " <> show err)
       Right _ -> pure ()

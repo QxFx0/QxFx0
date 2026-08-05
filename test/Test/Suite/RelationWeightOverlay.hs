@@ -31,6 +31,10 @@ mkEdge f t w conf = SemanticEdge
   , seSynthesis    = Nothing
   , seConfidence   = conf
   , seProvenance   = ProvenanceCurated
+  , seDomain       = Nothing
+  , seTemporalScope = Nothing
+  , seNamespace    = Nothing
+  , seLineage      = Nothing
   }
 
 mkNetwork :: [(Text, Text, Double, Double)] -> SemanticNetwork

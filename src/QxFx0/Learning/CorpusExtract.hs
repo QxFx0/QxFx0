@@ -36,7 +36,6 @@ module QxFx0.Learning.CorpusExtract
 
 import Data.Aeson (FromJSON(..), ToJSON, withObject, (.:), (.:?), (.!=))
 import qualified Data.Aeson as Aeson
-import qualified Data.ByteString.Lazy as BL
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -76,7 +75,7 @@ import QxFx0.Types.Decision
 import QxFx0.Types.Domain
   ( CanonicalMoveFamily(..)
   )
-import qualified QxFx0.Types.TurnProjection as TP
+import QxFx0.Types.TurnProjection (decodeReplayTracePayload)
 
 -- | Session identifier used for filtering the corpus.
 type SessionId = Text
@@ -93,10 +92,10 @@ data CorpusTrace = CorpusTrace
   , ctMoodArousal         :: !Double
   , ctContentSaliency     :: !Double
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Replay fields consumed by the extractor.  Only a small subset of the
--- full 'TP.TurnReplayTrace' is required, so a dedicated lenient parser
+-- full 'TurnReplayTrace' is required, so a dedicated lenient parser
 -- keeps extraction robust against schema drift.
 data ReplayTraceSummary = ReplayTraceSummary
   { rtsField           :: !Field
@@ -247,18 +246,12 @@ parseDisposition txt =
 
 parseReplayTraceSummary :: Text -> Maybe ReplayTraceSummary
 parseReplayTraceSummary txt =
-  case Aeson.decode (BL.fromStrict (TE.encodeUtf8 txt)) of
-    Just s  -> Just s
-    Nothing ->
-      case Aeson.decode (BL.fromStrict (TE.encodeUtf8 txt)) of
-        Nothing -> Nothing
-        Just (full :: TP.TurnReplayTrace) ->
-          Just ReplayTraceSummary
-            { rtsField = TP.trcField full
-            , rtsConatusEnergy = TP.trcConatusEnergy full
-            , rtsMoodArousal = TP.trcMoodArousal full
-            , rtsContentSaliency = Nothing
-            }
+  case decodeReplayTracePayload (TE.encodeUtf8 txt) of
+    Left _ -> Nothing
+    Right payload ->
+      case Aeson.fromJSON payload of
+        Aeson.Error _ -> Nothing
+        Aeson.Success summary -> Just summary
 
 corpusTraceToTrainingTrace :: CorpusTrace -> TrainingTrace
 corpusTraceToTrainingTrace ct =

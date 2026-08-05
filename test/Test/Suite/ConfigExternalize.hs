@@ -13,11 +13,8 @@ malformed JSON → builtin with stderr warning.
 
 EC-2..5: Per-target externalization tests (JSON-absent vs JSON-present).
 
-NOTE: Each test uses a unique temporary path to avoid GHC CSE
-(Common Subexpression Elimination) sharing two 'loadConfigOrBuiltin'
-applications with the same arguments. The NOINLINE pragma prevents
-inlining of the function body, but does not prevent CSE of two
-identical applications.
+The loader is explicit IO owned by session bootstrap; Self defaults remain
+pure builtins.
 -}
 module Test.Suite.ConfigExternalize
   ( configExternalizeTests
@@ -29,7 +26,7 @@ import qualified Data.ByteString.Lazy as BSL
 import System.Directory (removeFile)
 import Test.HUnit (Test (..), assertBool, assertEqual, assertFailure)
 
-import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
+import QxFx0.Runtime.Session.SelfConfig (loadConfigOrBuiltinIO)
 import QxFx0.Self.Conatus (ConatusWeights (..), defaultConatusWeights)
 import QxFx0.Self.FamilyTargets (FamilyTarget (..), familyTargets)
 import QxFx0.Self.Field (FieldHeuristics (..), defaultFieldHeuristics)
@@ -57,21 +54,21 @@ loaderTests :: [Test]
 loaderTests =
   [ TestLabel "loadConfigOrBuiltin missing file → builtin" $
       TestCase $ do
-        let result = loadConfigOrBuiltin "/nonexistent/path.json" (42 :: Int)
+        result <- loadConfigOrBuiltinIO "/nonexistent/path.json" (42 :: Int)
         assertEqual "builtin fallback" 42 result
 
   , TestLabel "loadConfigOrBuiltin valid JSON → parsed" $
       TestCase $ do
         let tmpPath = "/tmp/test_config_externalize_valid.json"
         BSL.writeFile tmpPath (encode (99 :: Int))
-        let result = loadConfigOrBuiltin tmpPath (42 :: Int)
+        result <- loadConfigOrBuiltinIO tmpPath (42 :: Int)
         assertEqual "parsed value" 99 result
 
   , TestLabel "loadConfigOrBuiltin malformed JSON → builtin" $
       TestCase $ do
         let tmpPath = "/tmp/test_config_externalize_broken.json"
         writeFile tmpPath "not json"
-        let result = loadConfigOrBuiltin tmpPath (42 :: Int)
+        result <- loadConfigOrBuiltinIO tmpPath (42 :: Int)
         assertEqual "builtin fallback for malformed" 42 result
   ]
 
@@ -86,7 +83,7 @@ externalizeAbsentTest name builtin path =
   TestLabel ("externalize absent " <> name) $
     TestCase $ do
       removeFile path `catch` (\(_ :: SomeException) -> pure ())
-      let result = loadConfigOrBuiltin path builtin
+      result <- loadConfigOrBuiltinIO path builtin
       assertEqual (name <> " absent mismatch") builtin result
 
 -- | Verify that a config file with a modified value overrides the builtin.
@@ -95,7 +92,7 @@ externalizeModifiedTest name builtin path modified =
   TestLabel ("externalize modified " <> name) $
     TestCase $ do
       BSL.writeFile path (encode modified)
-      let result = loadConfigOrBuiltin path builtin
+      result <- loadConfigOrBuiltinIO path builtin
       assertEqual (name <> " modified mismatch") modified result
 
 configExternalizeTests :: [Test]

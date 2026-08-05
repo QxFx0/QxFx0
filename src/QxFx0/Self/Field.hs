@@ -1,7 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
 {-|
@@ -114,12 +111,8 @@ module QxFx0.Self.Field
   , unFieldHistory
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), object, withObject, (.=), (.:), (.:?), (.!=))
-import GHC.Generics (Generic)
+import QxFx0.Types.Self.Field
 
-
-import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 
 -- ---------------------------------------------------------------------------
 -- Component newtypes
@@ -129,42 +122,20 @@ import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 -- embedding and any of the previous @k@ turn embeddings in the
 -- conversational window. Range @[0, 1]@: 0 = topic shift,
 -- 1 = exact echo. @k@ is a Phase-5 tunable.
-newtype Resonance = Resonance { unResonance :: Double }
-  deriving stock (Eq, Ord, Read, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Two-dimensional affective summary on the valence\/arousal axis.
 --
 -- * 'atmosphereValence' in @[-1, 1]@: @-1@ negative … @1@ positive.
 -- * 'atmosphereArousal' in @[0, 1]@: @0@ calm … @1@ urgent\/intense.
-data Atmosphere = Atmosphere
-  { atmosphereValence :: !Double
-  , atmosphereArousal :: !Double
-  } deriving stock (Eq, Ord, Read, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Internal-coherence score in @[0, 1]@: @1@ = all signals agree,
 -- @0@ = signals are mutually contradictory and any decision drawn
 -- from this 'Field' is suspect.
-newtype FieldConfidence = FieldConfidence { unFieldConfidence :: Double }
-  deriving stock (Eq, Ord, Read, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Narrative-integration scalar in @[0, 1]@: how much of the
 -- recent conversation has been digested into the system's running
 -- model. Genuinely temporal — its value at turn @n@ depends on
 -- the trajectory through turns @1..n@, not just the current turn.
-newtype Consolidation = Consolidation { unConsolidation :: Double }
-  deriving stock (Eq, Ord, Read, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Diversity of plausible alternative interpretations of the
 -- current turn, normalised to @[0, 1]@. High = posterior was
 -- spread; low = posterior was peaked.
-newtype Counterfactual = Counterfactual { unCounterfactual :: Double }
-  deriving stock (Eq, Ord, Read, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- ---------------------------------------------------------------------------
 -- Smart constructors
 -- ---------------------------------------------------------------------------
@@ -202,15 +173,6 @@ mkCounterfactual = Counterfactual . clampUnit
 -- | The right-hemispheric observation summary at one moment in
 -- time. A snapshot, not a history; trajectories live in
 -- 'FieldHistory'.
-data Field = Field
-  { fieldResonance      :: !Resonance
-  , fieldAtmosphere     :: !Atmosphere
-  , fieldConfidence     :: !FieldConfidence
-  , fieldConsolidation  :: !Consolidation
-  , fieldCounterfactual :: !Counterfactual
-  } deriving stock (Eq, Ord, Read, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | The \"no observation yet\" zero. Per ADR-0009 §4.4,
 -- 'fieldConfidence' is set to @1.0@: a system that has not yet
 -- observed anything is uninformed, not unconfident.
@@ -263,64 +225,6 @@ deriveFieldConfidence f =
 -- extracts them into a single calibration record so that
 -- property-based lifeness gates can vary the parameters and
 -- verify boundary behaviour.
-data FieldHeuristics = FieldHeuristics
-  { fhNarrativeWindowSize     :: !Int
-    -- ^ Window over 'ssRecentNarrativeSuccess' used for the
-    --   consolidation narrative-rate computation. Default: 5.
-  , fhDefaultNarrativeRate    :: !Double
-    -- ^ Consolidation fallback when the window is empty.
-    --   Default: 0.2.
-  , fhTopicStabilityBoost     :: !Double
-    -- ^ Floor applied to consolidation when the current topic
-    --   matches the previous turn's topic. Default: 0.5.
-  , fhEntropyEpsilon          :: !Double
-    -- ^ Small additive guard against division-by-zero when
-    --   normalising family weights for entropy. Default: 1e-9.
-  , fhHolisticStreakBoostRate :: !Double
-    -- ^ Increment added to counterfactual per unbroken holistic
-    --   turn in the streak. Default: 0.05.
-  , fhHolisticStreakBoostCap  :: !Double
-    -- ^ Maximum total streak boost. Default: 0.2.
-  , fhLegitimacyMidpoint      :: !Double
-    -- ^ Legitimacy score treated as neutral for atmosphere
-    --   valence modulation. Default: 0.5.
-  , fhLegitimacyBonusScale    :: !Double
-    -- ^ Multiplier on (legitimacy − midpoint) that is added
-    --   to the ego-derived valence base. Default: 0.4.
-  , fhOntologyDepthBoost      :: !Double
-    -- ^ Multiplier applied to predicate scores based on ontology
-    --   node depth.  A value of @0.0@ disables depth weighting.
-    --   Default: 0.0.
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData)
-
-instance ToJSON FieldHeuristics where
-  toJSON fh = object
-    [ "fhNarrativeWindowSize"     .= fhNarrativeWindowSize fh
-    , "fhDefaultNarrativeRate"    .= fhDefaultNarrativeRate fh
-    , "fhTopicStabilityBoost"     .= fhTopicStabilityBoost fh
-    , "fhEntropyEpsilon"          .= fhEntropyEpsilon fh
-    , "fhHolisticStreakBoostRate" .= fhHolisticStreakBoostRate fh
-    , "fhHolisticStreakBoostCap"  .= fhHolisticStreakBoostCap fh
-    , "fhLegitimacyMidpoint"      .= fhLegitimacyMidpoint fh
-    , "fhLegitimacyBonusScale"    .= fhLegitimacyBonusScale fh
-    , "fhOntologyDepthBoost"      .= fhOntologyDepthBoost fh
-    ]
-
-instance FromJSON FieldHeuristics where
-  parseJSON = withObject "FieldHeuristics" $ \o ->
-    FieldHeuristics
-      <$> o .:  "fhNarrativeWindowSize"
-      <*> o .:  "fhDefaultNarrativeRate"
-      <*> o .:  "fhTopicStabilityBoost"
-      <*> o .:  "fhEntropyEpsilon"
-      <*> o .:  "fhHolisticStreakBoostRate"
-      <*> o .:  "fhHolisticStreakBoostCap"
-      <*> o .:  "fhLegitimacyMidpoint"
-      <*> o .:  "fhLegitimacyBonusScale"
-      <*> o .:? "fhOntologyDepthBoost" .!= 0.0
-
 -- | Phase-7 builtin heuristic parameters.  These reproduce the
 -- behaviour of the hardcoded constants that shipped in Phase 5.5d.
 builtinFieldHeuristics :: FieldHeuristics
@@ -336,22 +240,10 @@ builtinFieldHeuristics = FieldHeuristics
   , fhOntologyDepthBoost      = 0.0
   }
 
--- | Phase-7 default heuristic parameters, loaded from
--- 'resources/config/tuned_field_heuristics.json' if present and
--- valid, otherwise falling back to
--- 'resources/config/field_heuristics.json', and finally to
--- 'builtinFieldHeuristics'.
---
--- The NOINLINE pragma is required to prevent GHC from inlining
--- the 'unsafePerformIO' call and potentially evaluating it
--- multiple times.
+-- | Pure Phase-7 default heuristic parameters. Runtime configuration is
+-- loaded explicitly by session bootstrap and injected into 'SelfState'.
 defaultFieldHeuristics :: FieldHeuristics
-defaultFieldHeuristics =
-  loadTunedOrDefault
-    "resources/config/tuned_field_heuristics.json"
-    "resources/config/field_heuristics.json"
-    builtinFieldHeuristics
-{-# NOINLINE defaultFieldHeuristics #-}
+defaultFieldHeuristics = builtinFieldHeuristics
 
 -- | Compute 'Consolidation' from a window of recent narrative
 -- success flags and a topic-stability indicator.

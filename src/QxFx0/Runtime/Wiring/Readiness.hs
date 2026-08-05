@@ -18,6 +18,7 @@ module QxFx0.Runtime.Wiring.Readiness
 import Control.Concurrent.MVar (modifyMVar_, newMVar)
 import Data.Text (Text)
 import qualified Data.Text as T
+import System.Timeout (timeout)
 
 import QxFx0.Bridge.AgdaWitness (AgdaWitnessReport(..), readAgdaWitnessReport)
 import QxFx0.Bridge.NixCache (NixCache, cachedNixEval)
@@ -134,10 +135,7 @@ probeDatalogBackend = do
   case execResult of
     Left err -> pure (Left err)
     Right executable -> do
-      probe <- Datalog.compileAndRunDatalogWithExecutable executable "" CMGround
-      pure $ case probe of
-        Left err -> Left err
-        Right _ -> Right ()
+      withinProbeTimeout (Datalog.compileAndRunDatalogWithExecutable executable "" CMGround)
 
 probeDatalogBackendCached :: RuntimeContext -> IO (Either Text ())
 probeDatalogBackendCached ctx = do
@@ -145,7 +143,12 @@ probeDatalogBackendCached ctx = do
   case execResult of
     Left err -> pure (Left err)
     Right executable -> do
-      probe <- Datalog.compileAndRunDatalogWithExecutable executable "" CMGround
-      pure $ case probe of
-        Left err -> Left err
-        Right _ -> Right ()
+      withinProbeTimeout (Datalog.compileAndRunDatalogWithExecutable executable "" CMGround)
+
+withinProbeTimeout :: IO (Either Text a) -> IO (Either Text ())
+withinProbeTimeout action = do
+  result <- timeout (5 * 1000000) action
+  pure $ case result of
+    Nothing -> Left "datalog readiness probe timed out"
+    Just (Left err) -> Left err
+    Just (Right _) -> Right ()

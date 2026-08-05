@@ -32,6 +32,7 @@ endpointAllowlist :: [Text]
 endpointAllowlist =
   [ "api.mistral.ai"
   , "api.fireworks.ai"
+  , "api.cerebras.ai"
   ]
 
 untrustedHostOverrideWarningTag :: Text

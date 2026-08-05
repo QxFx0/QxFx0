@@ -253,6 +253,8 @@ testLlmAllowlistContents = TestCase $ do
     ("api.mistral.ai" `elem` llmEndpointAllowlist)
   assertBool "allowlist must contain api.fireworks.ai"
     ("api.fireworks.ai" `elem` llmEndpointAllowlist)
+  assertBool "allowlist must contain api.cerebras.ai"
+    ("api.cerebras.ai" `elem` llmEndpointAllowlist)
 
 -- | 26. Oversized LLM response bodies are rejected before decoding.
 testLlmOversizeBodyRejected :: Test

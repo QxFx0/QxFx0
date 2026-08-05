@@ -26,7 +26,8 @@ import QxFx0.Core.FMAR
   , isFmarActive
   , readFmarMode
   )
-import QxFx0.Self.FamilyTargets (FamilyTarget(..), familyTargetFor, familyTargets, fieldDistance)
+import QxFx0.Self.FamilyTargets (FamilyTarget(..), familyTargetForWith, fieldDistance)
+import QxFx0.Types.State.SelfState (selfFamilyTargets)
 import QxFx0.Self.Field
   ( Atmosphere(..)
   , Field(..)
@@ -51,15 +52,12 @@ import QxFx0.Core.PipelineIO
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Core.TurnPlanning (buildRCP, buildRMPWithTruthContract)
 import QxFx0.Core.TurnRender (applyRenderStrategyWithTruthContract)
-import QxFx0.Core.TurnPipeline.Route.Effects
-  ( planRouteEffects
-  , resolveRouteEffects
-  )
 import QxFx0.Core.TurnPipeline.Route.Render
   ( buildTurnArtifacts
   , planRenderEffectsForRuntime
   , resolveRenderEffects
   )
+import qualified QxFx0.Core.TurnPipeline.Route.Anomaly
 import QxFx0.Core.TurnPipeline.Route.Shadow
   ( ShadowContext(..)
   , ShadowResolution(..)
@@ -73,6 +71,7 @@ import QxFx0.Core.TurnPipeline.Route.Types
   )
 import QxFx0.Core.TurnPipeline.Types
   ( RoutingDecision(..)
+  , DetectedAnomaly(..)
   , TurnArtifacts
   , TurnInput(..)
   , TurnPlan(..)
@@ -96,9 +95,10 @@ import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe Anomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
-buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults =
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe DetectedAnomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults =
   let atomSet = tiAtomSet ti
+      mAnomaly = daAnomaly <$> mDetectedAnomaly
       intuitPosterior = tsIntuitPosterior ts
       rd = rsRoutingDecision (repStatic effectPlan)
       sc =
@@ -173,9 +173,11 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
       -- FMAR Phase-4+7: override cascade family when Field-driven routing is active.
       fmarActive = isFmarActive fmarMode
       fmarPos = computeAdaptivePosition (tiField ti) (rdToMs rd) (tiConatusEnergy ti)
+      runtimeFamilyTargets = selfFamilyTargets (ssSelfState ss)
+      targetFor = familyTargetForWith runtimeFamilyTargets
       fmarFamily =
         case fmarActive of
-          True  -> fmarSelectFamily fmarPos (tiRecommendedFamily ti) familyTargets
+          True  -> fmarSelectFamily fmarPos (tiRecommendedFamily ti) runtimeFamilyTargets
           False -> cascadeFamily
       renderingFamily = case fmarMode of
         FmarLive -> fmarFamily
@@ -230,14 +232,14 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
         | fmarActive = Just (MeaningDirective
             { mdFamily            = fmarFamily
             , mdDetectorFamily    = cascadeFamily
-            , mdFieldDelta        = fieldDelta (ftTargetField (familyTargetFor fmarFamily)) (tiField ti)
+            , mdFieldDelta        = fieldDelta (ftTargetField (targetFor fmarFamily)) (tiField ti)
             , mdForce             = forceForFamily fmarFamily
             , mdClause            = clauseFormForIF (forceForFamily fmarFamily)
             , mdLayer             = layerForFamily fmarFamily
             , mdWarranted         = warrantedForFamily fmarFamily
             , mdConatusGateOk     = not (tiConatusGateFired ti)
             , mdRescueUsed        = tiConatusGateFired ti
-            , mdFieldDistance     = fieldDistance fmarPos (ftTargetField (familyTargetFor fmarFamily))
+            , mdFieldDistance     = fieldDistance fmarPos (ftTargetField (targetFor fmarFamily))
             , mdAbstractionBudget = 0
             , mdMaxWordsHint      = 0
             })
@@ -288,6 +290,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mAnomaly semanticFirstDisabled ss ti ts
             , tpCommitmentEngagement = commitmentEngagement
             , tpAnomalySurface = fmap aSurface mAnomaly
             , tpAnomalyTrace = fmap aTrace mAnomaly
+            , tpAnomalyStateEffect = mDetectedAnomaly >>= daStateEffect
             , tpSemanticFirstDisabled = semanticFirstDisabled
             }
 
@@ -313,16 +316,15 @@ derivePostLegitTruthContractStatus preTruthStatus ti sc shadowResolution legitSc
   | legitScore < legitimacyPassThreshold = ExplicitFallbackSurface
   | otherwise = preTruthStatus
 
-routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> IO TurnPlan
-routeTurnPlan pio ss ti ts = do
-  let effectPlan = planRouteEffects ss ti ts
-  effectResults <- resolveRouteEffects pio effectPlan
+routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> IO TurnPlan
+routeTurnPlan pio ss ti ts effectPlan effectResults = do
   fmarMode <- readFmarModeIO pio
   mSemanticDisable <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST")
   let semanticFirstDisabled = case mSemanticDisable of
         TurnResReadEnv (Just "1") -> True
         _ -> False
-  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) Nothing semanticFirstDisabled ss ti ts effectPlan effectResults)
+      detectedAnomaly = QxFx0.Core.TurnPipeline.Route.Anomaly.detectAnomaly ss ti
+  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) detectedAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults)
 
 -- | Read 'QXFX0_FMAR' once via the pipeline IO boundary and parse it into
 -- an 'FmarMode'. Mirrors 'shouldUseGfRuntime' in the render stage.

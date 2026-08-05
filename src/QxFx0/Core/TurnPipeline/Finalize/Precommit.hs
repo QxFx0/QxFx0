@@ -2,14 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
-{-| Finalize-stage precommit planning/resolution before persistence commit.
-
-P1.1 note: the feedback write to @resources/config/tuned_relation_weights.jsonl@
-still happens below for offline analysis, but the runtime now also reads the
-same file as a weight overlay during session bootstrap (see
-'QxFx0.Semantic.Network.Seed.Select.loadRelationWeightOverlay').  Persisted
-'SystemState' is the authoritative carrier of learned weights; the JSONL file
-is a secondary, inspectable mirror. -}
+{-| Finalize-stage precommit planning/resolution before persistence commit. -}
 module QxFx0.Core.TurnPipeline.Finalize.Precommit
   ( planFinalizePrecommit
   , resolveFinalizePrecommit
@@ -60,24 +53,12 @@ import QxFx0.Types.Decision (TurnDecision(..))
 import qualified Data.Text as T
 import Control.Monad (when)
 import Control.Exception (throwIO)
-import System.Environment (lookupEnv)
 import QxFx0.Types
 import QxFx0.Types.Domain.Atoms (maText, asAtoms)
 import QxFx0.Core.TurnPipeline.Types (tiAtomSet)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
-import QxFx0.Semantic.Network.Feedback.Persist (persistFeedbackNetwork)
-
--- | Read the runtime feedback-loop flag.
---
--- The feedback loop is now opt-in: it defaults to 'False' and is only
--- enabled when @QXFX0_FEEDBACK_LOOP@ is set to one of @"1"@, @"true"@,
--- @"yes"@ or @"enable"@. Any other value is treated as disabled.
-readFeedbackLoopActive :: IO Bool
-readFeedbackLoopActive = do
-  mEnv <- lookupEnv "QXFX0_FEEDBACK_LOOP"
-  pure $ maybe False (\raw -> T.toLower (T.pack raw) `elem` ["1", "true", "yes", "enable"]) mEnv
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
 planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =
@@ -123,6 +104,7 @@ resolveFinalizePrecommit pipelineIO plan = do
           [ (PelSemanticIntrospection, TurnReqSemanticIntrospectionEnv)
           , (PelWarnMorphology, TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
           , (PelFmarMode, TurnReqReadEnv "QXFX0_FMAR")
+          , (PelFeedbackLoop, TurnReqReadEnv "QXFX0_FEEDBACK_LOOP")
           ]
   resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
     result <- resolveTurnEffect pipelineIO request
@@ -139,6 +121,11 @@ resolveFinalizePrecommit pipelineIO plan = do
         case lookup PelFmarMode resolved of
           Just (TurnResReadEnv mraw) -> readFmarMode mraw
           _ -> FmarOff
+      feedbackLoopActive =
+        case lookup PelFeedbackLoop resolved of
+          Just (TurnResReadEnv (Just raw)) ->
+            T.toLower raw `elem` ["1", "true", "yes", "enable"]
+          _ -> False
   pure
     FinalizePrecommitResults
       { fprCurrentTime = fppCapturedCurrentTime plan
@@ -148,12 +135,13 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprSemanticIntrospectionEnabled = semanticIntrospectionEnabled
       , fprWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled
       , fprFmarMode = fmarMode
+      , fprFeedbackLoopActive = feedbackLoopActive
       }
 
 buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
-  feedbackLoopActive <- readFeedbackLoopActive
-  let static = fppStatic precommitPlan
+  let feedbackLoopActive = fprFeedbackLoopActive precommitResults
+      static = fppStatic precommitPlan
       (newDreamState, newMeaningGraph, rewireEventsCount) =
         applyDreamDynamics
           (fprCurrentTime precommitResults)
@@ -189,14 +177,6 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
       -- belief stance after base/external learning state has settled.
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
       nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
-  when (feedbackLoopActive && ssSemanticNetwork nextSystemState /= ssSemanticNetwork systemState) $
-    -- P1.1: keep writing the JSONL mirror for offline analysis.  The
-    -- authoritative learned weights live in persisted 'SystemState' and are
-    -- reloaded via 'loadRelationWeightOverlay' in bootstrap.
-    persistFeedbackNetwork
-      "resources/config/tuned_relation_weights.jsonl"
-      (ssSemanticNetwork systemState)
-      (ssSemanticNetwork nextSystemState)
   let guardStatus = tdGuardStatus (taDecision turnArtifacts)
   evidenceAdmissibility <- classifyEvidenceIO guardStatus
   when (evidenceAdmissibility == EvidenceInadmissible) $
@@ -244,5 +224,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
                (selfEssence (ssSelfState nextSystemState))
                commitmentTrigger
          , fpbCommitmentTrigger = commitmentTrigger
+         , fpbFeedbackMirrorPending =
+             feedbackLoopActive
+               && ssSemanticNetwork nextSystemState /= ssSemanticNetwork systemState
          }
-

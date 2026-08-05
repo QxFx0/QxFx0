@@ -302,7 +302,10 @@ gfMapHealthFromStatus status =
 -- the probe succeeds.
 probePgfHealth :: IO PgfHealth
 probePgfHealth = do
-  let pgfPath = "spec/gf/QxFx0Syntax.pgf"
+  pathsResult <- tryQxFx0 resolveResourcePaths
+  let pgfPath = case pathsResult of
+        Right paths -> rpResourceDir paths </> "spec" </> "gf" </> "QxFx0Syntax.pgf"
+        Left _ -> "spec/gf/QxFx0Syntax.pgf"
   exists <- doesFileExist pgfPath
   if not exists
     then pure $ PgfHealth

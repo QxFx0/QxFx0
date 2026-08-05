@@ -2,6 +2,7 @@
 
 module Main (main) where
 
+import System.Environment (lookupEnv)
 import System.Exit (exitFailure, exitSuccess)
 import Test.HUnit
 
@@ -55,8 +56,20 @@ import Test.Suite.ContentQualityGate (contentQualityGateTests)
 
 main :: IO ()
 main = do
-  testCounts <- runTestTT $ TestList (coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests ++ runtimeInfrastructureTests ++ httpRuntimeTests
-     ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests      ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests    ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests      ++ m5RegimeTests ++ substrateTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests)
+  mGroup <- lookupEnv "QXFX0_AGGREGATE_GROUP"
+  let coreTests = coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests
+        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m5RegimeTests ++ substrateTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
+      groups =
+        [ ("core", coreTests)
+        , ("runtime", runtimeInfrastructureTests)
+        , ("http", httpRuntimeTests)
+        ]
+      selected = case mGroup of
+        Nothing -> concatMap snd groups
+        Just group -> case lookup group groups of
+          Just tests -> tests
+          Nothing -> error ("Unknown QXFX0_AGGREGATE_GROUP: " ++ group)
+  testCounts <- runTestTT $ TestList selected
   if errors testCounts + failures testCounts > 0
     then exitFailure
     else exitSuccess

@@ -39,7 +39,11 @@ import QxFx0.ExceptionPolicy
   , throwQxFx0
   , tryAsync
   )
-import QxFx0.Types.Persistence (PersistenceDiagnostic(..), PersistenceStage(StageStateBlobUpsert, StageUnknown))
+import QxFx0.Types.Persistence
+  ( PersistenceDiagnostic(..)
+  , PersistenceStage(StageStateBlobUpsert, StageUnknown)
+  , StateVersion(..)
+  )
 import QxFx0.Self.Essence (EssenceViolation, renderEssenceViolation)
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkBlanketTransition, renderBlanketViolations)
@@ -63,11 +67,12 @@ planFinalizeCommit sessionId previousState turnInput turnSignals turnArtifacts b
     , fcpSessionId = sessionId
     , fcpProjection = fpbProjection bundle
     , fcpRewireEventsCount = fpbRewireEventsCount bundle
+    , fcpFeedbackMirrorPending = fpbFeedbackMirrorPending bundle
     , fcpEssenceValidation = fpbEssenceValidation bundle
     }
 
-resolveFinalizeCommit :: PipelineIO -> Int -> FinalizeCommitPlan -> IO FinalizeCommitResults
-resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
+resolveFinalizeCommit :: PipelineIO -> StateVersion -> FinalizeCommitPlan -> IO FinalizeCommitResults
+resolveFinalizeCommit pipelineIO expectedVersion commitPlan = do
   unless (fcpRewireEventsCount commitPlan == 0) $
     hPutStrLnWarning ("Dream rewiring: " <> T.pack (show (fcpRewireEventsCount commitPlan)) <> " edges adjusted")
 
@@ -94,35 +99,36 @@ resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
   saveResult <-
     resolveTurnEffect
       pipelineIO
-      (TurnReqSaveState (fcpSaveState commitPlan) (fcpSessionId commitPlan) expectedRevision (Just (fcpProjection commitPlan)))
+      (TurnReqSaveState (fcpSaveState commitPlan) (fcpSessionId commitPlan) expectedVersion (Just (fcpProjection commitPlan)))
   savedState <-
     case saveResult of
       TurnResSaveState (Right savedSystemState) -> pure savedSystemState
       TurnResSaveState (Left err) -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_failed session=" <> T.unpack (fcpSessionId commitPlan) <> " detail=" <> T.unpack (renderPersistenceDiagnostics [err])
         case err of
-          PdStateRevisionConflict sid expected actual priorTurn ->
+          PdStateVersionConflict sid expected actual ->
             throwQxFx0 (mkPersistenceError
               StageStateBlobUpsert
-              (T.pack "saveStateWithProjection")
+              (T.pack "saveStateWithProjectionExpected")
               (T.pack "PERSISTENCE_CONFLICT")
               (Map.fromList
                 [ (T.pack "session_id", sid)
-                , (T.pack "expected_revision", T.pack (show expected))
-                , (T.pack "actual_revision", T.pack (show actual))
-                , (T.pack "expected_prior_turn", T.pack (show priorTurn))
+                , (T.pack "expected_revision", T.pack (show (stateRevision expected)))
+                , (T.pack "actual_revision", T.pack (show (stateRevision actual)))
+                , (T.pack "expected_turn", T.pack (show (stateTurn expected)))
+                , (T.pack "actual_turn", T.pack (show (stateTurn actual)))
                 ]))
           _ ->
             throwQxFx0 (mkPersistenceError
               StageStateBlobUpsert
-              (T.pack "saveStateWithProjection")
+              (T.pack "saveStateWithProjectionExpected")
               (T.pack "PERSISTENCE_SAVE_FAILED")
               (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan), (T.pack "detail", renderPersistenceDiagnostics [err])]))
       _ -> do
         hPutStrLn stderr $ "[persistence_debug] finalize_save_unexpected_effect session=" <> T.unpack (fcpSessionId commitPlan)
         throwQxFx0 (mkPersistenceError
           StageStateBlobUpsert
-          (T.pack "saveStateWithProjection")
+          (T.pack "saveStateWithProjectionExpected")
           (T.pack "PERSISTENCE_UNEXPECTED_EFFECT")
           (Map.fromList [(T.pack "session_id", fcpSessionId commitPlan)]))
   commitAttempt <-
@@ -138,26 +144,30 @@ resolveFinalizeCommit pipelineIO expectedRevision commitPlan = do
             ("[warn] commit runtime state failed after save; state re-hydrated from persisted snapshot: "
               <> T.pack (show commitErr))
         Left recoveryErr -> do
-          projectionsRollbackSucceeded <- attemptRollbackPersistedProjections pipelineIO commitPlan
-          unless projectionsRollbackSucceeded $
+          rollbackSucceeded <- attemptRollbackPersistedTurn
+            pipelineIO
+            (StateVersion (stateRevision expectedVersion + 1) (ssTurnCount (fcpSaveState commitPlan)))
+            commitPlan
+          unless rollbackSucceeded $
             hPutStrLnWarning
-              "[warn] rollback of persisted turn projections failed after commit/recovery failure"
-          stateRollbackSucceeded <- attemptRollbackPersistedState pipelineIO (expectedRevision + 1) commitPlan
-          unless stateRollbackSucceeded $
-            hPutStrLnWarning
-              "[warn] rollback to previous persisted state failed after commit/recovery failure"
-          let projectionsRollbackText = if projectionsRollbackSucceeded then "ok" else "failed"
-              stateRollbackText = if stateRollbackSucceeded then "ok" else "failed"
+              "[warn] atomic rollback of persisted state and turn projections failed after commit/recovery failure"
+          let rollbackText = if rollbackSucceeded then "ok" else "failed"
           throwQxFx0
             (PersistenceError
               ("commit runtime state failed after saveState: "
                 <> T.pack (show commitErr)
                 <> "; recovery failed: "
                 <> T.pack (show recoveryErr)
-                <> "; projections rollback="
-                <> projectionsRollbackText
-                <> "; state rollback="
-                <> stateRollbackText))
+                <> "; atomic persistence rollback="
+                <> rollbackText))
+  if fcpFeedbackMirrorPending commitPlan
+    then runBestEffortPostCommit "feedback_mirror" $ do
+      _ <- resolveTurnEffect pipelineIO
+        (TurnReqPersistFeedbackMirror
+          (ssSemanticNetwork (fcpPreviousState commitPlan))
+          (ssSemanticNetwork savedState))
+      pure ()
+    else pure ()
   runBestEffortPostCommit "housekeeping" $ do
     maybeInjectPostCommitTailException pipelineIO
     _ <- resolveTurnEffect pipelineIO (TurnReqCheckpoint (ssTurnCount savedState))
@@ -232,32 +242,21 @@ recoverRuntimeTurnState pipelineIO commitPlan savedState =
     commitPlan
     (maybe (fcpPreviewIntuition commitPlan) id (ssIntuitionState savedState))
 
-attemptRollbackPersistedProjections :: PipelineIO -> FinalizeCommitPlan -> IO Bool
-attemptRollbackPersistedProjections pipelineIO commitPlan = do
+attemptRollbackPersistedTurn :: PipelineIO -> StateVersion -> FinalizeCommitPlan -> IO Bool
+attemptRollbackPersistedTurn pipelineIO expectedVersion commitPlan = do
   rollbackAttempt <-
     tryAsync
       (resolveTurnEffect
         pipelineIO
-        (TurnReqRollbackTurnProjections (fcpSessionId commitPlan) (ssTurnCount (fcpPreviousState commitPlan))))
+        (TurnReqRollbackCommittedTurn
+          (fcpPreviousState commitPlan)
+          (fcpSessionId commitPlan)
+          expectedVersion
+          (ssTurnCount (fcpPreviousState commitPlan))))
   case rollbackAttempt of
     Left err ->
-      hPutStrLn stderr ("[rollback] projection rollback failed: " <> show err) >> pure False
-    Right (TurnResRollbackTurnProjections (Right ())) ->
-      pure True
-    Right _ ->
-      pure False
-
-attemptRollbackPersistedState :: PipelineIO -> Int -> FinalizeCommitPlan -> IO Bool
-attemptRollbackPersistedState pipelineIO expectedRevision commitPlan = do
-  rollbackAttempt <-
-    tryAsync
-      (resolveTurnEffect
-        pipelineIO
-        (TurnReqSaveState (fcpPreviousState commitPlan) (fcpSessionId commitPlan) expectedRevision Nothing))
-  case rollbackAttempt of
-    Left err ->
-      hPutStrLn stderr ("[rollback] state rollback failed: " <> show err) >> pure False
-    Right (TurnResSaveState (Right _)) ->
+      hPutStrLn stderr ("[rollback] atomic persisted-turn rollback failed: " <> show err) >> pure False
+    Right (TurnResRollbackCommittedTurn (Right ())) ->
       pure True
     Right _ ->
       pure False

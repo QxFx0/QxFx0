@@ -46,7 +46,7 @@ mkEdge from to rt prov conf = SemanticEdge
   , seSynthesis     = Nothing
   , seConfidence    = conf
   , seProvenance    = prov
-  , seNamespace     = NamespaceSessionLocal
+  , seNamespace     = Just NamespaceSessionLocal
   , seLineage       = Nothing
   }
 
@@ -103,7 +103,7 @@ beliefRevisionTests =
         let e1 = mkEdge "A" "B" RelRequires ProvenanceIngested 0.9
             e2 = mkEdge "A" "B" RelContrastsWith ProvenanceIngested 0.6
             derived = (mkEdge "B" "C" RelRequires ProvenanceDerived 0.8)
-                        { seLineage = Just [("A", "B")] }
+                        { seLineage = Just [("A", "B", RelContrastsWith, NamespaceSessionLocal)] }
             edges = [e1, e2, derived]
             (resolved, _resols) = resolveContradictions edges
         case findEdge "B" "C" resolved of

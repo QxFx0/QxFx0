@@ -11,132 +11,74 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `SLICE-010B — morphology resource contract (re-applied from 0219d0e)`
-- `current_state`: SLICE-010B code (Morphology.hs, Paths.hs, LexiconTests, RuntimeInfrastructure) re-applied from `0219d0e` onto current `origin/main` (which includes B2/B3/SLICE-012). Morphology now derives from `paradigms.json` + `exceptions.json`; `forms_by_surface.json` is gitignored. Next: verify fast gate in intended env.
-- `last_updated`: `2026-06-17`
-- `evidence_or_result_ref`: `docs/closure/SLICE-010B_PLAN.md`, `audit-objective-2026-06-17.md`
+- `front_id`: `GF-RELEASE-AUDIT — bounded canary + release-corpus audit harness`
+- `current_state`: New audit tooling is in place and running locally but **entirely uncommitted**: `scripts/gf_release_audit.py`, `scripts/run-bounded-v3-canary.sh`, `scripts/autonomous-canary-monitor.sh`, fixtures `spec/gf/{release_corpus_golden.tsv,release_corpus_prompts.txt,curated_predicate_slots.tsv,argued_leaf_slots.tsv}`, output in `reports/gf-release/`. Latest run `20260726T170210Z` = **PASS**, but only **1 turn** (canonical rate 1.0000, recovery 0.0000, fallbacks `{"none": 1}`, 0 quality issues, 0 semantic substitutions, warm p95 6782 ms). A 1-turn PASS is a smoke signal, **not** release-grade canary evidence.
+- `last_updated`: `2026-07-26`
+- `evidence_or_result_ref`: `reports/gf-release/audit-20260726T170210Z.{md,json}`, `reports/gf-release/canary-20260726T170210Z.jsonl`
+
+### Second live front (same tree, uncommitted)
+
+- `front_id`: `PROMOTION-V4 — governed promotion chain + response plan`
+- `current_state`: Whole promotion subsystem exists **untracked**: `src/QxFx0/Learning/{Promotion,PromotionRuntime,PromotionReview,JobQueue,CorroborationQueue,Rollback,Quality}.hs`, `src/QxFx0/Semantic/ResponsePlan*`, `src/QxFx0/Runtime/{ManagedWorker,AutonomousSmoke,StateDefaults}.hs`, `src/QxFx0/Types/{Learning,Memory,Policy}/`, plus 4 new migrations (`learning_005_canary_state`, `learning_006_session_jobs`, `promotion_scope_001_session_evidence`, `runtime_projection_002_session_scope`).
+- `blocker`: **`human_review_required`** — automated runtime gate passes, activation eligible `false`. Repo-owner decision, not a code gap.
+- `evidence_or_result_ref`: `reports/promotion-v4-release-cycle-20260719.md` (+ 7 sibling `reports/promotion-*-20260719.md`, `reports/*selector-preflight*-20260719.md`)
 
 ## Immediate next action
 
-- Verify `cabal test qxfx0-test-fast` in intended env (GHC 9.6.6 + GF runtime).
-- Expected: morphology errors gone; GF issue not mixed if env configured.
-- After SLICE-010B closes: M4 semantic-core deepening (Gates 1-2 first).
-- M6-FELT remains NOT PROVEN.
+1. **Decide the fate of the working tree.** `main` is **338 commits ahead of `origin/main`** (0 behind — clean fast-forward) with nothing published since `436d6a8` (2026-06-24), *plus* ~174 tracked files with real content changes and ~225 untracked paths on top of the last commit (`49440f8`, 2026-07-17). Two separate decisions: (a) publish/withhold the 338; (b) commit or reduce the uncommitted delta. Until (b) happens there is no reproducible state for any gate claim.
+   - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
+2. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
+3. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
+4. **Gate status is UNKNOWN as of this update.** No test suite was run when this board was refreshed on 2026-07-26. Do not cite any gate as green until re-run against the current tree.
 
-## Completed this session (2026-06-17, second pass)
+## Open decisions / blockers
 
-- **SLICE-012 governed evidence admissibility** — closed (commits `b12cafb` + `6755b0e` pushed to `origin/main`).
-  - `EvidenceAdmissibility` type: `EvidenceGoverned` / `EvidenceDegradedGuardUnavailable` / `EvidenceInadmissible` (`src/QxFx0/Types/Evidence.hs`).
-  - `QXFX0_GOVERNED_EVIDENCE=1` env var: governed-evidence mode fail-closes on Unavailable guard (`EvidenceInadmissibleFailure`); normal mode preserves fail-open degraded behavior.
-  - Every `TurnReplayTrace` now carries `trcEvidenceAdmissibility`.
-  - CI extended contract: `QXFX0_GOVERNED_EVIDENCE=1` + `QXFX0_CONCEPTS_PATH`; core contract explicitly disclaims governed evidence (nix not installed).
-  - Docs: `ENV_CONTRACT.md`, `M6_DECLARATION.md` C1 evidence-admissibility row, `SLICE-012_PLAN.md`.
-  - **Pre-existing morphology blocker**: fast gate 1124 cases, 8 errors + 2 failures all pre-existing (`Morphology resource_load MORPHOLOGY_ERROR` + `forms_by_surface.json` — SLICE-010B). 0 new failures from SLICE-012.
-  - Status: **closed-with-pre-existing-morphology-blocker**. The morphology resource issue (SLICE-010B) blocks local fresh-runtime runs but does not affect SLICE-012's evidence-admissibility contract.
+| item | kind | owner | note |
+|---|---|---|---|
+| Publish 338 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
+| Uncommitted promotion/response-plan subsystem | hygiene | repo owner | untracked source files carry no history and no CI coverage |
+| Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
+| M6-FELT | research | — | **NOT PROVEN**; see `ROADMAP.md` North Star and the B1–B4 split |
 
-- **ESSENCE-REGIME-RECONCILE (Policy A)** — closed (commit `b12cafb` pushed).
-  - Essence is law-driven (unconditional `shouldCommit`/`validatePlan`/`EssenceRupture` since 2026-05-19); `essenceCommitmentEnabled` flag was never implemented.
-  - 19 docs + 1 discipline test reconciled; `Self.Essence` reclassified `canonical-flag-off` → `canonical`.
-  - Essence = structural/runtime scaffold only, NOT M6-FELT evidence.
+## Recently landed (2026-06-18 → 2026-07-17)
 
-## Completed this session (2026-06-17, first pass)
+Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
-- **SLICE-010B morphology resource contract** — closed on `slice-010b-morphology-contract` (commit `0219d0e`).
-  - `src/QxFx0/Resources/Paths.hs`: morphology directory marker switched from `prepositional.json` to `paradigms.json` with `lexicon_quality.json` fallback for test-tree compatibility.
-  - `src/QxFx0/Resources/Morphology.hs`: rewritten to load `paradigms.json` + `exceptions.json` and derive `MorphologyData` via `morphologyDataFromParadigms`. No cache; `clearFormsCache` kept as no-op.
-  - `.gitignore`: `resources/morphology/forms_by_surface.json` now ignored; comment updated to SLICE-010B contract.
-  - `test/Test/Suite/LexiconTests.hs`: removed `forms_by_surface.json` existence tests; added canonical artifact tests for `paradigms.json`/`exceptions.json` and a regression test for derived forms (`косе`, `выборов`, `любовь`, `коса`).
-  - `test/Test/Suite/RuntimeInfrastructure.hs`: fake resource trees now create `paradigms.json`/`exceptions.json`; readiness-invalid and morphology-cache tests updated to exercise the new substrate.
-  - Evidence: code reviewed; `git diff --name-only origin/main..HEAD` does not contain `forms_by_surface.json`; `git ls-tree -r HEAD resources/morphology/forms_by_surface.json` is empty; Python simulation over real `paradigms.json`/`exceptions.json` passes the regression examples.
-  - Gate status: full `cabal test qxfx0-test-fast` NOT RUN due to environment blockers, not code defects:
-    - GHC 9.6.7 / `base-4.18.3.0` locally vs `cabal.project.freeze` `base ==4.18.2.1` (intended CI is GHC 9.6.6).
-    - Missing GF C runtime (`libpgf`, `libgu`) for `pgf2` — tracked by SLICE-012, out of scope for SLICE-010B.
-  - If a CI/intended environment with GHC 9.6.6 + GF libs is available, the fast gate should run there. A separate future front (`SLICE-012` toolchain environment contract) is needed for any local toolchain migration.
+- **ADR-0050** compose-from-activation surface text (`SurfaceAccumulator`, wired into `generateFromFrame`, golden tests + feature flag).
+- **ADR-0051** typed dispatch across all gates (a–h): `SemanticFrameTarget`, `DreamCandidateKind`, `ConflictPolicy`, `TransportMode`, `RuntimeMode`/`HealthStatus`, `ParserStatus`, `PipelineEffectLabel`, parameterized `PropositionAdmissionConfig`.
+- **ADR-0052** relation-graph external knowledge: 666 curated relations exported to JSONL, `ontology.jsonl` + `Ontology` module, provenance-aware network merge, field-modulated spreading activation, `ingest` CLI, ontology-driven category classification.
+- **ADR-0053** runtime-LLM discovery bridge to the semantic network.
+- **ADR-0054 M1–M4** autonomous semantic expansion: M1 infrastructure → M2 content-density gate → M3 end-to-end loop-closure test + `spawnAutonomousLearningHandles` in Bootstrap → M4 runtime-ready safety (`Learning/Quarantine.hs`, `Learning/CircuitBreaker.hs`, `Test/Suite/AutonomousSafety.hs`, all first landed in `c02549a`, 2026-07-16). Plans: `docs/superpowers/plans/2026-07-11-ADR-0054-M{3,4}-runtime-ready.md`.
+- **Closure Round** (`docs/plan/closure-round-tz.md`, 2026-07-09) — diagnosed pattern **write-without-read ×3**: atom-graph seed default-on, feedback read-side + relation-weight overlay, selfplay admission gate, cross-turn coherence via emitted-predicate buffer, ontology depth weighting + sibling borrowing.
+- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6239 lines (batches through 6224). The bulk of the 338 unpushed commits are these batches.
 
-- **SLICE-010B morphology resource contract** — closed on `slice-010b-morphology-contract`.
-  - `src/QxFx0/Resources/Paths.hs`: morphology directory marker switched from `prepositional.json` to `paradigms.json` with `lexicon_quality.json` fallback for test-tree compatibility.
-  - `src/QxFx0/Resources/Morphology.hs`: rewritten to load `paradigms.json` + `exceptions.json` and derive `MorphologyData` via `morphologyDataFromParadigms`. No cache; `clearFormsCache` kept as no-op.
-  - `.gitignore`: `resources/morphology/forms_by_surface.json` now ignored; comment updated to SLICE-010B contract.
-  - `test/Test/Suite/LexiconTests.hs`: removed `forms_by_surface.json` existence tests; added canonical artifact tests for `paradigms.json`/`exceptions.json` and a regression test for derived forms (`косе`, `выборов`, `любовь`, `коса`).
-  - `test/Test/Suite/RuntimeInfrastructure.hs`: fake resource trees now create `paradigms.json`/`exceptions.json`; readiness-invalid and morphology-cache tests updated to exercise the new substrate.
-  - Evidence: code reviewed; `git diff --name-only origin/main..HEAD` does not contain `forms_by_surface.json`; `git ls-tree -r HEAD resources/morphology/forms_by_surface.json` is empty; Python simulation over real `paradigms.json`/`exceptions.json` passes the regression examples.
-  - Gate status: full `cabal test qxfx0-test-fast` NOT RUN due to environment blockers, not code defects:
-    - GHC 9.6.7 / `base-4.18.3.0` locally vs `cabal.project.freeze` `base ==4.18.2.1` (intended CI is GHC 9.6.6).
-    - Missing GF C runtime (`libpgf`, `libgu`) for `pgf2` — tracked by SLICE-012, out of scope for SLICE-010B.
-  - If a CI/intended environment with GHC 9.6.6 + GF libs is available, the fast gate should run there. A separate future front (`SLICE-016` toolchain environment contract) is needed for any local toolchain migration.
+## Current state of the M6 gate
 
-- **Push to `origin/main`** — `62cf43a..c46ebb5` fast-forward pushed.
-  - Removed `resources/morphology/forms_by_surface.json` (125 MB blob) from local history via `git filter-branch` before push; backup branch `backup/main-with-forms-blob-20260617` retained.
-  - `git log origin/main..HEAD -- resources/morphology/forms_by_surface.json` empty; `git diff --name-only origin/main..HEAD` does not contain the file.
-
-- **SLICE-014 runtime persistence residuals** — closed.
-  - 40: switched `testBootstrapSessionCorruptStateFailsClosed` to `withStrictRuntimeEnv`; strict corrupt-state bootstrap now fails closed as expected.
-  - 45: `Commit.hs` now emits `PERSISTENCE_CONFLICT` for `PdStateRevisionConflict`, restoring the stale-writer CAS contract.
-  - 50/51: classified as documented feature gaps and moved to SLICE-015.
-  - Result: `runtime` 93/93 tried with only 50/51 failures; `unit` unchanged at 1216/1217 with 1 pre-existing GF failure.
-
-- **SLICE-013 truth-contract persistence/load policy (Option 1)** — landed on `main` via merge commit `1cc5752`.
-  - Reconciled local `main` to `origin/main`, resolved `.gitattributes` merge conflict, and merged `slice-013-truthcontract-fix`.
-  - Ran relevant gates: state 36/36 ✅, runtime 93/93 tried with 4 deferred failures (40/45/50/51), unit 1216/1217 with 1 pre-existing GF-compile failure.
-  - Post-merge fix: normalized CRLF line endings in `testEmbeddedSqlMatchesCanonicalSpec` to keep runtime case 0 green.
-  - Policy: "strict rejects corruption, not compatibility." Persistence cleanup never manufactures truth-contract authority.
-  - Save path: `canonicalizePersistedState` preserves `ssTruthContractStatus` verbatim (removed unconditional `=AssembledSurfacePreserved`).
-  - Load path: removed duplicate non-auth reject gate from `loadState`; non-auth state → `LoadStateRestored` (demoted), not `LoadStateCorrupt`.
-  - Tests: 3 StatePersistence tests renamed+rewritten (Rejects/Recovers→Restores); RuntimeInfrastructure tests 17/25 rewritten with explicit auth fixture marker (symmetric to non-auth twins, breaking nix-capability dependency).
-  - Doctrine: `docs/commit_restore_state_machine.md §6.3` updated.
-  - Result: SLICE-013 closed; 4 deferred failures moved to SLICE-014.
-
-## Completed this session (2026-06-16)
-
-- **SLICE-011 infra/harness triage** — closed with separate commit on `slice-011`.
-  - Scope: `.gitattributes`, LF rules, SQL/EmbeddedSQL sync, `.test-tmp` symlink, witness path, resource root, fake nix/souffle/gf-map isolation, CLI/Http option parsing, sidecar `executeFile`, sidecar SIGTERM/SIGKILL group cleanup, HTTP proxy bypass, runtime readiness probe timeout, slow-gate group split (`runtime`/`http`/`state`).
-  - Evidence: 135 slow cases reached a clean final summary; 93/93 runtime, 22/22 http, 20/20 state.
-  - Deferred: 11 persistence-behavior failures moved to `SLICE-013`.
-
-## Completed this session (2026-06-03, full session)
-
-- **C3 SemanticAnchor bridge** — `anchorToFactualClaim` in Finalize/State.hs: every turn that establishes a SemanticAnchor commits a typed `FactualClaimPayload` to `ssSemanticCommitments`
-- **Test.Suite.SemanticCommitmentCorpus** — 4 tests: Turn1 commits, multi-turn accumulates, trace field matches store, 3-turn corpus ≥3 commitments
-- **F-11 Real GF Haskell parser:**
-  - `gfExprToClaimAst` in Runtime/PGF.hs — inverts astToGfExpr for all 24 Move* constructors + stance wrapping
-  - `parseClaimAstGf` / `parseClaimAstGfLang` — uses PGF.parse on live `.pgf` grammar
-  - `Render/Authority.hs` updated — GF path first, pattern-match fallback second; added `parseAuthoritySurfaceIO`, `claimAstToFactualClaim`, `parseAuthoritySurfacePattern`
-  - `Semantic/AuthorityParse.hs` — production handle with cached PGF grammar
-  - `Test.Suite.AuthoritySurface` — 24 gfExpr round-trip tests + 4 pattern tests + coverage ≥99% + negative corpus
-
-**Total: 956/956 tests pass. M6 activation checklist: all ✅**
-
-## Completed this session (2026-06-03, second pass)
-
-- **Test.Suite.M5Regime** — 3 integration tests using real in-memory turn; `trcRegimeVersion > 0`, equals `currentMathVersion`, `trcFamilyDivergenceActive = True`. **H3 gate closed.**
-- **trcSemanticCommitmentCount** added to TurnReplayTrace — C3 trace field, counts active `SemanticCommitmentStore` entries.
-- **Test.Suite.M6Witness** updated — 9 tests (added `c4ClaimPackageExists`).
-- **M6_CLAIM_PACKAGE.md** created — bounded final claim, evidence package structure, activation checklist, declaration template.
-- **REGIME_GOVERNANCE.md** — `Test.Suite.M5Regime` checkbox closed.
-
-## Current state of M6 activation gate
+Scope note: the table below is **M6-STRUCTURAL** only. Structural closure is *necessary, not sufficient* for the North Star; **M6-FELT remains NOT PROVEN** and no row here upgrades it.
 
 | Gate | Status |
 |------|--------|
 | H1 (SLICE-NA-001) | ✅ closed |
 | H2 (deferred arch queue) | ✅ SR-03/04/05 classified |
-| H3 (M5 governed regime) | ✅ M5Regime tests pass |
+| H3 (M5 governed regime) | ✅ `Test.Suite.M5Regime` |
 | C1 (continuity + 6 contours P4) | ✅ |
 | C2 (restart integrity + regime markers) | ✅ |
 | C3 (commitment accountability) | ✅ CTS-42 admission + CTS-43 quarantine + CTS-44 promotion |
 | C4 (bidirectional semantic) | ✅ GF-E1b + CTS-40 + ADR-0019 |
 
-**M6 declaration:** ready after C3 full completion.
+Public declaration scope lives in `docs/closure/M6_DECLARATION.md` (bounded/partial). Every ✅ must be re-verified at claim time, not inherited from this snapshot.
 
 ## Active architecture queue
 
-1. Keep CTS layer stable — no new proposition consumers without admission module
-2. When math constants change → follow MATH_CHANGE_PROTOCOL.md
-3. Legacy decode windows (SR-05) — monitor for retirement triggers
+1. Keep the CTS layer stable — no new proposition consumers without an admission module.
+2. When math constants change → follow `MATH_CHANGE_PROTOCOL.md`.
+3. Legacy decode windows (SR-05) — monitor for retirement triggers.
+4. New: untracked source under `src/` is an architecture risk — the arch gate (`scripts/check_architecture.sh`) and CI see none of the promotion/response-plan modules.
 
 ## Notes
 
-- This file is the execution coordinator.
+- This file is the execution coordinator, and is **internal-only** — never public release evidence.
 - Historical summaries belong in `docs/front_archive.md`.
 - Program doctrine belongs in `ROADMAP.md`.
 - Deferred architecture follow-ups stay in `ROADMAP.md` until a new bounded front is explicitly activated.
+- Run slow/runtime suites **sequentially** — concurrent instances are port/subprocess-heavy and corrupt results.

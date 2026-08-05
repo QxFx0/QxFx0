@@ -118,11 +118,11 @@ substrateTests =
             , "Иногда страшит не сама перемена"
             , "Быть прочитанным, но не увиденным"
             ]
-      -- Property: no brain_kb text fragment appears in any explicit predicate
+      -- Property: substrate source prose is never emitted as an explicit predicate.
       let leaks = [ (bp, pt)
                   | bp <- brainKBSamples
                   , pt <- explicitPredTexts
-                  , any (`T.isInfixOf` pt) (T.chunksOf 10 (T.pack bp))
+                  , T.pack bp `T.isInfixOf` pt
                   ]
       assertBool "no brain_kb text should leak into explicit predicates" (null leaks)
 

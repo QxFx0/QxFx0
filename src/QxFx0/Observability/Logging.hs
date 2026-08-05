@@ -140,7 +140,11 @@ logException ex ctx = do
 -- | Format log entry for output (simple text format for now)
 formatLogEntry :: LogEntry -> Text
 formatLogEntry LogEntry{..} =
-  T.pack (show leTimestamp) <> " [" <> levelText <> "] " <> leMessage <> errorCodeText
+  T.pack (show leTimestamp)
+    <> " [" <> levelText <> "] "
+    <> leMessage
+    <> errorCodeText
+    <> contextText
   where
     levelText = case leLevel of
       LogDebug -> "DEBUG"
@@ -150,6 +154,22 @@ formatLogEntry LogEntry{..} =
     errorCodeText = case leErrorCode of
       Nothing  -> ""
       Just ec  -> " (" <> ec <> ")"
+    contextText
+      | Map.null leContext = ""
+      | otherwise =
+          " " <> T.unwords
+            [ sanitizeContext key <> "=" <> sanitizeContext value
+            | (key, value) <- Map.toAscList leContext
+            ]
+
+-- Keep the existing single-line log format while making structured context
+-- machine-readable. Context values may contain exception text or paths with
+-- spaces, so delimiters are normalized rather than allowed to split fields.
+sanitizeContext :: Text -> Text
+sanitizeContext = T.map $ \c ->
+  if c < ' ' || c == ' ' || c == '\\' || c == '='
+    then '_'
+    else c
 
 -- | Emit log entry to stderr (simple implementation)
 emitLog :: LogEntry -> IO ()

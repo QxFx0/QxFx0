@@ -7,14 +7,14 @@ module Test.Suite.AutonomousLoop
   ( autonomousLoopTests
   ) where
 
-import Control.Concurrent.STM (atomically, newTQueue, readTQueue, writeTQueue)
+import Data.Time.Calendar (fromGregorian)
+import Data.Time.Clock (UTCTime(..))
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import Test.HUnit
 
 import QxFx0.Learning.Autonomous
   ( NetworkUpdateEvent(..)
-  , applyPendingNetworkUpdates
   , autonomousApplyLLMResponse
   , buildAtomMorphology
   )
@@ -29,8 +29,12 @@ import QxFx0.Semantic.Network.Types
 import QxFx0.Types.ExternalQuery (ExternalQueryResponse(..))
 import QxFx0.Types.State.System
   ( SystemState(..)
-  , emptySystemState
   , ssSemanticNetwork
+  )
+import QxFx0.Runtime.StateDefaults (emptySystemState)
+import QxFx0.Runtime.Session.Autonomous
+  ( AutonomousHandles(..)
+  , applyAutonomousEventBatchForTest
   )
 
 mkResp :: Text -> ExternalQueryResponse
@@ -54,18 +58,35 @@ testEndToEndLoop = TestLabel "end-to-end: event → update queue → apply → e
         morph = buildAtomMorphology store
         resp  = mkResp "свобода | связана | выбор | relatedto\n"
         net   = autonomousApplyLLMResponse store morph NeedKeywordEnrichment resp
-        evt   = NetworkUpdateEvent
-          { nueTopic     = "свобода"
-          , nueEdges     = M.elems (snEdges net)
-          , nueTimestamp = undefined  -- unused by apply
+        evt = NetworkUpdateEvent
+          { nueTopic = "свобода"
+          , nueEdges = M.elems (snEdges net)
+          , nueTimestamp = UTCTime (fromGregorian 2026 7 22) 0
+          , nueRequestId = "autonomous-loop-r1"
+          , nuePromptHash = Just "prompt"
+          , nueResponseHash = Just "response"
+          , nueModel = Just "test-model"
+          , nueParserDecision = Just "structured_relation_parser:accepted"
+          , nueAdmissionDecision = Just "worker_candidate_admitted"
+          , nueEvidenceSource = Just "test"
+          , nueCompetitiveAudit = Nothing
+          , nueCorroborationPriority = Nothing
+          , nueCorroborationTaskId = Nothing
+          , nueApplyToken = Nothing
           }
-        ss0   = emptySystemState
-    updates <- atomically newTQueue
-    atomically (writeTQueue updates evt)
-    _ <- atomically (readTQueue updates)
-    ss1 <- applyPendingNetworkUpdates store morph updates ss0
-    let edges = M.size (snEdges (ssSemanticNetwork ss1))
-    assertBool "at least one edge after apply" (edges >= 1)
+        emptyNetwork = (ssSemanticNetwork emptySystemState)
+          { snNodes = mempty, snEdges = M.empty, snActivation = M.empty, snActivationLog = mempty }
+        ss0 = emptySystemState { ssSemanticNetwork = emptyNetwork }
+    let handles = AutonomousHandles
+          { ahQueue = Nothing, ahUpdateQueue = Nothing, ahWorkerThread = Nothing
+          , ahPendingBreakerQueue = Nothing, ahQuarantineDB = Nothing, ahMetricsRef = Nothing
+          , ahNetworkOwner = Nothing, ahAuditThread = Nothing, ahApplyThread = Nothing
+          , ahSessionId = Just "test-session", ahEnabled = True
+          }
+    applied <- applyAutonomousEventBatchForTest handles (ssSemanticNetwork ss0) [evt]
+    let ss1 = ss0 { ssSemanticNetwork = applied }
+    assertBool "governed apply lands the admitted edge"
+      (M.member ("свобода", "выбор") (snEdges (ssSemanticNetwork ss1)))
 
 -- | End-to-end with a richer body: multiple admitted relations and an
 -- unknown endpoint (must be silently dropped).

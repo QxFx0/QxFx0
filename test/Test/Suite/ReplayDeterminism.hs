@@ -20,6 +20,7 @@ import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import Data.Aeson (encode, eitherDecode, withObject, (.:?))
 import Data.Aeson.Types (parseEither)
+import qualified Data.ByteString.Lazy as BL
 
 import QxFx0.Core.Legitimacy (legitimacyScore)
 import QxFx0.Core.PipelineIO
@@ -39,7 +40,14 @@ import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 import QxFx0.Types.ShadowDivergence (ShadowDivergence(..), ShadowDivergenceKind(..), ShadowDivergenceSeverity(..), ShadowSnapshotId(..))
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Core.FMAR (FmarMode(..))
-import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), EffectSnapshot(..), TurnProjection(..))
+import QxFx0.Types.TurnProjection
+  ( ParserStatus(..)
+  , TurnReplayTrace(..)
+  , EffectSnapshot(..)
+  , TurnProjection(..)
+  , encodePersistedReplayTrace
+  , decodePersistedReplayTrace
+  )
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..), emptyCommitmentEngagement)
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
@@ -193,6 +201,11 @@ minimalReplayTrace apiHealthy =
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+          , trcSelectorDiagnostics = []
+          , trcResponsePlan = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.
@@ -297,8 +310,8 @@ testSnapshotSurvivesSerialization =
                (Right (Just (EffectSnapshot False))) (decodeSnapshot (projOf False))
 
 -- | P5 (audit D): the FULL TurnReplayTrace round-trips through the exact
--- serialization the DB column uses. 'persistTurnQuality' stores
--- @Aeson.encode (tqpReplayTrace p)@; with 'FromJSON TurnReplayTrace' now in
+-- serialization the DB column uses. 'persistTurnQuality' stores a versioned
+-- replay envelope; with 'FromJSON TurnReplayTrace' in
 -- place (and FromJSON for all ~32 nested types + the 2 previously ToJSON-only
 -- PreActor types), @decode . encode@ is total. This is the serialization half
 -- of the production replay-from-DB path (item #1); the remaining half is the
@@ -310,9 +323,9 @@ testFullTraceRoundTrips =
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
                   (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
-    assertEqual "decode (encode trace) must reproduce the trace exactly"
+    assertEqual "persisted envelope decode must reproduce the trace exactly"
       (Right trace)
-      (eitherDecode (encode trace) :: Either String TurnReplayTrace)
+      (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace trace)))
 
 replayDeterminismTests :: [Test]
 replayDeterminismTests =

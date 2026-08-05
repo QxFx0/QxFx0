@@ -1,0 +1,75 @@
+# Canonical GF slots for curated semantic predicates.
+# source_ru is the exact legacy predicate surface retained for compatibility.
+# New entries must use explicit subject/relation/object slots; do not infer them at runtime.
+predicate_id	subject_id	subject_ru	relation_id	relation_ru	object_id	object_ru	source_ru
+freedom_choice	svoboda	свобода	predpolagaet	предполагает	vozmozhnost_vybora	возможность выбора	свобода предполагает возможность выбора
+freedom_responsibility	svoboda	свобода	ogranichena	ограничена	otvetstvennostyu	ответственностью	свобода ограничена ответственностью
+arbitrariness_criteria	proizvol	произвол	otricaet	отрицает	ramku_kriteriev	рамку критериев	произвол отрицает рамку критериев
+arbitrariness_trust	proizvol	произвол	razrushaet	разрушает	doverie_mezhdu_subektami	доверие между субъектами	произвол разрушает доверие между субъектами
+responsibility_consequences	otvetstvennost	ответственность	trebuet	требует	osoznaniya_posledstviy	осознания последствий	ответственность требует осознания последствий
+responsibility_obligations	otvetstvennost	ответственность	svyazana	связана	obyazatelstvami_pered_drugimi	с обязательствами перед другими	ответственность связана с обязательствами перед другими
+truth_reality	istina	истина	pretenduet	претендует	sootvetstvie_realnosti	на соответствие реальности	истина претендует на соответствие реальности
+truth_reproducibility	istina	истина	proveryaetsya	проверяется	cherez_vosproizvodimost	через воспроизводимость	истина проверяется через воспроизводимость
+opinion_position	mnenie	мнение	vyrazhaet	выражает	pozitsiyu_subekta	позицию субъекта	мнение выражает позицию субъекта
+opinion_perspective	mnenie	мнение	zavisit	зависит	ot_perspektivy_nablyudatelya	от перспективы наблюдателя	мнение зависит от перспективы наблюдателя
+memory_past	pamyat	память	sohranyaet	сохраняет	proshloe_dlya_nastoyashchego	прошлое для настоящего	память сохраняет прошлое для настоящего
+memory_reconstruction	pamyat	память	rekonstruiruet	реконструирует	ne_prosto_kopiruet	а не просто копирует	память реконструирует а не просто копирует
+recollection_past	vospominanie	воспоминание	est	есть	akt_obrashcheniya	актом обращения к личному прошлому	воспоминание есть акт обращения к личному прошлому
+recollection_subjectivity	vospominanie	воспоминание	otlichaetsya	отличается	ot_pamyati_subektivnostyu	от памяти своей субъективностью	воспоминание отличается от памяти своей субъективностью
+consciousness_first_person	soznanie	сознание	imeet	имеет	aspekt_pervogo_litsa	аспект от первого лица	сознание имеет аспект от первого лица
+consciousness_reflection	soznanie	сознание	obedinyaet	объединяет	vospriyatie_i_refleksiyu	восприятие и рефлексию	сознание объединяет восприятие и рефлексию
+self_awareness_states	samosoznanie	самосознание	napravleno	направлено	na_sobstvennye_sostoyaniya	на собственные состояния субъекта	самосознание направлено на собственные состояния субъекта
+self_awareness_consciousness	samosoznanie	самосознание	predpolagaet	предполагает	nalichie_soznaniya	наличие сознания как своего основания	самосознание предполагает наличие сознания как своего основания
+faith_acceptance	vera	вера	trebuet	требует	prinyatiya_bez_dokazatelstva	принятия без полного доказательства	вера требует принятия без полного доказательства
+faith_trust	vera	вера	svyazana	связана	doveriem_k_istochniku	с доверием к источнику или опыту	вера связана с доверием к источнику или опыту
+beauty_experience	krasota	красота	vyzyvaet	вызывает	esteticheskoe_perezhivanie	эстетическое переживание	красота вызывает эстетическое переживание
+beauty_frame	krasota	красота	zavisit	зависит	ot_vosprinimayuschego	от воспринимающего и культурной рамки	красота зависит от воспринимающего и культурной рамки
+duty_actions	dolg	долг	predpisyvaet	предписывает	deystviya_nezavisimo	действия независимо от желания	долг предписывает действия независимо от желания
+duty_obligations	dolg	долг	opiraetsya	опирается	na_obyazatelstva	на моральные или социальные обязательства	долг опирается на моральные или социальные обязательства
+trust_vulnerability	doverie	доверие	predpolagaet	предполагает	uyazvimost	уязвимость перед другим	доверие предполагает уязвимость перед другим
+trust_experience	doverie	доверие	stroitsya	строится	cherez_opyt	через повторяемый позитивный опыт	доверие строится через повторяемый позитивный опыт
+fear_threat	strah	страх	signaliziruet	сигнализирует	ob_ugroze	об угрозе целостности субъекта	страх сигнализирует об угрозе целостности субъекта
+fear_action	strah	страх	mozhet	может	paralizovat_deystvie	парализовать действие или мобилизовать его	страх может парализовать действие или мобилизовать его
+hope_future	nadezhda	надежда	orientiruet	ориентирует	na_budushchee	на возможность будущего	надежда ориентирует на возможность будущего
+hope_action	nadezhda	надежда	podderzhivaet	поддерживает	deystvie_neopredelennost	действие в условиях неопределённости	надежда поддерживает действие в условиях неопределённости
+justice_proportionality	spravedlivost	справедливость	trebuet	требует	sorazmernosti	соразмерности между деянием и воздаянием	справедливость требует соразмерности между деянием и воздаянием
+justice_equality	spravedlivost	справедливость	predpolagaet	предполагает	ravenstvo	равенство перед правилом	справедливость предполагает равенство перед правилом
+time_order	vremya	время	zadaet	задаёт	poryadok_sledovaniya	порядок следования событий	время задаёт порядок следования событий
+time_irreversible	vremya	время	neobratimo	необратимо	proshloe_nedostupno	— прошлое недоступно для изменения	время необратимо — прошлое недоступно для изменения
+reason_abstraction	razum	разум	sposoben	способен	k_obobshcheniyu	к обобщению и абстракции	разум способен к обобщению и абстракции
+reason_proof	razum	разум	otlichaetsya	отличается	ot_intuitsii	от интуиции потребностью в доказательстве	разум отличается от интуиции потребностью в доказательстве
+being_existence	bytie	бытие	oboznachaet	обозначает	fakt_sushchestvovaniya	сам факт существования	бытие обозначает сам факт существования
+being_judgement	bytie	бытие	rassmatrivaetsya	рассматривается	kak_uslovie	как условие возможности любого суждения	бытие рассматривается как условие возможности любого суждения
+history_interpretation	istoriya	история	svyazyvaet	связывает	proshloe_nastoyashchee	прошлое с настоящим через интерпретацию	история связывает прошлое с настоящим через интерпретацию
+history_viewpoint	istoriya	история	zavisit	зависит	ot_tochki_zreniya	от точки зрения рассказчика	история зависит от точки зрения рассказчика
+language_experience	yazyk	язык	strukturiruet	структурирует	opyt_razlichenie	опыт через различение и именование	язык структурирует опыт через различение и именование
+language_thought	yazyk	язык	svyazan	связан	s_myshleniem	с мышлением — он не только выражает, но и формирует мысль	язык связан с мышлением — он не только выражает, но и формирует мысль
+will_goal	volya	воля	napravlyaet	направляет	deystvie_k_tseli	действие к выбранной цели	воля направляет действие к выбранной цели
+will_obstacles	volya	воля	trebuet	требует	preodoleniya_prepyatstviy	преодоления препятствий и конкурирующих мотивов	воля требует преодоления препятствий и конкурирующих мотивов
+death_cessation	smert	смерть	oboznachaet	обозначает	prekrashchenie_sushchestvovaniya	необратимое прекращение существования	смерть обозначает необратимое прекращение существования
+death_boundary	smert	смерть	zadaet	задаёт	granitsu	границу, через которую жизнь обретает конечную форму	смерть задаёт границу, через которую жизнь обретает конечную форму
+loneliness_absence	odinochestvo	одиночество	vyrazhaet	выражает	otsutstvie_drugogo	отсутствие значимого другого	одиночество выражает отсутствие значимого другого
+loneliness_choice	odinochestvo	одиночество	mozhet	может	byt_izbrano	быть избрано или навязано обстоятельствами	одиночество может быть избрано или навязано обстоятельствами
+love_other	lyubov	любовь	napravlena	направлена	na_drugogo	на конкретного другого как на безусловно ценного	любовь направлена на конкретного другого как на безусловно ценного
+love_risk	lyubov	любовь	predpolagaet	предполагает	risk_poteri	уязвимость и риск потери	любовь предполагает уязвимость и риск потери
+labor_material	trud	труд	preobrazuet	преобразует	material	материал через целенаправленное усилие	труд преобразует материал через целенаправленное усилие
+labor_resources	trud	труд	svyazan	связан	s_potrebnostyu	с потребностью и распределением ресурсов	труд связан с потребностью и распределением ресурсов
+rest_absence	pokoy	покой	oboznachaet	обозначает	otsutstvie_dvizheniya	отсутствие движения и напряжения	покой обозначает отсутствие движения и напряжения
+rest_recovery	pokoy	покой	neobhodim	необходим	dlya_vosstanovleniya	для восстановления и интеграции опыта	покой необходим для восстановления и интеграции опыта
+power_influence	vlast	власть	oznachaet	означает	vliyat_na_drugih	способность влиять на действия других	власть означает способность влиять на действия других
+power_legitimacy	vlast	власть	trebuet	требует	legitimnosti	легитимности для устойчивости	власть требует легитимности для устойчивости
+truthfulness_event	pravda	правда	pretenduet	претендует	na_sootvetstvie	на соответствие тому, что произошло	правда претендует на соответствие тому, что произошло
+truthfulness_involvement	pravda	правда	otlichaetsya	отличается	ot_istiny	от истины личной вовлечённостью рассказчика	правда отличается от истины личной вовлечённостью рассказчика
+silence_refusal	molchanie	молчание	mozhet	может	byt_aktom	быть актом отказа или знаком присутствия	молчание может быть актом отказа или знаком присутствия
+silence_speech	molchanie	молчание	kontrastiruet	контрастирует	s_rechyu	с речью, но не тождественно пустоте	молчание контрастирует с речью, но не тождественно пустоте
+duty_action_singular	dolg	долг	predpisyvaet	предписывает	deystvie_nezavisimo	действие независимо от желания	долг предписывает действие независимо от желания
+fear_significance	strah	страх	ukazyvaet	указывает	na_to_chto_imeet_znachenie	на то, что имеет значение	страх указывает на то, что имеет значение
+arbitrariness_absence_constraints	proizvol	произвол	vyrazhaet	выражает	otsutstvie_ogranicheniy	отсутствие ограничений	произвол выражает отсутствие ограничений
+will_conscious_control	volya	воля	eto	это	sposobnost_cheloveka_soznatelno_upravlyat_povedeniem	способность человека сознательно управлять своим поведением	воля это способность человека сознательно управлять своим поведением
+truthfulness_facts	pravda	правда	pretenduet	претендует	na_sootvetstvie_faktam	на соответствие фактам	правда претендует на соответствие фактам
+memory_information_process	pamyat	память	eto	это	protsess_zapominaniya_hraneniya_i_vosproizvedeniya_informatsii	процесс запоминания хранения и воспроизведения информации	память это процесс запоминания хранения и воспроизведения информации
+recollection_new_frame	vospominanie	воспоминание	vosstanavlivaet	восстанавливает	perezhitoe_v_novoy_ramke	пережитое в новой рамке	воспоминание восстанавливает пережитое в новой рамке
+consciousness_awareness	soznanie	сознание	eto	это	sposobnost_osoznavat_okruzhayushchiy_mir_i_samogo_sebya	способность осознавать окружающий мир и самого себя	сознание это способность осознавать окружающий мир и самого себя
+self_awareness_reflexivity	samosoznanie	самосознание	vyrazhaet	выражает	refleksivnost_subekta	рефлексивность субъекта	самосознание выражает рефлексивность субъекта
+responsibility_accountability	otvetstvennost	ответственность	eto_neobhodimost	— это	otvechat_za_svoi_deystviya	необходимость отвечать за свои действия	ответственность — это необходимость отвечать за свои действия
+power_law	vlast	власть	opredelyaet	определяет,	chya_volya_stanovitsya_zakonom	чья воля становится законом	власть определяет, чья воля становится законом

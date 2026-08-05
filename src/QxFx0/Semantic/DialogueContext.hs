@@ -31,48 +31,22 @@ module QxFx0.Semantic.DialogueContext
   , contextDepth
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.List (nub, filter, isInfixOf, any)
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 
-import QxFx0.Semantic.Content.AtomStore (AtomId(..), Relation(..), relRuOriginal)
-
--- | A single context entry — one turn of dialogue.
-data ContextEntry = ContextEntry
-  { ceTurn :: !Int               -- turn number
-  , ceRole :: !ContextRole       -- who said it
-  , ceTopic :: !Text             -- main topic
-  , ceSurface :: !Text           -- what was said
-  , ceRelations :: ![Relation]   -- graph edges used (system only)
-  , ceTTL :: !Int                -- turns remaining before decay
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data ContextRole = RoleSystem | RoleUser
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Dialogue context — the thread of conversation.
-data DialogueContext = DialogueContext
-  { dcEntries :: ![ContextEntry]    -- all entries (system + user)
-  , dcTurnCount :: !Int             -- total turns
-  , dcMaxEntries :: !Int            -- max entries to keep (default 10)
-  , dcTTL :: !Int                   -- default TTL for new entries (default 5)
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Semantic.AtomGraph (Relation(..), relRuOriginal)
+import QxFx0.Types.Semantic.DialogueContext
+  ( DialogueContext(..)
+  , ContextEntry(..)
+  , ContextRole(..)
+  , emptyDialogueContext
+  )
 
 -- | Empty context for session start.
 emptyContext :: DialogueContext
-emptyContext = DialogueContext
-  { dcEntries = []
-  , dcTurnCount = 0
-  , dcMaxEntries = 10
-  , dcTTL = 5
-  }
+emptyContext = emptyDialogueContext
 
 -- | Add a system entry to the context.
 addSystemEntry :: DialogueContext -> Text -> Text -> [Relation] -> DialogueContext

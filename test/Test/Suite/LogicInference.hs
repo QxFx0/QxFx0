@@ -49,7 +49,7 @@ mkEdge from to rt conf = SemanticEdge
   , seSynthesis     = Nothing
   , seConfidence    = conf
   , seProvenance    = ProvenanceIngested
-  , seNamespace     = NamespaceSessionLocal
+  , seNamespace     = Just NamespaceSessionLocal
   , seLineage       = Nothing
   }
 
@@ -103,7 +103,8 @@ logicInferenceTests =
         case seLineage d of
           Nothing -> assertFailure "derived edge missing lineage"
           Just refs -> assertBool "lineage contains parents"
-            (("A", "B") `elem` refs && ("B", "C") `elem` refs)
+            (("A", "B", RelRequires, NamespaceSessionLocal) `elem` refs
+             && ("B", "C", RelRequires, NamespaceSessionLocal) `elem` refs)
 
   , TestLabel "applyInference inserts derived edges without overwriting" $
       TestCase $ do

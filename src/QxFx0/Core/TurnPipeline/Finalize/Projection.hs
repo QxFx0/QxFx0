@@ -18,9 +18,9 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
-import Text.Read (readMaybe)
 
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Core.TurnRouting.Cascade (commitmentFamilyHint)
@@ -75,7 +75,7 @@ import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
-import QxFx0.Semantic.Network.Types (SemanticNetwork(..), ActivationStep(..), EdgeSource(..))
+import QxFx0.Semantic.Network.Types (ActivationArtifact(..), ActivationStep(..), EdgeSource(..))
 import qualified Data.Sequence as Seq
 import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HashMap
@@ -88,21 +88,21 @@ import QxFx0.Types.Thresholds
   , scenePressureLowThreshold
   , scenePressureMediumThreshold
   )
-import QxFx0.Runtime.Mode (RuntimeMode(..))
+import QxFx0.Types.RuntimeMode (RuntimeMode(..))
 
 turnInputSalience :: TurnInput -> Salience
 turnInputSalience = svSalience . tiSelfVerdict
 
 -- | P0.2: concepts whose activation value exceeded the reporting threshold.
--- Source of truth is the spreading-activation map in 'tiActivatedNetwork'.
-activatedConcepts :: Maybe SemanticNetwork -> [Text]
+-- Source of truth is the activation artifact consumed by selection.
+activatedConcepts :: Maybe ActivationArtifact -> [Text]
 activatedConcepts Nothing = []
-activatedConcepts (Just net) =
-  M.keys (M.filter (>= 0.05) (snActivation net))
+activatedConcepts (Just artifact) =
+  M.keys (M.filter (>= 0.05) (aaActivation artifact))
 
 -- | P0.2: subset of activated concepts that have no surface predicate in the
 -- definition corpus.  Drives the GAPS.md curation backlog.
-missingPredicateConcepts :: M.Map Text DefinitionContent -> Maybe SemanticNetwork -> [Text]
+missingPredicateConcepts :: M.Map Text DefinitionContent -> Maybe ActivationArtifact -> [Text]
 missingPredicateConcepts corpus mNet =
   filter (not . (`M.member` corpus)) (activatedConcepts mNet)
 
@@ -229,6 +229,18 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             , Just (etAngstLevel t)
             , Just (renderCommitmentTrigger (ecTrigger c))
             )
+      overlayPredicateIds =
+        case ssCuratedOverlay nextSs of
+          Nothing -> []
+          Just overlay ->
+            [ predicateId
+            | surface <- taEmittedPredicates ta
+            , Just predicateId <- [M.lookup (T.toLower (T.strip surface)) (corPredicateIdsBySurface overlay)]
+            ]
+      activationArtifact = taActivationArtifact ta
+      activationSteps = maybe Seq.empty aaSteps activationArtifact
+      substrateSteps = filter ((== SubstrateEdge) . asSource) (F.toList activationSteps)
+      substrateActivated = S.toList (S.fromList (map asNode substrateSteps))
       replayTrace =
         TurnReplayTrace
           { trcRequestId = requestId
@@ -397,13 +409,18 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcFrameType = extractFrameTag (taDerivationTags ta)
           , trcContentSource = extractContentSourceTag (taDerivationTags ta)
           , trcAnalogicalSource = extractAnalogicalSourceTag (taDerivationTags ta)
-          , trcSubstrateActivated = extractSubstrateActivated (taDerivationTags ta)
-          , trcSubstrateEdgesUsed = extractSubstrateEdgesUsed (taDerivationTags ta)
-          , trcActivationSteps = maybe Seq.empty snActivationLog (tiActivatedNetwork ti)
-          , trcSubstrateHops = maybe 0 (\net -> length (filter (\s -> asSource s == SubstrateEdge) (F.toList (snActivationLog net)))) (tiActivatedNetwork ti)
-          , trcActivatedConcepts = activatedConcepts (tiActivatedNetwork ti)
-          , trcMissingPredicates = missingPredicateConcepts (ssDefinitionCorpus nextSs) (tiActivatedNetwork ti)
+          , trcSubstrateActivated = substrateActivated
+          , trcSubstrateEdgesUsed = length substrateSteps
+          , trcActivationSteps = activationSteps
+          , trcSubstrateHops = length substrateSteps
+          , trcActivatedConcepts = activatedConcepts activationArtifact
+          , trcMissingPredicates = missingPredicateConcepts (ssDefinitionCorpus nextSs) activationArtifact
           , trcEmittedPredicates = taEmittedPredicates ta
+          , trcCuratedOverlayVersion = corVersion <$> ssCuratedOverlay nextSs
+          , trcOverlayPredicateIds = overlayPredicateIds
+          , trcOverlayContentUsed = not (null overlayPredicateIds)
+           , trcSelectorDiagnostics = taSelectorDiagnostics ta
+           , trcResponsePlan = taResponsePlan ta
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs
@@ -593,19 +610,3 @@ extractAnalogicalSourceTag tags =
   case filter (T.isPrefixOf "analogical_source=") tags of
     (tag:_) -> Just (T.drop 18 tag)
     []      -> Nothing
-
--- | Extract substrate-activated topics from derivation tags.
--- Tags are formatted as "substrate_activated=topic1,topic2,topic3".
-extractSubstrateActivated :: [Text] -> [Text]
-extractSubstrateActivated tags =
-  case filter (T.isPrefixOf "substrate_activated=") tags of
-    (tag:_) -> T.splitOn "," (T.drop 20 tag)
-    []      -> []
-
--- | Extract substrate edges used count from derivation tags.
--- Tags are formatted as "substrate_edges_used=N".
-extractSubstrateEdgesUsed :: [Text] -> Int
-extractSubstrateEdgesUsed tags =
-  case filter (T.isPrefixOf "substrate_edges_used=") tags of
-    (tag:_) -> fromMaybe 0 (readMaybe (T.unpack (T.drop 21 tag)))
-    []      -> 0

@@ -5,6 +5,7 @@
 
 module QxFx0.Semantic.Content.Base
   ( PredicateRole(..)
+  , CanonicalPredicateRelation(..)
   , SemanticPredicate(..)
   , ChallengeResponse(..)
   , mkPred
@@ -16,38 +17,14 @@ module QxFx0.Semantic.Content.Base
   ) where
 
 import Data.Char (toUpper)
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
-
-data PredicateRole
-  = RoleProperty
-  | RoleRelation
-  | RoleStructure
-  | RoleDifferentiator
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data SemanticPredicate = SemanticPredicate
-  { spRole :: !PredicateRole
-  , spRu :: !Text
-  , spEn :: !Text
-  , spTopicForm :: !Text
-  , spRationale :: !(Maybe Text)
-  , spCounter :: !(Maybe Text)
-  , spSynthesis :: !(Maybe Text)
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data ChallengeResponse = ChallengeResponse
-  { crTopic :: !Text
-  , crObjectionKeywords :: ![Text]
-  , crRelevantPredicate :: !SemanticPredicate
-  , crRestate :: !Text
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Semantic.Content
+  ( PredicateRole(..)
+  , CanonicalPredicateRelation(..)
+  , SemanticPredicate(..)
+  , ChallengeResponse(..)
+  )
 
 extractTopicForm :: Text -> Text
 extractTopicForm t =
@@ -56,11 +33,11 @@ extractTopicForm t =
     []    -> ""
 
 mkPred :: PredicateRole -> Text -> Text -> SemanticPredicate
-mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing Nothing Nothing
+mkPred role ru en = SemanticPredicate role ru en (extractTopicForm ru) Nothing Nothing Nothing Nothing
 
 mkArguedPred :: PredicateRole -> Text -> Text -> Maybe Text -> Maybe Text -> Maybe Text -> SemanticPredicate
 mkArguedPred role ru en rationale counter synthesis =
-  SemanticPredicate role ru en (extractTopicForm ru) rationale counter synthesis
+  SemanticPredicate role ru en (extractTopicForm ru) Nothing rationale counter synthesis
 
 renderPredicateArgued :: SemanticPredicate -> Text
 renderPredicateArgued p =

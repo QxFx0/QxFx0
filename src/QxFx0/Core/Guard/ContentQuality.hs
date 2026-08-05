@@ -58,8 +58,10 @@ evaluateContentQualityWithTopic topic rendered =
       foldr orElse Nothing
         [ checkEmpty trimmed
         , checkTemplatePlaceholders rendered
-        , checkGenericFiller trimmed
-        , checkTopicRelevanceBlock rendered topic
+         , checkGenericFiller trimmed
+         , checkGenericGenerativeSurface trimmed
+         , checkRepeatedDiscourseMarkers trimmed
+         , checkTopicRelevanceBlock rendered topic
         , checkContentDensity tokens
         , checkSemanticSaturation tokens
         ]
@@ -122,6 +124,27 @@ checkGenericFiller text =
   in if null matched
        then Nothing
        else Just "\x413\x435\x43d\x435\x440\x438\x447\x435\x441\x43a\x438\x439 filler-\x43e\x442\x432\x435\x442"
+
+-- | The former generative paragraph is not content: it is a collection of
+-- unrelated aphorisms.  Keep the gate closed if an old artifact or persisted
+-- fallback ever reintroduces it.
+checkGenericGenerativeSurface :: Text -> Maybe Text
+checkGenericGenerativeSurface text
+  | T.isInfixOf "одна мысль:" (T.toLower text)
+    && T.isInfixOf "другая мысль:" (T.toLower text)
+    = Just "generic_generative_paragraph"
+  | otherwise = Nothing
+
+-- | Discourse markers are selected by the plan, not concatenated blindly.
+-- Adjacent contrast markers are a reliable signal of the old composition bug.
+checkRepeatedDiscourseMarkers :: Text -> Maybe Text
+checkRepeatedDiscourseMarkers text
+  | any repeated ["но вместе с тем", "вместе с тем но", "однако при этом", "при этом однако"]
+    = Just "repeated_discourse_marker"
+  | otherwise = Nothing
+  where
+    lowered = T.toLower text
+    repeated phrase = T.isInfixOf phrase lowered
 
 -- | Topic coherence check: blocks output that has zero overlap with topic tokens.
 -- Conservative: only blocks for outputs with 50+ tokens to avoid blocking

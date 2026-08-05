@@ -145,11 +145,11 @@ import QxFx0.Semantic.AtomAccretion
   , decayProvisionalAtoms
   , resolveCollisions
   )
-import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate, snActivationLog)
+import QxFx0.Semantic.Network (buildSemanticNetwork, mergeSemanticNetworks, contentDensityGate)
 import QxFx0.Semantic.Network.Feedback.Collect (applyDetectedFeedback)
 import QxFx0.Semantic.Space (buildSemanticSpace, buildFactVectors)
 import QxFx0.Semantic.Space.Types (emptySemanticSpace, ssFactVectors)
-import QxFx0.Semantic.ContentSelector (buildContentSelector, buildTopicAtoms, tokenizePredicate)
+import QxFx0.Semantic.ContentSelector (buildContentSelector, buildTopicAtoms, predicateAtomsForSelector)
 import QxFx0.Semantic.ContentSelector.Types (emptyContentSelector)
 import QxFx0.Semantic.Intent.Metrics (IntentClassifierMetrics)
 import QxFx0.Semantic.Intent.GeometricClassifier (recordABValidation)
@@ -361,35 +361,40 @@ maximumOrZero = foldr max 0.0
 -- the next Essence state and any commitment trigger.
 computeNextEssence :: SystemState -> TurnInput -> TurnPlan -> (Essence, Maybe CommitmentTrigger)
 computeNextEssence ss ti tp =
-  case tiEssence ti of
-    EssenceUncommitted trajectory ->
-      let trajectory' =
-            witness
-              defaultEssenceModulation
-              (ssTurnCount ss + 1)
-              (tiConatusEnergy ti)
-              (tiField ti)
-              (fromMaybe defaultDeliberation (tpDeliberation tp))
-              trajectory
-      -- no feature flag: Essence commitment is law-driven (ADR-0036 Policy A).
-      in case shouldCommit defaultEssenceModulation trajectory' of
-           Nothing      -> (EssenceUncommitted trajectory', Nothing)
-           Just trigger ->
-             ( EssenceCommitted
-                 trajectory'
-                 (commit (ssTurnCount ss + 1) trigger trajectory')
-             , Just trigger
-             )
-    EssenceCommitted trajectory commitment ->
-      let trajectory' =
-            witness
-              defaultEssenceModulation
-              (ssTurnCount ss + 1)
-              (tiConatusEnergy ti)
-              (tiField ti)
-              (fromMaybe defaultDeliberation (tpDeliberation tp))
-              trajectory
-      in (EssenceCommitted trajectory' commitment, Nothing)
+  case tpAnomalyStateEffect tp of
+    Just (ResetEssence resetTrajectory _resetEvent) ->
+      (EssenceUncommitted resetTrajectory, Nothing)
+    Nothing -> computeWitnessedEssence
+  where
+    computeWitnessedEssence = case tiEssence ti of
+      EssenceUncommitted trajectory ->
+        let trajectory' =
+              witness
+                defaultEssenceModulation
+                (ssTurnCount ss + 1)
+                (tiConatusEnergy ti)
+                (tiField ti)
+                (fromMaybe defaultDeliberation (tpDeliberation tp))
+                trajectory
+        -- no feature flag: Essence commitment is law-driven (ADR-0036 Policy A).
+        in case shouldCommit defaultEssenceModulation trajectory' of
+             Nothing      -> (EssenceUncommitted trajectory', Nothing)
+             Just trigger ->
+               ( EssenceCommitted
+                   trajectory'
+                   (commit (ssTurnCount ss + 1) trigger trajectory')
+               , Just trigger
+               )
+      EssenceCommitted trajectory commitment ->
+        let trajectory' =
+              witness
+                defaultEssenceModulation
+                (ssTurnCount ss + 1)
+                (tiConatusEnergy ti)
+                (tiField ti)
+                (fromMaybe defaultDeliberation (tpDeliberation tp))
+                trajectory
+        in (EssenceCommitted trajectory' commitment, Nothing)
 
 buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
 buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
@@ -574,18 +579,19 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
         --   committed essence; structural pruning applied each turn.
       , ssCalibrationSnapshots = calibrationSnapshots
       , ssSemanticNetwork = semanticNetwork
+      , ssLastActivationArtifact = taActivationArtifact ta
       , ssSemanticSpace = semanticSpace
       , ssContentSelector = contentSelector
       }
       rawInput = ipfRawText (tiFrame ti)
       mergedSemanticNetwork = mergeSemanticNetworks (ssSemanticNetwork ss) (buildSemanticNetwork newMeaningGraph)
-      semanticNetwork = applyDetectedFeedback feedbackLoopActive rawInput (ssSemanticNetwork ss) mergedSemanticNetwork
+      semanticNetwork = applyDetectedFeedback feedbackLoopActive rawInput (ssLastActivationArtifact ss) mergedSemanticNetwork
       topicAtomsMap = M.fromList
-        [ (topic, Set.toList $ Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
+         [ (topic, Set.toList $ Set.unions [predicateAtomsForSelector (ssLemmaMap ss) predicate | predicate <- Content.dcPredicates dc])
         | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
       topicAtomsSetMap = M.fromList
-        [ (topic, Set.unions [tokenizePredicate (ssLemmaMap ss) (Content.spRu predicate) | predicate <- Content.dcPredicates dc])
+         [ (topic, Set.unions [predicateAtomsForSelector (ssLemmaMap ss) predicate | predicate <- Content.dcPredicates dc])
         | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
       semanticSpace = if contentDensityGate semanticNetwork
@@ -645,7 +651,7 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
                   ) store2 engaged
               else store2
       -- Phase E: revision decisions for contradicted commitments (v3.0 pentagon)
-      (revisionDecisions, mCollapse) =
+      (revisionDecisions, mCollapse, mChallengedStanceDefense) =
         let ce = tpCommitmentEngagement tp
             conatus = tiConatusEnergy ti
             topic = tiBestTopic ti
@@ -654,38 +660,51 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
         in if ceContradicted ce
               then
                 let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
-                    engaged = ceEngaged ce
-                    results = map (\engagedCid ->
-                          (engagedCid, defendOrAdapt sd conatus challengeAtoms)
-                        ) (filter (/= newCid) engaged)
-                    decisions = map (\(engagedCid, result) ->
-                          case result of
-                            Left _collapse -> RcQuarantined engagedCid ContradictionStatement
-                            Right newSd ->
-                              case sdStance newSd of
-                                StanceRevised _ -> RcRevised engagedCid ContradictionStatement
-                                _ -> RcRetained engagedCid ContradictionStatement
-                        ) results
-                    hasCollapse = any (\(_, r) -> case r of Left _ -> True; Right _ -> False) results
-                in (decisions, if hasCollapse then Just () else Nothing)
-              else ([], Nothing)
+                    engaged = filter (/= newCid) (ceEngaged ce)
+                in case engaged of
+                     [] -> ([], Nothing, Nothing)
+                     _ ->
+                       let result = defendOrAdapt sd conatus challengeAtoms
+                           decision engagedCid =
+                             case result of
+                               Left _ -> RcQuarantined engagedCid ContradictionStatement
+                               Right newSd ->
+                                 case sdStance newSd of
+                                   StanceRevised _ -> RcRevised engagedCid ContradictionStatement
+                                   _ -> RcRetained engagedCid ContradictionStatement
+                           challengedSd =
+                             case result of
+                               Left _ -> sd { sdRecoveryCounter = 0 }
+                               Right newSd -> newSd
+                           collapse =
+                             case result of
+                               Left reason -> Just reason
+                               Right _ -> Nothing
+                       in (map decision engaged, collapse, Just (topic, challengedSd))
+              else ([], Nothing, Nothing)
       admittedClaimPayload = case commitDecision of
         CsaAdmitCanonical -> mClaimPayload
         _ -> Nothing
       lemmaMap = ssLemmaMap ss
       store4 = F.foldl' (\s dec -> applyRevisionDecision lemmaMap turnSeq s admittedClaimPayload dec) store3 revisionDecisions
-      -- Recovery Slice: increment sdRecoveryCounter, then recover if threshold met
-      updatedStanceDefenses = M.map (recoverStance . incrementRecoveryCounter) (ssStanceDefenses ss)
+      -- Recovery applies only to topics not challenged on this turn.  The
+      -- challenged topic persists defendOrAdapt's transition and reset counter.
+      updatedStanceDefenses =
+        let recovered = M.map (recoverStance . incrementRecoveryCounter) (ssStanceDefenses ss)
+        in case mChallengedStanceDefense of
+             Nothing -> recovered
+             Just (topic, challengedSd) -> M.insert topic challengedSd recovered
       -- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3)
+      selfStateBeforeCollapse = ssSelfState nextWithLog
       selfStateAfterCollapse = case mCollapse of
         Just _ ->
-          let currentEssence = selfEssence (ssSelfState ss)
+          let currentEssence = selfEssence selfStateBeforeCollapse
               currentTraj = case currentEssence of
                 EssenceUncommitted traj -> traj
                 EssenceCommitted traj _ -> traj
               (resetTraj, _resetEvent) = collapseEssence (unTurnSeq turnSeq) currentTraj
-          in (ssSelfState ss) { selfEssence = EssenceUncommitted resetTraj }
-        Nothing -> ssSelfState ss
+          in selfStateBeforeCollapse { selfEssence = EssenceUncommitted resetTraj }
+        Nothing -> selfStateBeforeCollapse
       nextWithCommitments = nextWithLog
         { ssSemanticCommitments = Just store4
         , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors lemmaMap semanticSpace store4 }

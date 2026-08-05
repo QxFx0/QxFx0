@@ -34,6 +34,10 @@ networkTypesTests =
           assertEqual "seSynthesis" Nothing (seSynthesis edge)
           assertEqual "seConfidence" 1.0 (seConfidence edge)
           assertEqual "seProvenance" ProvenanceCurated (seProvenance edge)
+          assertEqual "seDomain" Nothing (seDomain edge)
+          assertEqual "seTemporalScope" Nothing (seTemporalScope edge)
+          assertEqual "seNamespace" Nothing (seNamespace edge)
+          assertEqual "seLineage" Nothing (seLineage edge)
   , TestLabel "new-format SemanticEdge JSON round-trips" $ TestCase $
       let edge = SemanticEdge
             { seFrom         = "x"
@@ -48,11 +52,15 @@ networkTypesTests =
             , seSynthesis    = Just "synthesis"
             , seConfidence   = 0.8
             , seProvenance   = ProvenanceIngested
+            , seDomain       = Nothing
+            , seTemporalScope = Nothing
+            , seNamespace    = Nothing
+            , seLineage      = Nothing
             }
       in case eitherDecodeStrict (BL8.toStrict (encode edge)) :: Either String SemanticEdge of
            Left err -> assertFailure ("round-trip failed: " ++ err)
            Right decoded -> assertEqual "round-trip" edge decoded
-  , TestLabel "new-format SemanticEdge encodes all 12 fields" $ TestCase $
+  , TestLabel "new-format SemanticEdge encodes all fields" $ TestCase $
       let edge = SemanticEdge
             { seFrom         = "x"
             , seTo           = "y"
@@ -66,6 +74,10 @@ networkTypesTests =
             , seSynthesis    = Just "synthesis"
             , seConfidence   = 0.8
             , seProvenance   = ProvenanceIngested
+            , seDomain       = Nothing
+            , seTemporalScope = Nothing
+            , seNamespace    = Nothing
+            , seLineage      = Nothing
             }
           jsonText = BL8.unpack (encode edge)
       in do
@@ -76,6 +88,10 @@ networkTypesTests =
         assertBool "must contain synthesis" ("\"synthesis\"" `isInfixOf` jsonText)
         assertBool "must contain confidence" ("\"confidence\"" `isInfixOf` jsonText)
         assertBool "must contain provenance" ("\"provenance\"" `isInfixOf` jsonText)
+        assertBool "must contain seDomain" ("\"seDomain\"" `isInfixOf` jsonText)
+        assertBool "must contain seTemporalScope" ("\"seTemporalScope\"" `isInfixOf` jsonText)
+        assertBool "must contain seNamespace" ("\"seNamespace\"" `isInfixOf` jsonText)
+        assertBool "must contain seLineage" ("\"seLineage\"" `isInfixOf` jsonText)
         assertBool "must contain seFrom" ("\"seFrom\"" `isInfixOf` jsonText)
   ]
   where

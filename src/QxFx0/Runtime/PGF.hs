@@ -24,8 +24,10 @@ module QxFx0.Runtime.PGF
     -- * AST linearization (cache-aware)
   , linearizeClaimAstGfWithCache
   , linearizeClaimAstGfLangWithCache
-  , linearizeDialogAtomsGfWithCache
-  , linearizeDialogAtomsGfLangWithCache
+   , linearizeDialogAtomsGfWithCache
+   , linearizeDialogAtomsGfLangWithCache
+   , linearizeResponseSemanticPlanGfWithCache
+   , linearizeResponseSemanticPlanGfLangWithCache
     -- * Parsing (cache-aware)
   , parseClaimAstGfWithCache
   , parseClaimAstGfLangWithCache
@@ -34,8 +36,10 @@ module QxFx0.Runtime.PGF
     -- * Backward-compatible shims (create a fresh cache per call)
   , linearizeClaimAstGf
   , linearizeClaimAstGfLang
-  , linearizeDialogAtomsGf
-  , linearizeDialogAtomsGfLang
+   , linearizeDialogAtomsGf
+   , linearizeDialogAtomsGfLang
+   , linearizeResponseSemanticPlanGf
+   , linearizeResponseSemanticPlanGfLang
   , parseClaimAstGf
   , parseClaimAstGfLang
   , preloadDefaultPGF
@@ -51,6 +55,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
 import System.Directory (doesFileExist)
+import System.FilePath ((</>))
 import System.IO.Error (isDoesNotExistError)
 import Data.IORef (IORef, newIORef, readIORef, modifyIORef')
 import qualified PGF2 as PGF
@@ -59,7 +64,8 @@ import Data.Word (Word64)
 import Numeric (showHex)
 
 import QxFx0.Types (ArtifactManifest(..), AssemblyPath(..), AuthorityClass(..), ClaimAst(..), GfActTopic(..), GfLinearizationResult(..), GfMechanism(..), GfModifier(..), GfNP(..), GfNumber(..), GfRelation(..), GfVP(..), MorphologyData(..))
-import QxFx0.ExceptionPolicy (PGFError(..))
+import QxFx0.ExceptionPolicy (PGFError(..), tryQxFx0)
+import QxFx0.Resources.Paths (ResourcePaths(..), resolveResourcePaths)
 import QxFx0.Types.Decision.Enums.Render (RenderStyle(..))
 import QxFx0.Runtime.GF.Map (lookupTopicGfLexemeId, buildGfLexemeMap)
 import qualified QxFx0.Lexicon.GfMap as LegacyGfMap
@@ -69,6 +75,8 @@ import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
 import QxFx0.Render.Dialogue (linearizeClaimAstRus)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (emptyRuntimeParadigms)
 import QxFx0.Semantic.Authority.GfExprParse (gfExprToClaimAst)
+import QxFx0.Semantic.ResponsePlan.GF (responsePlanToGfExpr)
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan)
 
 defaultPgfPath :: FilePath
 defaultPgfPath = "spec/gf/QxFx0Syntax.pgf"
@@ -167,11 +175,53 @@ linearizeDialogAtomsGfLangWithCache cache mPgfPath lang da =
           | lang == "QxFx0SyntaxRus" ->
               Right (mkGfLinearizationResult mPgfPath lang RussianCompatShimRoute AuthorityShim (Just "russian_compatibility_shim") raw (artifactManifestFor mPgfPath lang RussianCompatShimRoute AuthorityShim raw))
           | otherwise ->
-              Right (mkGfLinearizationResult mPgfPath lang PgfAtomsRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfAtomsRoute AuthorityCanonical raw))
+                Right (mkGfLinearizationResult mPgfPath lang PgfAtomsRoute AuthorityCanonical Nothing raw (artifactManifestFor mPgfPath lang PgfAtomsRoute AuthorityCanonical raw))
+
+-- | Linearize a response plan only when every proposition resolves through the
+-- generated curated slot catalog. Unlike legacy Russian ClaimAst rendering,
+-- this path always executes the compiled PGF grammar and is therefore safe to
+-- promote as the plan-first authority once its effect boundary is wired.
+linearizeResponseSemanticPlanGf :: Maybe FilePath -> ResponseSemanticPlan -> IO (Either Text GfLinearizationResult)
+linearizeResponseSemanticPlanGf mPgfPath plan = do
+  cache <- newPgfCache
+  linearizeResponseSemanticPlanGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" plan
+
+linearizeResponseSemanticPlanGfLang :: Maybe FilePath -> Text -> ResponseSemanticPlan -> IO (Either Text GfLinearizationResult)
+linearizeResponseSemanticPlanGfLang mPgfPath lang plan = do
+  cache <- newPgfCache
+  linearizeResponseSemanticPlanGfLangWithCache cache mPgfPath lang plan
+
+linearizeResponseSemanticPlanGfWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> ResponseSemanticPlan -> IO (Either Text GfLinearizationResult)
+linearizeResponseSemanticPlanGfWithCache cache mPgfPath plan =
+  linearizeResponseSemanticPlanGfLangWithCache cache mPgfPath "QxFx0SyntaxRus" plan
+
+linearizeResponseSemanticPlanGfLangWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> ResponseSemanticPlan -> IO (Either Text GfLinearizationResult)
+linearizeResponseSemanticPlanGfLangWithCache cache mPgfPath lang plan =
+  case responsePlanToGfExpr plan of
+    Left err -> pure (Left err)
+    Right expr -> do
+      result <- linearizeExprWithCache cache mPgfPath lang expr
+      pure $ case result of
+        Left pgfErr -> Left (renderPGFError pgfErr)
+        Right raw ->
+          let surface = normalizeGfSurface raw
+          in Right (mkGfLinearizationResult mPgfPath lang PgfClaimRoute AuthorityCanonical Nothing surface (artifactManifestFor mPgfPath lang PgfClaimRoute AuthorityCanonical surface))
+
+-- | GF token concatenation leaves a space before punctuation in this compact
+-- concrete syntax. Removing that orthographic artifact does not alter the
+-- generated proposition structure or introduce lexical material.
+normalizeGfSurface :: Text -> Text
+normalizeGfSurface =
+  T.replace "?." "?"
+    . T.replace "!." "!"
+    . T.replace " ." "."
+    . T.replace " ," ","
+    . T.replace " ?" "?"
+    . T.replace " !" "!"
 
 linearizeExprWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> Text -> IO (Either PGFError Text)
 linearizeExprWithCache cache mPgfPath lang expr = do
-  let pgfPath = fromMaybe defaultPgfPath mPgfPath
+  pgfPath <- resolvePgfPath mPgfPath
   exists <- doesFileExist pgfPath
   if not exists
     then pure (Left (PGFFileNotFound pgfPath))
@@ -341,7 +391,7 @@ dialogAtomsToGfExpr da =
        Nothing -> Left ("unresolved_topic_lexeme:" <> topicStr)
        Just gfTopic ->
          if intent == "define"
-           then Right ("MoveDefine (MkNP " <> gfTopic <> ") (MkNP " <> gfTopic <> ")")
+           then Right ("MoveDefine (MkNP " <> gfTopic <> ") RelIdentity (MkNP " <> gfTopic <> ")")
            else if intent == "ground"
              then Right ("MoveGround (MkNP " <> gfTopic <> ")")
              else Right ("MoveGround (MkNP " <> gfTopic <> ")")
@@ -385,7 +435,7 @@ parseClaimAstGfWithCache cache mPgfPath surface =
 
 parseClaimAstGfLangWithCache :: IORef (Map.Map FilePath PGF.PGF) -> Maybe FilePath -> Text -> Text -> IO (Either Text ClaimAst)
 parseClaimAstGfLangWithCache cache mPgfPath lang surface = do
-  let pgfPath = fromMaybe defaultPgfPath mPgfPath
+  pgfPath <- resolvePgfPath mPgfPath
   exists <- doesFileExist pgfPath
   if not exists
     then pure (Left ("pgf_missing:" <> T.pack pgfPath))
@@ -422,16 +472,25 @@ preloadDefaultPGF = newPgfCache >>= preloadDefaultPGFWithCache
 
 preloadDefaultPGFWithCache :: IORef (Map.Map FilePath PGF.PGF) -> IO (Either Text ())
 preloadDefaultPGFWithCache cache = do
-  exists <- doesFileExist defaultPgfPath
+  pgfPath <- resolvePgfPath Nothing
+  exists <- doesFileExist pgfPath
   if not exists
-    then pure (Left ("PGF grammar not found at " <> T.pack defaultPgfPath))
+    then pure (Left ("PGF grammar not found at " <> T.pack pgfPath))
     else do
       result <- try @IOException $ do
-        _ <- cachedReadPGF cache defaultPgfPath
+        _ <- cachedReadPGF cache pgfPath
         pure (Right ())
       case result of
         Left e -> pure (Left ("PGF preload failed: " <> T.pack (show e)))
         Right r -> pure r
+
+resolvePgfPath :: Maybe FilePath -> IO FilePath
+resolvePgfPath (Just path) = pure path
+resolvePgfPath Nothing = do
+  result <- tryQxFx0 resolveResourcePaths
+  pure $ case result of
+    Right paths -> rpResourceDir paths </> "spec" </> "gf" </> "QxFx0Syntax.pgf"
+    Left _ -> defaultPgfPath
 
 
 

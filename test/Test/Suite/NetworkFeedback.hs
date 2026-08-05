@@ -28,6 +28,10 @@ sampleEdge = SemanticEdge
   , seSynthesis    = Nothing
   , seConfidence   = 0.5
   , seProvenance   = ProvenanceCurated
+  , seDomain       = Nothing
+  , seTemporalScope = Nothing
+  , seNamespace    = Nothing
+  , seLineage      = Nothing
   }
 
 sampleNetwork :: SemanticNetwork

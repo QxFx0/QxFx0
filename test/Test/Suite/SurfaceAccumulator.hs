@@ -26,7 +26,7 @@ neutralField = emptyField { fieldConfidence = FieldConfidence 0.0 }
 
 mkTestPred :: Text -> Text -> Maybe Text -> Maybe Text -> SemanticPredicate
 mkTestPred ru topic mRationale mSynthesis =
-  SemanticPredicate RoleProperty ru "" topic mRationale Nothing mSynthesis
+  SemanticPredicate RoleProperty ru "" topic Nothing mRationale Nothing mSynthesis
 
 surfaceAccumulatorTests :: [Test]
 surfaceAccumulatorTests =

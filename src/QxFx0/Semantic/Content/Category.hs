@@ -14,23 +14,4 @@ module QxFx0.Semantic.Content.Category
   ( ConceptCategory(..)
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Text (Text)
-import GHC.Generics (Generic)
-
--- | Category of a concept, used for category-typed generic predicates and
--- ontology nodes.
-data ConceptCategory
-  = CategoryPhilosophical
-    -- ^ Abstract philosophical concepts (свобода, истина, сознание, etc.)
-  | CategorySocial
-    -- ^ Social/interpersonal concepts (ответственность, доверие, долг)
-  | CategoryPsychological
-    -- ^ Psychological/mental concepts (память, восприятие, эмоция)
-  | CategoryPhysical
-    -- ^ Physical/concrete concepts (тело, пространство, время)
-  | CategoryGeneral
-    -- ^ Fallback for unclassifiable topics
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Semantic.Content (ConceptCategory(..))

@@ -22,7 +22,7 @@ import QxFx0.Semantic.Network.Types
   , SemanticEdge(..)
   , SemanticNetwork(..)
   )
-import QxFx0.Semantic.Network.RuntimeProjection
+import QxFx0.Bridge.SemanticNetwork.RuntimeProjection
   ( applyProjectionDelta
   , ensureRuntimeProjectionSchema
   , loadRuntimeEdgeProjection
@@ -53,7 +53,7 @@ mkEdge from to prov rel conf cooc = SemanticEdge
   , seSynthesis = Nothing
   , seConfidence = conf
   , seProvenance = prov
-  , seNamespace = NamespaceSessionLocal
+  , seNamespace = Just NamespaceSessionLocal
   , seLineage = Nothing
   }
 
@@ -80,8 +80,8 @@ testRoundTrip = TestLabel "runtime projection round-trip" $ TestCase $ do
   ensureRuntimeProjectionSchema db
   let edge1 = mkEdge "свобода" "долг" ProvenanceRuntimeLLM RelRequires 0.6 1
       edge2 = mkEdge "свобода" "выбор" ProvenanceRuntimeLLM RelPresupposes 0.7 2
-  persistRuntimeEdges db [edge1, edge2]
-  loaded <- loadRuntimeEdgeProjection db
+  persistRuntimeEdges db "session-a" [edge1, edge2]
+  loaded <- loadRuntimeEdgeProjection db "session-a"
   NSQL.close conn
   cleanup
   assertEqual "two edges persisted" 2 (M.size loaded)
@@ -124,6 +124,12 @@ mkLearningEvent kind from to conf cooc = LearningEvent
   , leReason       = Nothing
   , lePromptHash   = Nothing
   , leResponseHash = Nothing
+  , leModel = Nothing
+  , leParserDecision = Nothing
+  , leAdmissionDecision = Nothing
+  , leEvidenceSource = Nothing
+  , leEdgeNamespace = Just NamespaceSessionLocal
+  , leEdgeOwner = Nothing
   }
 
 testReplayEmpty :: Test
@@ -137,6 +143,26 @@ testReplayAdmit = TestLabel "replay admit inserts edge" $ TestCase $ do
       delta = rebuildLearningProjection events
   assertEqual "one edge" 1 (M.size delta)
   assertBool "edge exists" (M.member ("свобода", "долг") delta)
+
+testReplayCorroboration :: Test
+testReplayCorroboration = TestLabel "replay corroboration increments edge support" $ TestCase $ do
+  let events =
+        [ mkLearningEvent EdgeAdmitted "свобода" "долг" 0.6 1
+        , mkLearningEvent EdgeCorroborated "свобода" "долг" 0.6 2
+        ]
+      delta = rebuildLearningProjection events
+  case M.lookup ("свобода", "долг") delta of
+    Nothing -> assertFailure "edge missing"
+    Just edge -> assertEqual "corroboration increments co-occurrence" 2 (seCoOccurrence edge)
+
+testReplayTargetedConflictPreservesAdmittedEdge :: Test
+testReplayTargetedConflictPreservesAdmittedEdge =
+  TestLabel "replay targeted conflict keeps the admitted target" $ TestCase $ do
+    let admitted = mkLearningEvent EdgeAdmitted "свобода" "долг" 0.6 1
+        conflict = (mkLearningEvent EdgeQuarantined "свобода" "долг" 0.6 1)
+          { leEvidenceSource = Just "candidate_targeted_corroboration" }
+        delta = rebuildLearningProjection [admitted, conflict]
+    assertBool "incoming conflict does not erase admitted edge" (M.member ("свобода", "долг") delta)
 
 testReplayReject :: Test
 testReplayReject = TestLabel "replay reject removes edge" $ TestCase $ do
@@ -212,13 +238,13 @@ testHumanCorrectionWinsOverRuntime = TestLabel "human correction wins over runti
 
 testNamespaceGlobalWins :: Test
 testNamespaceGlobalWins = TestLabel "global namespace wins over user-local and session-local" $ TestCase $ do
-  let sessionEdge = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = NamespaceSessionLocal }
-      userEdge    = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = NamespaceUserLocal }
-      globalEdge  = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = NamespaceGlobal }
+  let sessionEdge = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = Just NamespaceSessionLocal }
+      userEdge    = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = Just NamespaceUserLocal }
+      globalEdge  = (mkEdge "a" "b" ProvenanceRuntimeLLM RelRequires 0.6 1) { seNamespace = Just NamespaceGlobal }
       net1 = applyProjectionDelta (M.singleton ("a", "b") userEdge) (mkNetwork [sessionEdge])
       net2 = applyProjectionDelta (M.singleton ("a", "b") globalEdge) net1
-  assertEqual "user wins over session" (Just NamespaceUserLocal) (seNamespace <$> M.lookup ("a", "b") (snEdges net1))
-  assertEqual "global wins over user" (Just NamespaceGlobal) (seNamespace <$> M.lookup ("a", "b") (snEdges net2))
+  assertEqual "user wins over session" (Just NamespaceUserLocal) (M.lookup ("a", "b") (snEdges net1) >>= seNamespace)
+  assertEqual "global wins over user" (Just NamespaceGlobal) (M.lookup ("a", "b") (snEdges net2) >>= seNamespace)
 
 testNamespaceRoundTrip :: Test
 testNamespaceRoundTrip = TestLabel "namespace round-trips through runtime projection" $ TestCase $ do
@@ -231,14 +257,41 @@ testNamespaceRoundTrip = TestLabel "namespace round-trips through runtime projec
     Right c -> pure c
   let db = QxFx0DB dbPath conn
   ensureRuntimeProjectionSchema db
-  let edge = (mkEdge "x" "y" ProvenanceHumanCorrection RelRequires 0.9 1) { seNamespace = NamespaceUserLocal }
-  persistRuntimeEdge db edge
-  loaded <- loadRuntimeEdgeProjection db
+  let edge = (mkEdge "x" "y" ProvenanceHumanCorrection RelRequires 0.9 1) { seNamespace = Just NamespaceGlobal }
+  persistRuntimeEdge db "session-a" edge
+  loaded <- loadRuntimeEdgeProjection db "session-a"
   NSQL.close conn
   cleanup
   case M.lookup ("x", "y") loaded of
     Nothing -> assertFailure "edge missing"
-    Just e -> assertEqual "namespace preserved" NamespaceUserLocal (seNamespace e)
+    Just e -> assertEqual "namespace preserved" (Just NamespaceGlobal) (seNamespace e)
+
+testSessionIsolationAndLegacyMigration :: Test
+testSessionIsolationAndLegacyMigration = TestLabel "runtime projection isolates sessions and migrates legacy rows global" $ TestCase $ do
+  dbPath <- freshTestDbPath "qxfx0_test_runtime_session_isolation.db"
+  let cleanup = mapM_ removeIfExists [dbPath, dbPath <> "-wal", dbPath <> "-shm"]
+  cleanup
+  Right conn <- NSQL.open dbPath
+  _ <- NSQL.execSql conn
+    "CREATE TABLE semantic_edges_runtime (id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, edge_from TEXT NOT NULL, edge_to TEXT NOT NULL, weight REAL NOT NULL, co_occurrence INTEGER NOT NULL, relation_type TEXT, domain TEXT, temporal_scope TEXT, verb TEXT, rationale TEXT, confidence REAL NOT NULL, provenance TEXT NOT NULL, namespace TEXT NOT NULL DEFAULT 'session_local')"
+  _ <- NSQL.execSql conn
+    "INSERT INTO semantic_edges_runtime(ts, edge_from, edge_to, weight, co_occurrence, relation_type, confidence, provenance, namespace) VALUES(1, 'legacy', 'shared', 0.5, 1, 'related_to', 0.5, 'runtime_llm', 'session_local')"
+  let db = QxFx0DB dbPath conn
+      sessionA = mkEdge "only-a" "target-a" ProvenanceRuntimeLLM RelRequires 0.6 1
+      sessionB = mkEdge "only-b" "target-b" ProvenanceRuntimeLLM RelRequires 0.6 1
+  ensureRuntimeProjectionSchema db
+  persistRuntimeEdge db "session-a" sessionA
+  persistRuntimeEdge db "session-b" sessionB
+  loadedA <- loadRuntimeEdgeProjection db "session-a"
+  loadedB <- loadRuntimeEdgeProjection db "session-b"
+  NSQL.close conn
+  cleanup
+  assertBool "legacy row is explicitly global and visible to A" (M.member ("legacy", "shared") loadedA)
+  assertBool "legacy row is explicitly global and visible to B" (M.member ("legacy", "shared") loadedB)
+  assertBool "A sees its own local row" (M.member ("only-a", "target-a") loadedA)
+  assertBool "A cannot see B local row" (not (M.member ("only-b", "target-b") loadedA))
+  assertBool "B sees its own local row" (M.member ("only-b", "target-b") loadedB)
+  assertBool "B cannot see A local row" (not (M.member ("only-a", "target-a") loadedB))
 
 runtimeProjectionTests :: [Test]
 runtimeProjectionTests =
@@ -247,6 +300,8 @@ runtimeProjectionTests =
   , testNovelEdgesAdded
   , testReplayEmpty
   , testReplayAdmit
+  , testReplayCorroboration
+  , testReplayTargetedConflictPreservesAdmittedEdge
   , testReplayReject
   , testReplayQuarantine
   , testReplayPositiveFeedback
@@ -256,4 +311,5 @@ runtimeProjectionTests =
   , testHumanCorrectionWinsOverRuntime
   , testNamespaceGlobalWins
   , testNamespaceRoundTrip
+  , testSessionIsolationAndLegacyMigration
   ]

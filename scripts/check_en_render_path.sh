@@ -144,6 +144,12 @@ import json, sys, re
 try:
     cli = json.loads(sys.argv[1])
     trace = json.loads(sys.argv[2])
+    if "replayTraceEnvelopeVersion" in trace:
+        if trace.get("replayTraceEnvelopeVersion") != 1:
+            raise ValueError("unsupported replay trace envelope version")
+        trace = trace.get("trace")
+        if not isinstance(trace, dict):
+            raise ValueError("invalid replay trace envelope")
     expected = sys.argv[3] if len(sys.argv) > 3 else ""
 except Exception as e:
     print(f"ERR|ERR|ERR|ERR|ERR|ERR|parse_error: {e}")

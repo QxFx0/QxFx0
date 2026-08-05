@@ -1,12 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Network.Types
   ( SemanticEdge(..)
   , EdgeSource(..)
   , SemanticNetwork(..)
+  , ActivationArtifact(..)
   , ActivationStep(..)
   , EdgeProvenance(..)
   , DomainTag(..)
@@ -21,157 +19,15 @@ module QxFx0.Semantic.Network.Types
   , edgeRefOf
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson
-  ( FromJSON(parseJSON)
-  , ToJSON(toJSON)
-  , object
-  , withObject
-  , (.!=)
-  , (.:)
-  , (.:?)
-  , (.=)
-  )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
-import GHC.Generics (Generic)
 
-import QxFx0.Semantic.Content.AtomStore (RelationType(..))
-
--- | Domain tag for semantic edges (philosophy ontology categories).
-data DomainTag
-  = DomainOntology
-  | DomainEthics
-  | DomainAesthetics
-  | DomainEpistemology
-  | DomainPoliticalPhilosophy
-  | DomainAnthropology
-  | DomainMethodology
-  | DomainLogic
-  | DomainSocialPhilosophy
-  | DomainPhilosophyOfMind
-  | DomainArtHistory
-  | DomainGeneral
-  deriving stock (Eq, Show, Ord, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Namespace for runtime semantic edges (used by RuntimeProjection).
-data EdgeNamespace
-  = NamespaceSessionLocal
-  | NamespaceUserLocal
-  | NamespaceGlobal
-  deriving stock (Eq, Show, Ord, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Reference to an edge in the projection.
-type EdgeRef = (Text, Text, RelationType, EdgeNamespace)
-
--- | Temporal scope for projected edges.
-data TemporalScope
-  = TemporalPoint
-  | TemporalInterval
-  | TemporalEternal
-  | AncientPeriod
-  | ClassicalPeriod
-  | MedievalPeriod
-  | RenaissancePeriod
-  | EarlyModernPeriod
-  | ModernPeriod
-  | ContemporaryPeriod
-  | TranshistoricalPeriod
-  | SpecificEra Text
-  deriving stock (Eq, Show, Ord, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Provenance of a semantic edge, distinguishing curated, corpus,
--- substrate, and externally-ingested origins.
-data EdgeProvenance
-  = ProvenanceCurated
-  | ProvenanceCorpus
-  | ProvenanceSubstrate
-  | ProvenanceIngested
-  | ProvenanceSelfPlay
-  | ProvenanceDialogueFeedback
-  | ProvenanceRuntimeLLM
-  | ProvenanceHumanCorrection
-  | ProvenanceDerived
-  deriving stock (Eq, Show, Ord, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Source of an edge in the SemanticNetwork.
-data EdgeSource
-  = ExplicitEdge
-    -- ^ Edge from seedFromCorpus (definitionCorpus predicates)
-  | SubstrateEdge
-    -- ^ Edge from brain_kb co-occurrence
-  deriving stock (Eq, Show, Ord, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data SemanticEdge = SemanticEdge
-  { seFrom         :: !Text
-  , seTo           :: !Text
-  , seWeight       :: !Double
-  , seCoOccurrence :: !Int
-  , seSource       :: !EdgeSource
-  , seRelationType :: !(Maybe RelationType)
-  , seVerb         :: !(Maybe Text)
-  , seRationale    :: !(Maybe Text)
-  , seCounter      :: !(Maybe Text)
-  , seSynthesis    :: !(Maybe Text)
-  , seConfidence   :: !Double
-  , seProvenance   :: !EdgeProvenance
-  , seDomain       :: !(Maybe DomainTag)
-  , seTemporalScope :: !(Maybe TemporalScope)
-  , seNamespace    :: !(Maybe EdgeNamespace)
-  , seLineage      :: !(Maybe [EdgeRef])
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
-instance ToJSON SemanticEdge where
-  toJSON e = object
-    [ "seFrom"         .= seFrom e
-    , "seTo"           .= seTo e
-    , "seWeight"       .= seWeight e
-    , "seCoOccurrence" .= seCoOccurrence e
-    , "seSource"       .= seSource e
-    , "relation_type"  .= seRelationType e
-    , "verb"           .= seVerb e
-    , "rationale"      .= seRationale e
-    , "counter"        .= seCounter e
-    , "synthesis"      .= seSynthesis e
-    , "confidence"     .= seConfidence e
-    , "provenance"     .= seProvenance e
-    , "seDomain"      .= seDomain e
-    , "seTemporalScope" .= seTemporalScope e
-    , "seNamespace"   .= seNamespace e
-    , "seLineage"     .= seLineage e
-    ]
-
-instance FromJSON SemanticEdge where
-  parseJSON = withObject "SemanticEdge" $ \o ->
-    SemanticEdge
-      <$> o .:  "seFrom"
-      <*> o .:  "seTo"
-      <*> o .:  "seWeight"
-      <*> o .:  "seCoOccurrence"
-      <*> o .:  "seSource"
-      <*> o .:? "relation_type"
-      <*> o .:? "verb"
-      <*> o .:? "rationale"
-      <*> o .:? "counter"
-      <*> o .:? "synthesis"
-      <*> o .:? "confidence" .!= 1.0
-      <*> o .:? "provenance" .!= ProvenanceCurated
-      <*> o .:? "seDomain"
-      <*> o .:? "seTemporalScope"
-      <*> o .:? "seNamespace"
-      <*> o .:? "seLineage"
+import QxFx0.Types.Semantic.AtomGraph (RelationType(..))
+import QxFx0.Types.Semantic.Network
 
 -- | Build a lineage reference from a semantic edge.
 -- Identity role: constructs a reference for lineage tracking.
@@ -195,29 +51,6 @@ semanticEdge from to weight cooc source =
     provenance = case source of
       ExplicitEdge  -> ProvenanceCorpus
       SubstrateEdge -> ProvenanceSubstrate
-
-data SemanticNetwork = SemanticNetwork
-  { snNodes        :: !(Set Text)
-  , snEdges        :: !(Map (Text, Text) SemanticEdge)
-  , snActivation   :: !(Map Text Double)
-  , snDecayRate    :: !Double
-  , snMaxHops      :: !Int
-  , snActivationLog :: !(Seq ActivationStep)
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | A single step in the spreading activation trace.
--- Records which node was activated, through which edge source
--- (explicit or substrate), from which node, at which hop,
--- and with what weight.
-data ActivationStep = ActivationStep
-  { asNode   :: !Text
-  , asSource :: !EdgeSource
-  , asVia    :: !Text
-  , asHop    :: !Int
-  , asWeight :: !Double
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
 
 emptySemanticNetwork :: SemanticNetwork
 emptySemanticNetwork = SemanticNetwork

@@ -6,6 +6,11 @@
 module QxFx0.Types.TurnProjection
   ( ParserStatus(..)
   , TurnReplayTrace(..)
+  , ReplayTraceEnvelope(..)
+  , currentReplayTraceEnvelopeVersion
+  , encodePersistedReplayTrace
+  , decodePersistedReplayTrace
+  , decodeReplayTracePayload
   , PreActorFailureKind(..)
   , PreActorFailureEvent(..)
   , EffectSnapshot(..)
@@ -20,7 +25,9 @@ import QxFx0.Types.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision)
 import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ConvMove(..), ReplayProvenanceStatus, ResponseSurfaceKind, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
-import QxFx0.Semantic.Network.Types (ActivationStep(..))
+import QxFx0.Types.Semantic.Network (ActivationStep(..))
+import QxFx0.Types.Semantic.ContentSelector (SelectorDiagnostic)
+import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId)
@@ -30,19 +37,25 @@ import QxFx0.Types.Sense (SenseAxis, SenseOperator, RhetoricalMove)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import QxFx0.Types.Domain.User (IdentityClaimRef)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
-import QxFx0.Self.Conatus (ConatusEnergy)
-import QxFx0.Self.Field (Field)
+import QxFx0.Types.Self.Conatus (ConatusEnergy)
+import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
-import QxFx0.Memory.Episodic
+import QxFx0.Types.Memory.Episodic
   ( EpisodicQuery
   , EpisodicId
   , ReuseAnnotation
   )
-import Data.Aeson (ToJSON, FromJSON, parseJSON, withObject, (.:), (.:?), (.!=))
+import Data.Aeson (ToJSON(..), FromJSON(..), Value(..), object, withObject, (.:), (.:?), (.!=), (.=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 import Data.Text (Text)
 import GHC.Generics (Generic)
-import QxFx0.Runtime.Mode (RuntimeMode(..))
+import QxFx0.Types.RuntimeMode (RuntimeMode(..))
 import QxFx0.Types.FMAR (FmarMode(..))
 
 data PreActorFailureKind
@@ -438,8 +451,76 @@ data TurnReplayTrace = TurnReplayTrace
   , trcEmittedPredicates :: ![Text]
     -- ^ P2.2: predicate surface forms (spRu) actually rendered this turn.
     --   Empty when the turn did not use semantic predicate selection.
-  } deriving stock (Show, Eq, Generic)
+  , trcCuratedOverlayVersion :: !(Maybe Text)
+    -- ^ Explicitly active promotion overlay observed by this turn.
+  , trcOverlayPredicateIds :: ![Text]
+    -- ^ Overlay predicates actually selected into the rendered surface.
+  , trcOverlayContentUsed :: !Bool
+    -- ^ True exactly when at least one selected predicate came from the
+    -- active promotion overlay.
+   , trcSelectorDiagnostics :: ![SelectorDiagnostic]
+     -- ^ Observed selector decisions from the rendered semantic artifact.
+   , trcResponsePlan :: !(Maybe ResponseSemanticPlan)
+     -- ^ Versioned grounded content plan, when a content-producing move used one.
+   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
+
+-- | Versioned representation stored in @turn_quality.replay_trace_json@.
+-- Version 1 contains the current trace schema under @trace@. Bare trace
+-- objects are the only legacy representation accepted by
+-- 'decodePersistedReplayTrace'; unknown envelope versions fail closed.
+data ReplayTraceEnvelope = ReplayTraceEnvelope
+  { rteVersion :: !Int
+  , rteTrace :: !TurnReplayTrace
+  } deriving stock (Show, Eq, Generic)
+
+currentReplayTraceEnvelopeVersion :: Int
+currentReplayTraceEnvelopeVersion = 1
+
+instance ToJSON ReplayTraceEnvelope where
+  toJSON envelope = object
+    [ "replayTraceEnvelopeVersion" .= rteVersion envelope
+    , "trace" .= rteTrace envelope
+    ]
+
+instance FromJSON ReplayTraceEnvelope where
+  parseJSON = withObject "ReplayTraceEnvelope" $ \o -> do
+    version <- o .: "replayTraceEnvelopeVersion"
+    if version == currentReplayTraceEnvelopeVersion
+      then ReplayTraceEnvelope version <$> o .: "trace"
+      else parserFailure ("unsupported replay trace envelope version: " <> show (version :: Int))
+
+encodePersistedReplayTrace :: TurnReplayTrace -> BL.ByteString
+encodePersistedReplayTrace =
+  Aeson.encode . ReplayTraceEnvelope currentReplayTraceEnvelopeVersion
+
+-- | Decode either the current versioned envelope or an existing bare trace.
+-- A bare object is legacy version 0. Compatibility defaults remain explicit in
+-- the 'TurnReplayTrace' parser; mandatory trace fields are not relaxed here.
+decodePersistedReplayTrace :: BS.ByteString -> Either String TurnReplayTrace
+decodePersistedReplayTrace bytes = do
+  payload <- decodeReplayTracePayload bytes
+  Aeson.parseEither parseJSON payload
+
+-- | Unwrap a persisted replay payload for consumers that intentionally parse
+-- only a trace subset. This applies the same version policy as full decoding.
+decodeReplayTracePayload :: BS.ByteString -> Either String Value
+decodeReplayTracePayload bytes = do
+  value <- Aeson.eitherDecodeStrict' bytes
+  Aeson.parseEither parsePayload value
+  where
+    parsePayload value@(Object o) =
+      case KeyMap.lookup (Key.fromText "replayTraceEnvelopeVersion") o of
+        Nothing -> pure value
+        Just _ -> do
+          version <- o .: "replayTraceEnvelopeVersion"
+          if version == currentReplayTraceEnvelopeVersion
+            then o .: "trace"
+             else parserFailure ("unsupported replay trace envelope version: " <> show (version :: Int))
+    parsePayload _ = parserFailure "persisted replay trace must be a JSON object"
+
+parserFailure :: String -> Aeson.Parser a
+parserFailure = fail
 
 instance FromJSON TurnReplayTrace where
   parseJSON = withObject "TurnReplayTrace" $ \o -> do
@@ -448,6 +529,9 @@ instance FromJSON TurnReplayTrace where
     activated <- o .:? "trcActivatedConcepts" .!= []
     missing   <- o .:? "trcMissingPredicates" .!= []
     emitted   <- o .:? "trcEmittedPredicates" .!= []
+    overlayIds <- o .:? "trcOverlayPredicateIds" .!= []
+    overlayUsed <- o .:? "trcOverlayContentUsed" .!= False
+    selectorDiagnostics <- o .:? "trcSelectorDiagnostics" .!= []
     TurnReplayTrace
       <$> o .: "trcRequestId"
       <*> o .: "trcSessionId"
@@ -535,8 +619,8 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcDreamPressureCandidateThresholdFired"
       <*> o .:? "trcDreamPressureCandidateKinds" .!= []
       <*> o .:? "trcDreamPressureBiasApplied"
-      <*> o .:? "trcDreamPressureDecisionReasons" .!= []
       <*> o .:? "trcDreamCandidateLifecycleStatuses" .!= []
+      <*> o .:? "trcDreamCandidateDecisionReasons" .!= []
       <*> o .:? "trcDreamCandidateApplied"
       <*> o .:? "trcPerspectiveProjection"
       <*> o .:? "trcPerspectiveProjections" .!= []
@@ -590,6 +674,11 @@ instance FromJSON TurnReplayTrace where
       <*> pure activated
       <*> pure missing
       <*> pure emitted
+      <*> o .:? "trcCuratedOverlayVersion"
+      <*> pure overlayIds
+      <*> pure overlayUsed
+       <*> pure selectorDiagnostics
+       <*> o .:? "trcResponsePlan"
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

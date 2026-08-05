@@ -66,6 +66,7 @@ import Test.Suite.SemanticContentB3 (semanticContentB3Tests)
 import Test.Suite.SemanticRepairB3 (semanticRepairB3Tests)
 import Test.Suite.B3MechanicalGateExecution (b3MechanicalGateExecutionTests)
 import Test.Suite.ContentQualityGate (contentQualityGateTests)
+import Test.Suite.ResponsePlan (responsePlanTests)
 
 main :: IO ()
 main = do
@@ -131,7 +132,8 @@ main = do
              ++ semanticContentB3Tests
               ++ semanticRepairB3Tests
               ++ b3MechanicalGateExecutionTests
-              ++ contentQualityGateTests
+               ++ contentQualityGateTests
+               ++ responsePlanTests
                   )
 
   if errors testCounts + failures testCounts > 0

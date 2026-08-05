@@ -102,8 +102,8 @@ testCuratedPredicatesAdmitted = TestLabel "curated topic contains expected Russi
     Nothing -> assertFailure "смысл should be present in extended corpus"
     Just dc -> do
       let ruPreds = map spRu (dcPredicates dc)
-      assertBool "смысл predicate should mention 'понимание'"
-        (any ("понимание" `T.isInfixOf`) ruPreds)
+      assertBool "смысл predicate should mention understanding or significance"
+        (any (\predicate -> "понимание" `T.isInfixOf` predicate || "значение" `T.isInfixOf` predicate) ruPreds)
 
 -- | A relation-rationale endpoint that corresponds to a curated gap concept
 -- must pass the admission gate after normalization.

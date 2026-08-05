@@ -24,10 +24,14 @@ module QxFx0.Semantic.Ontology
   , lookupParent
   , lookupSiblings
   , lookupChildren
+  -- Dynamic learning
+  , addOntologyNode
+  , addOntologyNodeAutoDepth
+  , addOntologyNodes
+  , addOntologyNodesAutoDepth
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(parseJSON), ToJSON, eitherDecodeStrict, withObject, (.:))
+import Data.Aeson (FromJSON(parseJSON), eitherDecodeStrict, withObject, (.:))
 import Data.Foldable (foldl')
 import Data.List (sort)
 import Data.Map.Strict (Map)
@@ -38,26 +42,10 @@ import qualified Data.ByteString as BS
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
-import GHC.Generics (Generic)
 
 import QxFx0.Semantic.Content.Category (ConceptCategory(..))
-
--- | A single concept in the ontology hierarchy.
-data OntologyNode = OntologyNode
-  { onName     :: !Text
-  , onCategory :: !ConceptCategory
-  , onParent   :: !(Maybe Text)
-  , onChildren :: !(Set Text)
-  , onDepth    :: !Int
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | In-memory ontology graph.
-data Ontology = Ontology
-  { otNodes :: !(Map Text OntologyNode)
-  , otRoots :: !(Set Text)
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Semantic.Ontology (OntologyNode(..), Ontology(..))
+import QxFx0.ExceptionPolicy (mkRuntimeInitError, throwQxFx0)
 
 -- | Empty ontology with no nodes.
 emptyOntology :: Ontology
@@ -120,10 +108,10 @@ loadOntology path = do
   where
     parseLine :: Text -> IO RawNode
     parseLine line
-      | T.null (T.strip line) = fail "Empty ontology line"
+      | T.null (T.strip line) = throwOntologyError "empty ontology line"
       | otherwise =
           case eitherDecodeStrict (TE.encodeUtf8 line) of
-            Left err  -> fail ("Failed to parse ontology line: " ++ err)
+            Left err  -> throwOntologyError ("failed to parse ontology line: " <> T.pack err)
             Right raw -> pure raw
 
     insertRaw :: Map Text OntologyNode -> RawNode -> Map Text OntologyNode
@@ -141,6 +129,14 @@ loadOntology path = do
     attachChild acc RawNode{rawName = child, rawParent = Nothing}   = acc
     attachChild acc RawNode{rawName = child, rawParent = Just parent} =
       Map.adjust (\n -> n { onChildren = Set.insert child (onChildren n) }) parent acc
+
+throwOntologyError :: Text -> IO a
+throwOntologyError detail =
+  throwQxFx0 (mkRuntimeInitError
+    "semantic_ontology"
+    "load_jsonl"
+    "ONTOLOGY_LOAD_ERROR"
+    (Map.singleton "detail" detail))
 
 -- | Lookup a node by concept name.
 lookupOntologyNode :: Ontology -> Text -> Maybe OntologyNode
@@ -174,3 +170,60 @@ lookupChildren ot name =
   case Map.lookup name (otNodes ot) of
     Nothing   -> []
     Just node -> sort (Set.toList (onChildren node))
+
+-- ==========================================================================
+-- Dynamic Ontology Learning (Phase E)
+-- ==========================================================================
+
+-- | Add a new node to the ontology. If the node already exists, returns
+-- the ontology unchanged. Otherwise, inserts the new node and updates parent/child
+-- relationships.
+addOntologyNode :: Ontology -> Text -> ConceptCategory -> Maybe Text -> Int -> Ontology
+addOntologyNode ot name category mparent depth =
+  case Map.lookup name (otNodes ot) of
+    Just _  -> ot  -- Node already exists
+    Nothing ->
+      let newNode = OntologyNode
+            { onName = name
+            , onCategory = category
+            , onParent = mparent
+            , onChildren = Set.empty
+            , onDepth = depth
+            }
+          -- Insert the new node
+          withNewNode = Map.insert name newNode (otNodes ot)
+          -- Update parent's children set if parent exists
+          withUpdatedParent = case mparent of
+            Nothing -> withNewNode
+            Just parentName ->
+              Map.adjust (
+                \n -> n { onChildren = Set.insert name (onChildren n) })
+                parentName withNewNode
+          -- Update roots if this is a root node (no parent)
+          newRoots = case mparent of
+            Nothing -> Set.insert name (otRoots ot)
+            Just _   -> otRoots ot
+      in Ontology { otNodes = withUpdatedParent, otRoots = newRoots }
+
+-- | Convenience function to add a node with automatic depth calculation.
+-- Depth is parent's depth + 1, or 1 if no parent.
+addOntologyNodeAutoDepth :: Ontology -> Text -> ConceptCategory -> Maybe Text -> Ontology
+addOntologyNodeAutoDepth ot name category mparent =
+  let parentDepth = case mparent of
+        Nothing -> 0
+        Just p  -> case Map.lookup p (otNodes ot) of
+          Nothing -> 1  -- Parent doesn't exist, treat as root
+          Just parentNode -> onDepth parentNode
+      depth = parentDepth + 1
+  in addOntologyNode ot name category mparent depth
+
+-- | Add multiple nodes to the ontology. Nodes are added in order, so later
+-- nodes can reference earlier nodes as parents.
+addOntologyNodes :: Ontology -> [(Text, ConceptCategory, Maybe Text, Int)] -> Ontology
+addOntologyNodes = foldl (\ot' (name, cat, parent, depth) ->
+  addOntologyNode ot' name cat parent depth)
+
+-- | Add multiple nodes with automatic depth calculation.
+addOntologyNodesAutoDepth :: Ontology -> [(Text, ConceptCategory, Maybe Text)] -> Ontology
+addOntologyNodesAutoDepth = foldl (\ot' (name, cat, parent) ->
+  addOntologyNodeAutoDepth ot' name cat parent)

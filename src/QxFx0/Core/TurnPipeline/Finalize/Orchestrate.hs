@@ -26,9 +26,10 @@ import QxFx0.Core.TurnPipeline.Finalize.Precommit
   )
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Types
+import QxFx0.Types.Persistence (StateVersion)
 
-finalizeTurnState :: PipelineIO -> SystemState -> Text -> Int -> Text -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> IO TurnResult
-finalizeTurnState pipelineIO systemState sessionId expectedRevision _requestId turnInput turnSignals turnPlan turnArtifacts = do
+finalizeTurnState :: PipelineIO -> SystemState -> Text -> StateVersion -> Text -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> IO TurnResult
+finalizeTurnState pipelineIO systemState sessionId expectedVersion _requestId turnInput turnSignals turnPlan turnArtifacts = do
   let precommitPlan = planFinalizePrecommit systemState turnInput turnSignals turnPlan turnArtifacts
   precommitResults <- resolveFinalizePrecommit pipelineIO precommitPlan
   precommitBundle <-
@@ -43,7 +44,7 @@ finalizeTurnState pipelineIO systemState sessionId expectedRevision _requestId t
           precommitPlan
           precommitResults
   let commitPlan = planFinalizeCommit sessionId systemState turnInput turnSignals turnArtifacts precommitBundle
-  commitResults <- resolveFinalizeCommit pipelineIO expectedRevision commitPlan
+  commitResults <- resolveFinalizeCommit pipelineIO expectedVersion commitPlan
   let rendered = RenderedTurn turnInput turnSignals turnPlan turnArtifacts
       turnResult = buildFinalizeTurnResult rendered precommitBundle commitResults
   resolveFinalizePostCommit (trMetrics turnResult)

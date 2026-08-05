@@ -146,6 +146,12 @@ try:
     conn.close()
     if row and row[0]:
         trace = json.loads(row[0])
+        if "replayTraceEnvelopeVersion" in trace:
+            if trace.get("replayTraceEnvelopeVersion") != 1:
+                raise ValueError("unsupported replay trace envelope version")
+            trace = trace.get("trace")
+            if not isinstance(trace, dict):
+                raise ValueError("invalid replay trace envelope")
         linearization_lang = trace.get("trcLinearizationLang")
         linearization_ok = bool(trace.get("trcLinearizationOk", False))
         fallback_reason = trace.get("trcFallbackReason")

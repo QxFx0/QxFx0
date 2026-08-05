@@ -48,8 +48,8 @@ import QxFx0.Types.State
   , defaultNormativeProfile
   , defaultPerspectiveRegistry
   , emptyDialogueOutcomeLearningState
-  , emptySystemState
   )
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.State.SelfState (SelfState(..))
 
 selfPerspectiveTests :: [Test]

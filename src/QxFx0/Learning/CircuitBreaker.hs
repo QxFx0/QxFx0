@@ -9,7 +9,7 @@ module QxFx0.Learning.CircuitBreaker
   , spawnBreakerWatcher
   ) where
 
-import Control.Concurrent (forkIO, threadDelay)
+import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (TQueue, TVar, atomically, modifyTVar', newTQueue, newTVar, readTVar, tryReadTQueue, writeTQueue)
 import Control.Monad (forever, void, when)
 import Data.IORef (IORef, readIORef)
@@ -22,6 +22,7 @@ import QxFx0.Learning.Autonomous
   , enqueueLearningTask
   , isCircuitOpen
   )
+import QxFx0.Runtime.ManagedWorker (ManagedWorker, spawnManagedWorker)
 
 data PendingBreakerCloseQueue = PendingBreakerCloseQueue
   { pbqTQueue :: !(TQueue LearningTask)
@@ -67,8 +68,8 @@ drainPendingBreakerQueue sq mainQ = loop 0
               _ <- enqueueBreakerSideQueue sq task
               pure n
 
-spawnBreakerWatcher :: IORef CircuitBreakerState -> PendingBreakerCloseQueue -> LearningQueue -> IO ()
-spawnBreakerWatcher cbRef sq mainQ = void . forkIO . forever $ do
+spawnBreakerWatcher :: IORef CircuitBreakerState -> PendingBreakerCloseQueue -> LearningQueue -> IO ManagedWorker
+spawnBreakerWatcher cbRef sq mainQ = spawnManagedWorker . forever $ do
   threadDelay (30 * 1000 * 1000)
   cb <- readIORef cbRef
   now <- getCurrentTime

@@ -24,7 +24,8 @@ import QxFx0.Learning.Signal
   , emptySignalComponents
   )
 import QxFx0.Learning.Need (LearningNeedState(..), emptyLearningNeedState)
-import QxFx0.Types.State (SystemState(..), emptySystemState)
+import QxFx0.Types.State (SystemState(..))
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Self.Salience (SalienceWeights(..), defaultSalienceWeights)
 import QxFx0.Self.Field (FieldHeuristics(..), defaultFieldHeuristics)
 

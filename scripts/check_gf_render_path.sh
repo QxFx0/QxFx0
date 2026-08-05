@@ -3,7 +3,7 @@
 #
 # Measures real runtime render path distribution from replay traces:
 # - fallback rate via trcFallbackReason
-# - GF atoms rate via trcLinearizationLang == ru_GF_ATOMS
+# - canonical GF rate via the legacy atom language or plan PGF language
 #
 # Exit codes:
 #   0 = PASS
@@ -47,7 +47,7 @@ if [ -z "$BIN" ] || [ ! -x "$BIN" ]; then
   exit 2
 fi
 
-PROMPTS_FILE="${QXFX0_GF_PROMPTS_FILE:-}"
+PROMPTS_FILE="${QXFX0_GF_PROMPTS_FILE:-$ROOT/spec/gf/release_corpus_prompts.txt}"
 PROMPTS=()
 if [ -n "$PROMPTS_FILE" ] && [ -f "$PROMPTS_FILE" ]; then
   while IFS= read -r line; do
@@ -141,19 +141,26 @@ for i in "${!PROMPTS[@]}"; do
     continue
   fi
 
-  parsed="$(python3 - <<'PY' "$trace_json"
+  parsed="$(python3 -c '
 import json, sys
 try:
-    obj = json.loads(sys.argv[1])
+    obj = json.load(sys.stdin)
+    if "replayTraceEnvelopeVersion" in obj:
+        if obj.get("replayTraceEnvelopeVersion") != 1:
+            raise ValueError("unsupported replay trace envelope version")
+        obj = obj.get("trace")
+        if not isinstance(obj, dict):
+            raise ValueError("invalid replay trace envelope")
 except Exception:
     print("ERR|ERR|0")
     raise SystemExit(0)
 fb = obj.get("trcFallbackReason")
 lang = obj.get("trcLinearizationLang")
 ok = 1 if obj.get("trcLinearizationOk", False) else 0
-print(f"{fb if fb is not None else '__NONE__'}|{lang if lang is not None else '__NONE__'}|{ok}")
-PY
-)"
+fb_out = fb if fb is not None else "__NONE__"
+lang_out = lang if lang is not None else "__NONE__"
+print(f"{fb_out}|{lang_out}|{ok}")
+' <<< "$trace_json")"
 
   IFS='|' read -r fb lang ok <<< "$parsed"
   if [ "$fb" = "ERR" ]; then
@@ -163,7 +170,9 @@ PY
 
   TOTAL=$((TOTAL + 1))
   [ "$fb" != "__NONE__" ] && FALLBACK=$((FALLBACK + 1))
-  [ "$lang" = "ru_GF_ATOMS" ] && GF_ATOMS=$((GF_ATOMS + 1))
+  if [ "$lang" = "ru_GF_ATOMS" ] || [ "$lang" = "QxFx0SyntaxRus" ]; then
+    GF_ATOMS=$((GF_ATOMS + 1))
+  fi
   [ "$ok" = "1" ] && LINEARIZATION_OK=$((LINEARIZATION_OK + 1))
 done
 

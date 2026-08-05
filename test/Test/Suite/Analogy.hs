@@ -25,6 +25,7 @@ testAdaptPredicate = TestCase $ do
         , spRu = "свобода предполагает выбор"
         , spEn = "freedom presupposes choice"
         , spTopicForm = "свобода"
+        , spCanonicalRelation = Nothing
         , spRationale = Nothing
         , spCounter = Nothing
         , spSynthesis = Nothing

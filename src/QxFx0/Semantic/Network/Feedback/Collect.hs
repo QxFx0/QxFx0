@@ -5,16 +5,15 @@ module QxFx0.Semantic.Network.Feedback.Collect
   , applyDetectedFeedback
   ) where
 
-import qualified Data.Foldable as F
 import qualified Data.Map.Strict as M
-import qualified Data.Sequence as Seq
 import qualified Data.Set as S
 import Data.Text (Text)
 
-import QxFx0.Semantic.Network.Feedback (UserFeedback, applyFeedback)
+import QxFx0.Semantic.Network.Feedback (applyFeedback)
 import QxFx0.Semantic.Network.Feedback.Detect (detectUserFeedback)
 import QxFx0.Semantic.Network.Types
-  ( ActivationStep(..)
+  ( ActivationArtifact(..)
+  , ActivationStep(..)
   , SemanticEdge(..)
   , SemanticNetwork(..)
   )
@@ -42,17 +41,16 @@ collectUsedEdges network steps =
 -- | Apply detected user feedback to a semantic network in one step.
 --
 -- This is a thin runtime wrapper over 'detectUserFeedback',
--- 'collectUsedEdges' and 'applyFeedback': it uses the /previous/ network's
--- activation log as the source of used edges and applies the feedback to
+-- 'collectUsedEdges' and 'applyFeedback': it uses the previous rendered
+-- activation artifact's captured edges and applies the feedback to
 -- the /base/ network (typically the merged network for the new turn).  If
 -- the feedback loop is disabled or no marker is found, the base network is
 -- returned unchanged.
-applyDetectedFeedback :: Bool -> Text -> SemanticNetwork -> SemanticNetwork -> SemanticNetwork
-applyDetectedFeedback feedbackLoopActive raw previousNetwork baseNetwork
+applyDetectedFeedback :: Bool -> Text -> Maybe ActivationArtifact -> SemanticNetwork -> SemanticNetwork
+applyDetectedFeedback feedbackLoopActive raw mArtifact baseNetwork
   | not feedbackLoopActive = baseNetwork
   | otherwise =
       case detectUserFeedback raw of
         Nothing -> baseNetwork
         Just feedback ->
-          let usedEdges = collectUsedEdges previousNetwork (F.toList (snActivationLog previousNetwork))
-          in applyFeedback baseNetwork usedEdges feedback
+          applyFeedback baseNetwork (maybe [] aaUsedEdges mArtifact) feedback

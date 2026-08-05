@@ -6,6 +6,8 @@ module Test.Suite.StatePersistence
   ( statePersistenceFastTests
   , statePersistenceSlowTests
   , statePersistenceTests
+  , replayTraceCompatibilityTests
+  , statePersistenceProductionBoundaryTests
   ) where
 
 import qualified Data.Sequence as Seq
@@ -44,6 +46,7 @@ import QxFx0.Learning.KnowledgeTree
   , graftFruit
   )
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.Persistence
   ( LoadStateResult(..)
   , PersistenceDiagnostic(..)
@@ -60,9 +63,17 @@ import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..))
-import qualified QxFx0.Runtime as Runtime
+import qualified Test.Support.Runtime as Runtime
 import QxFx0.Runtime (RuntimeMode(..))
-import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), EffectSnapshot(..))
+import QxFx0.Types.TurnProjection
+  ( ParserStatus(..)
+  , TurnReplayTrace(..)
+  , ReplayTraceEnvelope(..)
+  , EffectSnapshot(..)
+  , currentReplayTraceEnvelopeVersion
+  , encodePersistedReplayTrace
+  , decodePersistedReplayTrace
+  )
 import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
 import QxFx0.Self.Essence
@@ -99,6 +110,10 @@ statePersistenceFastTests =
   , testPersistedStateCanonicalizeIsIdempotent
   , testPersistedStateEnvelopeRoundTrip
   , testPersistedStateBareRoundTrip
+  , testReplayTraceEnvelopeRoundTripPreservesDreamLists
+  , testReplayTraceLegacyBareRoundTripPreservesDreamLists
+  , testReplayTraceRejectsUnknownEnvelopeVersion
+  , testReplayTraceLegacyBareRequiresMandatoryFields
   , testPersistedStatePropertyRoundTrip
   ]
 
@@ -111,18 +126,35 @@ matchRuntimeInitError ex = case ex of
 
 statePersistenceSlowTests :: [Test]
 statePersistenceSlowTests =
-  [ testSaveStateWithProjectionFailureRollsBackTransaction
+  [ testStaleStateCannotOverwriteNewerTurn
+  , testStateVersionTurnMismatchFails
+  , testCurrentStateAndProjectionSaveAtomically
+  , testSaveStateWithProjectionFailureRollsBackTransaction
   , testPersistedSystemStateSessionIdMatchesBootstrapId
   , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
   , testPersistedReplayTraceDeterministicWithFixedTimeProperty
   , testSaveStateWithDivergencePersistsShadowLog
   , testReplayTraceDbRoundTripFeedsReplayPipeline
+  , testPersistedReplayEnvelopeAndLegacyBareTraceOnDisk
+  ]
+
+replayTraceCompatibilityTests :: [Test]
+replayTraceCompatibilityTests =
+  [ testReplayTraceEnvelopeRoundTripPreservesDreamLists
+  , testReplayTraceLegacyBareRoundTripPreservesDreamLists
+  , testReplayTraceRejectsUnknownEnvelopeVersion
+  , testReplayTraceLegacyBareRequiresMandatoryFields
+  ]
+
+statePersistenceProductionBoundaryTests :: [Test]
+statePersistenceProductionBoundaryTests =
+  [ testPersistedReplayEnvelopeAndLegacyBareTraceOnDisk
   ]
 
 -- | Item #1 (production half): the REAL on-disk DB round-trip. Run a live turn
 -- through the runtime (which persists the trace blob via persistTurnQuality),
--- read the @replay_trace_json@ column straight back from SQLite, decode it with
--- the now-existing 'FromJSON TurnReplayTrace', and feed it to
+-- read the @replay_trace_json@ column straight back from SQLite, decode its
+-- versioned replay envelope, and feed the trace to
 -- 'mkReplayPipelineIO'. This is the half the unit-suite P5 deferred: not just
 -- @decode . encode@ in memory, but blob -> on-disk SQLite -> blob -> decode ->
 -- replay, end to end.
@@ -136,7 +168,7 @@ testReplayTraceDbRoundTripFeedsReplayPipeline = TestCase $
     blob <- Runtime.withRuntimeDb rt (`fetchLatestReplayTraceJson` sid)
     assertBool "a replay_trace_json row must have been persisted by the live turn"
       (not (T.null blob))
-    case Aeson.eitherDecodeStrict' (encodeUtf8 blob) :: Either String TurnReplayTrace of
+    case decodePersistedReplayTrace (encodeUtf8 blob) of
       Left err ->
         assertFailure ("persisted trace blob must decode as TurnReplayTrace: " <> err)
       Right trace -> do
@@ -150,8 +182,199 @@ testReplayTraceDbRoundTripFeedsReplayPipeline = TestCase $
         assertEqual "replay pipeline must reproduce the persisted apiHealthy"
           expectedHealthy replayHealthy
 
+testPersistedReplayEnvelopeAndLegacyBareTraceOnDisk :: Test
+testPersistedReplayEnvelopeAndLegacyBareTraceOnDisk = TestCase $
+  withRuntimeEnv "qxfx0_test_replay_dream_lists_on_disk.db" $ do
+    let sid = "replay_dream_lists_on_disk"
+        trace = (fixtureReplayTrace sid 0.82 PsOk Nothing)
+          { trcDreamCandidateLifecycleStatuses = ["candidate_active", "candidate_applied"]
+          , trcDreamCandidateDecisionReasons = ["shared_adaptive_record", "bounded_mutation"]
+          }
+        projection = fixtureProjection trace
+    session <- Runtime.bootstrapSession True sid
+    let runtime = Runtime.sessRuntime session
+    saved <- StatePersistence.saveStateWithProjectionExpected
+      (Runtime.withRuntimeDb runtime)
+      (Runtime.sessSystemState session)
+      sid
+      (observedSessionVersion session)
+      (Just projection)
+    case saved of
+      Left err -> assertFailure
+        ("production replay persistence failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    envelopeBlob <- Runtime.withRuntimeDb runtime (`fetchLatestReplayTraceJson` sid)
+    case eitherDecodeStrict' (encodeUtf8 envelopeBlob) :: Either String ReplayTraceEnvelope of
+      Left err -> assertFailure ("SQLite replay payload is not a v1 envelope: " <> err)
+      Right envelope -> do
+        assertEqual "SQLite stores replay envelope v1"
+          currentReplayTraceEnvelopeVersion (rteVersion envelope)
+        assertDreamListsPreserved trace (rteTrace envelope)
+    persistedTrace <- case decodePersistedReplayTrace (encodeUtf8 envelopeBlob) of
+      Left err -> assertFailure ("persisted v1 replay failed to decode: " <> err) >> fail "unreachable"
+      Right decoded -> pure decoded
+    Runtime.withRuntimeDb runtime $ \db ->
+      overwriteLatestReplayTraceJson db sid
+        (TE.decodeUtf8 . BL.toStrict $ Aeson.encode persistedTrace)
+    legacyBlob <- Runtime.withRuntimeDb runtime (`fetchLatestReplayTraceJson` sid)
+    case decodePersistedReplayTrace (encodeUtf8 legacyBlob) of
+      Left err -> assertFailure ("legacy bare SQLite replay failed to decode: " <> err)
+      Right decoded -> assertDreamListsPreserved persistedTrace decoded
+
 statePersistenceTests :: [Test]
 statePersistenceTests = statePersistenceFastTests ++ statePersistenceSlowTests
+
+observedSessionVersion :: Runtime.Session -> StateVersion
+observedSessionVersion session =
+  StateVersion
+    (Runtime.sessStateRevision session)
+    (ssTurnCount (Runtime.sessSystemState session))
+
+saveSessionState :: Runtime.Session -> SystemState -> T.Text -> IO (Either PersistenceDiagnostic SystemState)
+saveSessionState session state sessionId =
+  StatePersistence.saveStateExpected
+    (Runtime.withRuntimeDb (Runtime.sessRuntime session))
+    state
+    sessionId
+    (observedSessionVersion session)
+
+testStaleStateCannotOverwriteNewerTurn :: Test
+testStaleStateCannotOverwriteNewerTurn = TestCase $
+  withRuntimeEnv "qxfx0_test_stale_state_blocked.db" $ do
+    let sessionId = "stale_state_blocked"
+    sessionA <- Runtime.bootstrapSession True sessionId
+    sessionB <- Runtime.bootstrapSession True sessionId
+    let advance state status = state
+          { ssDialogue = (ssDialogue state) { dsTurnCount = 1 }
+          , ssTruthContractStatus = status
+          }
+        newerState = advance (Runtime.sessSystemState sessionA) NonExpansiveRecoverySurface
+        staleState = advance (Runtime.sessSystemState sessionB) LegacyIncompleteSurface
+    first <- saveSessionState sessionA newerState sessionId
+    case first of
+      Left err -> assertFailure ("current writer failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    stale <- saveSessionState sessionB staleState sessionId
+    case stale of
+      Left (PdStateVersionConflict _ expected actual) -> do
+        assertEqual "stale writer retains its observed version" (StateVersion 0 0) expected
+        assertEqual "conflict reports the newer persisted lineage" (StateVersion 1 1) actual
+      Left err -> assertFailure ("expected state-version conflict, got: " <> show err)
+      Right _ -> assertFailure "stale state must not overwrite a newer turn"
+    loaded <- StatePersistence.loadState (Runtime.withRuntimeDb (Runtime.sessRuntime sessionA)) sessionId
+    case loaded of
+      LoadStateRestored state -> do
+        assertEqual "newer turn remains persisted" 1 (ssTurnCount state)
+        assertEqual "stale payload did not replace newer state"
+          NonExpansiveRecoverySurface (ssTruthContractStatus state)
+      other -> assertFailure ("expected newer state to remain loadable, got: " <> show other)
+
+testStateVersionTurnMismatchFails :: Test
+testStateVersionTurnMismatchFails = TestCase $
+  withRuntimeEnv "qxfx0_test_state_turn_mismatch.db" $ do
+    let sessionId = "state_turn_mismatch"
+    session <- Runtime.bootstrapSession True sessionId
+    let state = Runtime.sessSystemState session
+        mismatched = StateVersion (Runtime.sessStateRevision session) (ssTurnCount state + 1)
+    result <- StatePersistence.saveStateExpected
+      (Runtime.withRuntimeDb (Runtime.sessRuntime session))
+      state
+      sessionId
+      mismatched
+    case result of
+      Left (PdStateVersionConflict _ expected actual) -> do
+        assertEqual "mismatched turn is reported" mismatched expected
+        assertEqual "actual revision/turn remains current" (StateVersion 0 0) actual
+      Left err -> assertFailure ("expected turn-lineage conflict, got: " <> show err)
+      Right _ -> assertFailure "matching revision with mismatched turn must fail"
+    revision <- StatePersistence.loadStateRevision
+      (Runtime.withRuntimeDb (Runtime.sessRuntime session)) sessionId
+    assertEqual "failed turn-lineage CAS does not advance revision" 0 revision
+
+testCurrentStateAndProjectionSaveAtomically :: Test
+testCurrentStateAndProjectionSaveAtomically = TestCase $
+  withRuntimeEnv "qxfx0_test_current_state_projection_atomic.db" $ do
+    let sessionId = "current_state_projection_atomic"
+    session <- Runtime.bootstrapSession True sessionId
+    let state0 = Runtime.sessSystemState session
+        state1 = state0 { ssDialogue = (ssDialogue state0) { dsTurnCount = 1 } }
+        projection = fixtureProjection (fixtureReplayTrace sessionId 0.8 PsOk Nothing)
+        runtime = Runtime.sessRuntime session
+    result <- StatePersistence.saveStateWithProjectionExpected
+      (Runtime.withRuntimeDb runtime)
+      state1
+      sessionId
+      (observedSessionVersion session)
+      (Just projection)
+    case result of
+      Left err -> assertFailure ("current state/projection save failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    revision <- StatePersistence.loadStateRevision (Runtime.withRuntimeDb runtime) sessionId
+    qualityRows <- Runtime.withRuntimeDb runtime $ \db ->
+      queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'current_state_projection_atomic' AND turn = 1"
+    loaded <- StatePersistence.loadState (Runtime.withRuntimeDb runtime) sessionId
+    assertEqual "state revision advances exactly once" 1 revision
+    assertEqual "projection commits in the state transaction" 1 qualityRows
+    case loaded of
+      LoadStateRestored state -> assertEqual "state and projection carry the same turn" 1 (ssTurnCount state)
+      other -> assertFailure ("atomically saved state did not restore: " <> show other)
+
+testReplayTraceEnvelopeRoundTripPreservesDreamLists :: Test
+testReplayTraceEnvelopeRoundTripPreservesDreamLists = TestCase $ do
+  let trace = (fixtureReplayTrace "envelope_dream_lists" 0.8 PsOk Nothing)
+        { trcDreamCandidateLifecycleStatuses = ["candidate_active", "candidate_applied"]
+        , trcDreamCandidateDecisionReasons = ["shared_adaptive_record", "bounded_mutation"]
+        }
+      bytes = BL.toStrict (encodePersistedReplayTrace trace)
+  case eitherDecodeStrict' bytes :: Either String ReplayTraceEnvelope of
+    Left err -> assertFailure ("current replay envelope must decode: " <> err)
+    Right envelope -> do
+      assertEqual "persisted replay envelope uses the current version"
+        currentReplayTraceEnvelopeVersion (rteVersion envelope)
+      assertEqual "envelope payload round-trips without dream-field drift"
+        trace (rteTrace envelope)
+  case decodePersistedReplayTrace bytes of
+    Left err -> assertFailure ("current persisted replay trace must decode: " <> err)
+    Right decoded -> assertDreamListsPreserved trace decoded
+
+testReplayTraceLegacyBareRoundTripPreservesDreamLists :: Test
+testReplayTraceLegacyBareRoundTripPreservesDreamLists = TestCase $ do
+  let trace = (fixtureReplayTrace "legacy_dream_lists" 0.7 PsOk Nothing)
+        { trcDreamCandidateLifecycleStatuses = ["candidate_rejected"]
+        , trcDreamCandidateDecisionReasons = ["insufficient_shared_evidence"]
+        }
+      bytes = BL.toStrict (Aeson.encode trace)
+  case decodePersistedReplayTrace bytes of
+    Left err -> assertFailure ("legacy bare replay trace must decode: " <> err)
+    Right decoded -> assertDreamListsPreserved trace decoded
+
+testReplayTraceRejectsUnknownEnvelopeVersion :: Test
+testReplayTraceRejectsUnknownEnvelopeVersion = TestCase $ do
+  let trace = fixtureReplayTrace "future_replay_version" 0.6 PsOk Nothing
+      bytes = BL.toStrict (Aeson.encode (ReplayTraceEnvelope 2 trace))
+  case decodePersistedReplayTrace bytes of
+    Left _ -> pure ()
+    Right _ -> assertFailure "unknown replay envelope versions must fail closed"
+
+testReplayTraceLegacyBareRequiresMandatoryFields :: Test
+testReplayTraceLegacyBareRequiresMandatoryFields = TestCase $ do
+  let trace = fixtureReplayTrace "legacy_missing_required" 0.6 PsOk Nothing
+      withoutRequestId = case Aeson.toJSON trace of
+        Object objectValue -> Object (KeyMap.delete "trcRequestId" objectValue)
+        value -> value
+      bytes = BL.toStrict (Aeson.encode withoutRequestId)
+  case decodePersistedReplayTrace bytes of
+    Left _ -> pure ()
+    Right _ -> assertFailure "legacy compatibility must not default mandatory trace fields"
+
+assertDreamListsPreserved :: TurnReplayTrace -> TurnReplayTrace -> Assertion
+assertDreamListsPreserved expected actual = do
+  assertEqual "dream lifecycle statuses must not shift into decision reasons"
+    (trcDreamCandidateLifecycleStatuses expected)
+    (trcDreamCandidateLifecycleStatuses actual)
+  assertEqual "dream candidate decision reasons must decode from their own key"
+    (trcDreamCandidateDecisionReasons expected)
+    (trcDreamCandidateDecisionReasons actual)
 
 -- SLICE-013 Option 1: a non-authoritative persisted blob (valid JSON, marker
 -- LegacyIncompleteSurface) is a valid compatibility/provenance state, NOT
@@ -165,7 +388,7 @@ testBootstrapRestoresNonAuthoritativePersistedState = TestCase $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative"
     let rt = Runtime.sessRuntime session0
         ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative"
     case saveResult of
       Left err -> assertFailure ("failed to persist non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -199,7 +422,7 @@ testLoadStateRebuildsDerivedGovernanceViewsFromCanonicalHistory = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "governed fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_load_rebuild"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_load_rebuild"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -232,7 +455,7 @@ testBootstrapSessionRestoresCanonicalGovernanceViews = TestCase $ do
       (not (null (ssGovernanceHistory governedState)))
     assertBool "bootstrap governed fixture must produce a non-empty derived perspective registry"
       (selfPerspectiveRegistry (ssSelfState governedState) /= selfPerspectiveRegistry (ssSelfState emptySystemState))
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) stalePersistedState "governance_bootstrap_restore"
+    saveResult <- saveSessionState session0 stalePersistedState "governance_bootstrap_restore"
     case saveResult of
       Left err -> assertFailure ("failed to persist governed bootstrap fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -262,7 +485,7 @@ testBootstrapSessionStrictRestoresNonAuthoritativePersistedState = TestCase $ do
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_strict"
     let rt = Runtime.sessRuntime session0
         ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative_strict"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative_strict"
     case saveResult of
       Left err -> assertFailure ("failed to persist strict non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -290,7 +513,7 @@ testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState = TestCase $ 
     session0 <- Runtime.bootstrapSession True "bootstrap_non_authoritative_degraded"
     let rt = Runtime.sessRuntime session0
         ss0 = authoritativeGovernedState (Runtime.sessSystemState session0)
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "bootstrap_non_authoritative_degraded"
+    saveResult <- saveSessionState session0 ss0 "bootstrap_non_authoritative_degraded"
     case saveResult of
       Left err -> assertFailure ("failed to persist degraded non-authoritative state fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -365,7 +588,7 @@ testLoadStateLegacyNumericTrajectoryHashRestores = TestCase $ do
                   (EssenceCommitment EssenceContemplative TriggerAngstThreshold 1 (TrajectoryHash "sha256:legacy-fixture"))
               }
           }
-    saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "test_legacy_numeric_trajectory_hash"
+    saveResult <- saveSessionState session0 ss0 "test_legacy_numeric_trajectory_hash"
     case saveResult of
       Left err -> assertFailure ("failed to persist legacy trajectory hash fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -552,7 +775,7 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
           , ssTruthContractStatus = NonExpansiveRecoverySurface
           , ssGovernanceRuntimeFault = Just GrfRebuildMismatch
           }
-    result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "test_save_ok"
+    result <- saveSessionState session0 ss0 "test_save_ok"
     case result of
       Left err -> assertFailure ("saveState should return Right on success, got Left: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right ss -> do
@@ -593,6 +816,13 @@ testSaveStateReturnsRightOnSuccess = TestCase $ do
             assertEqual "persisted canonical state must not carry rebuildable registry"
                (selfPerspectiveRegistry (ssSelfState emptySystemState))
                (selfPerspectiveRegistry (ssSelfState persistedState))
+            assertBool "persisted state must omit rebuildable bootstrap maps"
+              ( M.null (ssDefinitionCorpus persistedState)
+                && M.null (ssLemmaMap persistedState)
+                && M.null (ssCategoryMap persistedState)
+              )
+            assertBool "persisted state must stay below the bootstrap-resource budget"
+              (T.length persistedBlob < 2000000)
 
 -- | SLICE-013 truth-contract policy: persistence cleanup preserves the
 -- truth-contract status verbatim and never manufactures authority. For every
@@ -614,7 +844,7 @@ testPersistedStatePreservesTruthContractStatusVerbatim =
         let rt = Runtime.sessRuntime session0
             ss0 = (authoritativeGovernedState (Runtime.sessSystemState session0))
               { ssTruthContractStatus = status }
-        result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "truthcontract_verbatim"
+        result <- saveSessionState session0 ss0 "truthcontract_verbatim"
         case result of
           Left err ->
             assertFailure ("saveState should succeed, got Left: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -659,11 +889,15 @@ testPersistedStateCanonicalizeIsIdempotent =
         let rt = Runtime.sessRuntime session0
             ss0 = (authoritativeGovernedState (Runtime.sessSystemState session0))
               { ssTruthContractStatus = status }
-        r1 <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "truthcontract_idem"
+        r1 <- saveSessionState session0 ss0 "truthcontract_idem"
         case r1 of
           Left err -> assertFailure ("first saveState failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
           Right s1 -> do
-            r2 <- StatePersistence.saveState (Runtime.withRuntimeDb rt) s1 "truthcontract_idem"
+            r2 <- StatePersistence.saveStateExpected
+              (Runtime.withRuntimeDb rt)
+              s1
+              "truthcontract_idem"
+              (StateVersion (Runtime.sessStateRevision session0 + 1) (ssTurnCount s1))
             case r2 of
               Left err -> assertFailure ("second saveState failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
               Right s2 -> do
@@ -688,7 +922,7 @@ testPersistedStateEnvelopeRoundTrip = TestCase $ do
           , peState = ss0
           }
         blob = TE.decodeUtf8 . BL.toStrict . Aeson.encode $ envelope
-    result <- StatePersistence.saveState (Runtime.withRuntimeDb rt) ss0 "envelope_roundtrip"
+    result <- saveSessionState session0 ss0 "envelope_roundtrip"
     case result of
       Left err -> assertFailure ("saveState should succeed: " <> T.unpack (renderPersistenceDiagnostics [err]))
       Right _ -> pure ()
@@ -828,10 +1062,11 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
       queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'"
     Runtime.withRuntimeDb rt $ \db ->
       assertExec db "drop shadow_divergence_log" "DROP TABLE IF EXISTS shadow_divergence_log;"
-    result <- StatePersistence.saveStateWithProjection
+    result <- StatePersistence.saveStateWithProjectionExpected
       (Runtime.withRuntimeDb rt)
       ss0
       sessionId
+      (observedSessionVersion session0)
       (Just projection)
     case result of
       Left _ -> pure ()
@@ -839,6 +1074,37 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
     afterCount <- Runtime.withRuntimeDb rt $ \db ->
       queryCount db "SELECT count(*) FROM turn_quality WHERE session_id = 'test_save_projection_rollback'"
     assertEqual "failed projection persistence must rollback turn_quality insert" beforeCount afterCount
+
+fixtureProjection :: TurnReplayTrace -> TurnProjection
+fixtureProjection trace = TurnProjection
+  { tqpTurn = 1
+  , tqpParserMode = ParserFrameV1
+  , tqpParserConfidence = trcParserConfidence trace
+  , tqpParserErrors = []
+  , tqpPlannerMode = DefaultPlanner
+  , tqpPlannerDecision = CMGround
+  , tqpAtomRegister = Search
+  , tqpAtomLoad = 0.7
+  , tqpScenePressure = PressureHigh
+  , tqpSceneRequest = "replay_dream_lists"
+  , tqpSceneStance = MetaLayer
+  , tqpRenderLane = ValidateMove
+  , tqpRenderStyle = StyleFormal
+  , tqpLegitimacyStatus = LegitimacyDegraded
+  , tqpLegitimacyReason = ReasonShadowDivergence
+  , tqpWarrantedMode = AlwaysWarranted
+  , tqpDecisionDisposition = DispositionRepair
+  , tqpOwnerFamily = CMGround
+  , tqpOwnerForce = IFAssert
+  , tqpShadowStatus = ShadowMatch
+  , tqpShadowSnapshotId = ShadowSnapshotId "shadow:replay_dream_lists"
+  , tqpShadowDivergenceKind = ShadowNoDivergence
+  , tqpShadowFamily = Nothing
+  , tqpShadowForce = Nothing
+  , tqpShadowMessage = ""
+  , tqpReplayTrace = trace
+  , tqpDivergence = False
+  }
 
 testPersistedSystemStateSessionIdMatchesBootstrapId :: Test
 testPersistedSystemStateSessionIdMatchesBootstrapId = TestCase $ do
@@ -962,10 +1228,11 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
           , tqpReplayTrace = fixtureReplayTrace sessionId 0.3 (PsDegraded "low_confidence") (Just "low_confidence")
           , tqpDivergence = True
           }
-    saveResult <- StatePersistence.saveStateWithProjection
+    saveResult <- StatePersistence.saveStateWithProjectionExpected
       (Runtime.withRuntimeDb rt)
       ss0
       sessionId
+      (observedSessionVersion session0)
       (Just projection)
     case saveResult of
       Left err -> assertFailure ("saveStateWithProjection should persist divergence fixture: " <> T.unpack (renderPersistenceDiagnostics [err]))
@@ -986,6 +1253,19 @@ fetchLatestReplayTraceJson db sessionId = do
   NSQL.finalize stmt
   pure value
 
+overwriteLatestReplayTraceJson :: NSQL.Database -> T.Text -> T.Text -> IO ()
+overwriteLatestReplayTraceJson db sessionId payload = do
+  mStmt <- NSQL.prepare db
+    "UPDATE turn_quality SET replay_trace_json = ? WHERE session_id = ? AND turn = (SELECT MAX(turn) FROM turn_quality WHERE session_id = ?)"
+  stmt <- case mStmt of
+    Left err -> assertFailure ("Failed to prepare replay_trace_json update: " <> T.unpack err) >> fail "unreachable"
+    Right s -> pure s
+  _ <- NSQL.bindText stmt 1 payload
+  _ <- NSQL.bindText stmt 2 sessionId
+  _ <- NSQL.bindText stmt 3 sessionId
+  _ <- NSQL.step stmt
+  NSQL.finalize stmt
+
 normalizeReplayTraceJson :: String -> T.Text -> IO Value
 normalizeReplayTraceJson label payload =
   case eitherDecodeStrict' (encodeUtf8 payload) of
@@ -994,10 +1274,14 @@ normalizeReplayTraceJson label payload =
 
 normalizeReplayTraceValue :: Value -> Value
 normalizeReplayTraceValue (Object objectValue) =
-  Object
-    ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
-    $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
-    )
+  case KeyMap.lookup "trace" objectValue of
+    Just traceValue ->
+      Object (KeyMap.insert "trace" (normalizeReplayTraceValue traceValue) objectValue)
+    Nothing ->
+      Object
+        ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
+        $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
+        )
 normalizeReplayTraceValue other = other
 
 quickCheckTest :: Testable prop => Int -> String -> prop -> Test
@@ -1152,6 +1436,11 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcActivatedConcepts = []
     , trcMissingPredicates = []
           , trcEmittedPredicates = []
+          , trcCuratedOverlayVersion = Nothing
+          , trcOverlayPredicateIds = []
+          , trcOverlayContentUsed = False
+           , trcSelectorDiagnostics = []
+           , trcResponsePlan = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

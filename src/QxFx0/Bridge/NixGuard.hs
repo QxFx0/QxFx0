@@ -42,7 +42,7 @@ checkConstitution nixPath concept agency tension =
   case normalizeConceptKey concept of
     Nothing
       | T.null (T.strip concept) -> return (Blocked "constitution concept is empty")
-      | otherwise -> return (Blocked "constitution concept not recognized")
+      | otherwise -> unsupportedConceptStatus concept
     Just conceptKey
       | conceptKey `elem` philosophicalTopicWhitelist ->
           return Allowed
@@ -115,7 +115,19 @@ normalizeConceptKey raw =
                       else Nothing
 
 isConceptChar :: Char -> Bool
-isConceptChar c = isSafeChar c || c == ' '
+isConceptChar = isSafeChar
+
+unsupportedConceptStatus :: Text -> IO NixGuardStatus
+unsupportedConceptStatus concept = do
+  mLenient <- lookupEnv "QXFX0_NIXGUARD_LENIENT_UNSUPPORTED"
+  let reason = "constitution concept unsupported: " <> T.strip concept
+      lenient = maybe False ((`elem` ["1", "true", "yes"]) . map toLowerAscii) mLenient
+  pure $ if lenient then Unavailable reason else Blocked reason
+
+toLowerAscii :: Char -> Char
+toLowerAscii c
+  | c >= 'A' && c <= 'Z' = toEnum (fromEnum c + 32)
+  | otherwise = c
 
 philosophicalTopicWhitelist :: [Text]
 philosophicalTopicWhitelist =

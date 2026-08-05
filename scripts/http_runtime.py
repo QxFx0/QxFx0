@@ -33,6 +33,37 @@ WORKER_PROTOCOL_VERSION = "1"
 WORKER_PROTOCOL_CAPABILITIES = ["health", "state", "turn", "shutdown", "ping", "session_affine"]
 
 
+def _signal_process_group(proc, sig):
+    """Signal a worker group and tolerate an already-reaped leader."""
+    try:
+        # start_new_session makes the leader PID the stable process-group ID.
+        # It remains usable for surviving descendants after the leader exits.
+        os.killpg(proc.pid, sig)
+    except (ProcessLookupError, OSError):
+        pass
+
+
+def _terminate_and_reap_process_group(proc, graceful_timeout=2.0, kill_timeout=1.0):
+    """Terminate every descendant before reaping the group leader."""
+    if proc.poll() is not None:
+        try:
+            proc.wait(timeout=kill_timeout)
+        except subprocess.TimeoutExpired:
+            pass
+        return
+    _signal_process_group(proc, signal.SIGTERM)
+    try:
+        proc.wait(timeout=graceful_timeout)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    _signal_process_group(proc, signal.SIGKILL)
+    try:
+        proc.wait(timeout=kill_timeout)
+    except subprocess.TimeoutExpired:
+        log.warning(json.dumps({"event": "worker_group_reap_timeout", "pid": proc.pid}))
+
+
 class WorkerPreSendError(Exception):
     """Worker was unavailable before sending command."""
 
@@ -343,7 +374,9 @@ class SessionWorker:
             encoding="utf-8",
             errors="replace",
             bufsize=1,
-            preexec_fn=os.setpgrp,
+            # start_new_session is implemented by subprocess without running
+            # Python in the child after fork, unlike unsafe preexec_fn.
+            start_new_session=True,
         )
         threading.Thread(target=self._stderr_pump, daemon=True).start()
         self._handshake_worker()
@@ -409,23 +442,23 @@ class SessionWorker:
         if self.process is None:
             return
         proc = self.process
+        shutdown_acknowledged = False
         try:
             if proc.poll() is None and proc.stdin is not None:
                 proc.stdin.write(json.dumps(["shutdown"]) + "\n")
                 proc.stdin.flush()
-                self._readline_locked(timeout=1.5)
+                shutdown_acknowledged = bool(self._readline_locked(timeout=1.5))
         except Exception:
             pass
-        try:
-            if proc.poll() is None:
-                proc.terminate()
-                proc.wait(timeout=2)
-        except Exception:
-            try:
-                proc.kill()
-                proc.wait(timeout=1)
-            except Exception:
-                pass
+        # A shutdown acknowledgement is emitted before the Haskell bracket
+        # exits, so wait for closeSession cleanup before escalating to SIGTERM.
+        if proc.poll() is None:
+            if shutdown_acknowledged:
+                # WorkerShutdown acknowledges only after closeSession. Do not
+                # race the bracket's final return with an eager SIGTERM.
+                proc.wait()
+            else:
+                _terminate_and_reap_process_group(proc)
         self.process = None
         log.info(json.dumps({"event": "worker_stopped", "session": self.session_id, "reason": reason}))
 
@@ -435,10 +468,6 @@ class SessionWorker:
         if isinstance(runtime_epoch, str) and runtime_epoch:
             self.runtime_epoch = runtime_epoch
         return payload
-
-    def reassign(self, new_session_id):
-        """Reassign this worker to a new session without respawning."""
-        self.session_id = new_session_id
 
     def _request(self, command):
         with self.command_lock:
@@ -540,76 +569,6 @@ class SessionWorker:
         return line
 
 
-
-class WorkerPool:
-    """Pre-warmed worker pool to reduce per-session spawn latency (CF-1).
-
-    Pre-spawns N SessionWorker instances with pool session IDs at startup.
-    When a new session arrives, a pooled worker is reassigned to the real
-    session_id, avoiding the fork/exec + Haskell RTS init + handshake cycle.
-    If reassignment fails (first turn errors), existing error handling in
-    SessionRegistry.dispatch_turn drops the worker and respawns fresh.
-    """
-
-    def __init__(self, bin_path, timeout_seconds, pool_size=None):
-        self.bin_path = bin_path
-        self.timeout_seconds = timeout_seconds
-        self.pool_size = max(0, pool_size if pool_size is not None else int(os.environ.get("QXFX0_WORKER_POOL_SIZE", "2")))
-        self._lock = threading.Lock()
-        self._pool = []
-        self._refilling = False
-        self._shutdown = False
-
-    def prewarm(self):
-        with self._lock:
-            while len(self._pool) < self.pool_size and not self._shutdown:
-                try:
-                    worker = SessionWorker(
-                        f"_pool_{len(self._pool)}",
-                        self.bin_path,
-                        self.timeout_seconds,
-                    )
-                    self._pool.append(worker)
-                    log.info(json.dumps({"event": "pool_worker_prewarmed", "pool_size": len(self._pool)}))
-                except Exception as exc:
-                    log.warning(json.dumps({"event": "pool_prewarm_failed", "detail": str(exc)[:256]}))
-                    break
-
-    def checkout(self):
-        with self._lock:
-            if self._pool:
-                return self._pool.pop(0)
-            return None
-
-    def refill_background(self):
-        with self._lock:
-            if self._refilling or self._shutdown or self.pool_size == 0:
-                return
-            self._refilling = True
-        threading.Thread(target=self._refill, daemon=True).start()
-
-    def _refill(self):
-        try:
-            self.prewarm()
-        finally:
-            with self._lock:
-                self._refilling = False
-
-    def shutdown(self):
-        with self._lock:
-            self._shutdown = True
-            workers = self._pool
-            self._pool = []
-        for worker in workers:
-            try:
-                worker.close(reason="pool_shutdown")
-            except Exception:
-                pass
-
-    def pool_count(self):
-        with self._lock:
-            return len(self._pool)
-
 class SessionRegistry:
     def __init__(self, bin_path, ttl_seconds, timeout_seconds, max_sessions):
         self.bin_path = bin_path
@@ -618,7 +577,6 @@ class SessionRegistry:
         self.max_sessions = max(1, int(max_sessions))
         self._lock = threading.Lock()
         self._workers = {}
-        self._pool = WorkerPool(bin_path, timeout_seconds)
 
     def active_count(self):
         with self._lock:
@@ -644,7 +602,7 @@ class SessionRegistry:
                     }
                 )
             )
-            self._drop_worker(session_id, reason="presend_failure")
+            self._drop_worker(session_id, reason="presend_failure", expected=worker)
             try:
                 replacement = self._get_or_create(session_id)
                 payload = replacement.turn(user_input, mode=mode)
@@ -652,19 +610,19 @@ class SessionRegistry:
             except SessionCapacityError as retry_exc:
                 return self._session_capacity_exceeded(retry_exc), 503
             except WorkerPostSendUnknownError as retry_exc:
-                self._drop_worker(session_id, reason="post_send_unknown_after_presend_recovery")
+                self._drop_worker(session_id, reason="post_send_unknown_after_presend_recovery", expected=replacement)
                 return self._unknown_turn_result(session_id, retry_exc), retry_exc.status_code
             except WorkerCommandError as retry_exc:
-                self._drop_worker(session_id, reason="explicit_worker_error_after_presend_recovery")
+                self._drop_worker(session_id, reason="explicit_worker_error_after_presend_recovery", expected=replacement)
                 return self._known_worker_error(retry_exc.payload), 502
             except WorkerPreSendError as retry_exc:
-                self._drop_worker(session_id, reason="presend_failure_after_retry")
+                self._drop_worker(session_id, reason="presend_failure_after_retry", expected=replacement)
                 return self._worker_unavailable(session_id, str(retry_exc)), 502
         except WorkerPostSendUnknownError as exc:
-            self._drop_worker(session_id, reason="post_send_unknown")
+            self._drop_worker(session_id, reason="post_send_unknown", expected=worker)
             return self._unknown_turn_result(session_id, exc), exc.status_code
         except WorkerCommandError as exc:
-            self._drop_worker(session_id, reason="explicit_worker_error")
+            self._drop_worker(session_id, reason="explicit_worker_error", expected=worker)
             return self._known_worker_error(exc.payload), 502
 
     def evict_idle(self):
@@ -695,11 +653,14 @@ class SessionRegistry:
                         }
                     )
                 )
-        self._pool.shutdown()
 
-    def _drop_worker(self, session_id, reason):
+    def _drop_worker(self, session_id, reason, expected=None):
         with self._lock:
-            worker = self._workers.pop(session_id, None)
+            current = self._workers.get(session_id)
+            if expected is not None and current is not expected:
+                worker = expected
+            else:
+                worker = self._workers.pop(session_id, None)
         if worker is not None:
             try:
                 worker.close(reason=reason)
@@ -716,17 +677,8 @@ class SessionRegistry:
                 self._workers.pop(session_id, None)
             if len(self._workers) >= self.max_sessions:
                 raise SessionCapacityError(self.max_sessions, len(self._workers))
-            # CF-1: Try pre-warmed pool first to avoid spawn latency
-            pooled = self._pool.checkout()
-            if pooled is not None and pooled.is_alive():
-                pooled.reassign(session_id)
-                self._workers[session_id] = pooled
-                self._pool.refill_background()
-                return pooled
-            # Fallback: spawn fresh worker
             worker = SessionWorker(session_id, self.bin_path, self.timeout_seconds)
             self._workers[session_id] = worker
-            self._pool.refill_background()
             return worker
 
     def _drop_dead_locked(self):
@@ -853,13 +805,12 @@ def runtime_readiness_probe():
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                preexec_fn=os.setpgrp,
+                start_new_session=True,
             )
             try:
                 stdout, stderr = proc.communicate(timeout=RUNTIME_PROBE_TIMEOUT_SECONDS)
             except subprocess.TimeoutExpired:
-                proc.kill()
-                proc.wait()
+                _terminate_and_reap_process_group(proc)
                 cleanup_probe_db_artifacts(db_path, db_existed_before)
                 return (
                     {
@@ -1122,7 +1073,7 @@ class QxFx0Handler(BaseHTTPRequestHandler):
             session_token = owned_session_token
             fresh_claim = ownership_status == "claimed"
         payload, code = registry.dispatch_turn(session_id, sanitized, mode=output_mode)
-        if fresh_claim and (code != 200 or payload.get("status") == "error"):
+        if fresh_claim and (code != 200 or payload.get("status") == "error") and not payload.get("result_unknown", False):
             session_owners.release_if_matches(session_id, session_token)
             session_token = None
         if session_token is not None and payload.get("error") != "session_capacity_exceeded":
@@ -1148,20 +1099,8 @@ def graceful_shutdown(signum, frame):
     sys.exit(0)
 
 
-def auto_reap(signum, frame):
-    del signum, frame
-    try:
-        while True:
-            pid, _ = os.waitpid(-1, os.WNOHANG)
-            if pid <= 0:
-                break
-    except ChildProcessError:
-        return
-
-
 signal.signal(signal.SIGTERM, graceful_shutdown)
 signal.signal(signal.SIGINT, graceful_shutdown)
-signal.signal(signal.SIGCHLD, auto_reap)
 
 
 def main():

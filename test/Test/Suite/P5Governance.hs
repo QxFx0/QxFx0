@@ -100,14 +100,14 @@ import QxFx0.Types.State.Perspective
   , defaultPerspectiveRegistry
   )
 import QxFx0.Types.State
-  ( emptySystemState
-    , ssAdaptiveMutationLog
+  ( ssAdaptiveMutationLog
     , ssGovernanceHistory
     , ssGovernanceProjection
     , ssGovernanceRuntimeFault
   , ssTruthContractStatus
   , ssSelfState
   )
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Governance (EpistemicStatus(..))
 import QxFx0.Core.TurnPipeline

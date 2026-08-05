@@ -2,21 +2,16 @@
 module QxFx0.Types.Persistence
   ( PersistenceStage(..)
   , PersistenceEnvelope(..)
+  , StateVersion(..)
   , currentPersistenceEnvelopeVersion
+  , corruptStateRepairVersion
+  , isCorruptStateRepairVersion
   , renderPersistenceStage
   , PersistenceDiagnostic(..)
   , LoadStateResult(..)
   , renderPersistenceDiagnostics
   ) where
 
-import Data.Aeson
-  ( FromJSON(..)
-  , ToJSON(..)
-  , object
-  , withObject
-  , (.:)
-  , (.=)
-  )
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -31,17 +26,22 @@ data PersistenceEnvelope = PersistenceEnvelope
 currentPersistenceEnvelopeVersion :: Int
 currentPersistenceEnvelopeVersion = 1
 
-instance ToJSON PersistenceEnvelope where
-  toJSON envelope = object
-    [ "persistenceEnvelopeVersion" .= peVersion envelope
-    , "state" .= peState envelope
-    ]
+-- | Explicit write capability returned only when a persisted blob was read at
+-- the given revision and found corrupt. Normal writers must never construct or
+-- reinterpret this as turn zero.
+corruptStateRepairVersion :: Int -> StateVersion
+corruptStateRepairVersion revision = StateVersion revision (-1)
 
-instance FromJSON PersistenceEnvelope where
-  parseJSON = withObject "PersistenceEnvelope" $ \o ->
-    PersistenceEnvelope
-      <$> o .: "persistenceEnvelopeVersion"
-      <*> o .: "state"
+isCorruptStateRepairVersion :: StateVersion -> Bool
+isCorruptStateRepairVersion version = stateTurn version == -1
+
+-- | The database revision and turn lineage observed with a loaded state.
+-- Writers must present this pair; a revision fetched independently of the
+-- state is not a valid write capability.
+data StateVersion = StateVersion
+  { stateRevision :: !Int
+  , stateTurn :: !Int
+  } deriving stock (Eq, Show, Generic)
 
 data PersistenceStage
   = StageStateBlobUpsert
@@ -74,7 +74,7 @@ data PersistenceDiagnostic
   | PdTransactionBeginFailed
   | PdTransactionCommitFailed
   | PdTransactionRollbackFailed
-  | PdStateRevisionConflict !Text !Int !Int !Int
+  | PdStateVersionConflict !Text !StateVersion !StateVersion
   | PdSaveFailed !PersistenceStage !(Maybe Text) !(Maybe Text)
   | PdRollbackFailed !PersistenceStage !(Maybe Text) !(Maybe Text)
   | PdNonAuthoritativeTruth
@@ -95,11 +95,12 @@ renderPersistenceDiagnostics = T.intercalate "; " . map renderOne
     renderOne PdTransactionBeginFailed = "tx_begin_failed"
     renderOne PdTransactionCommitFailed = "tx_commit_failed"
     renderOne PdTransactionRollbackFailed = "tx_rollback_failed"
-    renderOne (PdStateRevisionConflict sessionId expectedRevision actualRevision expectedPriorTurn) =
-      "state_revision_conflict session=" <> sessionId
-      <> " expected_revision=" <> T.pack (show expectedRevision)
-      <> " actual_revision=" <> T.pack (show actualRevision)
-      <> " expected_prior_turn=" <> T.pack (show expectedPriorTurn)
+    renderOne (PdStateVersionConflict sessionId expected actual) =
+      "state_version_conflict session=" <> sessionId
+      <> " expected_revision=" <> T.pack (show (stateRevision expected))
+      <> " actual_revision=" <> T.pack (show (stateRevision actual))
+      <> " expected_turn=" <> T.pack (show (stateTurn expected))
+      <> " actual_turn=" <> T.pack (show (stateTurn actual))
     renderOne (PdSaveFailed stage mTable mSqlite) =
       "save_failed stage=" <> renderPersistenceStage stage
       <> maybe "" (\t -> " table=" <> t) mTable

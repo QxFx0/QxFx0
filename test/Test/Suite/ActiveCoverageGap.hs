@@ -42,7 +42,7 @@ mkEdge from to rt conf = SemanticEdge
   , seSynthesis     = Nothing
   , seConfidence    = conf
   , seProvenance    = ProvenanceIngested
-  , seNamespace     = NamespaceSessionLocal
+  , seNamespace     = Just NamespaceSessionLocal
   , seLineage       = Nothing
   }
 

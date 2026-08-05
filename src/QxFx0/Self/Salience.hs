@@ -119,12 +119,8 @@ module QxFx0.Self.Salience
   , adaptSalienceWeights
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import Data.Text (Text)
-import GHC.Generics (Generic)
 
-import QxFx0.Self.ConfigLoad (loadTunedOrDefault)
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
 import QxFx0.Self.Conatus
   ( ConatusComponents (..)
@@ -143,6 +139,7 @@ import QxFx0.Self.Field
   , mkResonance
   )
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
+import QxFx0.Types.Self.Salience
 
 -- ---------------------------------------------------------------------------
 -- Verdict types
@@ -150,18 +147,6 @@ import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 
 -- | Closed enumeration of which input dominated the controller's
 -- decision. Used in trace records and diagnostics.
-data SalienceDriver
-  = DrivenByResonance
-  | DrivenByAtmosphere
-  | DrivenByConsolidation
-  | DrivenByCounterfactual
-  | DrivenByFieldConfidence
-  | DrivenByConatusGate
-  | DrivenByContentSaliency  -- ^ WP-C: top-down content signal from spectral clustering
-  | DrivenByDefault
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | The controller's verdict for a single turn.
 --
 -- Invariants (verified by 'Test.Suite.SelfSalience'):
@@ -171,40 +156,16 @@ data SalienceDriver
 -- * Identical @(SalienceWeights, ConatusEnergy, Field)@ inputs
 --   produce identical 'Salience' values, including the discrete
 --   'salienceDriver' tag.
-data Salience = Salience
-  { salienceHolisticBias :: !Double
-    -- ^ In @[0, 1]@: @0@ = pure formal, @1@ = pure holistic.
-  , salienceConfidence   :: !Double
-    -- ^ In @[0, 1]@: @1@ = one driver decisively dominates,
-    --   @0@ = contributions cancel.
-  , salienceDriver       :: !SalienceDriver
-    -- ^ Which input dominated the decision. Closed enum so it
-    --   fits a trace record without further serialisation.
-  }
-  deriving stock (Eq, Show)
-
 -- | The dispatched form of a 'Salience' value.
 --
 -- 'Tied' falls inside the dead band defined by
 -- 'verdictThreshold'. Downstream code dispatches @Tied@ to the
 -- documented default ('PreferFormal' fallback in 'chooseBranch').
-data SalienceVerdict
-  = PreferHolistic !Double  -- ^ Magnitude in @(0, 1]@.
-  | PreferFormal   !Double  -- ^ Magnitude in @(0, 1]@.
-  | Tied
-  deriving stock (Eq, Show)
-
 -- | Aggregated pre-turn self decision surface.
 --
 -- Keeps the continuous 'Salience' payload together with its discrete
 -- dispatch verdict so pipeline stages can read one canonical self-layer
 -- verdict instead of recomputing and reclassifying locally.
-data SelfVerdict = SelfVerdict
-  { svSalience :: !Salience
-  , svVerdict  :: !SalienceVerdict
-  }
-  deriving stock (Eq, Show)
-
 -- ---------------------------------------------------------------------------
 -- Tunable weights
 -- ---------------------------------------------------------------------------
@@ -212,40 +173,6 @@ data SelfVerdict = SelfVerdict
 -- | Tunable coefficients of the decision rule. Phase 5 ships
 -- 'defaultSalienceWeights'; Phase 7 (lifeness gates) is the
 -- calibration step.
-data SalienceWeights = SalienceWeights
-  { weightResonance       :: !Double
-    -- ^ Multiplier on 'fieldResonance'. Direction: positive
-    --   (more resonance ⇒ more bias toward Holistic).
-  , weightAtmosphere      :: !Double
-    -- ^ Multiplier on @atmosphereArousal (fieldAtmosphere f)@.
-    --   Direction: positive.
-  , weightConsolidation   :: !Double
-    -- ^ Multiplier on 'fieldConsolidation'. Direction: inverse
-    --   (more consolidation ⇒ more bias toward Formal).
-  , weightCounterfactual  :: !Double
-    -- ^ Multiplier on 'fieldCounterfactual'. Direction: positive.
-  , weightFieldConfidence :: !Double
-    -- ^ Multiplier on 'fieldConfidence'. Direction: inverse
-    --   (lower field confidence ⇒ more bias toward Formal, in
-    --   keeping with "the system can\'t trust holistic signals;
-    --   fall back to formal contracts").
-  , weightContentSaliency :: !Double
-    -- ^ WP-C: Multiplier on content saliency from spectral clustering.
-    --   Direction: positive (more distinct topic clusters ⇒ more bias
-    --   toward Holistic, as rich content structure favors generative mode).
-  , conatusGateThreshold  :: !Double
-    -- ^ If @ceScalar < this@, force 'PreferFormal' with full
-    --   confidence and 'DrivenByConatusGate' driver.
-  , verdictThreshold      :: !Double
-    -- ^ Half-width of the dead band around @0.5@ within which
-    --   the verdict is 'Tied'. In @[0, 0.5]@.
-  , sigmoidTemperature    :: !Double
-    -- ^ Slope parameter for the @sigmoid (raw \/ temperature)@
-    --   squash. @1.0@ is the textbook default.
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | The Phase-5 builtin weights.
 --
 -- These are pinned to make the property tests pass and to make
@@ -265,22 +192,10 @@ builtinSalienceWeights = SalienceWeights
   , sigmoidTemperature    = 1.0
   }
 
--- | The Phase-5 default weights, loaded from
--- 'resources/config/tuned_salience_weights.json' if present and
--- valid, otherwise falling back to
--- 'resources/config/salience_weights.json', and finally to
--- 'builtinSalienceWeights'.
---
--- The NOINLINE pragma is required to prevent GHC from inlining
--- the 'unsafePerformIO' call and potentially evaluating it
--- multiple times.
+-- | Pure Phase-5 default weights. Runtime configuration is loaded explicitly
+-- by session bootstrap and injected into 'SelfState'.
 defaultSalienceWeights :: SalienceWeights
-defaultSalienceWeights =
-  loadTunedOrDefault
-    "resources/config/tuned_salience_weights.json"
-    "resources/config/salience_weights.json"
-    builtinSalienceWeights
-{-# NOINLINE defaultSalienceWeights #-}
+defaultSalienceWeights = builtinSalienceWeights
 
 -- ---------------------------------------------------------------------------
 -- Tunable behavioural thresholds
@@ -297,20 +212,6 @@ defaultSalienceWeights =
 -- downstream code /uses/ it. Like 'defaultSalienceWeights', the
 -- defaults here are pinned to make the property and integration
 -- tests pass; Phase 7 (lifeness gates) is the calibration step.
-data SalienceModulation = SalienceModulation
-  { smModulationHolisticBiasFloor :: !Double
-    -- ^ Above this 'salienceHolisticBias', the principled-cascade
-    --   and guard-gating modulation paths /relax/ (intuition and
-    --   narrative hints retain more influence; only
-    --   agency-collapse remains hard-blocked). Default: @0.6@.
-  , smEscalationConfidenceFloor   :: !Double
-    -- ^ Above this 'salienceConfidence', soft family escalation
-    --   nudges the cascade family to its nearest Holistic \/ Formal
-    --   counterpart when bias and family side disagree.
-    --   Default: @0.7@.
-  }
-  deriving stock (Eq, Show)
-
 -- | The Phase-5.5 default modulation thresholds.
 --
 -- Pinned to match the values previously embedded as magic

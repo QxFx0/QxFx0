@@ -24,6 +24,7 @@ The loop is fail-closed:
 -}
 module QxFx0.Learning.Loop
   ( LearningTelemetry(..)
+  , legacyExternalLearningEnabled
   , runLearningStep
   , applyExternalLearning
   , applyLLMResponseToSemanticNetwork
@@ -102,7 +103,8 @@ import QxFx0.Types.State.AdaptiveMutation
   )
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkInitialBlanket)
-import QxFx0.Self.Conatus (computeConatusEnergy, ceScalar)
+import QxFx0.Self.Conatus (computeConatusEnergyWith, ceScalar)
+import QxFx0.Types.State.SelfState (selfConatusWeights)
 
 -- | Telemetry emitted by one learning-loop iteration.
 data LearningTelemetry = LearningTelemetry
@@ -126,6 +128,12 @@ emptyLearningTelemetry = LearningTelemetry
   , ltRejectReason     = Nothing
   }
 
+-- | Local fail-closed policy for the superseded Phase 8/9 contour.
+-- Governed autonomous learning uses 'QxFx0.Learning.Autonomous' and does not
+-- consult this policy.
+legacyExternalLearningEnabled :: Bool
+legacyExternalLearningEnabled = False
+
 -- | Run one learning-step iteration.
 --
 -- Arguments:
@@ -143,7 +151,24 @@ runLearningStep
   -> Text
   -> Maybe (Either ExternalQueryError ExternalQueryResponse)
   -> (SystemState, LearningTelemetry)
-runLearningStep ss tool need query mResult =
+runLearningStep ss tool need query mResult
+  | not legacyExternalLearningEnabled =
+      ( ss
+      , emptyLearningTelemetry
+          { ltValidationStatus = "disabled_by_policy"
+          , ltRejectReason = Just "legacy_external_learning_disabled"
+          }
+      )
+  | otherwise = runLearningStepEnabled ss tool need query mResult
+
+runLearningStepEnabled
+  :: SystemState
+  -> ExternalTool
+  -> LearningNeed
+  -> Text
+  -> Maybe (Either ExternalQueryError ExternalQueryResponse)
+  -> (SystemState, LearningTelemetry)
+runLearningStepEnabled ss tool need query mResult =
   let turn = ssTurnCount ss
       tree0 = ssKnowledgeTree ss
       rel0  = ssToolReliability ss
@@ -275,7 +300,8 @@ conatusProxyFromState :: SystemState -> Double
 conatusProxyFromState s =
   let blanket = computeSelfBlanket s
       violations = checkInitialBlanket blanket
-      energy = ceScalar (computeConatusEnergy blanket violations)
+      energy = ceScalar (computeConatusEnergyWith
+        (selfConatusWeights (ssSelfState s)) blanket violations)
       tree = ssKnowledgeTree s
       treeSize = sum (map length (M.elems (ktBranches tree))) + length (ktQuarantine tree)
   in energy + 0.01 * fromIntegral treeSize
@@ -506,25 +532,27 @@ applyLLMResponseToSemanticNetwork need resp =
 -- when an external query result is present.
 -- If no result was carried, returns the state unchanged.
 applyExternalLearning :: SystemState -> Maybe (Either ExternalQueryError ExternalQueryResponse) -> SystemState
-applyExternalLearning ss mResult =
-  case mResult of
-    Nothing -> ss
-    Just result ->
-      let needState = ssLearningNeedState ss
-          need = lnsCurrentNeed needState
-          mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
-          tool = fromMaybe (ExternalTool "unknown" DomainGeneral 0.5 False) mTool
-          turn = ssTurnCount ss
-          proposalId = CalibrationId turn
-          submittedGuard = recordProposalSubmission (ssGuardrailState ss) turn proposalId
-          ssSubmitted = ss { ssGuardrailState = submittedGuard }
-          queryText = case result of
-            Right resp -> eqrToolName resp <> " " <> T.pack (show (eqrLatencyMs resp))
-            Left _     -> ""
-          (updated, telemetry) = runLearningStep ssSubmitted tool need queryText (Just result)
-          finalizedGuard =
-            case ltValidationStatus telemetry of
-              "accept" -> recordAcceptance (ssGuardrailState updated)
-              "not_attempted" -> ssGuardrailState updated
-              _ -> recordRejection (ssGuardrailState updated) turn
-      in updated { ssGuardrailState = finalizedGuard }
+applyExternalLearning ss mResult
+  | not legacyExternalLearningEnabled = ss
+  | otherwise =
+      case mResult of
+        Nothing -> ss
+        Just result ->
+          let needState = ssLearningNeedState ss
+              need = lnsCurrentNeed needState
+              mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
+              tool = fromMaybe (ExternalTool "unknown" DomainGeneral 0.5 False) mTool
+              turn = ssTurnCount ss
+              proposalId = CalibrationId turn
+              submittedGuard = recordProposalSubmission (ssGuardrailState ss) turn proposalId
+              ssSubmitted = ss { ssGuardrailState = submittedGuard }
+              queryText = case result of
+                Right resp -> eqrToolName resp <> " " <> T.pack (show (eqrLatencyMs resp))
+                Left _     -> ""
+              (updated, telemetry) = runLearningStep ssSubmitted tool need queryText (Just result)
+              finalizedGuard =
+                case ltValidationStatus telemetry of
+                  "accept" -> recordAcceptance (ssGuardrailState updated)
+                  "not_attempted" -> ssGuardrailState updated
+                  _ -> recordRejection (ssGuardrailState updated) turn
+          in updated { ssGuardrailState = finalizedGuard }

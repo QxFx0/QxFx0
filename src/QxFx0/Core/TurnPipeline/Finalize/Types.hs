@@ -18,7 +18,7 @@ import Data.Time.Clock (UTCTime)
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Core.FMAR (FmarMode(..))
-import QxFx0.Runtime.Mode (RuntimeMode(..))
+import QxFx0.Types.RuntimeMode (RuntimeMode(..))
 import QxFx0.Self.Conatus (ConatusEnergy)
 import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
@@ -53,6 +53,7 @@ data FinalizePrecommitResults = FinalizePrecommitResults
     -- ^ FMAR Phase-9: the FMAR operating mode read from @QXFX0_FMAR@.
     --   Carried to trace so that 'trcFmarMode' can disambiguate shadow
     --   vs live override.
+  , fprFeedbackLoopActive :: !Bool
   } deriving stock (Eq, Show)
 
 data FinalizePrecommitBundle = FinalizePrecommitBundle
@@ -72,7 +73,10 @@ data FinalizePrecommitBundle = FinalizePrecommitBundle
     -- ^ WP1 (contour closure): the 'shouldCommit' result from
     --   'buildNextSystemState'.  Used to detect
     --   'ViolationRefusedCommitment' and to avoid re-computing
-    --   'shouldCommit' in 'computeEssenceValidation'.
+  --   'shouldCommit' in 'computeEssenceValidation'.
+  , fpbFeedbackMirrorPending :: !Bool
+    -- ^ Secondary JSONL feedback mirror work. This is only executed after
+    --   authoritative persistence and runtime-state commit both succeed.
   } deriving stock (Eq, Show)
 
 data FinalizeCommitPlan = FinalizeCommitPlan
@@ -85,6 +89,7 @@ data FinalizeCommitPlan = FinalizeCommitPlan
   , fcpSessionId :: !Text
   , fcpProjection :: !TurnProjection
   , fcpRewireEventsCount :: !Int
+  , fcpFeedbackMirrorPending :: !Bool
   , fcpEssenceValidation :: !(Either EssenceViolation ())
     -- ^ Phase 10: pre-commitment essence validation result.
     --   A 'Left' here becomes 'EssenceRupture' in

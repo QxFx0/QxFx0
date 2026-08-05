@@ -58,7 +58,9 @@ computeFieldAffinity space dim pv =
 
 buildSemanticSpace :: SemanticNetwork -> Map Text (Set Text) -> SemanticSpace
 buildSemanticSpace sn topicAtoms =
-  let nodeList = S.toList (snNodes sn)
+  let topicAtomNodes = S.unions (M.elems topicAtoms)
+      prototypeAtoms = S.fromList (concat (M.elems fieldDimensionPrototypes))
+      nodeList = S.toList (snNodes sn `S.union` topicAtomNodes `S.union` prototypeAtoms)
       atomIndex = M.fromList $ zip nodeList [0..]
       dimCount = length nodeList
       prototypes = buildPrototypes atomIndex dimCount
@@ -145,4 +147,3 @@ tokenizePredicate lemmaMap text =
       , "of", "to", "in", "on", "at", "for", "with", "by"
       , "that", "which", "who", "when", "where", "how"
       ]
-

@@ -9,7 +9,12 @@ import CLI.Protocol (RuntimeOutputMode(..))
 import CLI.State (handleStateJson)
 import CLI.Turn (runTurnJson)
 import CLI.Worker (runWorkerStdio)
-import CLI.AutonomousSmoke (runAutonomousSmoke)
+import CLI.AutonomousSmoke (runAutonomousFor, runAutonomousSmoke)
+import QxFx0.Learning.Autonomous (auditHistoricalSelectorPreflight)
+import QxFx0.Learning.CorroborationQueue (ensureCorroborationTaskSchema)
+import QxFx0.Learning.Events (ensureLearningEventsSchema)
+import QxFx0.Learning.JobQueue (ensureLearningJobSchema)
+import QxFx0.Learning.Quarantine (ensureQuarantineSchema)
 
 import QxFx0.Learning.Tuning (runCorpusTuning)
 
@@ -25,7 +30,7 @@ import System.Exit (exitFailure)
 import System.FilePath (takeDirectory)
 import System.IO (BufferMode(..), hPutStrLn, hSetBuffering, stderr, stdout)
 import qualified Data.ByteString.Lazy.Char8 as BLC
-import Control.Exception (try)
+import Control.Exception (finally)
 import Text.Read (readMaybe)
 
 import qualified QxFx0.Bridge.EmbeddedSQLSync as EmbeddedSQLSync
@@ -41,8 +46,32 @@ import QxFx0.Semantic.Content.PathFinder (defaultFieldProfile)
 import Data.List (partition)
 import QxFx0.CLI.Parser (extractSessionArgs)
 import qualified QxFx0.CLI.Ingest as Ingest
-import QxFx0.ExceptionPolicy (QxFx0Exception)
-import QxFx0.Types.State (ssMorphology, ssRuntimeGraph)
+import QxFx0.ExceptionPolicy (QxFx0Exception, tryIO, tryQxFx0)
+import QxFx0.Types.State (ssMorphology, ssRuntimeGraph, ssTurnCount)
+import QxFx0.Types.Persistence (StateVersion(..))
+import QxFx0.Bridge.SQLite (QxFx0DB(..))
+import qualified QxFx0.Bridge.SemanticNetwork.RuntimeProjection as RuntimeProjection
+import QxFx0.Learning.Promotion
+  ( PromotionEvaluation(..)
+  , PromotionSnapshot(..)
+  , activatePromotionOverlay
+  , buildPromotionCandidates
+  , createDraftOverlay
+  , createPromotionSnapshot
+  , ensurePromotionSchema
+  , recordPromotionHumanRelease
+  , rollbackPromotionOverlay
+  , runPromotionEvaluation
+  , runPromotionGates
+  )
+import QxFx0.Learning.PromotionRuntime
+  ( RuntimePromotionEvaluation
+  , runPromotionRuntimeEvaluation
+  )
+import QxFx0.Learning.PromotionReview
+  ( renderPromotionReview
+  , renderPromotionRevalidationReport
+  )
 
 main :: IO ()
 main = do
@@ -68,15 +97,37 @@ main = do
     ("--input":textParts)     -> handleTurnJson sessionId (filter (/= "--json") textParts)
     ["--json"]                -> handleStateJson sessionId
     ["--init-db-only"]        -> handleInitDb
+    ["--init-learning-db-only"] -> handleInitLearningDb
     ["--check-embedded-sql"]  -> handleCheckEmbeddedSql
     ["--sync-embedded-sql"]   -> handleSyncEmbeddedSql
     ("--selfplay":rest)       -> handleSelfPlay sessionId rest
     ("--discover":rest)       -> handleDiscover sessionId rest
     ("--tune-corpus":rest)    -> handleTuneCorpus sessionId rest
+    ["--promotion-snapshot"] -> handlePromotionSnapshot
+    ["--promotion-candidates", snapshotId] -> handlePromotionCandidates (T.pack snapshotId)
+    ["--promotion-gate", snapshotId] -> handlePromotionGates (T.pack snapshotId)
+    ["--promotion-draft", snapshotId] -> handlePromotionDraft (T.pack snapshotId)
+    ["--promotion-activate", overlayVersion] -> handlePromotionActivate (T.pack overlayVersion)
+    ["--promotion-rollback"] -> handlePromotionRollback
+    ["--promotion-eval", overlayVersion] -> handlePromotionEvaluation (T.pack overlayVersion)
+    ["--promotion-runtime-eval", overlayVersion] -> handlePromotionRuntimeEvaluation (T.pack overlayVersion)
+    ["--promotion-release", overlayVersion] -> handlePromotionRelease (T.pack overlayVersion)
+    ["--promotion-review", snapshotId, overlayVersion] -> handlePromotionReview (T.pack snapshotId) (T.pack overlayVersion)
+    ["--promotion-revalidation-review", snapshotId, priorOverlayVersion] -> handlePromotionRevalidationReview (T.pack snapshotId) (T.pack priorOverlayVersion)
+    ["--autonomous-preflight-audit"] -> handleAutonomousPreflightAudit
     ("--autonomous-smoke":rest) -> case rest of
       (topic:_) -> runAutonomousSmoke (T.pack topic) sessionId
       _ -> do
         hPutStrLn stderr "Error: --autonomous-smoke requires a topic name"
+        exitFailure
+    ("--autonomous-run":rest) -> case rest of
+      (secondsText:_) -> case readMaybe secondsText of
+        Just seconds -> runAutonomousFor seconds sessionId
+        Nothing -> do
+          hPutStrLn stderr "Error: --autonomous-run requires an integer duration in seconds"
+          exitFailure
+      _ -> do
+        hPutStrLn stderr "Error: --autonomous-run requires an integer duration in seconds"
         exitFailure
     ("ingest":rest)           -> handleIngest rest
     _                         -> do
@@ -105,10 +156,24 @@ printMachineHelp = do
   T.putStrLn "  --strict-decode              fail on missing JSON fields (sets QXFX0_STRICT_DECODE=true)"
   T.putStrLn "  --selfplay [N]               run N self-play iterations (offline graph enrichment)"
   T.putStrLn "  --discover <concept>         discover relations for a concept via LLM (offline)"
-  T.putStrLn "  --autonomous-smoke <topic>    run autonomous learning smoke test with LLM"
+  T.putStrLn "  --autonomous-smoke <topic>    run with LLM; requires QXFX0_AUTONOMOUS_SMOKE_DB=/tmp/..."
+  T.putStrLn "  --autonomous-run <seconds>    run bounded unattended autonomous learning"
+  T.putStrLn "  --autonomous-preflight-audit  annotate legacy selector-preflight rejections"
   T.putStrLn "  --check-schema-consistency   verify cumulative migrations match canonical schema.sql"
+  T.putStrLn "  --init-learning-db-only     migrate core, learning, and promotion schemas without starting workers"
   T.putStrLn "  --check-schema-contract      verify runtime schema contract manifest against schema.sql and SchemaContract.hs"
   T.putStrLn "  --tune-corpus [session-id|all]  run corpus-driven calibration tuning"
+  T.putStrLn "  --promotion-snapshot            materialize runtime LLM edges for promotion"
+  T.putStrLn "  --promotion-candidates <id>     build normalized candidate predicates"
+  T.putStrLn "  --promotion-gate <id>           run deterministic promotion gates"
+  T.putStrLn "  --promotion-draft <id>          create a versioned draft overlay"
+  T.putStrLn "  --promotion-activate <version>  activate an evaluated overlay"
+  T.putStrLn "  --promotion-rollback            restore the parent active overlay"
+  T.putStrLn "  --promotion-eval <version>      record deterministic overlay evaluation"
+  T.putStrLn "  --promotion-runtime-eval <ver>  run isolated renderer A/B evaluation"
+  T.putStrLn "  --promotion-release <version>   human-release the latest passing evaluation (does not activate)"
+  T.putStrLn "  --promotion-review <snapshot> <overlay>  render a read-only A/B review report"
+  T.putStrLn "  --promotion-revalidation-review <snapshot> <prior-overlay>  report a fail-closed revalidation"
   T.putStrLn "  ingest [--relations <path>] [--ontology <path>]"
   T.putStrLn "                              ingest external knowledge and emit a summary"
 
@@ -133,9 +198,113 @@ handleInitDb = do
   case mDb of
     Left err -> hPutStrLn stderr $ "Cannot open database: " <> T.unpack err
     Right db -> do
-      Runtime.ensureSchemaMigrations db
-      NSQL.close db
-      hPutStrLn stderr $ "DB initialized at: " ++ dbPath
+       Runtime.ensureSchemaMigrations db
+       NSQL.close db
+       hPutStrLn stderr $ "DB initialized at: " ++ dbPath
+
+handleInitLearningDb :: IO ()
+handleInitLearningDb = do
+  dbPath <- Runtime.resolveDbPath
+  createDirectoryIfMissing True (takeDirectory dbPath)
+  opened <- NSQL.open dbPath
+  case opened of
+    Left err -> hPutStrLn stderr ("Cannot open database: " <> T.unpack err) >> exitFailure
+    Right conn -> do
+      let db = QxFx0DB dbPath conn
+      migrated <- tryIO (tryQxFx0 $ do
+          Runtime.ensureSchemaMigrations conn
+          RuntimeProjection.ensureRuntimeProjectionSchema db
+          ensureLearningJobSchema db
+          ensureLearningEventsSchema db
+          ensureCorroborationTaskSchema db
+          ensureQuarantineSchema db
+          ensurePromotionSchema db
+        )
+      NSQL.close conn
+      case migrated of
+        Left err -> do
+          hPutStrLn stderr ("Learning schema migration failed: " <> show err)
+          exitFailure
+        Right (Left err) -> do
+          hPutStrLn stderr ("Learning schema migration failed: " <> show err)
+          exitFailure
+        Right (Right ()) -> hPutStrLn stderr ("Learning schema initialized at: " <> dbPath)
+
+withPromotionDb :: (QxFx0DB -> IO a) -> IO a
+withPromotionDb action = do
+  dbPath <- Runtime.resolveDbPath
+  opened <- NSQL.open dbPath
+  case opened of
+    Left err -> hPutStrLn stderr ("Cannot open promotion DB: " <> T.unpack err) >> exitFailure
+    Right conn -> action (QxFx0DB dbPath conn) `finally` NSQL.close conn
+
+handleAutonomousPreflightAudit :: IO ()
+handleAutonomousPreflightAudit = withPromotionDb $ \db -> do
+  count <- auditHistoricalSelectorPreflight db
+  T.putStrLn $ "audited_selector_preflight_rows=" <> T.pack (show count)
+
+handlePromotionSnapshot :: IO ()
+handlePromotionSnapshot = withPromotionDb $ \db -> do
+  snapshot <- createPromotionSnapshot db
+  T.putStrLn $ "snapshot_id=" <> psSnapshotId snapshot
+    <> " edge_count=" <> T.pack (show (psEdgeCount snapshot))
+
+handlePromotionCandidates :: Text -> IO ()
+handlePromotionCandidates snapshotId = withPromotionDb $ \db -> do
+  count <- buildPromotionCandidates db snapshotId
+  T.putStrLn $ "candidates=" <> T.pack (show count)
+
+handlePromotionGates :: Text -> IO ()
+handlePromotionGates snapshotId = withPromotionDb $ \db -> do
+  eligible <- runPromotionGates db snapshotId
+  T.putStrLn $ "eligible_for_draft=" <> T.pack (show eligible)
+
+handlePromotionDraft :: Text -> IO ()
+handlePromotionDraft snapshotId = withPromotionDb $ \db -> do
+  version <- createDraftOverlay db snapshotId
+  T.putStrLn $ "overlay_version=" <> version
+
+handlePromotionActivate :: Text -> IO ()
+handlePromotionActivate version = withPromotionDb $ \db -> do
+  activatePromotionOverlay db version
+  T.putStrLn $ "active_overlay=" <> version
+
+handlePromotionRollback :: IO ()
+handlePromotionRollback = withPromotionDb $ \db -> do
+  rollbackPromotionOverlay db
+  T.putStrLn "overlay rollback complete"
+
+handlePromotionEvaluation :: Text -> IO ()
+handlePromotionEvaluation version = withPromotionDb $ \db -> do
+  evaluation <- runPromotionEvaluation db version
+  T.putStrLn $ "evaluation_id=" <> peEvaluationId evaluation
+    <> " baseline_contentful=" <> T.pack (show (peBaselineContentful evaluation))
+    <> " candidate_contentful=" <> T.pack (show (peCandidateContentful evaluation))
+    <> " baseline_refusals=" <> T.pack (show (peBaselineRefusals evaluation))
+    <> " candidate_refusals=" <> T.pack (show (peCandidateRefusals evaluation))
+    <> " baseline_conflicts=" <> T.pack (show (peBaselineConflicts evaluation))
+    <> " candidate_conflicts=" <> T.pack (show (peCandidateConflicts evaluation))
+
+handlePromotionRuntimeEvaluation :: Text -> IO ()
+handlePromotionRuntimeEvaluation version = withPromotionDb $ \db -> do
+  evaluation <- runPromotionRuntimeEvaluation db version
+  BLC.putStrLn (encode evaluation)
+
+handlePromotionRelease :: Text -> IO ()
+handlePromotionRelease version = withPromotionDb $ \db -> do
+  evaluationId <- recordPromotionHumanRelease db version "explicit_cli_human_release"
+  T.putStrLn $ "released_evaluation=" <> evaluationId <> " overlay_version=" <> version
+
+handlePromotionReview :: Text -> Text -> IO ()
+handlePromotionReview snapshotId version = withPromotionDb $ \db -> do
+  evaluation <- runPromotionRuntimeEvaluation db version
+  report <- renderPromotionReview db snapshotId version evaluation
+  T.putStrLn report
+
+handlePromotionRevalidationReview :: Text -> Text -> IO ()
+handlePromotionRevalidationReview snapshotId priorOverlayVersion = withPromotionDb $ \db -> do
+  report <- renderPromotionRevalidationReport db snapshotId priorOverlayVersion
+  T.putStrLn report
 
 handleCheckEmbeddedSql :: IO ()
 handleCheckEmbeddedSql = do
@@ -178,7 +347,14 @@ handleSelfPlay _sessionId args = do
           T.putStrLn $ "  Q: " <> SelfPlay.sprQuestion r
           T.putStrLn $ "    Score: " <> T.pack (show (SelfPlay.sprScore r))
           T.putStrLn $ "    Admitted: " <> T.pack (show (length (SelfPlay.sprAdmittedRelations r)))
-        saveResult <- StatePersistence.saveState (Runtime.withRuntimeDb (Runtime.sessRuntime session)) enrichedState _sessionId
+        let observedVersion = StateVersion
+              (Runtime.sessStateRevision session)
+              (ssTurnCount (Runtime.sessSystemState session))
+        saveResult <- StatePersistence.saveStateExpected
+          (Runtime.withRuntimeDb (Runtime.sessRuntime session))
+          enrichedState
+          _sessionId
+          observedVersion
         case saveResult of
           Right _ -> T.putStrLn "Enriched graph persisted to session."
           Left err -> hPutStrLn stderr $ "Failed to persist enriched graph: " <> show err
@@ -237,7 +413,7 @@ handleWorkerStdio sessionId = runWorkerStdio sessionId
 
 handleWriteAgdaWitness :: IO ()
 handleWriteAgdaWitness = do
-  result <- try Runtime.writeAgdaWitness
+  result <- tryQxFx0 Runtime.writeAgdaWitness
   case result of
     Right witnessPath -> T.putStrLn (T.pack witnessPath)
     Left err -> do

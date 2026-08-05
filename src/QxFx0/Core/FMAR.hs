@@ -50,7 +50,7 @@ import QxFx0.Self.Field
 import QxFx0.Self.FamilyTargets
   ( FamilyTarget (..)
   , closestFamilyByField
-  , familyTargetFor
+  , familyTargetForWith
   , fieldDistance
   , fmarDistanceThreshold
   )
@@ -77,7 +77,7 @@ fmarSelectFamily
   -> [FamilyTarget]
   -> CanonicalMoveFamily
 fmarSelectFamily pos recommended targets =
-  let recTarget = familyTargetFor recommended
+  let recTarget = familyTargetForWith targets recommended
       recDist   = fieldDistance pos (ftTargetField recTarget)
    in if recDist <= fmarDistanceThreshold
         then recommended

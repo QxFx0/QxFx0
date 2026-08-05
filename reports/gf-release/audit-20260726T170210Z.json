@@ -1,0 +1,82 @@
+{
+  "run_id": "20260726T170210Z",
+  "binary": "/home/liskil/my-haskell-project/QxFx0/dist-newstyle/build/x86_64-linux/ghc-9.6.6/qxfx0-0.1.0.0/x/qxfx0-main/build/qxfx0-main/qxfx0-main",
+  "prompt_count": 30,
+  "warm_p95_limit_ms": 10000.0,
+  "canary_scope": {
+    "sessions": 2,
+    "selected_sessions": 1,
+    "percent": 50,
+    "turns_per_session": 1
+  },
+  "canary_summary": {
+    "turns": 1,
+    "canonical_rate": 1.0,
+    "fallback_histogram": {
+      "none": 1
+    },
+    "recovery_rate": 0.0,
+    "quality_issue_count": 0,
+    "semantic_substitution_count": 0,
+    "warm_wall_median_ms": 6782.023243998992,
+    "warm_wall_p95_ms": 6782.023243998992,
+    "phases": {
+      "prepare": {
+        "median_ms": 47.0,
+        "p95_ms": 47.0
+      },
+      "plan": {
+        "median_ms": 39.0,
+        "p95_ms": 39.0
+      },
+      "render": {
+        "median_ms": 3709.0,
+        "p95_ms": 3709.0
+      },
+      "finalize": {
+        "median_ms": 1920.0,
+        "p95_ms": 1920.0
+      },
+      "total": {
+        "median_ms": 5716.0,
+        "p95_ms": 5716.0
+      }
+    }
+  },
+  "control_summary": {
+    "turns": 1,
+    "canonical_rate": 0.0,
+    "fallback_histogram": {
+      "none": 1
+    },
+    "recovery_rate": 0.0,
+    "quality_issue_count": 0,
+    "semantic_substitution_count": 0,
+    "warm_wall_median_ms": 6773.90063099665,
+    "warm_wall_p95_ms": 6773.90063099665,
+    "phases": {
+      "prepare": {
+        "median_ms": 47.0,
+        "p95_ms": 47.0
+      },
+      "plan": {
+        "median_ms": 39.0,
+        "p95_ms": 39.0
+      },
+      "render": {
+        "median_ms": 2860.0,
+        "p95_ms": 2860.0
+      },
+      "finalize": {
+        "median_ms": 2034.0,
+        "p95_ms": 2034.0
+      },
+      "total": {
+        "median_ms": 4981.0,
+        "p95_ms": 4981.0
+      }
+    }
+  },
+  "canary_artifact": "/home/liskil/my-haskell-project/QxFx0/reports/gf-release/canary-20260726T170210Z.jsonl",
+  "passed": true
+}

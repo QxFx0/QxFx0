@@ -25,16 +25,9 @@ is_core_policy_port_module() {
 
 echo "Architecture checks:"
 
-echo "  [1] Types modules must not import Core/Bridge/Semantic..."
+echo "  [1] Types modules must not import implementation layers..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+QxFx0\.(Core|Bridge|Semantic)' "$file" \
-       | rg -v 'Semantic\.DialogueContext' \
-       | rg -v 'Semantic\.Network\.(Types|Seed)' \
-       | rg -v 'Semantic\.Space\.Types' \
-       | rg -v 'Semantic\.Intent\.Metrics' \
-       | rg -v 'Semantic\.ContentSelector\.Types' \
-       | rg -v 'Semantic\.Content(\.|\s)' \
-       | rg -v 'Semantic\.Content\.AtomStore' >/dev/null 2>&1; then
+  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core|Bridge|Runtime|Self|Learning|Policy|Memory|Semantic)([[:space:].(]|$)' "$file" >/dev/null 2>&1; then
     fail_violation "$file imports forbidden layer from Types"
   fi
 done < <(
@@ -42,9 +35,18 @@ done < <(
     find "$SRC/QxFx0/Types" -name "*.hs" -type f 2>/dev/null || true; } | sort -u
 )
 
+echo "  [1a] Types.State.System is a contract, not a runtime-default owner..."
+SYSTEM_STATE_TYPES="$SRC/QxFx0/Types/State/System.hs"
+if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core|Bridge|Runtime|Self|Learning|Policy|Memory|Semantic)([[:space:].(]|$)' "$SYSTEM_STATE_TYPES" >/dev/null 2>&1; then
+  fail_violation "$SYSTEM_STATE_TYPES imports an implementation layer"
+fi
+if rg -n '^emptySystemState\b|\b(seedFromCorpus|seedGraph|defaultRuntimeRegime|defaultSelfState)\b|^instance\s+(ToJSON|FromJSON)\s+SystemState\b' "$SYSTEM_STATE_TYPES" >/dev/null 2>&1; then
+  fail_violation "$SYSTEM_STATE_TYPES owns runtime construction, seeding, policy defaults, or persistence instances"
+fi
+
 echo "  [2] Semantic modules must not import Bridge/Core/Runtime..."
 while IFS= read -r file; do
-  if rg -n '^\s*import\s+QxFx0\.(Bridge|Core|Runtime)' "$file" \
+  if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Bridge|Core|Runtime)' "$file" \
        | rg -v 'Runtime\.GF\.Morphology' \
        | rg -v 'Core\.Proposition[A-Za-z]*Admission' \
        | rg -v 'Core\.MeaningGraph' >/dev/null 2>&1; then
@@ -336,6 +338,13 @@ echo "  [13] ADR-0013 §3 Rule 1: Self/* must be canonical-only; no downward wri
 while IFS= read -r file; do
   if rg -n '^\s*import\s+(qualified\s+)?QxFx0\.(Core\.TurnPipeline|Bridge)' "$file" >/dev/null 2>&1; then
     fail_violation "$file (Self/*) imports Core.TurnPipeline.* or Bridge.* (ADR-0013 Rule 1)"
+  fi
+done < <(find "$SRC/QxFx0/Self" -name "*.hs" 2>/dev/null || true)
+
+echo "  [13b] Self/* must remain free of unsafePerformIO and unsafe IO imports..."
+while IFS= read -r file; do
+  if rg -n 'unsafePerformIO|^\s*import\s+(qualified\s+)?System\.IO\.Unsafe' "$file" >/dev/null 2>&1; then
+    fail_violation "$file (Self/*) uses unsafe IO; load configuration explicitly in Runtime.Session.Bootstrap"
   fi
 done < <(find "$SRC/QxFx0/Self" -name "*.hs" 2>/dev/null || true)
 

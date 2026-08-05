@@ -63,19 +63,15 @@ module QxFx0.Self.Essence
   , fieldSignature
   ) where
 
-import Control.DeepSeq (NFData)
 import qualified Crypto.Hash.SHA256 as SHA256
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), encode)
-import Data.Aeson.Types (typeMismatch)
+import Data.Aeson (encode)
 import qualified Data.ByteString as BS
 import Data.Foldable (foldl', toList)
-import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
 import Numeric (showHex)
 
 import QxFx0.Self.Conatus (ConatusEnergy (..))
@@ -98,62 +94,15 @@ import QxFx0.Self.Field
 import QxFx0.Self.Salience (SalienceDriver (..))
 import QxFx0.Types.Decision.Enums.Render (RenderStyle (..))
 import QxFx0.Types.Domain (CanonicalMoveFamily (..))
+import QxFx0.Types.Self.Essence
 
 -- ---------------------------------------------------------------------------
 -- Carriers
 -- ---------------------------------------------------------------------------
 
-data Essence
-  = EssenceUncommitted !EssenceTrajectory
-  | EssenceCommitted   !EssenceTrajectory !EssenceCommitment
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data EssenceTrajectory = EssenceTrajectory
-  { etWitnesses    :: !(Seq EssenceWitness)
-  , etAngstLevel   :: !Double
-  , etConatusFloor :: !Double
-  , etCapacity     :: !Int
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
-data EssenceWitness = EssenceWitness
-  { ewTurnOrdinal     :: !Int
-  , ewSalienceDriver  :: !SalienceDriver
-  , ewReconcileRule   :: !ReconcileRule
-  , ewAgreement       :: !Agreement
-  , ewDivergence      :: !Double
-  , ewConatusScalar   :: !Double
-  , ewFieldSignature  :: !FieldSignature
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- ---------------------------------------------------------------------------
 -- Field signature
 -- ---------------------------------------------------------------------------
-
-data FieldSignature = FieldSignature
-  { fsResonance      :: !FieldBand
-  , fsArousal        :: !FieldBand
-  , fsValence        :: !ValenceBand
-  , fsConsolidation  :: !FieldBand
-  , fsCounterfactual :: !FieldBand
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
-data FieldBand
-  = BandLow
-  | BandMid
-  | BandHigh
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data ValenceBand
-  = ValenceNegative
-  | ValenceNeutral
-  | ValencePositive
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Coarse hash of a 'Field' into a 'FieldSignature' for
 -- trajectory storage. Components in [0, 1] bucket at
@@ -181,63 +130,12 @@ fieldSignature em f = FieldSignature
 -- Modes and triggers
 -- ---------------------------------------------------------------------------
 
-data EssenceMode
-  = EssenceWitnessing      -- pre-commitment, runtime-visible
-  | EssenceContemplative
-  | EssenceDialogical
-  | EssenceIntegrative
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data CommitmentTrigger
-  = TriggerAngstThreshold
-  | TriggerConatusErosion
-  deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-newtype TrajectoryHash = TrajectoryHash { unTrajectoryHash :: Text }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData)
-
--- | Emit a BARE string, matching the 'String' case the FromJSON below accepts.
--- The generic newtype ToJSON would emit @{"unTrajectoryHash":...}@ (an Object),
--- which the hand-written FromJSON rejects — so @decode . encode@ failed on the
--- persisted @selfEssence.ecWitnessHash@ path. (Class II round-trip fix.)
-instance ToJSON TrajectoryHash where
-  toJSON = toJSON . unTrajectoryHash
-
-instance FromJSON TrajectoryHash where
-  parseJSON value =
-    case value of
-      String txt -> pure (TrajectoryHash txt)
-      Number n ->
-        let rounded = round n :: Integer
-        in if fromInteger rounded == n
-             then pure (TrajectoryHash (T.pack (show rounded)))
-             else pure (TrajectoryHash (T.pack (show (realToFrac n :: Double))))
-      _ -> typeMismatch "TrajectoryHash" value
-
-data EssenceCommitment = EssenceCommitment
-  { ecMode         :: !EssenceMode
-  , ecTrigger      :: !CommitmentTrigger
-  , ecCommittedAt  :: !Int                -- turn ordinal
-  , ecWitnessHash  :: !TrajectoryHash
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- ---------------------------------------------------------------------------
 -- Anomaly-3: Self-referential collapse
 -- ---------------------------------------------------------------------------
 
 -- | Event recorded when the system performs a self-referential collapse.
 -- This is a replay-visible record of Essence reset, not a silent failure.
-data EssenceResetEvent = EssenceResetEvent
-  { ereTurn               :: !Int      -- ^ Turn ordinal when collapse occurred
-  , erePreviousAngst      :: !Double   -- ^ Angst level before reset
-  , erePreviousWitnessCount :: !Int    -- ^ Number of witnesses before reset
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Perform a self-referential collapse: reset the Essence trajectory
 -- while preserving the replay-visible record of what was lost.
 --
@@ -266,22 +164,6 @@ collapseEssence turn traj =
 -- ---------------------------------------------------------------------------
 -- Modulation
 -- ---------------------------------------------------------------------------
-
-data EssenceModulation = EssenceModulation
-  { emAngstCommitmentThreshold     :: !Double  -- [0, 1]
-  , emAngstAccrualRate             :: !Double  -- per qualifying turn
-  , emAngstDecayRate               :: !Double  -- per agreement turn
-  , emAngstAccrualDivergenceFloor  :: !Double  -- below floor no accrual
-  , emConatusFloorWindow           :: !Int     -- turns of sub-floor
-  , emConatusStructuralFloor       :: !Double  -- below which we count
-  , emTrajectoryCapacity           :: !Int     -- ring-buffer length
-    -- field-band bucketing knobs
-  , emBandLowEdge                  :: !Double  -- below = BandLow
-  , emBandHighEdge                 :: !Double  -- above = BandHigh
-  , emValenceLowEdge               :: !Double  -- below = ValenceNegative
-  , emValenceHighEdge              :: !Double  -- above = ValencePositive
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | Original Phase 9 defaults, kept for backward-compat regression
 -- locks.  Note: @emConatusStructuralFloor = 0.5@ was a unit-mismatch
@@ -506,21 +388,6 @@ commit turnOrdinal trigger traj =
 
 -- | A commitment violation.  Priority order: family → tone → style;
 -- the first mismatch is the one reported.
-data EssenceViolation
-  = ViolationFamilyMismatch !EssenceMode !CanonicalMoveFamily
-  | ViolationToneMismatch   !EssenceMode !NarrativeTone
-  | ViolationStyleMismatch  !EssenceMode !RenderStyle
-  | ViolationMissingDeliberation !EssenceMode
-    -- ^ A committed essence cannot be validated without a reconciled
-    --   plan. Missing deliberation is therefore a fail-closed state,
-    --   not an implicit validation pass.
-  | ViolationRefusedCommitment !CommitmentTrigger
-    -- ^ WP1 (contour closure): 'shouldCommit' fired with this trigger,
-    --   but the resulting state remained 'EssenceUncommitted'.
-    --   This is a structural inconsistency, not a content mismatch.
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- | Snake_case JSON-schema-stable summary of a violation.
 renderEssenceViolation :: EssenceViolation -> Text
 renderEssenceViolation = \case

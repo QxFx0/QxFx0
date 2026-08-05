@@ -34,40 +34,9 @@ module QxFx0.Learning.Signal
   , applyCalibrationGated
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Time.Clock (UTCTime)
-import GHC.Generics (Generic)
-
 import QxFx0.Learning.Need (LearningNeedState(..), NeedTrend(..), lnsHistory)
 import QxFx0.Learning.KnowledgeTree (KnowledgeTree, branchHealthTrend)
-
--- | Bounded calibration signal in [-1, 1].
-newtype CalibrationSignal = CalibrationSignal { unCalibrationSignal :: Double }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
--- | Raw components that feed into the composite signal.
--- Each component is independently normalised to [-1, 1] before
--- weighting so the formula remains explainable.
-data SignalComponents = SignalComponents
-  { scConatusTrend      :: !Double
-    -- ^ Slope of need level over the recent 3 history points.
-    --   Positive = deficit worsening.
-  , scUncertaintyTrend  :: !Double
-    -- ^ Normalised counterfactual magnitude.  Positive = higher
-    --   ambiguity / more alternative parses.
-  , scLoopRisk          :: !Double
-    -- ^ Normalised repair-loop frequency.  Positive = frequent
-    --   recovery-driven turns.
-  , scBranchHealthTrend :: !Double
-    -- ^ Average branch health from the knowledge tree.
-    --   Negative = tree is decaying.
-  }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
+import QxFx0.Types.Learning.Signal
 
 emptySignalComponents :: SignalComponents
 emptySignalComponents = SignalComponents
@@ -76,58 +45,6 @@ emptySignalComponents = SignalComponents
   , scLoopRisk = 0.0
   , scBranchHealthTrend = 0.0
   }
-
--- | Persisted snapshot of a calibration signal computation.
--- Captures the full feature vector and decision so the pipeline is
--- reproducible and auditable.
-data CalibrationSnapshot = CalibrationSnapshot
-  { csTimestamp   :: !UTCTime
-    -- ^ When the snapshot was taken (turn resolution time).
-  , csRunId       :: !Text
-    -- ^ Session + turn identifier for traceability.
-  , csComponents  :: !SignalComponents
-    -- ^ The four raw feature values that fed the signal.
-  , csSignal      :: !Double
-    -- ^ Final clamped signal value.
-  , csDecision    :: !CalibrationDecision
-    -- ^ What the system decided to do with the signal.
-  }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
--- | Decision made by the calibration pipeline for a given snapshot.
-data CalibrationDecision
-  = CdApplySignal
-    -- ^ Signal confidence and guardrails passed; apply to weights/heuristics.
-  | CdHoldLowConfidence
-    -- ^ Signal magnitude below threshold or confidence insufficient.
-  | CdHoldGuardrails
-    -- ^ Guardrails blocked application (e.g. rate limit, circuit breaker open).
-  | CdHoldNoNeed
-    -- ^ No active learning need; signal computed but not actionable.
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
-
--- | Configuration for the calibration signal pipeline.
--- Keeps the pipeline gated and conservative by default.
-data SignalPipelineConfig = SignalPipelineConfig
-  { spcMinConfidence      :: !Double
-    -- ^ Minimum |signal| to be considered actionable (default 0.15).
-  , spcApplyRateLimit     :: !Int
-    -- ^ Max applications per N turns (default 1 per 5 turns).
-  , spcApplyWindow        :: !Int
-    -- ^ Window size for rate limit (default 5 turns).
-  , spcConatusWeight      :: !Double
-    -- ^ Weight for conatus trend component (default 0.30).
-  , spcUncertaintyWeight  :: !Double
-    -- ^ Weight for uncertainty trend component (default 0.30).
-  , spcLoopRiskWeight     :: !Double
-    -- ^ Weight for loop risk component (default 0.20).
-  , spcBranchHealthWeight :: !Double
-    -- ^ Weight for branch health component (default 0.20).
-  }
-  deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, FromJSON, ToJSON)
 
 defaultSignalPipelineConfig :: SignalPipelineConfig
 defaultSignalPipelineConfig = SignalPipelineConfig

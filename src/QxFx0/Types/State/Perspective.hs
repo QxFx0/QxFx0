@@ -59,6 +59,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 import Data.List (sortOn)
 import Data.Ord (Down(..))
+import Data.Aeson.Types (Parser)
 
 newtype PerspectiveId = PerspectiveId { unPerspectiveId :: Text }
   deriving stock (Eq, Ord, Show, Read, Generic)
@@ -129,7 +130,7 @@ instance FromJSON ConflictPolicy where
           Just "CpPermissive" -> pure CpPermissive
           Just "CpStrict"     -> pure CpStrict
           Just _              -> pure CpStrict
-          Nothing             -> fail "missing tag"
+          Nothing             -> parserFailure "missing tag"
       parseString = withText "ConflictPolicy" $ \t ->
         case T.toLower t of
           "invalid"    -> pure CpInvalid
@@ -406,3 +407,6 @@ activePerspectiveProjectionScopes registry =
 hasDuplicateKeys :: Ord a => [a] -> Bool
 hasDuplicateKeys values =
   M.size (M.fromList [(value, ()) | value <- values]) /= length values
+
+parserFailure :: String -> Parser a
+parserFailure = fail

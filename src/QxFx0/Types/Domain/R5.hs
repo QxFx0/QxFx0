@@ -42,7 +42,7 @@ import Data.Aeson
 import GHC.Generics (Generic)
 import Data.Text (Text)
 
-import QxFx0.Self.Field (Field)
+import QxFx0.Types.Self.Field (Field)
 
 data CanonicalMoveFamily
   = CMGround | CMDefine | CMDistinguish | CMReflect | CMDescribe

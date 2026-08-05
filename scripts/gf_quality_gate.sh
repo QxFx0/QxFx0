@@ -48,8 +48,9 @@ echo "  OK: ${SIZE} bytes"
 
 # ── Check 2: No template strings in GF concrete ───────────────────────
 echo "[2/4] No template collapse strings in GF concrete ..."
+# Ordinary semantic leaves may legitimately contain phrases such as
+# "что значит"; only explicit template/fallback markers belong in this gate.
 TEMPLATE_MARKERS=(
-  "что значит"
   "ответ по шаблону"
   "template"
   "шаблон"

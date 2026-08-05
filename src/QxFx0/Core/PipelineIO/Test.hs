@@ -158,14 +158,18 @@ defaultTestInterpreter request =
       pure TurnResCommitRuntimeState
     TurnReqSaveState _ _ _ _ ->
       pure (TurnResSaveState (Left (PdSaveFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))
-    TurnReqRollbackTurnProjections _ _ ->
-      pure (TurnResRollbackTurnProjections (Left (PdRollbackFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))
+    TurnReqRollbackCommittedTurn _ _ _ _ ->
+      pure (TurnResRollbackCommittedTurn (Left (PdRollbackFailed StageUnknown Nothing (Just "persistence_unavailable_default_test_pipeline"))))
+    TurnReqPersistFeedbackMirror _ _ ->
+      pure TurnResPersistFeedbackMirror
     TurnReqCheckpoint _ ->
       pure TurnResCheckpointCompleted
     TurnReqLinearizeClaimAst _ _ _ ->
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_default_test_pipeline"))
     TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_default_test_pipeline"))
+    TurnReqLinearizeResponsePlan _ _ _ ->
+      pure (TurnResLinearizeResponsePlan (Left "pgf_unavailable_default_test_pipeline"))
     TurnReqExternalQuery _ _ _ ->
       pure (TurnResExternalQuery (Left (EqeInvalidResponse "external_query_unavailable_default_test_pipeline")))
 

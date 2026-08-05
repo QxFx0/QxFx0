@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
 
 {-|
 Module      : QxFx0.Bridge.ExternalLLM
@@ -27,14 +28,18 @@ module QxFx0.Bridge.ExternalLLM
   , buildTransportFromEnvWithManager
   , buildTransportFromConfig
   , buildTransportFromConfigWithManager
+  , closeOwnedTransport
   , queryExternalTool
   , queryExternalToolWithConfig
   , defaultExternalQueryConfig
   , llmEndpointAllowlist
   , llmMaxQueryChars
   , llmMaxRequestBytes
+  , llmMaxCompletionTokens
   , llmUntrustedHostOverrideWarningTag
   , transportTimeoutMs
+  , transportModel
+  , transportMaxAttempts
   , validateEndpointUrl
   , validateEndpointUrlWithContext
   , extractStructured
@@ -48,8 +53,7 @@ module QxFx0.Bridge.ExternalLLM
   ) where
 
 import Control.Applicative ((<|>))
-import Control.Concurrent (threadDelay)
-import Control.Exception (try)
+import Control.Exception (bracket, try)
 import Data.Aeson (FromJSON(..), ToJSON, decodeStrict, encode, object, (.=))
 import Data.Aeson.Types (withObject, (.:), (.:?))
 import qualified Data.ByteString as BS
@@ -79,6 +83,7 @@ import Network.HTTP.Client
   , responseBody
   , responseStatus
   , withResponse
+  , closeManager
   )
 import Network.HTTP.Client.TLS (newTlsManager)
 import Network.HTTP.Types.Status (Status, statusCode)
@@ -186,6 +191,9 @@ llmMaxRequestBytes = 16384
 llmMaxResponseBytes :: Int
 llmMaxResponseBytes = 65536
 
+llmMaxCompletionTokens :: Int
+llmMaxCompletionTokens = 512
+
 llmRawBodyTelemetryChars :: Int
 llmRawBodyTelemetryChars = 4096
 
@@ -221,6 +229,22 @@ transportTimeoutMs transport =
     MockTransport _ mCfg -> eqcTimeoutMs <$> mCfg
     MistralTransport _ cfg -> Just (mcTimeoutMs cfg)
     FireworksTransport _ cfg -> Just (fcTimeoutMs cfg)
+
+-- | Stable, non-secret provider model marker for durable learning lineage.
+-- The mock case is deliberately marked as such: it must never be mistaken
+-- for provider-backed evidence during promotion review.
+transportModel :: LLMTransport -> Text
+transportModel transport =
+  case transport of
+    MockTransport _ _ -> "mock"
+    MistralTransport _ cfg -> mcModel cfg
+    FireworksTransport _ cfg -> fcModel cfg
+
+-- | A provider POST has no durable idempotency key.  Every transport therefore
+-- makes exactly one attempt; a timeout or connection failure is unknown rather
+-- than safe to replay.
+transportMaxAttempts :: LLMTransport -> Int
+transportMaxAttempts _ = 1
 
 -- | Build transport from environment.
 --
@@ -514,6 +538,16 @@ buildTransportFromConfigWithManager mgr cfg =
               pure (MockTransport defaultMockTable (Just cfg { eqcApiKey = Nothing, eqcFallbackReason = Just reason }))
             Right () -> pure (realTransportForKey mgr cfg key)
 
+-- | Release a transport returned by a builder without a @WithManager@ suffix.
+-- The @WithManager@ builders borrow their manager and must not use this
+-- release function.
+closeOwnedTransport :: LLMTransport -> IO ()
+closeOwnedTransport transport =
+  case transport of
+    MockTransport _ _ -> pure ()
+    MistralTransport manager _ -> closeManager manager
+    FireworksTransport manager _ -> closeManager manager
+
 -- | Default mock table with a handful of deterministic responses.
 -- Extend this in tests by passing a custom table to 'MockTransport'.
 defaultMockTable :: MockTable
@@ -599,8 +633,8 @@ queryExternalToolWithConfig
   -> Text
   -> IO (Either ExternalQueryError ExternalQueryResponse)
 queryExternalToolWithConfig cfg tool need query = do
-  transport <- buildTransportFromConfig cfg
-  queryExternalTool transport tool need query
+  bracket (buildTransportFromConfig cfg) closeOwnedTransport $ \transport ->
+    queryExternalTool transport tool need query
 
 -- | Deterministic mock query.
 mockQuery :: MockTable -> ExternalTool -> LearningNeed -> Text -> IO (Either ExternalQueryError ExternalQueryResponse)
@@ -658,26 +692,19 @@ chatCompletionQuery
   -> ExternalTool
   -> Text
   -> IO (Either ExternalQueryError ExternalQueryResponse)
-chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs maxRequestBytes maxResponseBytes maxRetries retryBaseDelayMs tool query =
-  attempt 0 0
+chatCompletionQuery mgr _provider endpoint model apiKey timeoutMs maxRequestBytes maxResponseBytes _maxRetries _retryBaseDelayMs tool query =
+  attempt 0
   where
-    attempt accLatencyMs retryCount = do
+    attempt accLatencyMs = do
       requestResult <- buildChatRequest endpoint model apiKey timeoutMs maxRequestBytes query
       case requestResult of
         Left err -> pure (Left err)
-        Right req -> do
-          start <- getCurrentTime
-          httpResult <- runChatHttp mgr req maxResponseBytes
-          end <- getCurrentTime
-          let latencyMs = accLatencyMs + elapsedMs start end
-          case handleChatHttpResult tool maxResponseBytes latencyMs httpResult of
-            Left err
-              | retryCount < maxRetries && isRetryableError err -> do
-                  let delayUs = retryDelayMs retryBaseDelayMs retryCount * 1000
-                  threadDelay delayUs
-                  attempt latencyMs (retryCount + 1)
-              | otherwise -> pure (Left err)
-            Right resp -> pure (Right resp)
+        Right req ->
+          getCurrentTime >>= \start ->
+            runChatHttp mgr req maxResponseBytes >>= \httpResult ->
+              getCurrentTime >>= \end ->
+                let latencyMs = accLatencyMs + elapsedMs start end
+                in pure (handleChatHttpResult tool maxResponseBytes latencyMs httpResult)
 
 buildChatRequest :: Text -> Text -> Text -> Int -> Int -> Text -> IO (Either ExternalQueryError Request)
 buildChatRequest endpoint model apiKey timeoutMs maxRequestBytes query = do
@@ -687,6 +714,9 @@ buildChatRequest endpoint model apiKey timeoutMs maxRequestBytes query = do
     Right req0 ->
       let payload = encode $ object
             [ "model" .= model
+            -- Autonomous discovery asks for 3–7 relations; bounding output
+            -- makes its reserved token budget enforceable across providers.
+            , "max_tokens" .= llmMaxCompletionTokens
             , "messages" .= [object ["role" .= ("user" :: Text), "content" .= query]]
             ]
           payloadBytes = fromIntegral (LBS.length payload)

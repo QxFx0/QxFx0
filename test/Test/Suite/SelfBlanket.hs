@@ -33,7 +33,7 @@ import QxFx0.Types
   ( MorphologyData (..)
   , SystemState (..)
   )
-import QxFx0.Types.State (emptySystemState)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 
 -- | A minimally valid baseline blanket for transition tests.
 validBlanket :: SelfBlanket

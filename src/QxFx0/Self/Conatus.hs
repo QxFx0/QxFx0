@@ -86,13 +86,8 @@ module QxFx0.Self.Conatus
   , lowEnergyThreshold
   ) where
 
-import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
-
-import QxFx0.Self.ConfigLoad (loadConfigOrBuiltin)
-import GHC.Generics (Generic)
-
 import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
+import QxFx0.Types.Self.Conatus
 
 -- | Tunable coefficients of the Conatus functional. The defaults
 -- in 'defaultConatusWeights' encode the editorial judgement that
@@ -103,19 +98,6 @@ import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
 -- The violation penalty is intentionally large relative to any
 -- single-axis logarithmic contribution: a structural rupture must
 -- not be wallpapered over by mere accumulation.
-data ConatusWeights = ConatusWeights
-  { cwMorphology :: !Double
-    -- ^ Weight on \(\log(1 + m)\). Default: @1.0@.
-  , cwIdentity   :: !Double
-    -- ^ Weight on \(\log(1 + c)\). Default: @0.5@.
-  , cwTurns      :: !Double
-    -- ^ Weight on \(\log(1 + t)\). Default: @0.25@.
-  , cwViolation  :: !Double
-    -- ^ Penalty per 'BlanketViolation' (subtracted). Default: @10.0@.
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | The reference builtin weights used throughout the system unless an
 -- experiment overrides them via 'computeConatusEnergyWith' or
 -- 'computeConatusGradientWith'.
@@ -127,47 +109,18 @@ builtinConatusWeights = ConatusWeights
   , cwViolation  = 10.0
   }
 
--- | The reference weights, loaded from
--- 'resources/config/conatus_weights.json' if present, otherwise
--- falling back to 'builtinConatusWeights'.
---
--- The NOINLINE pragma is required to prevent GHC from inlining
--- the 'unsafePerformIO' call and potentially evaluating it
--- multiple times.
+-- | Pure reference weights. Runtime configuration is loaded explicitly by
+-- session bootstrap and injected into 'SelfState'.
 defaultConatusWeights :: ConatusWeights
-defaultConatusWeights =
-  loadConfigOrBuiltin "resources/config/conatus_weights.json" builtinConatusWeights
-{-# NOINLINE defaultConatusWeights #-}
+defaultConatusWeights = builtinConatusWeights
 
 -- | The decomposed scalar contribution of each axis. Kept separate
 -- from 'ConatusEnergy' so that diagnostics and observability can
 -- show which axis is carrying (or failing) the system, not only the
 -- aggregate.
-data ConatusComponents = ConatusComponents
-  { ccMorphology :: !Double
-    -- ^ \(w_m \cdot \log(1 + m)\).
-  , ccIdentity   :: !Double
-    -- ^ \(w_c \cdot \log(1 + c)\).
-  , ccTurns      :: !Double
-    -- ^ \(w_t \cdot \log(1 + t)\).
-  , ccPenalty    :: !Double
-    -- ^ \(-\lambda \cdot |v|\). Always @<= 0@.
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | The scalar value of the Conatus functional together with its
 -- per-axis decomposition. Invariant: @ceScalar == sum of all four
 -- 'ConatusComponents' fields@.
-data ConatusEnergy = ConatusEnergy
-  { ceScalar     :: !Double
-    -- ^ \(C(b, v)\), the aggregate.
-  , ceComponents :: !ConatusComponents
-    -- ^ The per-axis breakdown.
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | The gradient of the smooth part of \(C\) at a blanket. Each
 -- component is the partial derivative of \(C\) with respect to that
 -- blanket axis, treating the blanket fields as real-valued for the
@@ -179,17 +132,6 @@ data ConatusEnergy = ConatusEnergy
 -- integer fields are non-negative (which is the universe of all
 -- legitimately-constructed 'SelfBlanket' values), so the gradient
 -- always points into the strictly-growing orthant.
-data ConatusGradient = ConatusGradient
-  { cgMorphology :: !Double
-    -- ^ \(w_m / (1 + m)\).
-  , cgIdentity   :: !Double
-    -- ^ \(w_c / (1 + c)\).
-  , cgTurns      :: !Double
-    -- ^ \(w_t / (1 + t)\).
-  }
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, FromJSON, ToJSON)
-
 -- | Compute the Conatus energy of a blanket under the supplied
 -- violation list, using 'defaultConatusWeights'. Pure, total, and
 -- well-defined on every legitimately constructed blanket including

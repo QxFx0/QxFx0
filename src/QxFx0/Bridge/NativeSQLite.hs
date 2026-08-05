@@ -126,11 +126,18 @@ sqlNullType = 5
 
 open :: FilePath -> IO (Either Text Database)
 open path = alloca $ \ppDb -> do
+  poke ppDb nullPtr
   rc <- withCString path $ \cPath -> c_sqlite3_open cPath ppDb
+  db <- peek ppDb
   if rc == sqlOk
-    then do db <- peek ppDb
-            return (Right db)
-    else return (Left $ "sqlite3_open failed: " <> T.pack (show rc))
+    then return (Right db)
+    else do
+      -- sqlite3_open may return a live handle even on failure. SQLite requires
+      -- the caller to close that handle to release any partially opened files.
+      if db == nullPtr then pure () else do
+        _ <- c_sqlite3_close db
+        pure ()
+      return (Left $ "sqlite3_open failed: " <> T.pack (show rc))
 
 close :: Database -> IO ()
 close db = do

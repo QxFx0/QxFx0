@@ -55,7 +55,6 @@ module QxFx0.Semantic.Content.AtomStore
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson
 import qualified Data.Set as S
 import Data.List (foldl', sortOn)
 import Data.Map.Strict (Map)
@@ -63,148 +62,26 @@ import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics (Generic)
+import QxFx0.Types.Semantic.AtomGraph
+  ( Atom(..)
+  , AtomId(..)
+  , AtomCategory(..)
+  , RelationType(..)
+  , Relation(..)
+  , ObjectCase(..)
+  , RelationSource(..)
+  , PathProof(..)
+  , AtomGraph(..)
+  , GeneratedSurface(..)
+  )
 
 -- ============================================================
 -- Types
 -- ============================================================
 
-newtype AtomId = AtomId Text
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON, ToJSONKey, FromJSONKey)
-
-data AtomCategory
-  = CatTopic       -- philosophical topic (свобода, истина, ...)
-  | CatConcept     -- abstract concept (выбор, ответственность, ...)
-  | CatProperty    -- property/quality (необратимость, осмысленность, ...)
-  | CatProcess     -- process/action (действие, проверка, ...)
-  | CatDiscovered  -- auto-discovered from brain_kb (evidence, boundary, ...)
-  | CatDomain      -- cross-domain bridge concept (закон, нейрон, искусство, ...)
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data Atom = Atom
-  { atomId       :: !AtomId
-  , atomSurface  :: !Text   -- internal ID (underscores for compound)
-  , atomDisplay  :: !Text   -- display text (spaces, for output)
-  , atomHead     :: !Text   -- head noun for morphological inflection
-  , atomCategory :: !AtomCategory
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Typed relation between two atoms.
--- The relation type determines the verb and grammatical case
--- for verbalization.
-data RelationType
-  = RelPresupposes       -- предполагает (acc)
-  | RelLimitedBy         -- ограничена (instr)
-  | RelRequires          -- требует (gen)
-  | RelClaims            -- претендует на (acc)
-  | RelVerifiedBy        -- проверяется через (acc)
-  | RelSignals           -- сигнализирует об (loc)
-  | RelTransformsInto    -- превращается в (acc)
-  | RelExpresses         -- выражает (acc)
-  | RelDiffersFrom       -- отличается от (gen)
-  | RelRelatedTo         -- связана с (instr)
-  | RelDirectedAt        -- направлена на (acc)
-  | RelPreserves         -- сохраняет (acc)
-  | RelOrientsToward     -- ориентирует на (acc)
-  | RelPrescribes        -- предписывает (acc)
-  | RelBuiltThrough      -- строится через (acc)
-  | RelDenotes           -- обозначает (acc)
-  | RelStructures        -- структурирует (acc)
-  | RelDetermines        -- определяет (acc)
-  | RelTransforms        -- преобразует (acc)
-  | RelGives             -- придаёт (acc)
-  | RelReveals           -- обнаруживает (acc)
-  | RelRecognizes        -- признаёт (acc)
-  | RelUnifies           -- объединяет (acc)
-  | RelConnects          -- связывает (acc)
-  | RelPrecedes          -- предшествует (dat)
-  | RelDependsOn         -- зависит от (gen)
-  | RelIncludes          -- включает (acc)
-  | RelNecessaryFor      -- необходим для (gen)
-  | RelEvokes            -- вызывает (acc)
-  | RelMeans             -- означает (acc)
-  | RelSays              -- говорит (instr)
-  | RelNegates           -- отрицает (acc)
-  | RelContrastsWith     -- контрастирует с (instr)
-  | RelNotReducibleTo    -- не сводится к (dat)
-  | RelIsNot             -- не является (instr)
-  | RelCapableOf         -- способен к (dat)
-  | RelCreatedFrom       -- создаётся из (gen)
-  | RelReliesOn          -- опирается на (acc)
-  | RelCanBe             -- может быть (instr)
-  | RelDestroys          -- разрушает (acc)
-  | RelPointsTo          -- указывает на (acc)
-  | RelMakes             -- делает (acc)
-  | RelIsA               -- есть (nom)
-  | RelReconstructs      -- реконструирует (acc)
-  | RelSupports          -- поддерживает (acc)
-  | RelSets              -- задаёт (acc)
-  | RelNotJustCopies     -- реконструирует а не просто копирует (special)
-  | RelEnables           -- позволяет (acc)
-  | RelCauses            -- вызывает (acc)
-  | RelInfluences        -- влияет на (acc)
-  | RelPartOf            -- часть (gen)
-  | RelOpposes           -- противоречит (dat)
-  deriving stock (Eq, Ord, Show, Enum, Bounded, Generic, Read)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Grammatical case of the object for verbalization.
-data ObjectCase
-  = CaseNominative
-  | CaseAccusative
-  | CaseGenitive
-  | CaseInstrumental
-  | CaseDative
-  | CasePrepositional
-  | CaseSpecial        -- compound/special text, stored as-is
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data RelationSource
-  = SeedFromPredicate
-  | Curated
-  | PromotedSubstrate
-  | SubstrateExtractedRaw
-  deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
-data Relation = Relation
-  { relFrom       :: !AtomId
-  , relTo         :: !AtomId
-  , relType       :: !RelationType
-  , relObjectCase :: !ObjectCase
-  , relObjectText :: !Text          -- object surface text as in predicate
-  , relVerbText   :: !(Maybe Text)  -- override verb phrase (for prepositions, gender, etc.)
-  , relRuOriginal :: !Text          -- full original predicate for round-trip
-  , relEnOriginal :: !Text          -- English original
-  , relSource     :: !RelationSource
-  , relTopic      :: !Text          -- topic this relation belongs to
-  , relRationale  :: !(Maybe Text)  -- "потому что без выбора действие не отличается от рефлекса"
-  , relCounter    :: !(Maybe Text)  -- "но не любой выбор свободен"
-  , relSynthesis  :: !(Maybe Text)  -- "именно поэтому свобода требует осознанности"
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
--- | Proof that a generated predicate came from a specific path.
-data PathProof = PathProof
-  { ppEdges :: ![Relation]
-  , ppTopic :: !Text
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
-
 -- ============================================================
 -- AtomGraph — runtime graph with indexed lookups
 -- ============================================================
-
-data AtomGraph = AtomGraph
-  { agRelations :: ![Relation]          -- canonical sorted list
-  , agByFrom    :: !(Map AtomId [Relation])  -- index: from_atom → edges
-  , agVersion   :: !Text                -- version tag for trace
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON)
 
 -- | Seed graph: built from static relationStore, sorted canonically.
 seedGraph :: AtomGraph
@@ -259,30 +136,9 @@ graphRelationsFromAtom g aid = fromMaybe [] (M.lookup aid (agByFrom g))
 graphAllRelations :: AtomGraph -> [Relation]
 graphAllRelations = agRelations
 
--- | Empty graph (for FromJSON fallback).
-emptyGraph :: AtomGraph
-emptyGraph = AtomGraph [] M.empty "empty"
-
--- | Custom FromJSON: rebuild index if missing (old persisted state).
-instance FromJSON AtomGraph where
-  parseJSON = withObject "AtomGraph" $ \o -> do
-    rels <- o .: "agRelations"
-    mIdx <- o .:? "agByFrom" .!= M.empty
-    ver <- o .:? "agVersion" .!= "legacy"
-    let idx = if M.null mIdx && not (null rels) then buildIndex rels else mIdx
-    pure (AtomGraph rels idx ver)
-
 -- ============================================================
 -- GeneratedSurface — structured output with provenance
 -- ============================================================
-
-data GeneratedSurface = GeneratedSurface
-  { gsText       :: !Text
-  , gsPaths      :: ![PathProof]
-  , gsProvenance :: ![RelationSource]
-  , gsDepthScore :: !Double
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- ============================================================
 -- Atom store

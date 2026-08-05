@@ -47,7 +47,8 @@ import QxFx0.Self.Field
   , FieldConfidence(..)
   , Consolidation(..)
   )
-import QxFx0.Types.State.System (SystemState, emptySystemState)
+import QxFx0.Types.State.System (SystemState)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types (MorphologyData(..))
 import qualified QxFx0.Semantic.Frame.Types as FT
 

@@ -33,6 +33,7 @@ import Data.Aeson
   )
 import Data.Text (Text)
 import GHC.Generics (Generic)
+import Data.Aeson.Types (Parser)
 
 import QxFx0.Types.Decision (ShadowStatus)
 import QxFx0.Types.Domain (CanonicalMoveFamily)
@@ -122,7 +123,7 @@ instance FromJSON DreamCandidateKind where
       "affective" -> pure DckAffective
       "conflict" -> pure DckConflict
       "none" -> pure DckNone
-      other -> fail ("unknown DreamCandidateKind string: " <> show other)
+      other -> parserFailure ("unknown DreamCandidateKind string: " <> show other)
   parseJSON (Object o) = do
     tag <- o .: "tag"
     case tag of
@@ -131,11 +132,14 @@ instance FromJSON DreamCandidateKind where
       "DckAffective" -> pure DckAffective
       "DckConflict" -> pure DckConflict
       "DckNone" -> pure DckNone
-      other -> fail ("unknown DreamCandidateKind tag: " <> show (other :: Text))
-  parseJSON _ = fail "DreamCandidateKind expects a string or an object with a 'tag' field"
+      other -> parserFailure ("unknown DreamCandidateKind tag: " <> show (other :: Text))
+  parseJSON _ = parserFailure "DreamCandidateKind expects a string or an object with a 'tag' field"
 
 instance ToJSON DreamCandidateKind where
   toJSON k = object ["tag" .= show k]
+
+parserFailure :: String -> Parser a
+parserFailure = fail
 
 data DreamCorrectionCandidate = DreamCorrectionCandidate
   { dccLabel :: !Text

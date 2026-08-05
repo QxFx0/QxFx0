@@ -14,7 +14,6 @@ import System.IO (hPutStrLn, stderr)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as K
 import qualified Data.Aeson.KeyMap as KM
-import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Vector as V
@@ -39,6 +38,7 @@ import QxFx0.Self.Salience (defaultSalienceWeights)
 import QxFx0.Types.Domain (atCurrentLoad)
 import QxFx0.Types.Domain.R5 (R5CoreProfile(..), R5PolicyProfile(..), defaultR5CoreProfile, defaultR5PolicyProfile)
 import QxFx0.Types.Observability (KernelPulse(..))
+import QxFx0.Types.TurnProjection (decodeReplayTracePayload)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase(..))
 import QxFx0.Types.State.Governance
   ( GovernanceDecision(..)
@@ -87,6 +87,9 @@ data ReplayTraceSummary = ReplayTraceSummary
   , rtsSurfaceProvenance :: !(Maybe Text)
   , rtsContractProvenance :: !(Maybe Text)
   , rtsDerivationTags :: ![Text]
+  , rtsPreActorFailureKind :: !(Maybe Text)
+  , rtsPreActorFailureAction :: !(Maybe Text)
+  , rtsPreActorFailureReason :: !(Maybe Text)
   , rtsLoadStatus :: !Text
   }
 
@@ -187,12 +190,20 @@ stateSummaryLines session = do
           Just raw -> raw
           Nothing -> "n/a"
       gradientTag = maybe "n/a" renderGradientTag (latestTrace >>= (parseGradientFromEvidence . rtsRecoveryEvidence))
-      truthContractTag = maybe "n/a" id (latestTrace >>= rtsTruthContractStatus)
+      stateTruthContractTag = T.pack (show (ssTruthContractStatus ss))
+      truthContractTag =
+        case sessStateOrigin session of
+          RestoredOrigin -> stateTruthContractTag
+          RecoveredCorruptOrigin -> stateTruthContractTag
+          FreshOrigin -> maybe stateTruthContractTag id (latestTrace >>= rtsTruthContractStatus)
       authorityClassTag = maybe "n/a" id (latestTrace >>= rtsAuthorityClass)
       assemblyPathTag = maybe "n/a" id (latestTrace >>= rtsAssemblyPath)
       replayProvenanceTag = maybe "n/a" id (latestTrace >>= rtsReplayProvenanceStatus)
       surfaceProvenanceTag = maybe "n/a" id (latestTrace >>= rtsSurfaceProvenance)
       contractProvenanceTag = maybe "n/a" id (latestTrace >>= rtsContractProvenance)
+      preActorFailureKindTag = maybe "n/a" id (latestTrace >>= rtsPreActorFailureKind)
+      preActorFailureActionTag = maybe "n/a" id (latestTrace >>= rtsPreActorFailureAction)
+      preActorFailureReasonTag = maybe "n/a" id (latestTrace >>= rtsPreActorFailureReason)
       replayTraceLoadTag = replayTraceLoadStatus traceLoad
   pure
     $ [ "STATE_BEGIN"
@@ -216,11 +227,15 @@ stateSummaryLines session = do
       , "gf_lexical_authority_status: " <> renderEpistemicStatus (gfLexicalAuthorityStatus latestTrace)
       , "formal_contour_status: " <> renderEpistemicStatus (formalContourStatus latestTrace)
       , "truth_contract: " <> truthContractTag
+      , "restart_authority_status: " <> restartAuthorityStatus session
       , "authority_class: " <> authorityClassTag
       , "assembly_path: " <> assemblyPathTag
       , "replay_provenance_status: " <> replayProvenanceTag
       , "surface_provenance: " <> surfaceProvenanceTag
       , "contract_provenance: " <> contractProvenanceTag
+      , "external_action.pre_actor_failure.kind: " <> preActorFailureKindTag
+      , "external_action.pre_actor_failure.action: " <> preActorFailureActionTag
+      , "external_action.pre_actor_failure.reason: " <> preActorFailureReasonTag
       , "replay_trace_load_status: " <> replayTraceLoadTag
       , "r5_core_version: " <> renderValue (r5cVersionId defaultR5CoreProfile)
       , "r5_policy_version: " <> renderValue (r5pVersionId defaultR5PolicyProfile)
@@ -231,6 +246,15 @@ renderStateOrigin :: StateOrigin -> Text
 renderStateOrigin FreshOrigin = "fresh"
 renderStateOrigin RestoredOrigin = "restored"
 renderStateOrigin RecoveredCorruptOrigin = "recovered_corrupt"
+
+restartAuthorityStatus :: Session -> Text
+restartAuthorityStatus session =
+  case sessStateOrigin session of
+    FreshOrigin -> "not_applicable"
+    RecoveredCorruptOrigin -> "restart_capped_recovered_corrupt"
+    RestoredOrigin
+      | truthContractIsAuthoritative (ssTruthContractStatus (sessSystemState session)) -> "restart_authoritative"
+      | otherwise -> "restart_capped_non_authoritative"
 
 salienceFieldContractStatus :: SystemState -> Text
 salienceFieldContractStatus ss
@@ -368,8 +392,8 @@ loadLatestReplayTrace session = do
   where
     decodeReplayTraceSummary :: Text -> ReplayTraceLoad
     decodeReplayTraceSummary payload =
-      case Aeson.decode (BL.fromStrict (TE.encodeUtf8 payload)) :: Maybe Aeson.Value of
-        Just (Aeson.Object obj) ->
+      case decodeReplayTracePayload (TE.encodeUtf8 payload) of
+        Right (Aeson.Object obj) ->
           let recoveryCause = decodeScalarField "trcRecoveryCause" obj
               recoveryStrategy = decodeScalarField "trcRecoveryStrategy" obj
               shadowSeverity = decodeScalarField "trcShadowDivergenceSeverity" obj
@@ -386,6 +410,9 @@ loadLatestReplayTrace session = do
               surfaceProvenance = decodeScalarField "trcSurfaceProvenance" obj
               contractProvenance = decodeScalarField "trcContractProvenance" obj
               derivationTags = decodeStringArrayField "trcDerivationTags" obj
+              preActorFailureKind = decodeNestedScalarField "trcPreActorFailureEvent" "pafeKind" obj
+              preActorFailureAction = decodeNestedScalarField "trcPreActorFailureEvent" "pafeActionKind" obj
+              preActorFailureReason = decodeNestedScalarField "trcPreActorFailureEvent" "pafeReason" obj
             in ReplayTraceLoaded ReplayTraceSummary
                  { rtsRecoveryCause = recoveryCause
                  , rtsRecoveryStrategy = recoveryStrategy
@@ -397,13 +424,16 @@ loadLatestReplayTrace session = do
                  , rtsTruthContractStatus = truthContractStatus
                  , rtsAssemblyPath = assemblyPath
                  , rtsReplayProvenanceStatus = replayProvenanceStatus
-                  , rtsSurfaceProvenance = surfaceProvenance
-                  , rtsContractProvenance = contractProvenance
-                  , rtsDerivationTags = derivationTags
-                  , rtsLoadStatus = "loaded"
+                   , rtsSurfaceProvenance = surfaceProvenance
+                   , rtsContractProvenance = contractProvenance
+                   , rtsDerivationTags = derivationTags
+                   , rtsPreActorFailureKind = preActorFailureKind
+                   , rtsPreActorFailureAction = preActorFailureAction
+                   , rtsPreActorFailureReason = preActorFailureReason
+                   , rtsLoadStatus = "loaded"
                  }
-        Just _ -> ReplayTraceSchemaError "replay_trace_not_object"
-        Nothing -> ReplayTraceDecodeError "replay_trace_decode_failed"
+        Right _ -> ReplayTraceSchemaError "replay_trace_not_object"
+        Left err -> ReplayTraceDecodeError ("replay_trace_decode_failed:" <> T.pack err)
 
     decodeScalarField :: Text -> Aeson.Object -> Maybe Text
     decodeScalarField key obj =
@@ -412,6 +442,12 @@ loadLatestReplayTrace session = do
         Just (Aeson.Number n) -> Just (T.pack (show n))
         Just (Aeson.Bool True) -> Just "true"
         Just (Aeson.Bool False) -> Just "false"
+        _ -> Nothing
+
+    decodeNestedScalarField :: Text -> Text -> Aeson.Object -> Maybe Text
+    decodeNestedScalarField parentKey childKey obj =
+      case KM.lookup (K.fromText parentKey) obj of
+        Just (Aeson.Object nested) -> decodeScalarField childKey nested
         _ -> Nothing
 
     decodeStringArrayField :: Text -> Aeson.Object -> [Text]

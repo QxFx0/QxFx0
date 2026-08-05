@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings, RecordWildCards #-}
-{-| Turn-level observability primitives: timings, structured metric logs, and warnings. -}
+{-| Description : observer — Turn-level timings, structured metric logs, and warnings. -}
 module QxFx0.Core.Observability
   ( RequestId
   , PhaseTiming(..)

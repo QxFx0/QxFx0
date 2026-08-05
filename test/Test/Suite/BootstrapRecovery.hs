@@ -15,6 +15,11 @@ module Test.Suite.BootstrapRecovery
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
 import Test.HUnit (Test (..), (@?=), assertBool)
+import Control.Exception (IOException, try)
+import Control.Monad (forM, when)
+import System.Directory (doesDirectoryExist, getSymbolicLinkTarget, listDirectory)
+import System.FilePath ((</>))
+import System.IO (hPutStrLn, stderr)
 
 import QxFx0.Runtime.Session
   ( generateFallbackSessionId
@@ -31,7 +36,9 @@ import QxFx0.Types.Domain.Atoms
   , LexemeNumber (..)
   , SourceTier (..)
   )
-import QxFx0.Types.State (emptySystemState)
+import QxFx0.Runtime.StateDefaults (emptySystemState)
+import qualified Test.Support.Runtime as Runtime
+import Test.Support (withEnvVar, withRuntimeEnv)
 
 -- | A morphology with at least one entry so that the baseline state
 -- satisfies the blanket.
@@ -138,6 +145,54 @@ testValidStateUnchanged = TestCase $ do
   sessionIdOut @?= "demo"
   ssSessionId repaired @?= "demo"
 
+-- A session owns a two-connection SQLite pool and an HTTP manager. Repeated
+-- restart must release those resources deterministically rather than relying
+-- on GC. /proc makes this assertion process-local and race-free on Linux.
+testSessionLifecycleDescriptorBound :: Test
+testSessionLifecycleDescriptorBound = TestCase $ do
+  procAvailable <- doesDirectoryExist "/proc/self/fd"
+  when procAvailable $
+    withRuntimeEnv "qxfx0_test_session_fd_lifecycle.db" $
+      withEnvVar "QXFX0_AUTONOMOUS_LEARNING" (Just "0") $ do
+        Runtime.withBootstrappedSession True "fd-lifecycle" (const (pure ()))
+        baseline <- descriptorCount
+        baselineTargets <- descriptorTargets
+        (activeTargets, dbPath) <- Runtime.withBootstrappedSession True "fd-lifecycle" $ \session -> do
+          targets <- descriptorTargets
+          pure (targets, Runtime.sessDbPath session)
+        let ownedTargets = Map.keys (positiveDifference activeTargets baselineTargets)
+        assertBool
+          ("open session did not expose its owned SQLite descriptors: " <> show ownedTargets)
+          (any (dbPath `isPrefixOf`) ownedTargets)
+        samples <- forM [1 .. 16 :: Int] $ \_ -> do
+          Runtime.withBootstrappedSession True "fd-lifecycle" (const (pure ()))
+          descriptorCount
+        let peakGrowth = maximum (baseline : samples) - baseline
+            finalGrowth = last samples - baseline
+        hPutStrLn stderr
+          ("[fd-lifecycle] baseline=" <> show baseline
+            <> " samples=" <> show samples
+            <> " open_session_targets=" <> show ownedTargets)
+        assertBool
+          ("session lifecycle leaked descriptors: baseline=" <> show baseline
+            <> ", samples=" <> show samples)
+          (peakGrowth <= 3 && finalGrowth <= 2)
+  where
+    descriptorCount = length <$> listDirectory "/proc/self/fd"
+    descriptorTargets = do
+      descriptors <- listDirectory "/proc/self/fd"
+      targets <- forM descriptors $ \descriptor -> do
+        targetResult <- try (getSymbolicLinkTarget ("/proc/self/fd" </> descriptor))
+          :: IO (Either IOException FilePath)
+        pure (either (const Nothing) Just targetResult)
+      pure (Map.fromListWith (+) [(target, 1 :: Int) | Just target <- targets])
+    positiveDifference current previous =
+      Map.differenceWith subtractCount current previous
+    subtractCount current previous
+      | current > previous = Just (current - previous)
+      | otherwise = Nothing
+    isPrefixOf prefix value = take (length prefix) value == prefix
+
 bootstrapRecoveryTests :: [Test]
 bootstrapRecoveryTests =
   [ TestLabel "fallback morphology is non-empty" testFallbackMorphologyNonEmpty
@@ -146,4 +201,5 @@ bootstrapRecoveryTests =
   , TestLabel "both violations repaired together" testBothRepaired
   , TestLabel "fallback session id format" testFallbackSessionIdFormat
   , TestLabel "valid state remains unchanged" testValidStateUnchanged
+  , TestLabel "session restart keeps descriptor growth bounded" testSessionLifecycleDescriptorBound
   ]

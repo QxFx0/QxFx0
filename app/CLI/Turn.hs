@@ -119,7 +119,7 @@ rawQxFx0Exception err =
     EmbeddingErrorStructured _ -> "EmbeddingErrorStructured"
     RuntimeInitErrorStructured _ -> "RuntimeInitErrorStructured"
     SQLiteErrorStructured _ -> "SQLiteErrorStructured"
-    PersistenceConflict _ _ _ _ -> "PersistenceConflict"
+    PersistenceConflict _ _ _ -> "PersistenceConflict"
     PersistenceErrorStructured _ -> "PersistenceErrorStructured"
 
 runTurnJsonInSession :: Runtime.Session -> RuntimeOutputMode -> Text -> IO (Runtime.Session, TurnJsonResponse)

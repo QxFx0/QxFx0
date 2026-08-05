@@ -19,7 +19,6 @@ module QxFx0.Semantic.Content.Curated
   ) where
 
 import qualified Data.ByteString as BS
-import Control.Exception (SomeException, try)
 import Control.DeepSeq (NFData)
 import Data.Aeson
   ( FromJSON(parseJSON), ToJSON(toJSON), eitherDecodeStrict, object
@@ -40,6 +39,12 @@ import QxFx0.Semantic.Content.Base
   , mkArguedPred
   )
 import QxFx0.Semantic.Content (DefinitionContent(..), definitionCorpus, normalizeTopic)
+import QxFx0.ExceptionPolicy
+  ( mkRuntimeInitError
+  , throwQxFx0
+  , tryIO
+  , tryQxFx0
+  )
 
 -- | A single predicate inside a curated entry.
 data CuratedPredicateItem = CuratedPredicateItem
@@ -133,7 +138,7 @@ loadCuratedPredicates path = do
       decodeLine :: BS.ByteString -> Either String CuratedPredicateEntry
       decodeLine = eitherDecodeStrict
   entries <- mapM (\line -> case decodeLine line of
-    Left err -> fail ("Failed to parse curated predicate line: " ++ err)
+    Left err -> throwCuratedParseError (T.pack err)
     Right e  -> pure e) lines'
   pure $ M.fromList
     [ (normalizeTopic (cpeTopic e), definitionContentFromEntry e)
@@ -145,10 +150,19 @@ loadCuratedPredicates path = do
 -- falls back to the seed corpus only.
 extendedDefinitionCorpus :: IO (Map Text DefinitionContent)
 extendedDefinitionCorpus = do
-  result <- try @SomeException (loadCuratedPredicates curatedPredicatesPath)
+  result <- tryIO (tryQxFx0 (loadCuratedPredicates curatedPredicatesPath))
   case result of
-    Left _    -> pure definitionCorpus
-    Right cur -> pure (mergeCuratedIntoDefinitionCorpus cur definitionCorpus)
+    Left _ -> pure definitionCorpus
+    Right (Left _) -> pure definitionCorpus
+    Right (Right cur) -> pure (mergeCuratedIntoDefinitionCorpus cur definitionCorpus)
+
+throwCuratedParseError :: Text -> IO a
+throwCuratedParseError detail =
+  throwQxFx0 (mkRuntimeInitError
+    "curated_predicates"
+    "parse_jsonl"
+    "CURATED_PREDICATE_PARSE_ERROR"
+    (M.singleton "detail" detail))
 
 -- | Merge curated predicates into the seed definition corpus.
 -- Curated entries override seed entries on topic key collision.

@@ -20,18 +20,17 @@ individual fields.
 -}
 module QxFx0.Types.State.SelfState
   ( SelfState(..)
-  , emptySelfState
-  , defaultSelfState
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
 import GHC.Generics (Generic)
 
-import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
-import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
-import QxFx0.Types.State.Perspective (PerspectiveRegistry, emptyPerspectiveRegistry)
-import QxFx0.Self.Essence (Essence, emptyEssence)
+import QxFx0.Types.Self.Salience (SalienceWeights)
+import QxFx0.Types.Self.Field (FieldHeuristics)
+import QxFx0.Types.Self.Conatus (ConatusWeights)
+import QxFx0.Types.Self.FamilyTargets (FamilyTarget)
+import QxFx0.Types.State.Perspective (PerspectiveRegistry)
+import QxFx0.Types.Self.Essence (Essence)
 
 -- | Grouped Self-layer state (Phase 1-10 components).
 --
@@ -49,6 +48,11 @@ data SelfState = SelfState
   , selfFieldHeuristics :: !FieldHeuristics
     -- ^ Phase B: mutable field heuristics for post-commitment
     --   bounded self-tuning. Initialised to 'defaultFieldHeuristics'.
+  , selfConatusWeights :: !ConatusWeights
+    -- ^ Conatus functional coefficients captured at bootstrap and persisted
+    --   so replay never consults ambient files.
+  , selfFamilyTargets :: ![FamilyTarget]
+    -- ^ FMAR target configuration captured at bootstrap and persisted.
   , selfPerspectiveRegistry :: !PerspectiveRegistry
     -- ^ P4/P5: derived versioned perspective lineage projection.
     --   P5 canonical truth is 'ssGovernanceHistory'; this registry is
@@ -59,22 +63,5 @@ data SelfState = SelfState
     --   Carries the uncommitted (or committed) 'Essence' across
     --   turns. Initialised to 'emptyEssence'.
   } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, FromJSON, ToJSON)
-
--- | Empty SelfState (for initialization).
---
--- All components are initialized to their respective empty/default values.
-emptySelfState :: SelfState
-emptySelfState = SelfState
-  { selfSalienceWeights = defaultSalienceWeights
-  , selfFieldHeuristics = defaultFieldHeuristics
-  , selfPerspectiveRegistry = emptyPerspectiveRegistry
-  , selfEssence = emptyEssence
-  }
-
--- | Default SelfState (alias for emptySelfState).
---
--- Provided for consistency with other state modules.
-defaultSelfState :: SelfState
-defaultSelfState = emptySelfState
+    deriving anyclass (NFData)
 

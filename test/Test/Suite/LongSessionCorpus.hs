@@ -21,7 +21,7 @@ import QxFx0.Self.Essence
 import QxFx0.Types (SystemState(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
 
-import qualified QxFx0.Runtime as Runtime
+import qualified Test.Support.Runtime as Runtime
   ( Session(..)
   , bootstrapSession
   , runTurnInSession

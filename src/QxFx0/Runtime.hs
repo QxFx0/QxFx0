@@ -16,6 +16,7 @@ module QxFx0.Runtime
   , runtimeToDialogueMode
   , dialogueToRuntimeMode
   , StateOrigin(..)
+  , StateVersion(..)
   , ensureSchemaMigrations
   , RuntimeContext
   , withRuntimeDb
@@ -33,6 +34,7 @@ module QxFx0.Runtime
   ) where
 
 import QxFx0.Bridge.SQLite (ensureSchemaMigrations)
+import QxFx0.Types.Persistence (StateVersion(..))
 import QxFx0.Bridge.AgdaWitness (AgdaWitnessReport(..), readAgdaWitnessReport, writeAgdaWitness)
 import QxFx0.Runtime.Wiring
   ( RuntimeContext

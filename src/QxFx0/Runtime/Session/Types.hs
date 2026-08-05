@@ -14,6 +14,7 @@ module QxFx0.Runtime.Session.Types
   ) where
 
 import Data.Aeson (FromJSON(..), ToJSON(..), Value(..), withText)
+import Control.Concurrent.MVar (MVar)
 import Data.Text (Text)
 import qualified Data.Text as T
 import QxFx0.Resources (ReadinessMode)
@@ -30,9 +31,8 @@ data RuntimeOutputMode
 data StateOrigin
   = FreshOrigin
   | RestoredOrigin
-  -- | Reserved for a future bounded degraded-recovery contour.
-  -- Current bootstrap handling fails closed on corrupt persisted state
-  -- instead of materializing a recovered-corrupt session shell.
+  -- | Degraded bootstrap recovered a corrupt blob. The first successful turn
+  -- uses an explicit revision-guarded repair CAS, then becomes RestoredOrigin.
   | RecoveredCorruptOrigin
   deriving stock (Eq, Show)
 
@@ -59,6 +59,7 @@ data Session = Session
   , sessReadinessMode :: !ReadinessMode
   , sessRuntime :: !RuntimeContext
   , sessAutonomousHandles :: !AutonomousHandles
+  , sessCloseState :: !(MVar Bool)
   }
 
 renderRuntimeOutputMode :: RuntimeOutputMode -> Text

@@ -24,6 +24,7 @@ import qualified Data.Text as T
 
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types
+import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.Readiness ()
 import QxFx0.Core.PipelineIO
   ( PipelineIO
@@ -222,12 +223,16 @@ testProtocolInterpreter request =
       pure TurnResCommitRuntimeState
     TurnReqSaveState ss _ _ _ ->
       pure (TurnResSaveState (Right ss))
-    TurnReqRollbackTurnProjections _ _ ->
-      pure (TurnResRollbackTurnProjections (Right ()))
+    TurnReqRollbackCommittedTurn _ _ _ _ ->
+      pure (TurnResRollbackCommittedTurn (Right ()))
+    TurnReqPersistFeedbackMirror _ _ ->
+      pure TurnResPersistFeedbackMirror
     TurnReqCheckpoint _ ->
       pure TurnResCheckpointCompleted
     TurnReqLinearizeClaimAst _ _ _ ->
       pure (TurnResLinearizeClaimAst (Left "pgf_unavailable_test_protocol"))
+    TurnReqLinearizeResponsePlan _ _ _ ->
+      pure (TurnResLinearizeResponsePlan (Left "pgf_unavailable_test_protocol"))
     TurnReqLinearizeDialogAtoms _ _ _ ->
       pure (TurnResLinearizeDialogAtoms (Left "pgf_unavailable_test_protocol"))
     TurnReqExternalQuery tool need queryText -> do
