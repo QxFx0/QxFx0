@@ -127,7 +127,10 @@
     `ReplayDeterminism.hs`
   - Library builds clean; test-suite recompile blocked by pre-existing
     GHC 9.6 `BlockArguments`/`do`-in-pattern issue in
-    `RuntimeInfrastructure.hs:1476`
+    `RuntimeInfrastructure.hs:1476` — **RESOLVED (2026-08-08)**: all four
+    test suites (`qxfx0-test`, `-fast`, `-property`, `-integration`)
+    now build and link clean on GHC 9.6.6; the erstwhile failure was an
+    artefact of the pre-port state that no longer reproduces.
 
   **M4-SEMANTIC-CORE-003 Phase C cutover (2026-06-18)**: semantic-first
   path is now PRIMARY for ALL input. `isCoveredTopic` gate removed from

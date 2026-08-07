@@ -102,6 +102,25 @@ parameters are deferred.
 **Prerequisites**: Package 1, Package 8, **a production trace
 corpus** (synthetic cannot suffice per ADR-0012 §15.2).
 
+### 2.3a `Self.SelfDivergence.SelfDivergenceTuning` (A-slice, 2026-08-07)
+
+Per the A-slice (A3), the self-consistency penalty is a *fraction*
+of the Conatus scalar (`penaltyShare = sdtScaling * total`), so the
+WP-F unit-mismatch lesson cannot recur: the default is calibrated
+against the production codomain `ceScalar ∈ [~5, ~20+]`, not
+`[0, 1]`. Invariants are pinned by unit-guards in
+`Test.Suite.SelfDivergence` (`0 < sdtScaling <= 1`,
+`0 <= sdtThreshold <= 1`, `sdtWindow >= 1`).
+
+| Field | Current value | Signal codomain | Observable outcome | Empirical evidence needed | Promotion gate |
+|---|---|---|---|---|---|
+| `sdtScaling` | 0.035 (hand-set, fraction) | `ceScalar ∈ [~5, ~20+]` (multiplicative share, unit-agnostic) | `trcSelfDivergencePenalty` / erosion-trigger rate (`trcEssenceTrigger = "conatus_erosion"`) | corpus of N≥1k turns with self-divergence traces | penalty share matches observed divergence-driven energy decay; healthy state never fed into `TriggerConatusErosion` by penalty alone (A→B guard) |
+| `sdtThreshold` | 0.35 | `sdeTotalDivergence ∈ [0, 1]` | `trcSelfDivergencePenalty = 0` rate | same | gate fires at expected calm-state fraction |
+| `sdtWindow` | 8 (turns) | `Int` | `trcSelfDivergenceWindowMean` trajectory | corpus | window matches observed persistent-drift duration |
+
+**Prerequisites**: Package 1, Package 8, corpus (A-slice C-slice
+trace corpus; see `docs/closure/ESSENCE_SOFT_RUPTURE.md`).
+
 ### 2.4 `Self.Deliberation.DeliberationModulation`
 
 Per ADR-0011 §12 Package C, `DeliberationModulation` centralises

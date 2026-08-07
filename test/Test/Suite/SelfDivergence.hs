@@ -100,6 +100,18 @@ selfDivergenceTests =
   , TestLabel "penalty preserves the five-component invariant ceScalar == sum" $
       quickCheckProperty "penalty preserves component invariant"
         propPenaltyPreservesInvariant
+    -- BD1 unit-guards: default tuning invariants (0 < sdtScaling <= 1,
+    -- 0 <= sdtThreshold <= 1, sdtWindow >= 1) — regression pins so a
+    -- future corpus-driven calibration cannot introduce a unit-mismatch
+    -- (WP-F lesson applied to the A-slice contour).
+  , TestLabel "default tuning invariants: scaling, threshold, window" $
+      TestCase $ do
+        assertBool "sdtScaling must be in (0, 1]"
+          (0.0 < sdtScaling tuning && sdtScaling tuning <= 1.0)
+        assertBool "sdtThreshold must be in [0, 1]"
+          (0.0 <= sdtThreshold tuning && sdtThreshold tuning <= 1.0)
+        assertBool "sdtWindow must be >= 1"
+          (sdtWindow tuning >= 1)
   , TestLabel "windowMeanDivergence is the exact arithmetic mean" $
       TestCase $ do
         assertEqual "simple mean" 0.5 (windowMeanDivergence [0.0, 1.0])
