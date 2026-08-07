@@ -62,7 +62,7 @@ module QxFx0.Semantic.Morphology
   , gerundSuffixes
   ) where
 
-import QxFx0.Types (MorphologyData(..))
+import QxFx0.Types.Domain.Atoms (LexemeForm(..), MorphologyData(..))
 import QxFx0.Lexicon.Inflection
   ( accusativeForm
   , genitiveForm

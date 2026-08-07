@@ -30,7 +30,7 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time (UTCTime)
-import QxFx0.Types
+import QxFx0.Types.Observability
   ( ConvMove(..)
   , DensityBand(..)
   , DepthBand(..)

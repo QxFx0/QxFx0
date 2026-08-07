@@ -26,6 +26,7 @@ module QxFx0.Semantic.ContentSelector.Integration
     ) where
 
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Foldable (foldl')
 import Data.List (maximumBy)
 import Data.Map.Strict (Map)
@@ -37,41 +38,18 @@ import qualified Data.Set as S
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import QxFx0.Types.Semantic.ContentSelector (ContentSelector(..), SelectedPredicate(..))
-import QxFx0.Semantic.ContentSelector.Types (emptyContentSelector)
+import QxFx0.Types.Semantic.AtomGraph (RelationType(..))
+import QxFx0.Types.Semantic.ContentSelector
+  ( ContentSelector(..), SelectedPredicate(..), ContentSelectorState(..)
+  , emptyContentSelectorState, initContentSelectorState
+  )
 import QxFx0.Semantic.ContentSelector.Optimized (TopicPredicateIndex, AtomTopicIndex, ScoreCache, emptyScoreCache, buildTopicPredicateIndex, buildAtomTopicIndex, scorePredWithCache, selectPredicatesWithCache, warmCacheForTopic)
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Semantic.Space (SemanticSpace(..))
 import QxFx0.Semantic.Network (SemanticNetwork(..))
-import QxFx0.Semantic.Ontology (Ontology(..))
-import QxFx0.Semantic.Ontology.Dynamic (LearningObservation(..), OntologyLearningConfig(..), DynamicOntologyState(..), emptyDynamicOntologyState, defaultLearningConfig, learnFromObservations, updateContentSelectorWithLearned, learnFromContentSelector)
+import QxFx0.Semantic.Ontology (Ontology(..), emptyOntology)
+import QxFx0.Semantic.Ontology.Dynamic (LearningObservation(..), OntologyLearningConfig(..), DynamicOntologyState(..), learnFromObservations, updateContentSelectorWithLearned, learnFromContentSelector)
 import QxFx0.Self.Field (Field(..))
-
--- | Extended state for ContentSelector with optimization data
-data ContentSelectorState = ContentSelectorState
-  { cssContentSelector :: !ContentSelector
-  , cssPredicateIndex :: !TopicPredicateIndex
-  , cssAtomIndex :: !AtomTopicIndex  
-  , cssScoreCache :: !ScoreCache
-  , cssLearningConfig :: !OntologyLearningConfig
-  , cssLearningState :: !DynamicOntologyState
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
--- | Empty ContentSelectorState
-emptyContentSelectorState :: ContentSelectorState
-emptyContentSelectorState = initContentSelectorState emptyContentSelector
-
--- | Initialize ContentSelectorState from a base ContentSelector
-initContentSelectorState :: ContentSelector -> ContentSelectorState
-initContentSelectorState cs = ContentSelectorState
-  { cssContentSelector = cs
-  , cssPredicateIndex = buildTopicPredicateIndex cs
-  , cssAtomIndex = buildAtomTopicIndex cs
-  , cssScoreCache = emptyScoreCache
-  , cssLearningConfig = defaultLearningConfig
-  , cssLearningState = emptyDynamicOntologyState
-  }
 
 -- | Initialize selector with all optimizations
 initSelectorWithOptimizations 
@@ -137,14 +115,15 @@ updateWithObservations
   -> (ContentSelectorState, [(Text, Text, RelationType)])
 updateWithObservations css observations =
   let config = cssLearningConfig css
-      ontology = csOntology (cssContentSelector css)
+      mOntology = csOntology (cssContentSelector css)
       learningState = cssLearningState css
+      ontology = fromMaybe emptyOntology mOntology
       (updatedOntology, newLearningState, learnedEdges) = learnFromObservations config ontology learningState observations
       updatedCS = css { cssLearningState = newLearningState }
       -- Update the ContentSelector with the new ontology
       -- learnedEdges is [(Text, Text, RelationType, Double)], we need to extract just the first 3 elements
       learnedEdges3 = map (\ (from, to, rel, _) -> (from, to, rel)) learnedEdges
-      updatedContentSelector = case ontology of
+      updatedContentSelector = case mOntology of
         Nothing -> cssContentSelector css
         Just ont -> updateContentSelectorWithLearned (cssContentSelector css) ont learnedEdges3
       finalCSS = updatedCS { cssContentSelector = updatedContentSelector }

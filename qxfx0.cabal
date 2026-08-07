@@ -71,6 +71,7 @@ library
     QxFx0.Types.Intuition
     QxFx0.Types.Observability
     QxFx0.Types.Persistence
+    QxFx0.Types.Persistence.Protocol
     QxFx0.Types.Readiness
     QxFx0.Types.Recovery
     QxFx0.Types.State
@@ -120,6 +121,7 @@ library
     QxFx0.Types.Semantic.IntentMetrics
     QxFx0.Types.Semantic.Network
     QxFx0.Types.Semantic.Ontology
+    QxFx0.Types.Semantic.Ontology.Dynamic
     QxFx0.Types.Semantic.ResponsePlan
     QxFx0.Types.Semantic.SurfaceRealizer
     QxFx0.Types.Semantic.Space
@@ -326,6 +328,7 @@ library
       QxFx0.Semantic.Network.Seed
       QxFx0.Semantic.Network.Seed.Select
       QxFx0.Semantic.Network.Substrate
+       QxFx0.Semantic.TopicRelations
       QxFx0.Semantic.Network.Ingest
       QxFx0.Semantic.Network.Feedback
       QxFx0.Semantic.Network.Feedback.Detect

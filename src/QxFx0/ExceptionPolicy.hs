@@ -27,7 +27,7 @@ import qualified Data.Map.Strict as Map
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Types.Persistence (PersistenceStage, StateVersion(..))
+import QxFx0.Types.Persistence.Protocol (PersistenceStage, StateVersion(..))
 
 -- | Structured error details for persistence failures
 data PersistenceErrorDetails = PersistenceErrorDetails

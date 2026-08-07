@@ -23,8 +23,7 @@ import QxFx0.Policy.RenderLexicon
   , morphNounSuffixA
   , morphNounSuffixIya
   )
-import QxFx0.Types (MorphologyData(..))
-import QxFx0.Types.Domain.Atoms (LexemeForm(..), LexemeCase(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..), LexemeForm(..), LexemeCase(..))
 import QxFx0.Lexicon.Resolver (resolveLexemeForm)
 
 dropLastChar :: T.Text -> T.Text

@@ -11,7 +11,7 @@ module QxFx0.Types.Text
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Types (IllocutionaryForce(..))
+import QxFx0.Types.Domain (IllocutionaryForce(..))
 
 finalizeForce :: IllocutionaryForce -> Text -> Text
 finalizeForce IFAsk = ensureQuestion

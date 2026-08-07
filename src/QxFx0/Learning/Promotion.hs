@@ -64,12 +64,12 @@ import QxFx0.Learning.CorroborationQueue (currentCorroborationPolicyVersion)
 import QxFx0.Learning.Quarantine (sha256Hex)
 import QxFx0.Semantic.Content
   ( DefinitionContent(..)
-  , CanonicalPredicateRelation(..)
   , PredicateRole(..)
   , SemanticPredicate(..)
   , definitionCorpus
   , normalizeTopic
   )
+import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
 import QxFx0.Semantic.Morphology (instrumentalForm)
 import QxFx0.Types (MorphologyData)
 import QxFx0.Semantic.Content.AtomStore

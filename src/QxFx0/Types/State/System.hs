@@ -130,9 +130,8 @@ import QxFx0.Types.Semantic.Network (ActivationArtifact, SemanticNetwork)
 import QxFx0.Types.Semantic.Space (SemanticSpace)
 import QxFx0.Types.Semantic.IntentMetrics (IntentClassifierMetrics)
 import QxFx0.Types.Semantic.Content (ConceptCategory, DefinitionContent)
-import QxFx0.Types.Semantic.ContentSelector (ContentSelector)
+import QxFx0.Types.Semantic.ContentSelector (ContentSelector, ContentSelectorState)
 import QxFx0.Types.Semantic.AtomGraph (AtomGraph)
-import QxFx0.Semantic.ContentSelector.Integration (ContentSelectorState)
 import QxFx0.Types.Semantic.Ontology (Ontology)
 import QxFx0.Types.State.Stance
   ( StanceState

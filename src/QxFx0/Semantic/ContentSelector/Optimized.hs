@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 
@@ -30,52 +33,35 @@ module QxFx0.Semantic.ContentSelector.Optimized
     , batchSelectPredicates
     ) where
 
+import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
 import Data.Foldable (foldl')
 import Data.List (maximumBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Vector (Vector)
+import GHC.Generics (Generic)
 
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..), SelectedPredicate(..))
-import QxFx0.Semantic.ContentSelector (scorePred)
-import QxFx0.Semantic.Content (CanonicalPredicateRelation(..), SemanticPredicate(..))
-import QxFx0.Semantic.Space (SemanticSpace(..), buildVector)
+import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..), SemanticPredicate(..))
+import QxFx0.Semantic.ContentSelector (scorePred, buildVector)
+import QxFx0.Semantic.Space (SemanticSpace(..))
 import QxFx0.Semantic.Network (SemanticNetwork(..))
 import QxFx0.Self.Field (Field(..))
+import QxFx0.Types.Semantic.ContentSelector
+  ( TopicPredicateIndex, AtomTopicIndex, ScoreCache, ScoreCacheKey(..)
+  , emptyScoreCache, buildTopicPredicateIndex, buildAtomTopicIndex
+  )
 
 -- ==========================================================================
--- Index Types
+-- Index Lookup Functions (index construction moved to Types layer)
 -- ==========================================================================
-
--- | Index for fast predicate lookup by topic: topic -> [(predicate_id, predicate)]
-type TopicPredicateIndex = Map Text [(Text, SemanticPredicate)]
-
--- | Reverse index for atom lookup: atom -> [topics containing this atom]
-type AtomTopicIndex = Map Text [Text]
-
--- ==========================================================================
--- Index Building Functions
--- ==========================================================================
-
--- | Build an index for fast predicate lookup by topic
-buildTopicPredicateIndex :: ContentSelector -> TopicPredicateIndex
-buildTopicPredicateIndex cs =
-  M.fromList [ (topic, zip [T.pack (show i) | i <- [0..]] preds) 
-             | (topic, preds) <- M.toList (csTopicPredicates cs) ]
-
--- | Build a reverse index: atom -> [topics that contain this atom]
-buildAtomTopicIndex :: ContentSelector -> AtomTopicIndex
-buildAtomTopicIndex cs =
-  let atomTopicPairs = [ (atom, topic) 
-                       | (topic, atoms) <- M.toList (csTopicAtoms cs)
-                       , atom <- S.toList atoms ]
-  in M.fromListWith (++) [ (atom, [topic]) | (atom, topic) <- atomTopicPairs ]
 
 -- | Fast lookup of predicates for a topic using the pre-built index
 lookupPredicatesByIndex :: TopicPredicateIndex -> Text -> [(Text, SemanticPredicate)]
@@ -90,23 +76,8 @@ lookupTopicsByAtom :: AtomTopicIndex -> Text -> [Text]
 lookupTopicsByAtom atomIndex atom = M.findWithDefault [] atom atomIndex
 
 -- ==========================================================================
--- Caching Types and Functions
+-- Caching Functions
 -- ==========================================================================
-
--- | Cache key for predicate scoring
--- Uses topic + predicate surface as the key for simplicity
--- In production, could include field signature for more precision
-data ScoreCacheKey = ScoreCacheKey
-  { sckTopic :: !Text
-  , sckPredicate :: !Text  -- spRu predicate text
-  } deriving (Eq, Ord, Show)
-
--- | Simple cache type: maps (topic, predicate) to computed score
-type ScoreCache = Map ScoreCacheKey Double
-
--- | Empty cache
-emptyScoreCache :: ScoreCache
-emptyScoreCache = M.empty
 
 -- | Clear the cache
 clearScoreCache :: ScoreCache -> ScoreCache
@@ -149,9 +120,10 @@ selectPredicatesWithCache cs field topic mNetwork initialCache =
      Just preds ->
        let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
            -- Score all predicates for this topic
-           (scoredResults, finalCache) = foldl' (\) ( [], initialCache) preds $ \ pred cache' ->
-             let (result, newCache) = scorePredWithCache cs field topic topicAtoms pred cache'
-             in (mapMaybe id [result], newCache)
+           (scoredResults, finalCache) = foldl' step ([], initialCache) preds
+           step (acc, cache) pred =
+             let (mResult, newCache) = scorePredWithCache cs field topic topicAtoms pred cache
+             in (acc ++ maybe [] (: []) mResult, newCache)
            
            -- Find the best scoring predicate
            best = case scoredResults of
@@ -175,10 +147,10 @@ warmCacheForTopic cs field topic mNetwork initialCache =
      Nothing -> initialCache
      Just preds ->
        let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
-       in foldl' (\) cache pred ->
+       in foldl' (\cache pred ->
              let key = ScoreCacheKey topic (spRu pred)
                  score = computeScore cs field topic topicAtoms pred
-             in M.insert key score cache
+             in M.insert key score cache)
           initialCache preds
   where
     -- Use the real scorePred function from ContentSelector
@@ -198,13 +170,12 @@ lazyScorePred
   -> Field
   -> Text
   -> Maybe SemanticNetwork
-  -> Text
   -> Set Text
   -> SemanticPredicate
   -> Maybe (SemanticPredicate, Double)
-lazyScorePred cs field _topic _mNetwork _topicAtoms pred =
+lazyScorePred cs field _topic mNetwork _topicAtoms pred =
   -- Use the actual scorePred from ContentSelector
-  scorePred field (csSpace cs) (csLemmaMap cs) Nothing pred
+  scorePred field (csSpace cs) (csLemmaMap cs) mNetwork pred
 
 -- | Lazy vector builder - defers vector computation until needed
 lazyBuildVector 
@@ -227,9 +198,10 @@ batchScorePredicates
   -> ScoreCache               -- Initial cache
   -> ([(SemanticPredicate, Double)], ScoreCache)  -- Results and updated cache
 batchScorePredicates cs field topic topicAtoms preds initialCache =
-  foldl' (\) ([], initialCache) preds $ \ pred (results, cache) ->
+  foldl' (\ (results, cache) pred ->
     let (result, newCache) = scorePredWithCache cs field topic topicAtoms pred cache
-    in (case result of { Just r -> r : results; Nothing -> results }, newCache)
+    in (case result of { Just r -> r : results; Nothing -> results }, newCache))
+    ([], initialCache) preds
 
 -- | Select predicates for multiple topics in a batch
 batchSelectPredicates 
@@ -240,6 +212,7 @@ batchSelectPredicates
   -> ScoreCache               -- Initial cache
   -> ([SelectedPredicate], ScoreCache)  -- Results and updated cache
 batchSelectPredicates cs field topics mNetwork initialCache =
-  foldl' (\) ([], initialCache) topics $ \ topic (results, cache) ->
+  foldl' (\ (results, cache) topic ->
     let (result, newCache) = selectPredicatesWithCache cs field topic mNetwork cache
-    in (case result of { Just r -> r : results; Nothing -> results }, newCache)
+    in (case result of { Just r -> r : results; Nothing -> results }, newCache))
+    ([], initialCache) topics

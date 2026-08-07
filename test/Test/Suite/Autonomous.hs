@@ -34,11 +34,11 @@ import QxFx0.Learning.Autonomous
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Semantic.LLMDiscovery (buildDiscoveryPrompt, buildGapAwareDiscoveryPrompt)
 import QxFx0.Semantic.Content
-  ( CanonicalPredicateRelation(..)
-  , DefinitionContent(..)
+  ( DefinitionContent(..)
   , PredicateRole(..)
   , SemanticPredicate(..)
   )
+import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
 import QxFx0.Semantic.Content.AtomStore
   ( Atom(..)
   , AtomId(..)

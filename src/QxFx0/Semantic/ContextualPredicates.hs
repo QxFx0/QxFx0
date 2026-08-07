@@ -503,7 +503,7 @@ explanationPredicates mTopic =
      , mkProp (topic <> " требует разъяснения") (topic <> " requires explanation")
      ]
   where
-    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing
+    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing Nothing
 
 -- | Predicates for clarification mode
 clarificationPredicates :: Maybe Text -> [SemanticPredicate]
@@ -513,7 +513,7 @@ clarificationPredicates mTopic =
      , mkProp ("необходимо прояснить " <> topic) ("it is necessary to clarify " <> topic)
      ]
   where
-    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing
+    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing Nothing
 
 -- | Predicates for exploration mode
 explorationPredicates :: Maybe Text -> [SemanticPredicate]
@@ -523,7 +523,7 @@ explorationPredicates mTopic =
      , mkProp (topic <> " открывает новые перспективы") (topic <> " opens new perspectives")
      ]
   where
-    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing
+    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing Nothing
 
 -- | General dialogic predicates
 generalDialogicPredicates :: Maybe Text -> [SemanticPredicate]
@@ -533,7 +533,7 @@ generalDialogicPredicates mTopic =
      , mkProp (topic <> " важно для диалога") (topic <> " is important for dialogue")
      ]
   where
-    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing
+    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing Nothing
 
 -- | Reflection predicates based on consolidation level
 reflectionPredicates :: Double -> Maybe Text -> [SemanticPredicate]
@@ -547,7 +547,7 @@ reflectionPredicates consolidationLevel mTopic =
         then mkProp (topic <> " интегрируется в понимание") (topic <> " is integrated into understanding") : predicates
         else predicates
   where
-    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing
+    mkProp ru en = SemanticPredicate RoleProperty ru en (fromMaybe "это" mTopic) Nothing Nothing Nothing Nothing
 
 -- | State-based predicates
 stateBasedPredicates :: [Text] -> Int -> [SemanticPredicate]

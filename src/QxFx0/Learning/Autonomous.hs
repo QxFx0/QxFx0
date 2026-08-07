@@ -211,13 +211,13 @@ import QxFx0.Types.ExternalQuery
   , renderExternalQueryError
   )
 import QxFx0.Semantic.Content
-  ( CanonicalPredicateRelation(..)
-  , DefinitionContent(..)
+  ( DefinitionContent(..)
   , definitionCorpus
   , PredicateRole(..)
   , SemanticPredicate(..)
   , mkPred
   )
+import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
 import QxFx0.Semantic.ContentSelector
   ( buildContentSelector
   , selectPredicatesWithDiagnostics

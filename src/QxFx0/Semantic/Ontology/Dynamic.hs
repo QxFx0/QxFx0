@@ -1,37 +1,28 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module QxFx0.Semantic.Ontology.Dynamic
-  ( LearningObservation(..)
-    , OntologyLearningConfig(..)
-    , defaultLearningConfig
-    , DynamicOntologyState(..)
-    , emptyDynamicOntologyState
-    , observeCooccurrence
-    , observeSimilarity
-    , observeHierarchical
-    , learnFromObservations
-    , applyLearnedEdges
-    , suggestNewRelations
-    , learnFromContentSelector
-    , updateContentSelectorWithLearned
-    ) where
+  ( module QxFx0.Types.Semantic.Ontology.Dynamic
+  , observeCooccurrence
+  , observeSimilarity
+  , observeHierarchical
+  , learnFromObservations
+  , applyLearnedEdges
+  , suggestNewRelations
+  , learnFromContentSelector
+  , updateContentSelectorWithLearned
+  ) where
 
 import Data.Foldable (foldl')
 import Data.List (sortBy, groupBy, maximumBy, nub)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (mapMaybe, fromMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Ord (comparing)
-import Data.Set (Set)
-import qualified Data.Set as S
 import Data.Text (Text)
-import qualified Data.Text as T
-import GHC.Generics (Generic)
-import Control.DeepSeq (NFData)
 
+import QxFx0.Types.Semantic.Ontology.Dynamic
+  ( LearningObservation(..), OntologyLearningConfig(..)
+  , defaultLearningConfig, DynamicOntologyState(..), emptyDynamicOntologyState
+  )
 import QxFx0.Semantic.Ontology
   ( Ontology(..), OntologyNode(..), ConceptCategory(..)
   , addOntologyNode, addOntologyNodeAutoDepth
@@ -39,61 +30,8 @@ import QxFx0.Semantic.Ontology
   )
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Semantic.Content (SemanticPredicate(..))
-import QxFx0.Semantic.Network.Types (RelationType(..), DomainTag(..))
-
--- | Represents an observation that could lead to ontology learning
-data LearningObservation = LearningObservation
-  { loSourceTopic :: !Text
-  , loTargetTopic :: !Text
-  , loRelationType :: !RelationType
-  , loConfidence :: !Double
-  , loEvidence :: ![Text]
-  , loContext :: !(Maybe Text)
-  , loTimestamp :: !Int
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
--- | Configuration for dynamic ontology learning
-data OntologyLearningConfig = OntologyLearningConfig
-  { olcMinConfidence :: !Double
-  , olcMaxObservations :: !Int
-  , olcLearningRate :: !Double
-  , olcDecayFactor :: !Double
-  , olcMaxSuggestions :: !Int
-  , olcValidationThreshold :: !Double
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
--- | Default learning configuration
-defaultLearningConfig :: OntologyLearningConfig
-defaultLearningConfig = OntologyLearningConfig
-  { olcMinConfidence = 0.6
-  , olcMaxObservations = 1000
-  , olcLearningRate = 0.7
-  , olcDecayFactor = 0.99
-  , olcMaxSuggestions = 10
-  , olcValidationThreshold = 0.8
-  }
-
--- | State for dynamic ontology learning
-data DynamicOntologyState = DynamicOntologyState
-  { dosObservations :: ![LearningObservation]
-  , dosLearnedEdges :: ![(Text, Text, RelationType)]
-  , dosRejectedEdges :: ![(Text, Text, RelationType, Text)]
-  , dosObservationCount :: !Int
-  , dosLearningIterations :: !Int
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData)
-
--- | Empty dynamic ontology state
-emptyDynamicOntologyState :: DynamicOntologyState
-emptyDynamicOntologyState = DynamicOntologyState
-  { dosObservations = []
-  , dosLearnedEdges = []
-  , dosRejectedEdges = []
-  , dosObservationCount = 0
-  , dosLearningIterations = 0
-  }
+import QxFx0.Types.Semantic.AtomGraph (RelationType(..))
+import QxFx0.Types.Semantic.Network (SemanticNetwork(..))
 
 -- | Record a co-occurrence observation between two topics
 observeCooccurrence :: Text -> Text -> [Text] -> Maybe Text -> Int -> LearningObservation
@@ -142,14 +80,14 @@ observeHierarchical parent child relType confidence evidence context timestamp =
 -- | Apply learned edges to an ontology
 applyLearnedEdges :: Ontology -> [(Text, Text, RelationType)] -> (Ontology, [(Text, Text, RelationType)])
 applyLearnedEdges ontology edges =
-  foldl' applyEdge (ontology, [])
+  foldl' applyEdge (ontology, []) edges
   where
     applyEdge (currentOnt, learnedSoFar) edge@(from, to, relType) =
       let (newOntology, wasAdded) = addEdgeToOntology currentOnt edge
       in if wasAdded
          then (newOntology, edge : learnedSoFar)
          else (newOntology, learnedSoFar)
-    
+
     addEdgeToOntology ont (from, to, relType) =
       case (lookupOntologyNode ont from, lookupOntologyNode ont to) of
         (Just fromNode, Just toNode) -> (ont, False)
@@ -169,7 +107,7 @@ suggestNewRelations :: OntologyLearningConfig -> Ontology -> DynamicOntologyStat
 suggestNewRelations config ontology state =
   let observations = dosObservations state
       groupedByRelation = groupBy (\ a b -> loRelationType a == loRelationType b) observations
-      relationGroups = map (\ group -> 
+      relationGroups = map (\ group ->
                          let relType = loRelationType (head group)
                              confidence = averageConfidence group
                          in (relType, confidence, group))
@@ -177,7 +115,7 @@ suggestNewRelations config ontology state =
       sortedGroups = sortBy (comparing (\ (_, conf, _) -> conf)) relationGroups
       topSuggestions = take (olcMaxSuggestions config) sortedGroups
   in concatMap (\ (relType, avgConf, group) ->
-                 map (\ obs -> 
+                 map (\ obs ->
                    (loSourceTopic obs, loTargetTopic obs, relType, avgConf * loConfidence obs)
                  ) group
             ) topSuggestions
@@ -204,13 +142,13 @@ learnFromObservations config ontology state newObservations =
 learnFromContentSelector :: OntologyLearningConfig -> ContentSelector -> Text -> [SemanticPredicate] -> Maybe SemanticNetwork -> Int -> DynamicOntologyState -> (DynamicOntologyState, [LearningObservation])
 learnFromContentSelector config cs currentTopic selectedPredicates mNetwork timestamp state =
   let observations = generateObservationsFromSelection cs currentTopic selectedPredicates mNetwork timestamp
-      updatedState = state 
+      updatedState = state
         { dosObservations = take (olcMaxObservations config) (observations ++ dosObservations state)
-        , dosObservationCount = dosObservationCount state + length observations 
+        , dosObservationCount = dosObservationCount state + length observations
         }
   in (updatedState, observations)
   where
-    generateObservationsFromSelection cs' topic preds mNet ts =
+    generateObservationsFromSelection csOnTopic topic predicates mNet ts =
       case mNet of
         Nothing -> []
         Just network ->
@@ -261,8 +199,10 @@ validateLearnedEdge config ontology (from, to, relType, confidence) =
 updateState :: DynamicOntologyState -> [LearningObservation] -> [(Text, Text, RelationType)] -> DynamicOntologyState
 updateState state newObservations learnedEdges =
   state
-    { dosObservations = take (olcMaxObservations (defaultLearningConfig)) (newObservations ++ dosObservations state)
+    { dosObservations = take (olcMaxObservations config) (newObservations ++ dosObservations state)
     , dosLearnedEdges = learnedEdges ++ dosLearnedEdges state
     , dosObservationCount = dosObservationCount state + length newObservations
     , dosLearningIterations = dosLearningIterations state + 1
     }
+  where
+    config = defaultLearningConfig

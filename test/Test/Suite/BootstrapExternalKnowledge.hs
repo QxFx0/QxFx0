@@ -35,9 +35,12 @@ import QxFx0.Semantic.Network.Types
 seedNode :: T.Text
 seedNode = "свобода"
 
--- | External-only node from the relations corpus ("свобода" -> "выбор").
+-- | External-only node from the relations corpus ("свобода" -> "самоопределение").
+-- This word is deliberately absent from the seeded definition corpus, the
+-- self-play corpus and the atom-graph seed, so the disabled path cannot
+-- introduce it.
 externalNode :: T.Text
-externalNode = "выбор"
+externalNode = "самоопределение"
 
 -- | The default compile-time flag must keep the feature off.
 testUseExternalKnowledgeDefaultOff :: Test
@@ -113,8 +116,8 @@ testEnabledMergesExternalNodes = TestCase $ do
   assertBool "external-only node should be present"
     (S.member externalNode (snNodes network))
 
--- | The "свобода" -> "выбор" edge imported from the external corpus is
--- present and carries 'ProvenanceIngested'.
+-- | The "свобода" -> "самоопределение" edge imported from the external corpus
+-- is present and carries 'ProvenanceIngested'.
 testExternalEdgeHasIngestedProvenance :: Test
 testExternalEdgeHasIngestedProvenance = TestCase $ do
   brainKBEntries <- loadBrainKB =<< resolveBrainKBPath

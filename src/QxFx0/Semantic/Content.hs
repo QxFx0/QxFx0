@@ -112,15 +112,7 @@ import QxFx0.Semantic.Content.Argued (arguedPredicates)
 import QxFx0.Semantic.Content.Challenges (challengeResponseCorpusFull)
 import QxFx0.Semantic.Content.Category (ConceptCategory(..))
 import QxFx0.Semantic.Ontology (Ontology, emptyOntology, lookupCategory)
-
--- | Definition content for a topic: ≥2 substantive predicates.
-data DefinitionContent = DefinitionContent
-  { dcTopic :: !Text
-    -- ^ The topic key (lowercase, normalized).
-  , dcPredicates :: ![SemanticPredicate]
-    -- ^ ≥2 substantive non-tautological predicates.
-  } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+import QxFx0.Types.Semantic.Content (DefinitionContent(..))
 
 -- | Distinction content for a topic pair: ≥1 differentiating predicate.
 data DistinctionContent = DistinctionContent
@@ -905,9 +897,9 @@ definitionCorpus = M.fromList
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))
-    prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru) Nothing Nothing Nothing
-    rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru) Nothing Nothing Nothing
-    structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru) Nothing Nothing Nothing
+    prop ru en = SemanticPredicate RoleProperty ru en (extractTopicForm ru) Nothing Nothing Nothing Nothing
+    rel ru en = SemanticPredicate RoleRelation ru en (extractTopicForm ru) Nothing Nothing Nothing Nothing
+    structure ru en = SemanticPredicate RoleStructure ru en (extractTopicForm ru) Nothing Nothing Nothing Nothing
 
 -- | Merge argued predicates into a topic's predicate list.
 -- Replaces flat predicates with their argued versions (matching by ru text),
@@ -1011,7 +1003,7 @@ distinctionCorpus = M.fromList
   where
     dEntry left right preds =
       ((left, right), DistinctionContent left right preds)
-    diff ru en = SemanticPredicate RoleDifferentiator ru en (extractTopicForm ru) Nothing Nothing Nothing
+    diff ru en = SemanticPredicate RoleDifferentiator ru en (extractTopicForm ru) Nothing Nothing Nothing Nothing
 
 -- ============================================================================
 -- Lookup functions

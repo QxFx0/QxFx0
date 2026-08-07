@@ -26,9 +26,9 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.Content
   ( normalizeTopic
-  , CanonicalPredicateRelation(..)
   , SemanticPredicate(..)
   )
+import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
 import QxFx0.Semantic.ContentSelector
   ( ContentSelector(..)
   , SelectedPredicate(..)
