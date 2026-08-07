@@ -331,6 +331,28 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   reachability/recommit), registered in cabal + all three TestMains.
   See `docs/closure/ESSENCE_SOFT_RUPTURE.md`.
 
+  **C-slice (self-divergence recovery envelope) completed 2026-08-07**:
+  the A-slice divergence signal now drives the local recovery machine.
+  New `RecoverySelfDivergence` cause (`LocalRecoveryCause`) and
+  `StrategySelfReanchoring` strategy (`LocalRecoveryStrategy`),
+  rendered `self_divergence` / `self_reanchoring`. Pure morphism
+  `sustainedDivergenceExceeds :: SelfDivergenceTuning -> [Double] ->
+  Bool` gates the branch (non-empty `SelfState.selfDivergenceWindow`
+  with window mean strictly above `sdtThreshold`). Wired into
+  `buildLocalRecoveryPlan` (Route/Render.hs) between the structural
+  Conatus gate and WP3 learning-need recovery; severity ladder seats
+  `RecoverySelfDivergence` at 90 (above `RecoveryLearningNeed` 85,
+  below `RecoveryConatusGate` 100) in `Self/Deliberation.hs`. The
+  turn surface narrows to the predicted (stable) contour instead of
+  amplifying the current drift — "the system now notices itself,
+  not only its shadow." Distinct from `RecoveryShadowDivergence`
+  (shadow runtime) and `RecoveryConatusGate` (energy). Anti-rot:
+  PhaseM2d render/JSON cases, SelfDivergence threshold/empty-window
+  cases, SelfDeliberation severity ordering, TurnPipelineProtocol
+  integration (window override drives the cause; fresh state does
+  not). No trace-schema change (`trcRecoveryCause`/`Strategy` already
+  carry it); no math version bump.
+
   **Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
   - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),
     from `seedFromCorpus` (definitionCorpus predicates). Only source of output.

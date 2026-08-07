@@ -475,6 +475,7 @@ turnPipelineProtocolTests =
       -- P1-1: empty/fresh state must NOT fire the Conatus gate (energy starts non-negative)
       , testConatusGateDoesNotFireFromEmptyState
       , testConatusGateFiresRecoveryConatusGate
+      , testSustainedSelfDivergenceFiresRecoverySelfDivergence
      , testConatusGateFlagDrivesLocalRecoveryPlan
      , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
      , testConatusGradientMorphologyDominant
@@ -1865,6 +1866,47 @@ testConatusGateFiresRecoveryConatusGate = TestCase $
           ("conatus_gate_fired" `elem` lrpEvidence recoveryPlan)
         assertBool "evidence must include blanket_violations=2 line"
           ("blanket_violations=2" `elem` lrpEvidence recoveryPlan)
+
+-- | C-slice (CD): sustained self-divergence (window mean above
+-- 'sdtThreshold') must drive 'RecoverySelfDivergence' with
+-- 'StrategySelfReanchoring' inside 'buildLocalRecoveryPlan', and a
+-- fresh (empty-window) state must NOT fire it. The override injects a
+-- bounded divergence window into 'SelfState', mirroring the A-slice
+-- finalize stage's one-turn-later window.
+testSustainedSelfDivergenceFiresRecoverySelfDivergence :: Test
+testSustainedSelfDivergenceFiresRecoverySelfDivergence = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
+    let ssDiverged = ss
+          { ssSelfState =
+              (ssSelfState ss)
+                { selfDivergenceWindow = [1.0, 1.0, 1.0] }
+          }
+        renderPlanDiverged =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ssDiverged ti ts tp
+        renderPlanFresh =
+          planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlanDiverged of
+      Nothing ->
+        assertFailure "sustained self-divergence must expose a visible local recovery plan"
+      Just recoveryPlan -> do
+        assertEqual "sustained self-divergence must produce RecoverySelfDivergence cause"
+          RecoverySelfDivergence
+          (lrpCause recoveryPlan)
+        assertEqual "sustained self-divergence must force StrategySelfReanchoring"
+          StrategySelfReanchoring
+          (lrpStrategy recoveryPlan)
+        assertBool "evidence must include self_divergence_window_mean tag"
+          (any ("self_divergence_window_mean=" `T.isPrefixOf`) (lrpEvidence recoveryPlan))
+        assertBool "evidence must include self_divergence_window_size=3 line"
+          ("self_divergence_window_size=3" `elem` lrpEvidence recoveryPlan)
+    case repLocalRecoveryPlan renderPlanFresh of
+      Just freshPlan ->
+        assertBool
+          ("fresh empty-window state must not produce a self-divergence recovery, got: "
+            <> show (lrpCause freshPlan))
+          (lrpCause freshPlan /= RecoverySelfDivergence)
+      Nothing -> pure ()
 
 -- | F2-lock (regression): conatus gate *flag* must drive the recovery plan.
 -- This pins the M6 single-source-of-truth invariant: the energy scalar

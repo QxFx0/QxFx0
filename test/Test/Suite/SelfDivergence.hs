@@ -19,6 +19,9 @@ Pins the pure morphisms of @QxFx0.Self.SelfDivergence@:
     @ceScalar == sum of components@;
   * 'windowMeanDivergence' is the exact arithmetic mean and is 0 on
     empty windows.
+  * 'sustainedDivergenceExceeds' (C-slice CD trigger) is False on
+    empty windows, False below the threshold, and True exactly when a
+    non-empty window mean strictly exceeds 'sdtThreshold'.
 -}
 module Test.Suite.SelfDivergence
   ( selfDivergenceTests
@@ -54,6 +57,7 @@ import QxFx0.Self.SelfDivergence
   ( measureDivergence
   , predictSelf
   , selfConsistencyPenalty
+  , sustainedDivergenceExceeds
   , windowMeanDivergence
   )
 import QxFx0.Types.Self.SelfDivergence
@@ -90,6 +94,24 @@ selfDivergenceTests =
         assertEqual "weighted mean" 0.25 (windowMeanDivergence [0.0, 0.5])
   , TestLabel "windowMeanDivergence is 0 on an empty window" $
       TestCase $ assertEqual "empty window mean" 0.0 (windowMeanDivergence [])
+    -- C-slice (CD): sustainedDivergenceExceeds recovery trigger
+  , TestLabel "sustained divergence is False on an empty window" $
+      TestCase $ assertBool "empty window never sustained-diverged"
+        (not (sustainedDivergenceExceeds tuning []))
+  , TestLabel "sustained divergence is False below or at threshold" $
+      TestCase $
+        let thr = sdtThreshold tuning
+            atThreshold = [thr]
+            belowThreshold = [thr / 2.0, thr / 2.0]
+        in do
+          assertBool "at-threshold window must not fire"
+            (not (sustainedDivergenceExceeds tuning atThreshold))
+          assertBool "below-threshold window must not fire"
+            (not (sustainedDivergenceExceeds tuning belowThreshold))
+  , TestLabel "sustained divergence is True when window mean exceeds threshold" $
+      TestCase $
+        assertBool "above-threshold window must fire"
+          (sustainedDivergenceExceeds tuning [1.0, 1.0])
   ]
 
 quickCheckProperty :: String -> Property -> Test

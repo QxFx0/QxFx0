@@ -57,7 +57,9 @@ import QxFx0.Types
   )
 import QxFx0.Types.Recovery
   ( LocalRecoveryCause (..)
+  , LocalRecoveryStrategy (..)
   , renderLocalRecoveryCause
+  , renderLocalRecoveryStrategy
   )
 import QxFx0.Runtime.StateDefaults (emptySystemState)
 
@@ -110,6 +112,23 @@ phaseM2dTests =
   , TestLabel "renderLocalRecoveryCause RecoveryRuntimeDegraded preserves runtime_degraded after split" $
       TestCase $
         renderLocalRecoveryCause RecoveryRuntimeDegraded @?= "runtime_degraded"
+
+    -- C-slice (CD): self-divergence recovery cause — text rendering and JSON tag
+  , TestLabel "renderLocalRecoveryCause RecoverySelfDivergence renders to self_divergence" $
+      TestCase $
+        renderLocalRecoveryCause RecoverySelfDivergence @?= "self_divergence"
+
+  , TestLabel "ToJSON RecoverySelfDivergence produces String \"self_divergence\"" $
+      TestCase $
+        toJSON RecoverySelfDivergence @?= String "self_divergence"
+
+  , TestLabel "renderLocalRecoveryStrategy StrategySelfReanchoring renders to self_reanchoring" $
+      TestCase $
+        renderLocalRecoveryStrategy StrategySelfReanchoring @?= "self_reanchoring"
+
+  , TestLabel "ToJSON StrategySelfReanchoring produces String \"self_reanchoring\"" $
+      TestCase $
+        toJSON StrategySelfReanchoring @?= String "self_reanchoring"
 
     -- Phase 2.5 (M2d) — psConatusEnergy invariant
   , TestLabel "buildPrepareEffectPlan stores psConatusEnergy matching direct computation" $

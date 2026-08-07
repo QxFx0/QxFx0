@@ -18,7 +18,7 @@ module Test.Suite.SelfDeliberation
   ( selfDeliberationTests
   ) where
 
-import Test.HUnit (Test (..), assertFailure)
+import Test.HUnit (Test (..), assertEqual, assertFailure)
 import Test.QuickCheck
   ( Gen
   , Property
@@ -41,6 +41,7 @@ import QxFx0.Self.Deliberation
   , ReconcileRule (..)
   , formalProposal
   , holisticProposal
+  , pickHigherSeverity
   , reconcile
   , renderAgreement
   , renderReconcileRule
@@ -84,6 +85,21 @@ selfDeliberationTests =
       quickCheckProperty "propRenderAgreementTotal" propRenderAgreementTotal
   , TestLabel "renderReconcileRule is total and stable" $
       quickCheckProperty "propRenderReconcileRuleTotal" propRenderReconcileRuleTotal
+    -- C-slice (CD): self-divergence severity ordering. The ladder is
+    -- the single source of truth for "recovery is never silenced";
+    -- CD slots at 90 (above learning 85, below structural Conatus
+    -- gate 100). Pin the deltas so a future renumbering is visible.
+  , TestLabel "severity: self-divergence beats learning need and loses to Conatus gate" $
+      TestCase $ do
+        assertEqual "self-divergence over learning"
+          (Just RecoverySelfDivergence)
+          (pickHigherSeverity (Just RecoveryLearningNeed) (Just RecoverySelfDivergence))
+        assertEqual "Conatus gate over self-divergence"
+          (Just RecoveryConatusGate)
+          (pickHigherSeverity (Just RecoverySelfDivergence) (Just RecoveryConatusGate))
+        assertEqual "self-divergence beats shadow divergence"
+          (Just RecoverySelfDivergence)
+          (pickHigherSeverity (Just RecoveryShadowDivergence) (Just RecoverySelfDivergence))
   ]
 
 -- ---------------------------------------------------------------------------

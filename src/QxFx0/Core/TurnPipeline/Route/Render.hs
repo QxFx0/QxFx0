@@ -55,7 +55,9 @@ import QxFx0.Core.TurnRender
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
 import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradientWith)
-import QxFx0.Types.State.SelfState (selfConatusWeights)
+import QxFx0.Self.SelfDivergence (sustainedDivergenceExceeds, windowMeanDivergence)
+import QxFx0.Types.Self.SelfDivergence (SelfDivergenceTuning(..), defaultSelfDivergenceTuning)
+import QxFx0.Types.State.SelfState (selfConatusWeights, selfDivergenceWindow)
 import QxFx0.Types.State.DialogueDevelopment (DialogueThread(..))
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
 import QxFx0.Learning.Loop (legacyExternalLearningEnabled)
@@ -947,6 +949,31 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                       , strategy
                       , evidence
                       )
+            -- C-slice (CD): the system noticed its own deterministic
+            -- self-model drifted out of the envelope it predicted for
+            -- itself.  Read exclusively from the bounded
+            -- 'SelfState.selfDivergenceWindow' (filled by the A-slice
+            -- finalize stage) via the pure 'sustainedDivergenceExceeds'
+            -- morphism: the window mean must exceed 'sdtThreshold'
+            -- with at least one history sample.  Slotted at severity
+            -- 90 — above learning needs, below the structural
+            -- Conatus gate (100) — so the gate still wins when both
+            -- fire on the same turn.
+            | sustainedDivergenceExceeds
+                defaultSelfDivergenceTuning
+                (selfDivergenceWindow (ssSelfState ss)) ->
+                let divergenceWindow = selfDivergenceWindow (ssSelfState ss)
+                    windowMean = windowMeanDivergence divergenceWindow
+                    evidence =
+                      [ "self_divergence_window_mean=" <> T.pack (show windowMean)
+                      , "self_divergence_window_size=" <> T.pack (show (length divergenceWindow))
+                      , "self_divergence_threshold=" <> T.pack (show (sdtThreshold defaultSelfDivergenceTuning))
+                      ]
+                 in Just
+                      ( RecoverySelfDivergence
+                      , StrategySelfReanchoring
+                      , evidence
+                      )
             -- WP3: learning-driven recovery.  Only triggered when a
             -- persistent need (already stored in state from previous
             -- turns) has a high deficit level.  This introduces one
@@ -1102,6 +1129,8 @@ renderLocalRecoverySurfaceRu strategy topic =
           "Для темы " <> topicText <> " не хватает понятия или ключевого признака; сначала задам рабочую границу смысла."
         StrategyExternalDialogue ->
           "Эту тему лучше разворачивать через отдельное исследование; сейчас удержу исходный вопрос: " <> topicText <> "."
+        StrategySelfReanchoring ->
+          "Я вернусь к собственному устойчивому контуру и не буду усиливать текущее отклонение от него."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn _cause strategy topic =
@@ -1133,6 +1162,8 @@ renderLocalRecoverySurfaceEn _cause strategy topic =
           "The topic " <> topicText <> " needs a clearer concept or key feature; I will start by setting a working boundary."
         StrategyExternalDialogue ->
           "This topic is better developed through a separate inquiry; I will keep the current question in view: " <> topicText <> "."
+        StrategySelfReanchoring ->
+          "I will return to my own stable contour instead of amplifying the current deviation from it."
 
 localRecoveryCandidateFamilies :: TurnInput -> TurnPlan -> [CanonicalMoveFamily]
 localRecoveryCandidateFamilies ti tp =

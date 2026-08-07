@@ -32,6 +32,7 @@ module QxFx0.Self.SelfDivergence
   , measureDivergence
   , selfConsistencyPenalty
   , windowMeanDivergence
+  , sustainedDivergenceExceeds
   , clampUnit
   ) where
 
@@ -185,3 +186,16 @@ windowMeanDivergence :: [Double] -> Double
 windowMeanDivergence [] = 0.0
 windowMeanDivergence xs =
   sum xs / fromIntegral (length xs)
+
+-- | C-slice (CD): the recovery trigger for 'RecoverySelfDivergence'.
+-- True exactly when a /non-empty/ bounded window of recent total
+-- divergence samples has a mean strictly above 'sdtThreshold' — i.e.
+-- the system has been out of its predicted envelope on average, not
+-- just on one noisy turn.  Empty windows (no self-history yet) are
+-- never sustained-diverged.
+--
+-- Deterministic and total: same tuning and window always yield the
+-- same verdict.
+sustainedDivergenceExceeds :: SelfDivergenceTuning -> [Double] -> Bool
+sustainedDivergenceExceeds tuning window =
+  not (null window) && windowMeanDivergence window > sdtThreshold tuning

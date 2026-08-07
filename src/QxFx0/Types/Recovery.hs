@@ -51,6 +51,16 @@ data LocalRecoveryCause
     --   Distinct from 'RecoveryRuntimeDegraded' (which means
     --   the runtime mode itself is degraded for environmental
     --   reasons, e.g. shadow unavailability, partial DB).
+  | RecoverySelfDivergence
+    -- ^ C-slice (CD): the system noticed its own deterministic
+    --   self-model diverged from the envelope it predicted for
+    --   itself.  Triggered exclusively by 'sustainedDivergenceExceeds'
+    --   in 'QxFx0.Self.SelfDivergence' from the bounded
+    --   'SelfState.selfDivergenceWindow' inside
+    --   'QxFx0.Core.TurnPipeline.Rout.Render.buildLocalRecoveryPlan'.
+    --   Distinct from 'RecoveryShadowDivergence' (which the
+    --   shadow runtime produces) and from 'RecoveryConatusGate'
+    --   (which fires on energy, not on self-consistency).
   deriving stock (Eq, Show, Generic, Bounded, Enum)
 
 instance ToJSON LocalRecoveryCause where
@@ -91,6 +101,13 @@ data LocalRecoveryStrategy
   | StrategyExternalDialogue
     -- ^ Phase 9: autonomous exploratory learning — system initiates
     --   an external dialogue query to acquire new knowledge.
+  | StrategySelfReanchoring
+    -- ^ C-slice (CD): the system re-anchors itself to the
+    --   deterministic prediction it made for its own next Field
+    --   state.  Used exclusively with 'RecoverySelfDivergence':
+    --   when the observed Field left the predicted envelope, the
+    --   response narrows to the predicted (stable) contour instead
+    --   of amplifying the current drift.
   deriving stock (Eq, Show, Generic, Bounded, Enum)
 
 instance ToJSON LocalRecoveryStrategy where
@@ -114,6 +131,7 @@ renderLocalRecoveryCause RecoveryUnknownTopic = "unknown_topic"
 renderLocalRecoveryCause RecoveryRuntimeDegraded = "runtime_degraded"
 renderLocalRecoveryCause RecoveryLearningNeed = "learning_need"
 renderLocalRecoveryCause RecoveryConatusGate = "conatus_gate"
+renderLocalRecoveryCause RecoverySelfDivergence = "self_divergence"
 
 renderLocalRecoveryStrategy :: LocalRecoveryStrategy -> Text
 renderLocalRecoveryStrategy StrategyAskClarification = "ask_clarification"
@@ -129,3 +147,4 @@ renderLocalRecoveryStrategy StrategyRequestCalibration = "request_calibration"
 renderLocalRecoveryStrategy StrategyRequestRule = "request_rule"
 renderLocalRecoveryStrategy StrategyRequestConcept = "request_concept"
 renderLocalRecoveryStrategy StrategyExternalDialogue = "external_dialogue"
+renderLocalRecoveryStrategy StrategySelfReanchoring = "self_reanchoring"
