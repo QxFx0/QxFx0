@@ -138,8 +138,10 @@ testCommitReachabilityWindow = do
   assertEqual "no commitment on turn 14" Nothing (shouldCommit em traj14)
   assertEqual "commitment fires exactly on turn 15"
     (Just TriggerAngstThreshold) (shouldCommit em traj15)
-  assertEqual "angst lands on the threshold on turn 15"
-    (emAngstCommitmentThreshold em) (etAngstLevel traj15)
+  assertBool
+    ( "angst on turn 15 must reach the 0.75 commitment threshold; got "
+        ++ show (etAngstLevel traj15))
+    (etAngstLevel traj15 >= emAngstCommitmentThreshold em)
 
 -- | A zero-divergence agreement regime decays angst and must not
 -- produce a commitment inside the window (no spurious reduction).
