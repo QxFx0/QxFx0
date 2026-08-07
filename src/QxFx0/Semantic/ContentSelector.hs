@@ -49,7 +49,7 @@ selectPredicates cs field topic mActivatedNetwork =
     Just preds ->
       let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) mActivatedNetwork) preds
       in case scored of
-            [] -> []
+            [] -> [SelectedPredicate topic 0.0 [head preds]]
             _  -> let (bestPred, bestScore) = maximumBy (comparing snd) scored
                   in [SelectedPredicate topic bestScore [bestPred]]
 

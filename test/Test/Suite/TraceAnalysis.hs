@@ -329,5 +329,5 @@ testActivatedConcepts = TestCase $ do
 -- as missing predicates.
 testMissingPredicateConcepts :: Test
 testMissingPredicateConcepts = TestCase $ do
-  let artifact = ActivationArtifact [] (Map.fromList [("выбор", 0.1), ("ответственность", 0.1)]) Seq.empty []
-  assertEqual "Missing predicate concepts" ["выбор"] (missingPredicateConcepts definitionCorpus (Just artifact))
+  let artifact = ActivationArtifact [] (Map.fromList [("квантовый туман", 0.1), ("ответственность", 0.1)]) Seq.empty []
+  assertEqual "Missing predicate concepts" ["квантовый туман"] (missingPredicateConcepts definitionCorpus (Just artifact))
