@@ -50,6 +50,7 @@ import QxFx0.Semantic.SemanticInput (SemanticInput)
 -- import QxFx0.Semantic.Sense (SenseVector)
 -- import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
+import QxFx0.Types.Self.SelfDivergence (SelfPrediction)
 import QxFx0.Core.ResponseContentAdmission (ResponseContentAdmissionDecision)
 -- import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
@@ -163,9 +164,19 @@ data TurnInput = TurnInput
     --   re-asking established facts or repeating recent decisions.
     --   Empty list when 'episodicRecallActive' is False or no relevant
     --   episodes exist.  Living consumer of 'QxFx0.Memory.Episodic.retrieve'.
-  , tiGeoResult :: !(Maybe ClassificationResult)
+, tiGeoResult :: !(Maybe ClassificationResult)
     -- ^ Phase 2: geometric classifier result for A/B validation.
     --   Populated in Prepare stage, consumed in Finalize for metrics.
+  , tiSelfPrediction :: !(Maybe SelfPrediction)
+    -- ^ A-slice: deterministic prediction of this turn's Field,
+    --   anchored on the previous observed Field plus the pre-turn
+    --   angst.  @Nothing@ on the first turn (no previous
+    --   observation yet).  Mirrors 'psSelfPrediction'.
+  , tiSelfDivergencePenalty :: !Double
+    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    --   from the previous turn's measured divergence.  Mirrors
+    --   'psSelfDivergencePenalty'; recorded on the trace by the
+    --   Finalize stage without recomputing.
   }
 
 data TurnSignals = TurnSignals

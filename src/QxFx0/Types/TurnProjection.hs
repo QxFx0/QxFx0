@@ -254,6 +254,21 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ P3: full ConatusEnergy record (ceScalar + ceComponents) from the
     --   current turn's PrepareStatic. Replay can reconstruct the scalar
     --   and per-axis decomposition from this field alone.
+  , trcSelfDivergenceTotal :: !(Maybe Double)
+    -- ^ A-slice: total self-divergence measured this turn (predict ->
+    --   witness -> diff).  @Nothing@ on the first turn (no prediction
+    --   anchor yet) and whenever the prediction anchor is absent.
+  , trcSelfDivergencePenalty :: !Double
+    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    --   from the previous turn's divergence.  @0@ when no previous
+    --   measurement existed or divergence was below the threshold.
+  , trcSelfDivergenceWindowMean :: !(Maybe Double)
+    -- ^ A-slice: mean of the bounded divergence window (most recent
+    --   samples).  @Nothing@ when the window is empty (no measurements
+    --   yet).
+  , trcSelfDivergencePredictionActive :: !Bool
+    -- ^ A-slice: True when this turn carried a deterministic
+    --   prediction (i.e. a previous Field observation existed).
   , trcConatusGateFired :: !Bool
     -- ^ P3: True when the structural-energy gate fired this turn
     --   (conatusGateFires). Together with trcConatusEnergy enables
@@ -625,6 +640,10 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcPerspectiveProjection"
       <*> o .:? "trcPerspectiveProjections" .!= []
       <*> o .: "trcConatusEnergy"
+      <*> o .:? "trcSelfDivergenceTotal"
+      <*> o .:? "trcSelfDivergencePenalty" .!= 0.0
+      <*> o .:? "trcSelfDivergenceWindowMean"
+      <*> o .:? "trcSelfDivergencePredictionActive" .!= False
       <*> o .: "trcConatusGateFired"
       <*> o .: "trcField"
       <*> o .:? "trcIdentityClaims" .!= []

@@ -77,7 +77,15 @@ import QxFx0.Self.Salience
   , conatusGateFires
   )
 import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from Spectral, WP-I Tier-0)
-import QxFx0.Self.Essence (Essence)
+import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), defaultEssenceModulation)
+import QxFx0.Self.SelfDivergence
+  ( predictSelf
+  , selfConsistencyPenalty
+  )
+import QxFx0.Types.Self.SelfDivergence
+  ( SelfPrediction
+  , defaultSelfDivergenceTuning
+  )
 import QxFx0.Learning.Tool (ExternalTool)
 import QxFx0.Learning.Need (LearningNeed)
 import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
@@ -316,6 +324,18 @@ data PrepareStatic = PrepareStatic
   , psGeoResult :: !(Maybe ClassificationResult)
     -- ^ Phase 2: geometric classifier result for A/B validation.
     --   Stored for metrics recording in Finalize stage.
+  , psSelfPrediction :: !(Maybe SelfPrediction)
+    -- ^ A-slice: deterministic prediction of this turn's Field,
+    --   anchored on the previous observed Field plus the pre-turn
+    --   angst level.  @Nothing@ on the first turn (no previous
+    --   observation yet).  Threaded through 'tiSelfPrediction' so
+    --   Finalize can measure the divergence without recomputing.
+  , psSelfDivergencePenalty :: !Double
+    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    --   from the previous turn's measured divergence.  @0@ when the
+    --   previous turn had no measurement or divergence was below
+    --   'sdtThreshold'.  Threaded through 'tiSelfDivergencePenalty'
+    --   for trace observability.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -397,8 +417,28 @@ buildPrepareEffectPlan ss input currentTime =
       atomLoad = asLoad atomSet
       blanket = computeSelfBlanket ss
       violations = checkInitialBlanket blanket
-      conatusEnergy = computeConatusEnergyWith
+      conatusEnergy0 = computeConatusEnergyWith
         (selfConatusWeights (ssSelfState ss)) blanket violations
+      -- A-slice: apply the previous turn's measured divergence as a
+      -- Conatus penalty (one-turn delayed).  The pure penalty share
+      -- (<= 0) is threaded through 'psSelfDivergencePenalty' so the
+      -- Finalize stage can record it on the trace without
+      -- recomputing.
+      (conatusEnergy, divergencePenalty) =
+        case selfLastDivergence (ssSelfState ss) of
+          Nothing -> (conatusEnergy0, 0.0)
+          Just divE ->
+            selfConsistencyPenalty
+              defaultSelfDivergenceTuning divE conatusEnergy0
+      -- A-slice: deterministic prediction of this turn's Field,
+      -- anchored on the previous observed Field.  @Nothing@ on the
+      -- first turn (no previous observation yet).
+      selfPrediction =
+        case selfLastFieldObservation (ssSelfState ss) of
+          Nothing -> Nothing
+          Just prevField ->
+            let preTurnAngst = etAngstLevel (essenceTrajectoryOf (selfEssence (ssSelfState ss)))
+            in Just (predictSelf defaultEssenceModulation prevField preTurnAngst)
       violationCount = length violations
       conatusGateFired = conatusGateFires conatusEnergy
       -- Phase 7: populate four of five Field components via
@@ -532,6 +572,8 @@ buildPrepareEffectPlan ss input currentTime =
        , psTruthContractStatus = ssTruthContractStatus ss
        , psEssence = selfEssence (ssSelfState ss)
        , psGeoResult = geoClassification
+       , psSelfPrediction = selfPrediction
+       , psSelfDivergencePenalty = divergencePenalty
        }
   in PrepareEffectPlan
       { pepStatic = static
@@ -546,6 +588,11 @@ buildPrepareEffectPlan ss input currentTime =
       }
   where
     firstNonEmpty = fromMaybe "" . listToMaybe . filter (not . T.null)
+
+    -- | Extract the trajectory from either 'Essence' constructor.
+    essenceTrajectoryOf :: Essence -> EssenceTrajectory
+    essenceTrajectoryOf (EssenceUncommitted traj)      = traj
+    essenceTrajectoryOf (EssenceCommitted traj _)     = traj
 
 useGeometricIntent :: Bool
 useGeometricIntent = True

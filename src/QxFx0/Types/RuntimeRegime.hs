@@ -64,8 +64,12 @@ data RuntimeRegime = RuntimeRegime
 
 -- | Current math version. Bump when any calibration-relevant constant changes.
 -- Initial value 1 = post-ADR-0012 correction (emConatusStructuralFloor 0.5 → 7.0).
+-- Version 2 = A-slice self-divergence contour landed (predict → witness →
+-- diff → allergen → Conatus): new Conatus component channel
+-- @ccSelfDivergence@, new tunables @sdtScaling@/@sdtThreshold@/@sdtWindow@,
+-- and the one-turn-delayed energy-fraction penalty enter the runtime math.
 currentMathVersion :: Int
-currentMathVersion = 1
+currentMathVersion = 2
 
 -- | Current CTS constitution version.
 -- Initial value 44 = CTS-44 (commitment promotion).

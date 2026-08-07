@@ -36,7 +36,7 @@ contentSalienceTests =
     TestLabel "WP-C: content saliency parameter affects salience score" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 5.0 3.0 2.0 0.0
+            components = ConatusComponents 5.0 3.0 2.0 0.0 0.0
             energy = ConatusEnergy 10.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             
@@ -55,7 +55,7 @@ contentSalienceTests =
       TestCase $ do
         let weights = defaultSalienceWeights
             -- Low conatus energy and low field signals
-            components = ConatusComponents 0.5 0.3 0.2 0.0
+            components = ConatusComponents 0.5 0.3 0.2 0.0 0.0
             energy = ConatusEnergy 1.0 components
             field = emptyField { fieldResonance = mkResonance 0.1 }
             
@@ -78,7 +78,7 @@ contentSalienceTests =
   , TestLabel "WP-C anti-rot: content saliency influences holistic bias" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 2.5 1.5 1.0 0.0
+            components = ConatusComponents 2.5 1.5 1.0 0.0 0.0
             energy = ConatusEnergy 5.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             
@@ -96,7 +96,7 @@ contentSalienceTests =
   , TestLabel "WP-C: confidence accounts for content saliency contribution" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 2.5 1.5 1.0 0.0
+            components = ConatusComponents 2.5 1.5 1.0 0.0 0.0
             energy = ConatusEnergy 5.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             

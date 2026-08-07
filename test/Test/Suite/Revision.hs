@@ -44,7 +44,7 @@ revisionTests =
           let cid = CommitmentId 1
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -55,7 +55,7 @@ revisionTests =
           let cid = CommitmentId 2
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.4 }
-              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75)
+              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -66,7 +66,7 @@ revisionTests =
           let cid = CommitmentId 3
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -77,7 +77,7 @@ revisionTests =
           let cid = CommitmentId 4
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.4, sdAttackCount = 3 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -88,7 +88,7 @@ revisionTests =
           let cid = CommitmentId 5
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 5.0 (ConatusComponents 1.25 1.25 1.25 1.25)
+              conatus = ConatusEnergy 5.0 (ConatusComponents 1.25 1.25 1.25 1.25 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -99,7 +99,7 @@ revisionTests =
           let cid = CommitmentId 6
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.3, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3", "atom4", "atom5"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of
@@ -110,7 +110,7 @@ revisionTests =
           let cid = CommitmentId 7
               kind = ContradictionScope
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.3, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3", "atom4", "atom5"]
               result = revisePosition cid kind sd conatus challengeAtoms
           case result of

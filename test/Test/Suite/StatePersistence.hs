@@ -1340,6 +1340,10 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcReplayProvenanceStatus = ReplayProvenanceComplete
     , trcDerivationTags = []
     , trcConatusEnergy = positiveConatus
+    , trcSelfDivergenceTotal = Nothing
+    , trcSelfDivergencePenalty = 0.0
+    , trcSelfDivergenceWindowMean = Nothing
+    , trcSelfDivergencePredictionActive = False
     , trcConatusGateFired = False
     , trcField = emptyField
     , trcSalienceDriver = "default"
@@ -1510,5 +1514,6 @@ positiveConatus = ConatusEnergy
       , ccIdentity = 0.0
       , ccTurns = 10.0
       , ccPenalty = 0.0
+      , ccSelfDivergence = 0.0
       }
-  }
+}

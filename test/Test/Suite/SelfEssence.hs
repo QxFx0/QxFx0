@@ -253,7 +253,7 @@ arbitraryConatusEnergy = do
   s <- arbitraryUnitDouble
   pure $ ConatusEnergy
     { ceScalar     = s
-    , ceComponents = ConatusComponents 0 0 0 0
+    , ceComponents = ConatusComponents 0 0 0 0 0.0
     }
 
 arbitraryEssenceWitness :: Gen EssenceWitness

@@ -70,6 +70,12 @@ import QxFx0.Self.Salience
   , salienceHolisticBias
   , isHolisticFamily
   )
+import QxFx0.Self.SelfDivergence (measureDivergence)
+import QxFx0.Types.Self.SelfDivergence
+  ( SelfDivergenceE(..)
+  , SelfDivergenceTuning(..)
+  , defaultSelfDivergenceTuning
+  )
 import QxFx0.Self.Deliberation
   ( Deliberation(..)
   , DeliberationTrace(..)
@@ -694,7 +700,7 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
         in case mChallengedStanceDefense of
              Nothing -> recovered
              Just (topic, challengedSd) -> M.insert topic challengedSd recovered
-      -- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3)
+-- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3)
       selfStateBeforeCollapse = ssSelfState nextWithLog
       selfStateAfterCollapse = case mCollapse of
         Just _ ->
@@ -705,11 +711,35 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
               (resetTraj, _resetEvent) = collapseEssence (unTurnSeq turnSeq) currentTraj
           in selfStateBeforeCollapse { selfEssence = EssenceUncommitted resetTraj }
         Nothing -> selfStateBeforeCollapse
+      -- A-slice: measure this turn's self-divergence against the
+      -- deterministic prediction (predict -> witness -> diff).  The
+      -- actual angst is the post-witness trajectory's angst level
+      -- (post-collapse when the pentagon collapsed).  The window is
+      -- bounded to 'sdtWindow'.
+      (measuredDivergence, selfStateWithDivergence) =
+        case tiSelfPrediction ti of
+          Nothing -> (Nothing, selfStateAfterCollapse)
+          Just prediction ->
+            let actualEssence = selfEssence selfStateAfterCollapse
+                actualTraj = case actualEssence of
+                  EssenceUncommitted traj -> traj
+                  EssenceCommitted traj _ -> traj
+                divE = measureDivergence prediction (tiField ti) (etAngstLevel actualTraj)
+                window0 = take (sdtWindow defaultSelfDivergenceTuning)
+                  (selfDivergenceWindow selfStateAfterCollapse <> [sdeTotalDivergence divE])
+                fObservation = selfLastFieldObservation selfStateAfterCollapse
+            in ( Just divE
+               , selfStateAfterCollapse
+                   { selfLastFieldObservation = Just (tiField ti)
+                   , selfLastDivergence = Just divE
+                   , selfDivergenceWindow = window0
+                   }
+               )
       nextWithCommitments = nextWithLog
         { ssSemanticCommitments = Just store4
         , ssSemanticSpace = semanticSpace { ssFactVectors = buildFactVectors lemmaMap semanticSpace store4 }
         , ssStanceDefenses = updatedStanceDefenses
-        , ssSelfState = selfStateAfterCollapse
+        , ssSelfState = selfStateWithDivergence
         }
       -- P9: metacognitive correction loop (post-hoc, pure)
       mContour = case ssMetacognition nextWithCommitments of

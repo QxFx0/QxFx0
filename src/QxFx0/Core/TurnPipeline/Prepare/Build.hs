@@ -130,8 +130,10 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
         , tiDialoguePhase = psDialoguePhase prepareStatic
         , tiTruthContractStatus = psTruthContractStatus prepareStatic
           , tiEssence = psEssence prepareStatic
-          , tiGeoResult = psGeoResult prepareStatic
-         , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
+, tiGeoResult = psGeoResult prepareStatic
+          , tiSelfPrediction = psSelfPrediction prepareStatic
+          , tiSelfDivergencePenalty = psSelfDivergencePenalty prepareStatic
+          , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
          , tiRetrievedEpisodes = retrievedEpisodes
          }
 

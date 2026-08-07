@@ -66,7 +66,7 @@ selfConatusTests =
       TestCase $ do
         let ce    = computeConatusEnergy baseBlanket []
             comps = ceComponents ce
-            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps
+            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps + ccSelfDivergence comps
         assertBool
           ("scalar/component disagreement: scalar=" <> show (ceScalar ce)
             <> " sum=" <> show sumC)
@@ -77,9 +77,9 @@ selfConatusTests =
         let vs    = [BlanketEmptySession, BlanketTurnRegressed 3 1]
             ce    = computeConatusEnergy baseBlanket vs
             comps = ceComponents ce
-            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps
+            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps + ccSelfDivergence comps
         assertBool
-          "scalar must equal sum of all four components in the presence of violations"
+          "scalar must equal sum of all five components in the presence of violations"
           (approxEqual eps (ceScalar ce) sumC)
 
   , TestLabel "degenerate blanket (0,0,0) gives zero smooth scalar" $

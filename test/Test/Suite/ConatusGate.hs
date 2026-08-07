@@ -42,8 +42,9 @@ mkConatusEnergy scalar =
         , ccIdentity = 0
         , ccTurns = 0
         , ccPenalty = 0
+        , ccSelfDivergence = 0.0
         }
-    }
+}
 
 -- | Helper: construct a low-energy blanket (below threshold).
 -- A minimal blanket with 1 morphology entry, 0 claims, 0 turns yields:

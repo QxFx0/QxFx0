@@ -157,7 +157,11 @@ minimalTrace = TurnReplayTrace
   , trcDreamCandidateApplied = Nothing
   , trcPerspectiveProjection = Nothing
   , trcPerspectiveProjections = []
-  , trcConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0.4 0.3 0.3 0.0)
+  , trcConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0.4 0.3 0.3 0.0 0.0)
+  , trcSelfDivergenceTotal = Nothing
+  , trcSelfDivergencePenalty = 0.0
+  , trcSelfDivergenceWindowMean = Nothing
+  , trcSelfDivergencePredictionActive = False
   , trcConatusGateFired = False
   , trcField = Field
       { fieldResonance = Resonance 0.5
@@ -248,7 +252,7 @@ testConatusHealthy = TestCase $ do
 testConatusDegraded :: Test
 testConatusDegraded = TestCase $ do
   let trace = minimalTrace
-        { trcConatusEnergy = ConatusEnergy 0.2 (ConatusComponents 0.1 0.05 0.05 0.0)
+        { trcConatusEnergy = ConatusEnergy 0.2 (ConatusComponents 0.1 0.05 0.05 0.0 0.0)
         }
   let analysis = analyzeConatusDynamics trace
   assertEqual "Degraded energy" "degraded" (caEnergyTrend analysis)

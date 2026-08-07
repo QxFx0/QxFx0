@@ -251,7 +251,7 @@ arbitraryConatusEnergy = do
   s <- arbitraryUnitDouble
   pure $ ConatusEnergy
     { ceScalar     = s
-    , ceComponents = ConatusComponents 0 0 0 0
+    , ceComponents = ConatusComponents 0 0 0 0 0.0
     }
 
 arbitraryEssenceWitness :: Gen EssenceWitness
@@ -430,7 +430,7 @@ testFlagOffEssenceUncommittedShape :: IO ()
 testFlagOffEssenceUncommittedShape = do
   let traj = emptyTrajectory
       fd   = emptyField
-      ce   = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0)
+      ce   = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0 0.0)
       p    = defaultPlan
       delib = defaultDeliberation { delibReconciled = p }
       traj' = witness defaultEssenceModulation 1 ce fd delib traj
@@ -452,7 +452,7 @@ testFlagOnCommitmentFires = do
       -- Build a trajectory with angst just below threshold
       traj0 = emptyTrajectory { etAngstLevel = 0.45 }
       fd = emptyField
-      ce = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0)
+      ce = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0 0.0)
       -- One divergence witness to push angst over threshold.
       -- dtAgreement must NOT be Agree, otherwise extractMode counts
       -- the witness as Integrative regardless of dtRule.

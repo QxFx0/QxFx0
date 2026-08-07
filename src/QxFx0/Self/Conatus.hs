@@ -119,7 +119,7 @@ defaultConatusWeights = builtinConatusWeights
 -- show which axis is carrying (or failing) the system, not only the
 -- aggregate.
 -- | The scalar value of the Conatus functional together with its
--- per-axis decomposition. Invariant: @ceScalar == sum of all four
+-- per-axis decomposition. Invariant: @ceScalar == sum of all five
 -- 'ConatusComponents' fields@.
 -- | The gradient of the smooth part of \(C\) at a blanket. Each
 -- component is the partial derivative of \(C\) with respect to that
@@ -152,10 +152,11 @@ computeConatusEnergyWith w b violations =
       tComp     = cwTurns      w * log1p t
       penalty   = negate (cwViolation w * fromIntegral (length violations))
       comps     = ConatusComponents
-        { ccMorphology = mComp
-        , ccIdentity   = cComp
-        , ccTurns      = tComp
-        , ccPenalty    = penalty
+        { ccMorphology     = mComp
+        , ccIdentity       = cComp
+        , ccTurns          = tComp
+        , ccPenalty        = penalty
+        , ccSelfDivergence = 0.0
         }
    in ConatusEnergy
         { ceScalar     = mComp + cComp + tComp + penalty

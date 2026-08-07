@@ -33,6 +33,7 @@ import Test.Suite.SelfSalience (selfSalienceTests)
 import Test.Suite.SelfDeliberation (selfDeliberationTests)
 import Test.Suite.SelfEssence (selfEssenceTests)
 import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
+import Test.Suite.SelfDivergence (selfDivergenceTests)
 import Test.Suite.P5Governance (p5GovernanceTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
@@ -100,6 +101,7 @@ main = do
            ++ promotionFlagDisciplineTests
             ++ selfEssenceTests
             ++ selfEssenceCommitTests
+            ++ selfDivergenceTests
             ++ p5GovernanceTests
             ++ phaseM2dTests
             ++ learningLoopTests

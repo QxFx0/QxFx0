@@ -50,14 +50,18 @@ c1CanonicalContourCoverage = TestLabel "C1: all 6 canonical contours have trc* f
     let tracePath = "src/QxFx0/Types/TurnProjection.hs"
     contents <- readFileOrEmpty tracePath
     let requiredFields =
-          [ "trcConatusEnergy"      -- Conatus P4
-          , "trcConatusGateFired"   -- Conatus P4
-          , "trcField"              -- Field P4
-          , "trcIdentityClaims"     -- Identity P4
-          , "trcSalienceDriver"     -- Salience P4
-          , "trcDeliberationRule"   -- Deliberation P4
-          , "trcEssenceMode"        -- Essence P4
-          ]
+              [ "trcConatusEnergy"      -- Conatus P4
+              , "trcConatusGateFired"   -- Conatus P4
+              , "trcSelfDivergenceTotal" -- Conatus P4 (A-slice predict->witness->diff)
+              , "trcSelfDivergencePenalty" -- Conatus P4 (A-slice one-turn-delayed penalty)
+              , "trcSelfDivergenceWindowMean" -- Conatus P4 (A-slice bounded window)
+              , "trcSelfDivergencePredictionActive" -- Conatus P4 (A-slice prediction flag)
+              , "trcField"              -- Field P4
+              , "trcIdentityClaims"     -- Identity P4
+              , "trcSalienceDriver"     -- Salience P4
+              , "trcDeliberationRule"   -- Deliberation P4
+              , "trcEssenceMode"        -- Essence P4
+              ]
         missing = filter (\f -> not (f `L.isInfixOf` contents)) requiredFields
     assertBool
       ("C1: the following canonical contour trc* fields are missing from TurnReplayTrace: "

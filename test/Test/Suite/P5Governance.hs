@@ -910,5 +910,6 @@ positiveConatus = ConatusEnergy
       , ccIdentity = 0.0
       , ccTurns = 10.0
       , ccPenalty = 0.0
+      , ccSelfDivergence = 0.0
       }
-  }
+}

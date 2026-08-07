@@ -107,6 +107,7 @@ library
     QxFx0.Types.Self.FamilyTargets
     QxFx0.Types.Self.Field
     QxFx0.Types.Self.Salience
+    QxFx0.Types.Self.SelfDivergence
     QxFx0.Types.Learning.Calibration
     QxFx0.Types.Learning.Guardrails
     QxFx0.Types.Learning.KnowledgeTree
@@ -141,6 +142,7 @@ library
     QxFx0.Self.Perspective
     QxFx0.Self.AdaptivePosition
     QxFx0.Self.FamilyTargets
+    QxFx0.Self.SelfDivergence
     QxFx0.Learning.Need
     QxFx0.Learning.Tool
     QxFx0.Learning.Calibration
@@ -670,6 +672,7 @@ common test-common
     Test.Suite.SelfDeliberation
     Test.Suite.SelfEssence
     Test.Suite.SelfEssenceCommit
+    Test.Suite.SelfDivergence
     Test.Suite.P5Governance
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d

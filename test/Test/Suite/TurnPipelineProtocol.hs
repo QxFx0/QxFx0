@@ -775,8 +775,9 @@ testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical = TestCase $ do
             , ccIdentity = 0.0
             , ccTurns = 0.0
             , ccPenalty = 1.0
+            , ccSelfDivergence = 0.0
             }
-        }
+}
       scheduled =
         scheduleTurnEffects
           testProtocolPipelineIO
@@ -1138,7 +1139,7 @@ testResolveCollisionsKeepsNovel = TestCase $ do
 -- persistence threshold is met.
 testLearningNeedRaisedOnPersistentPattern :: Test
 testLearningNeedRaisedOnPersistentPattern = TestCase $ do
-  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)
+  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)
         -- ^ High conatus: old logic would suppress lexicon need.
         --   WP6.1 decouples learning from conatus health.
       field = emptyField
@@ -1170,7 +1171,7 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
 -- | WP1: single-turn noise must not create a learning need.
 testLearningNeedNotRaisedOnNoise :: Test
 testLearningNeedNotRaisedOnNoise = TestCase $ do
-  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0)
+  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0 0.0)
       field = emptyField
         { fieldConfidence = FieldConfidence 0.3
         , fieldCounterfactual = Counterfactual 0.6
@@ -1213,7 +1214,7 @@ testLearningNeedHighDeficitTriggersRequestStrategy = TestCase $
         -- Ensure no higher-priority recovery drivers fire
         ti = ti0
           { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     case repLocalRecoveryPlan renderPlan of
@@ -1239,7 +1240,7 @@ testLearningNeedLowDeficitDoesNotTriggerRequest = TestCase $
         ss = ss0 { ssLearningNeedState = lowDeficitNeed }
         ti = ti0
           { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     -- With no other recovery drivers, and learningNeedActive = False,
@@ -1257,7 +1258,7 @@ testLearningNeedNoneDoesNotTriggerRequest = TestCase $
         ss = ss0 { ssLearningNeedState = noNeed }
         ti = ti0
           { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "NeedNone must not produce learning-driven recovery"
@@ -1840,8 +1841,9 @@ testConatusGateFiresRecoveryConatusGate = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         ti = ti0
           { tiConatusEnergy         = forcedConatus
           , tiBlanketViolationCount = 2
@@ -1878,8 +1880,9 @@ testConatusGateFlagDrivesLocalRecoveryPlan = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         ti = ti0
           { tiConatusEnergy         = forcedConatus
           , tiBlanketViolationCount = 2
@@ -1914,8 +1917,9 @@ testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         ti = ti0
           { tiConatusEnergy         = forcedConatus
           , tiBlanketViolationCount = 2
@@ -1942,8 +1946,9 @@ testConatusGradientMorphologyDominant = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
         ss = ss0
           { ssMorphology = MorphologyData Map.empty Map.empty Map.empty Map.empty
@@ -1979,8 +1984,9 @@ testConatusGradientIdentityDominant = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         ss = ss0
           { ssMorphology = MorphologyData
               (Map.fromList [("a","x"),("b","x"),("c","x"),("d","x"),("e","x"),("f","x"),("g","x"),("h","x"),("i","x")])
@@ -2015,8 +2021,9 @@ testConatusGradientTemporalDominant = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
         ss = ss0
           { ssMorphology = MorphologyData
@@ -2052,8 +2059,9 @@ testConatusGradientDegenerateTie = TestCase $
               , ccIdentity   = 0.0
               , ccTurns      = 0.0
               , ccPenalty    = 1.0
+              , ccSelfDivergence = 0.0
               }
-          }
+}
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
         ss = ss0
           { ssMorphology = MorphologyData
@@ -4338,7 +4346,7 @@ testDedupAntiOverblockingAllowsNoisyKnownTopic = TestCase $
         ti = ti0
           { tiBestTopic = "в"
           , tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "noisy known topic must NOT be dedup-skipped"
@@ -4363,7 +4371,7 @@ testDedupBlocksCleanKnownTopic = TestCase $
         ti = ti0
           { tiBestTopic = "книга"
           , tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0)
+          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "clean known topic must be dedup-skipped"
@@ -4967,7 +4975,7 @@ testAntiConatusChoiceDetection = TestCase $
           }
     (_ss, ti, _ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
     -- Override conatus to be low
-    let tiLowConatus = ti { tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0) }
+    let tiLowConatus = ti { tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0) }
     let mAnomaly = detectAntiConatusChoice ss0 tiLowConatus
     -- Inconsistent stance + low conatus + high angst should trigger
     assertBool "inconsistent stance with low conatus should trigger anti-conatus"

@@ -28,6 +28,8 @@ import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Core.TopicDrift.Pressure (buildDreamOutcome)
 import QxFx0.Core.Observability
 import QxFx0.Types.State.SelfState (SelfState(..))
+import QxFx0.Self.SelfDivergence (windowMeanDivergence)
+import QxFx0.Types.Self.SelfDivergence (SelfDivergenceE(..))
 import QxFx0.Core.TruthContract
   ( normalizedReplayProvenanceStatus
   , replayProvenanceStatusForOutcome
@@ -348,6 +350,13 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 [] -> Nothing
           , trcPerspectiveProjections = perspectiveProjections
           , trcConatusEnergy = tiConatusEnergy ti
+          , trcSelfDivergenceTotal =
+              sdeTotalDivergence <$> selfLastDivergence (ssSelfState nextSs)
+          , trcSelfDivergencePenalty = tiSelfDivergencePenalty ti
+          , trcSelfDivergenceWindowMean =
+              let w = selfDivergenceWindow (ssSelfState nextSs)
+              in if null w then Nothing else Just (windowMeanDivergence w)
+          , trcSelfDivergencePredictionActive = maybe False (const True) (tiSelfPrediction ti)
           , trcConatusGateFired = tiConatusGateFired ti
           , trcField = tiField ti
           , trcIdentityClaims = ssIdentityClaims nextSs

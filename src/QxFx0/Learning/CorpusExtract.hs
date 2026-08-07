@@ -106,7 +106,7 @@ data ReplayTraceSummary = ReplayTraceSummary
     deriving anyclass (ToJSON)
 
 emptyConatusEnergy :: ConatusEnergy
-emptyConatusEnergy = ConatusEnergy 0.0 (ConatusComponents 0.0 0.0 0.0 0.0)
+emptyConatusEnergy = ConatusEnergy 0.0 (ConatusComponents 0.0 0.0 0.0 0.0 0.0)
 
 instance FromJSON ReplayTraceSummary where
   parseJSON = withObject "ReplayTraceSummary" $ \o ->

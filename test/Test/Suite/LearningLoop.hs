@@ -1459,7 +1459,7 @@ testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
             { selfPerspectiveRegistry = registry }
         , ssDialogueOutcomeLearning = outcome
         }
-      bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)) False emptyField
+      bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)) False emptyField
       candidate = opinionCore bundle
   assertEqual "matching activation scope must select the scoped profile"
     7 (pcNormativeProfileVersion candidate)
@@ -1727,7 +1727,7 @@ runNeedStep :: LearningPressureConfig -> LearningNeedState -> Int -> Bool -> Int
 runNeedStep cfg old turn isUnknown grafts =
   detectLearningNeedWithPressure
     cfg
-    (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0))
+    (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0))
     emptyField
     0       -- repairCount
     0       -- unknownTopicCount (legacy)
@@ -1768,7 +1768,7 @@ testLearningPressureIgnoresWhenGraftsGrowing = TestCase $ do
 
 testLearningPressureBackwardCompatWrapper :: Test
 testLearningPressureBackwardCompatWrapper = TestCase $ do
-  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0)
+  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)
       old = emptyLearningNeedState
       new = detectLearningNeed conatus emptyField 0 0 1 old
       newWP = detectLearningNeedWithPressure defaultLearningPressureConfig conatus emptyField 0 0 1 old False 0

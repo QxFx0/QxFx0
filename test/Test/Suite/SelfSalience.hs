@@ -218,8 +218,9 @@ placeholderConatus s = ConatusEnergy
       , ccIdentity   = 0.0
       , ccTurns      = 0.0
       , ccPenalty    = 0.0
+      , ccSelfDivergence = 0.0
       }
-  }
+}
 
 -- | Replace the 'fieldResonance' component on an existing field,
 -- preserving the rest. @fieldConfidence@ is /not/ re-derived

@@ -85,6 +85,9 @@ instance ToJSON SelfState where
     , "selfFamilyTargets" .= selfFamilyTargets selfState
     , "selfPerspectiveRegistry" .= selfPerspectiveRegistry selfState
     , "selfEssence" .= selfEssence selfState
+    , "selfLastFieldObservation" .= selfLastFieldObservation selfState
+    , "selfLastDivergence" .= selfLastDivergence selfState
+    , "selfDivergenceWindow" .= selfDivergenceWindow selfState
     ]
 
 instance FromJSON SelfState where
@@ -95,6 +98,9 @@ instance FromJSON SelfState where
     <*> o .:? "selfFamilyTargets" .!= familyTargets
     <*> o .:? "selfPerspectiveRegistry" .!= emptyPerspectiveRegistry
     <*> o .:? "selfEssence" .!= emptyEssence
+    <*> o .:? "selfLastFieldObservation" .!= Nothing
+    <*> o .:? "selfLastDivergence" .!= Nothing
+    <*> o .:? "selfDivergenceWindow" .!= []
 
 emptySelfState :: SelfState
 emptySelfState = SelfState
@@ -104,6 +110,9 @@ emptySelfState = SelfState
   , selfFamilyTargets = familyTargets
   , selfPerspectiveRegistry = emptyPerspectiveRegistry
   , selfEssence = emptyEssence
+  , selfLastFieldObservation = Nothing
+  , selfLastDivergence = Nothing
+  , selfDivergenceWindow = []
   }
 
 defaultSelfState :: SelfState
@@ -224,6 +233,7 @@ instance FromJSON SystemState where
         <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
         <*> pure defaultConatusWeights <*> pure familyTargets
         <*> pure emptyPerspectiveRegistry <*> o .:? "essence" .!= emptyEssence
+        <*> pure Nothing <*> pure Nothing <*> pure []
     SystemState dialogue identity semantic
       <$> o .: "sessionId"
       <*> (parseDialogueOutputMode <$> o .: "outputMode")

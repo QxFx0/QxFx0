@@ -245,35 +245,35 @@ testAntiConatusChoiceTrigger :: Assertion
 testAntiConatusChoiceTrigger = do
   -- Test 1: High confidence + inconsistent stance (Doubted with high conf) + high angst + low conatus should trigger
   let stance1 = StanceDoubted 0.8  -- Inconsistent: state says weakened, confidence says strong
-      conatus1 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0)  -- Low conatus (< 5.0)
+      conatus1 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)  -- Low conatus (< 5.0)
       traj1 = emptyTrajectory { etAngstLevel = 0.9 }  -- High angst (> 0.8)
   assertBool "should trigger for high confidence + inconsistent + high angst + low conatus"
     (antiConatusMove stance1 conatus1 traj1 undefined)
 
   -- Test 2: High confidence but consistent stance (StanceHeld with high conf) should not trigger
   let stance2 = StanceHeld 0.8  -- Consistent: state and confidence match
-      conatus2 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0)
+      conatus2 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
       traj2 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for consistent stance"
     (not $ antiConatusMove stance2 conatus2 traj2 undefined)
 
   -- Test 3: Low confidence should not trigger
   let stance3 = StanceDoubted 0.5
-      conatus3 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0)
+      conatus3 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
       traj3 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for low confidence"
     (not $ antiConatusMove stance3 conatus3 traj3 undefined)
 
   -- Test 4: High conatus should not trigger
   let stance4 = StanceDoubted 0.8
-      conatus4 = ConatusEnergy 7.0 (ConatusComponents 2.0 2.0 2.0 1.0)  -- High conatus (>= 5.0)
+      conatus4 = ConatusEnergy 7.0 (ConatusComponents 2.0 2.0 2.0 1.0 0.0)  -- High conatus (>= 5.0)
       traj4 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for high conatus"
     (not $ antiConatusMove stance4 conatus4 traj4 undefined)
 
   -- Test 5: Low angst should not trigger
   let stance5 = StanceDoubted 0.8
-      conatus5 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0)
+      conatus5 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
       traj5 = emptyTrajectory { etAngstLevel = 0.5 }  -- Low angst (<= 0.8)
   assertBool "should not trigger for low angst"
     (not $ antiConatusMove stance5 conatus5 traj5 undefined)
@@ -368,7 +368,7 @@ testFinalizePersistsStanceTransitions =
     let ti = ti0
           { tiBestTopic = topic
           , tiAtomSet = strongChallengeAtoms
-          , tiConatusEnergy = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+          , tiConatusEnergy = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
           }
         tp = tp0
           { tpCommitmentEngagement = CommitmentEngagement [cid] True ContradictedStrong }
@@ -412,7 +412,7 @@ testFinalizeCollapsePreservesAdaptiveSelfState =
     let ti = ti0
           { tiBestTopic = topic
           , tiAtomSet = strongChallengeAtoms
-          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75)
+          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
           , tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 }
           }
         tp = tp0

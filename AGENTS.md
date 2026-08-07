@@ -285,7 +285,32 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
 - **Test updates**: All tests updated for new signatures and semantics. 1370 tests
   passing.
 
-**Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
+  **A-slice (deterministic self-divergence contour) completed 2026-08-07**:
+  `QxFx0.Self.SelfDivergence` implements the pure morphisms
+  predict -> witness -> diff -> allergen -> Conatus
+  (`predictSelf` / `measureDivergence` / `selfConsistencyPenalty` /
+  `windowMeanDivergence`; carriers in
+  `QxFx0.Types.Self.SelfDivergence`). `ConatusComponents` gained a 5th
+  field `ccSelfDivergence` (custom ToJSON/FromJSON, backward-compat
+  default 0.0) and the invariant `ceScalar == sum of all five
+  components` holds after penalty application. Pipeline wiring: A2.3
+  `Prepare/Effects.hs` computes `conatusEnergy0` + conditional
+  `selfConsistencyPenalty` (gated on prior-turn `selfLastDivergence`,
+  `sdtThreshold`), `PrepareStatic`/`TurnInput` carry
+  `psSelfPrediction`/`tiSelfPrediction` + `psSelfDivergencePenalty`;
+  A2.4 `Finalize/State.hs` measures divergence against the prediction
+  and updates `selfLastFieldObservation`/`selfLastDivergence`/bounded
+  `selfDivergenceWindow` in `SelfState`; A2.5 traces
+  `trcSelfDivergenceTotal`/`trcSelfDivergencePenalty`/
+  `trcSelfDivergenceWindowMean`/`trcSelfDivergencePredictionActive` in
+  `TurnReplayTrace`. Penalty is an energy /fraction/
+  (`penalty = -(sdtScaling * total * ceScalar)`), WP-F unit-mismatch
+  aware. A3: `currentMathVersion = 2` (RuntimeRegime). A4: anti-rot
+  suite `Test.Suite.SelfDivergence` (determinism, steady-state zero
+  divergence, clamp, threshold gating, component invariant, window
+  mean) registered in cabal + TestMain/TestMainUnit/TestMainFast.
+
+  **Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
   - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),
     from `seedFromCorpus` (definitionCorpus predicates). Only source of output.
   - **Substrate layer**: same 30 topics, ~78 edges (weight 0.3),

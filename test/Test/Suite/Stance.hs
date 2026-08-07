@@ -37,7 +37,7 @@ stanceTests =
   , TestLabel "defendOrAdapt" $ TestList
       [ TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceHeld 0.8 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e"]
               result = defendOrAdapt sd conatus challenge
           case result of
@@ -50,7 +50,7 @@ stanceTests =
 
       , TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceDoubted 0.4 }
-              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75)
+              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e"]
               result = defendOrAdapt sd conatus challenge
           case result of
@@ -59,7 +59,7 @@ stanceTests =
 
       , TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceDoubted 0.4, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5)
+              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e", "f"]
               result = defendOrAdapt sd conatus challenge
           case result of

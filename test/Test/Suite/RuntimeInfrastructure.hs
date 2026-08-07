@@ -1708,8 +1708,13 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                          , ccIdentity   = 0.0
                          , ccTurns      = 0.0
                          , ccPenalty    = 0.0
+                         , ccSelfDivergence = 0.0
                          }
-                     }
+}
+                 , trcSelfDivergenceTotal = Nothing
+                 , trcSelfDivergencePenalty = 0.0
+                 , trcSelfDivergenceWindowMean = Nothing
+                 , trcSelfDivergencePredictionActive = False
                  , trcConatusGateFired = False
                  , trcField = emptyField
                  , trcIdentityClaims = []
@@ -2250,8 +2255,13 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                          , ccIdentity   = 0.0
                          , ccTurns      = 0.0
                          , ccPenalty    = 0.0
+                         , ccSelfDivergence = 0.0
                          }
-                     }
+}
+                 , trcSelfDivergenceTotal = Nothing
+                 , trcSelfDivergencePenalty = 0.0
+                 , trcSelfDivergenceWindowMean = Nothing
+                 , trcSelfDivergencePredictionActive = False
                  , trcConatusGateFired = False
                  , trcField = emptyField
                  , trcIdentityClaims = []
@@ -2664,8 +2674,9 @@ positiveConatus = ConatusEnergy
       , ccIdentity = 0.0
       , ccTurns = 10.0
       , ccPenalty = 0.0
+      , ccSelfDivergence = 0.0
       }
-  }
+}
 
 fetchLatestReplayTraceJson :: NSQL.Database -> T.Text -> IO T.Text
 fetchLatestReplayTraceJson db sessionId = do

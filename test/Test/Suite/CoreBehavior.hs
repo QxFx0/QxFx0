@@ -187,7 +187,7 @@ import Test.Support.QuickCheckConfig (qcArgs)
 dummyConatusEnergy :: ConatusEnergy
 dummyConatusEnergy = ConatusEnergy
   { ceScalar = 1.0
-  , ceComponents = ConatusComponents { ccMorphology = 0.0, ccIdentity = 0.0, ccTurns = 0.0, ccPenalty = 0.0 }
+  , ceComponents = ConatusComponents { ccMorphology = 0.0, ccIdentity = 0.0, ccTurns = 0.0, ccPenalty = 0.0, ccSelfDivergence = 0.0 }
   }
 
 testSI :: SemanticLayer -> AtomSet -> CanonicalMoveFamily -> SemanticInput
@@ -1883,8 +1883,9 @@ testRouteFamilyConatusOverrideDeliberation = TestCase $ do
             , ccIdentity   = 0.0
             , ccTurns      = 0.0
             , ccPenalty    = 1.0
+            , ccSelfDivergence = 0.0
             }
-        }
+}
       rd = routeFamily CMDescribe frame atomSet nextUserState ss [] input False "свобода" Nothing 0.0 forcedConatus emptyField 0.5 Nothing []
   case rdDeliberation rd of
     Nothing -> assertFailure "routeFamily must populate rdDeliberation under conatus override"
