@@ -43,7 +43,6 @@ import QxFx0.Self.Salience (SelfVerdict)
 import QxFx0.Self.Essence
   ( Essence
   , EssenceResetEvent
-  , EssenceTrajectory
   )
 import QxFx0.Semantic.Embedding (EmbeddingSource, EmbeddingQuality)
 import QxFx0.Semantic.SemanticInput (SemanticInput)
@@ -198,7 +197,7 @@ data DetectedAnomaly = DetectedAnomaly
   }
 
 data AnomalyStateEffect
-  = ResetEssence !EssenceTrajectory !EssenceResetEvent
+  = ResetEssence !Essence !EssenceResetEvent
 
 {-| Route-phase plan: cascade snapshot plus shadow/legitimacy/render derivations. -}
 data TurnPlan = TurnPlan

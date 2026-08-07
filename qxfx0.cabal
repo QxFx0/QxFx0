@@ -673,6 +673,7 @@ common test-common
     Test.Suite.SelfEssence
     Test.Suite.SelfEssenceCommit
     Test.Suite.SelfDivergence
+    Test.Suite.EssenceCollapse
     Test.Suite.P5Governance
     Test.Suite.LongSessionCorpus
     Test.Suite.PhaseM2d

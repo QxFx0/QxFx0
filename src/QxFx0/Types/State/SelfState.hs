@@ -32,7 +32,7 @@ import QxFx0.Types.Self.FamilyTargets (FamilyTarget)
 import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.Self.SelfDivergence (SelfDivergenceE)
 import QxFx0.Types.State.Perspective (PerspectiveRegistry)
-import QxFx0.Types.Self.Essence (Essence)
+import QxFx0.Types.Self.Essence (Essence, EssenceResetEvent)
 
 -- | Grouped Self-layer state (Phase 1-10 components).
 --
@@ -76,6 +76,12 @@ data SelfState = SelfState
   , selfDivergenceWindow :: ![Double]
     -- ^ A-slice: bounded sliding window of recent total divergence
     --   samples (most recent last).  Bounded by 'sdtWindow'.
+  , selfLastEssenceResetEvent :: !(Maybe EssenceResetEvent)
+    -- ^ B-slice: the 'EssenceResetEvent' of the previous runtime
+    --   soft-rupture (BD2 single branch).  @Just@ only on the turn a
+    --   collapse ran (SelfReferentialCollapse or pentagon collapse);
+    --   @Nothing@ otherwise.  Surfaces the soft rupture on the replay
+    --   trace (never dropped).
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 

@@ -61,6 +61,7 @@ c1CanonicalContourCoverage = TestLabel "C1: all 6 canonical contours have trc* f
               , "trcSalienceDriver"     -- Salience P4
               , "trcDeliberationRule"   -- Deliberation P4
               , "trcEssenceMode"        -- Essence P4
+              , "trcEssenceResetEvent"  -- Essence P4 (B-slice BD2 soft rupture)
               ]
         missing = filter (\f -> not (f `L.isInfixOf` contents)) requiredFields
     assertBool

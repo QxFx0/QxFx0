@@ -1357,6 +1357,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcEssenceCommitted = Nothing
     , trcEssenceAngstLevel = Nothing
     , trcEssenceTrigger = Nothing
+    , trcEssenceResetEvent = Nothing
     , trcLearningQueryType = Nothing
     , trcExternalTool = Nothing
     , trcLearningValidationStatus = Nothing

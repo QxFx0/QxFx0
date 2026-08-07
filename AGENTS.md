@@ -310,6 +310,27 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   divergence, clamp, threshold gating, component invariant, window
   mean) registered in cabal + TestMain/TestMainUnit/TestMainFast.
 
+  **B-slice (Essence soft rupture, single canonical collapse branch)
+  completed 2026-08-07**: `Self/Essence.hs` gained the canonical
+  total morphism `collapseEssenceAt :: Int -> Essence -> (Essence,
+  EssenceResetEvent)` (BD2 single-branch rule). **Every runtime reset
+  goes through it**; a reset is either visible as an
+  `EssenceResetEvent` or it never happened. `AnomalyStateEffect`
+  became `ResetEssence !Essence !EssenceResetEvent` (carries the full
+  canonical result). The pentagon-collapse path
+  (`Finalize/State.hs` "Phase F") no longer drops the event: it stores
+  it in the new `SelfState.selfLastEssenceResetEvent`, surfaced as
+  `trcEssenceResetEvent :: Maybe EssenceResetEvent` on the replay trace
+  (JSON backward-compat `Nothing`). Soft rupture (reset + resume) stays
+  distinct from the hard `EssenceRupture` exception (`validatePlan`,
+  aborts before persistence). BD3 reachability: under sustained
+  hemispheric advantage with out-of-envelope divergence, angst crosses
+  the 0.75 threshold **exactly on turn 15** (never before turn 14), and
+  a post-collapse trajectory recommits inside the same 14-15 window.
+  Pinned by `Test.Suite.EssenceCollapse` (BD2 totality + BD3
+  reachability/recommit), registered in cabal + all three TestMains.
+  See `docs/closure/ESSENCE_SOFT_RUPTURE.md`.
+
   **Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
   - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),
     from `seedFromCorpus` (definitionCorpus predicates). Only source of output.

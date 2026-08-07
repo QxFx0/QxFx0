@@ -39,6 +39,7 @@ import QxFx0.Types.Domain.User (IdentityClaimRef)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Types.Self.Conatus (ConatusEnergy)
 import QxFx0.Types.Self.Field (Field)
+import QxFx0.Types.Self.Essence (EssenceResetEvent)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
 import QxFx0.Types.Memory.Episodic
@@ -197,6 +198,12 @@ data TurnReplayTrace = TurnReplayTrace
     -- ^ Phase 9: snake_case 'renderCommitmentTrigger' tag set only
     --   on the turn a commitment fires (Phase 10).  Always
     --   @Nothing@ in Phase 9.
+  , trcEssenceResetEvent :: !(Maybe EssenceResetEvent)
+    -- ^ B-slice BD2: the 'EssenceResetEvent' of the previous runtime
+    --   soft-rupture.  @Just@ only on a collapse turn
+    --   (SelfReferentialCollapse or pentagon collapse); @Nothing@
+    --   otherwise.  Makes the soft rupture (never the hard
+    --   'EssenceRupture' exception) replay-visible.
   , trcLearningQueryType :: !(Maybe Text)
     -- ^ Phase 8: type of learning query, e.g. "definition",
     --   "declension", "concept".  Nothing when no learning loop
@@ -604,6 +611,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcEssenceCommitted"
       <*> o .:? "trcEssenceAngstLevel"
       <*> o .:? "trcEssenceTrigger"
+      <*> o .:? "trcEssenceResetEvent"
       <*> o .:? "trcLearningQueryType"
       <*> o .:? "trcExternalTool"
       <*> o .:? "trcLearningValidationStatus"

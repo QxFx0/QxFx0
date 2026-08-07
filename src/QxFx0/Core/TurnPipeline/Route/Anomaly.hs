@@ -35,7 +35,7 @@ import QxFx0.Types.Domain.Atoms (AtomSet(..), MeaningAtom(..))
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Space.Types (SemanticSpace(..))
-import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), EssenceResetEvent(..), collapseEssence)
+import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), EssenceResetEvent(..), collapseEssenceAt)
 import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
 import QxFx0.Types.State.SelfState (SelfState(..))
 
@@ -77,7 +77,7 @@ detectSelfReferentialCollapse ss ti =
   in if selfReferentialCollapse traj frame
        then
          let turnSeq = TurnSeq (ssTurnCount ss)
-             (resetTraj, resetEvent) = collapseEssence (ssTurnCount ss) traj
+             (resetEssence, resetEvent) = collapseEssenceAt (ssTurnCount ss) essence
              anomaly = mkSelfReferential
                (erePreviousWitnessCount resetEvent)
                (ipfRawText frame)
@@ -86,7 +86,7 @@ detectSelfReferentialCollapse ss ti =
                0.95  -- Very high confidence for collapse
          in Just DetectedAnomaly
               { daAnomaly = anomaly
-              , daStateEffect = Just (ResetEssence resetTraj resetEvent)
+              , daStateEffect = Just (ResetEssence resetEssence resetEvent)
               }
        else Nothing
 

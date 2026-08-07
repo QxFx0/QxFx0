@@ -97,7 +97,7 @@ import QxFx0.Self.Essence
   , commit
   , validatePlan
   , witness
-  , collapseEssence
+  , collapseEssenceAt
   )
 import QxFx0.Self.Salience (adaptSalienceWeights)
 import QxFx0.Self.Field (adaptFieldHeuristics, Field(..), FieldHeuristics(..), fieldCounterfactual, Counterfactual(..), Atmosphere(..), updateMood)
@@ -368,8 +368,8 @@ maximumOrZero = foldr max 0.0
 computeNextEssence :: SystemState -> TurnInput -> TurnPlan -> (Essence, Maybe CommitmentTrigger)
 computeNextEssence ss ti tp =
   case tpAnomalyStateEffect tp of
-    Just (ResetEssence resetTrajectory _resetEvent) ->
-      (EssenceUncommitted resetTrajectory, Nothing)
+    Just (ResetEssence resetEssence _resetEvent) ->
+      (resetEssence, Nothing)
     Nothing -> computeWitnessedEssence
   where
     computeWitnessedEssence = case tiEssence ti of
@@ -551,6 +551,10 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
           { selfEssence = nextEssence
           , selfSalienceWeights = adaptedWeights
           , selfFieldHeuristics = adaptedHeuristics
+          , selfLastEssenceResetEvent =
+              case tpAnomalyStateEffect tp of
+                Just (ResetEssence _ resetEv) -> Just resetEv
+                _ -> Nothing
           }
       , ssShadowVetoState = tpShadowVetoState tp
       , ssProvisionalAtoms =
@@ -700,16 +704,20 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
         in case mChallengedStanceDefense of
              Nothing -> recovered
              Just (topic, challengedSd) -> M.insert topic challengedSd recovered
--- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3)
+-- Phase F: collapseEssence if pentagon collapsed (v3.0 spec §4.3).
+-- BD2 single-ff: all runtime resets run through the canonical
+-- 'collapseEssenceAt' morphism; the 'EssenceResetEvent' is preserved
+-- (never dropped) so the soft-rupture is replay-visible.
       selfStateBeforeCollapse = ssSelfState nextWithLog
       selfStateAfterCollapse = case mCollapse of
         Just _ ->
           let currentEssence = selfEssence selfStateBeforeCollapse
-              currentTraj = case currentEssence of
-                EssenceUncommitted traj -> traj
-                EssenceCommitted traj _ -> traj
-              (resetTraj, _resetEvent) = collapseEssence (unTurnSeq turnSeq) currentTraj
-          in selfStateBeforeCollapse { selfEssence = EssenceUncommitted resetTraj }
+              (resetEssence, resetEvent) =
+                collapseEssenceAt (unTurnSeq turnSeq) currentEssence
+          in selfStateBeforeCollapse
+               { selfEssence = resetEssence
+               , selfLastEssenceResetEvent = Just resetEvent
+               }
         Nothing -> selfStateBeforeCollapse
       -- A-slice: measure this turn's self-divergence against the
       -- deterministic prediction (predict -> witness -> diff).  The

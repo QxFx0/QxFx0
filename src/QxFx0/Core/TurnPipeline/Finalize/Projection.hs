@@ -301,6 +301,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcEssenceCommitted = committedFlag
           , trcEssenceAngstLevel = angst
           , trcEssenceTrigger = triggerTag
+          , trcEssenceResetEvent = selfLastEssenceResetEvent (ssSelfState nextSs)
           , trcLearningQueryType =
               case (taExternalQueryResult ta, taExploratoryQueryResult ta) of
                 (Nothing, Nothing) -> Nothing

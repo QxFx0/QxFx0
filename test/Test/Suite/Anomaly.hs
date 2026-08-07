@@ -49,7 +49,7 @@ import QxFx0.Types.State.System
 import QxFx0.Runtime.StateDefaults (emptySelfState, emptySystemState)
 import QxFx0.Types.State.SemanticCommitment
 import QxFx0.Types.Collection.BoundedSet
-import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), EssenceMode(..), EssenceTrajectory(..), EssenceWitness(..), FieldSignature(..), FieldBand(..), ValenceBand(..), TrajectoryHash(..), CommitmentTrigger(..), EssenceResetEvent(..), emptyTrajectory, collapseEssence)
+import QxFx0.Self.Essence (Essence(..), EssenceCommitment(..), EssenceMode(..), EssenceTrajectory(..), EssenceWitness(..), FieldSignature(..), FieldBand(..), ValenceBand(..), TrajectoryHash(..), CommitmentTrigger(..), EssenceResetEvent(..), emptyTrajectory, collapseEssence, collapseEssenceAt)
 import QxFx0.Types (InputPropositionFrame(..), emptyInputPropositionFrame)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Self.Salience (SalienceDriver(..), adaptSalienceWeights)
@@ -74,6 +74,7 @@ anomalyTests = TestList
   , "BoundedSet: FIFO eviction" ~: testBoundedSetFIFO
   , "SelfReferentialCollapse: trigger conditions" ~: testSelfReferentialCollapseTrigger
   , "SelfReferentialCollapse: collapseEssence" ~: testCollapseEssence
+  , "SelfReferentialCollapse: canonical collapseEssenceAt (BD2)" ~: testCollapseEssenceAt
   , "SelfReferentialCollapse: production plan/finalize path" ~: testSelfReferentialCollapseProductionPath
   , "AntiConatusChoice: trigger conditions" ~: testAntiConatusChoiceTrigger
   , "Anomaly rendering: Unclassifiable" ~: testRenderUnclassifiable
@@ -176,6 +177,28 @@ testCollapseEssence = do
   assertEqual "previous witness count should be 2" 2 (erePreviousWitnessCount resetEvent)
   assertEqual "reset turn should be 0" 0 (ereTurn resetEvent)
 
+testCollapseEssenceAt :: Assertion
+testCollapseEssenceAt = do
+  let traj = emptyTrajectory
+        { etAngstLevel = 0.95
+        , etWitnesses = Seq.fromList [testWitness 1, testWitness 2]
+        }
+      (resA, evA) = collapseEssenceAt 3 (EssenceUncommitted traj)
+      committed = EssenceCommitted traj (EssenceCommitment EssenceDialogical TriggerAngstThreshold 3 (TrajectoryHash "h"))
+      (resB, evB) = collapseEssenceAt 3 committed
+  -- BD2: canonical entry is total on both constructors and always
+  -- repacks as EssenceUncommitted — the reset branch is single.
+  assertEqual "uncommitted collapse repacks to EssenceUncommitted"
+    (EssenceUncommitted (fst (collapseEssence 3 traj))) resA
+  assertEqual "committed collapse repacks to EssenceUncommitted"
+    resA resB
+  assertEqual "canonical event equals trajectory-level event"
+    (snd (collapseEssence 3 traj)) evA
+  assertEqual "committed collapse event equals uncommitted event"
+    evA evB
+  assertEqual "reset event turn is the collapse turn" 3 (ereTurn evA)
+  assertEqual "reset clears angst" 0.0 (etAngstLevel (case resB of EssenceUncommitted t -> t; EssenceCommitted t _ -> t))
+
 testSelfReferentialCollapseProductionPath :: Assertion
 testSelfReferentialCollapseProductionPath =
   withDeterministicEmbedding $ do
@@ -206,10 +229,14 @@ testSelfReferentialCollapseProductionPath =
     assertBool "self-referential anomaly must reach TurnPlan"
       (case tpAnomalySurface tp of Just SurfaceSelfReferential{} -> True; _ -> False)
     case tpAnomalyStateEffect tp of
-      Just (ResetEssence resetTrajectory resetEvent) -> do
+      Just (ResetEssence resetEssence resetEvent) -> do
+        let resetTrajectory = case resetEssence of
+              EssenceUncommitted t -> t
+              EssenceCommitted t _ -> t
         assertEqual "planned reset must clear angst" 0.0 (etAngstLevel resetTrajectory)
         assertEqual "planned reset must restore the conatus floor" 1.0 (etConatusFloor resetTrajectory)
         assertEqual "reset event must retain previous angst" 0.95 (erePreviousAngst resetEvent)
+        assertEqual "BD2 reset event turn is the collapse turn" 0 (ereTurn resetEvent)
       Nothing -> assertFailure "self-referential anomaly must carry a typed reset effect"
     RenderedTurn _ _ _ artifacts <- renderTurn routePio ss0 planned
     bundle <- finalizeFixture ss0 plannedTi plannedTs tp artifacts

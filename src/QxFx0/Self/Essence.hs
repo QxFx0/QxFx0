@@ -38,6 +38,7 @@ module QxFx0.Self.Essence
     -- * Anomaly-3: Self-referential collapse
   , EssenceResetEvent (..)
   , collapseEssence
+  , collapseEssenceAt
     -- * Violations and validation (Phase 10)
   , EssenceViolation (..)
   , validatePlan
@@ -160,6 +161,26 @@ collapseEssence turn traj =
         , etConatusFloor = 1.0  -- Reset to initial floor
         }
   in (resetTraj, resetEvent)
+
+-- | Canonical 'Essence'-level collapse entry point (B-slice BD2
+-- single-branch rule).  Total on both 'Essence' constructors: extracts
+-- the trajectory, runs 'collapseEssence', and repacks the result as
+-- 'EssenceUncommitted' alongside the replay-visible
+-- 'EssenceResetEvent'.
+--
+-- Every runtime reset MUST go through this morphism — there is exactly
+-- one branch to a reset, so a reset is either visible as an
+-- 'EssenceResetEvent' or it never happened.  The hard
+-- post-commitment guard ('EssenceRupture' in 'QxFx0.ExceptionPolicy',
+-- thrown by 'validatePlan' before persistence) stays separate: it
+-- aborts the turn, it does not perform a soft reset.
+collapseEssenceAt :: Int -> Essence -> (Essence, EssenceResetEvent)
+collapseEssenceAt turn essence =
+  let traj = case essence of
+        EssenceUncommitted t -> t
+        EssenceCommitted t _ -> t
+      (resetTraj, resetEvent) = collapseEssence turn traj
+  in (EssenceUncommitted resetTraj, resetEvent)
 
 -- ---------------------------------------------------------------------------
 -- Modulation

@@ -122,6 +122,7 @@ minimalTrace = TurnReplayTrace
   , trcEssenceCommitted = Just False
   , trcEssenceAngstLevel = Just 0.1
   , trcEssenceTrigger = Nothing
+  , trcEssenceResetEvent = Nothing
   , trcLearningQueryType = Nothing
   , trcExternalTool = Nothing
   , trcLearningValidationStatus = Nothing
