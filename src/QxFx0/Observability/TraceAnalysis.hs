@@ -74,7 +74,7 @@ import GHC.Generics (Generic)
 
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ceScalar)
+import QxFx0.Self.Conatus (ConatusEnergy(..), ceScalar, lowEnergyThreshold)
 import QxFx0.Self.Field
   ( Field(..)
   , Resonance(..)
@@ -261,21 +261,38 @@ analyzeConatusDynamics trace =
        , caAnomaly = anomaly
        }
 
+-- | Conatus 'ceScalar' lives on a production log-scale codomain
+-- (@0.5 * log(1+m) + ...@), not the unit interval encoded by
+-- early-hand-coded thresholds (see `QxFx0.Self.Conatus.computeConatusEnergyWith`).
+-- The low end is single-sourced from the runtime law
+-- ('QxFx0.Self.Conatus.lowEnergyThreshold'), so "degraded" means
+-- "below the gate moment", not an arbitrary 0.3.
+--
+-- The high end has no law constant (energy accumulates without a hard
+-- cap as morphology/identity/turns grow).  We therefore flag as
+-- "excessive" only values far above the healthy band (~14-15; a
+-- blanket with hundreds of claims sits near ~4-5 initial and climbs
+-- with substance).  A conservative ceiling of 30.0 keeps genuinely
+-- surprising runaways visible without flagging every productive
+-- session.
+conatusExcessiveCeiling :: Double
+conatusExcessiveCeiling = 30.0
+
 -- | Classify energy trend
 classifyEnergyTrend :: Double -> Bool -> Text
 classifyEnergyTrend scalar gateFired
   | gateFired = "critical"
-  | scalar < 0.3 = "degraded"
+  | scalar < lowEnergyThreshold = "degraded"
   | otherwise = "healthy"
 
 -- | Detect Conatus anomalies
 detectConatusAnomaly :: Double -> Bool -> Maybe Text
 detectConatusAnomaly scalar gateFired
-  | gateFired && scalar > 0.5 =
+  | gateFired && scalar > conatusExcessiveCeiling =
       Just "gate_fired_with_high_energy"
   | scalar < 0.0 =
       Just "negative_conatus_energy"
-  | scalar > 10.0 =
+  | scalar > conatusExcessiveCeiling =
       Just "excessive_conatus_energy"
   | otherwise = Nothing
 

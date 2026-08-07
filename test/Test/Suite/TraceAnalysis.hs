@@ -41,6 +41,8 @@ traceAnalysisTests =
   , TestLabel "TraceAnalysis: Recovery with cause" testRecoveryWithCause
   , TestLabel "TraceAnalysis: Conatus healthy" testConatusHealthy
   , TestLabel "TraceAnalysis: Conatus degraded" testConatusDegraded
+  , TestLabel "TraceAnalysis: Conatus production scale no false excessive" testConatusProductionScaleNoFalseExcessive
+  , TestLabel "TraceAnalysis: Conatus excessive above ceiling" testConatusExcessive
   , TestLabel "TraceAnalysis: Field balanced" testFieldBalanced
   , TestLabel "TraceAnalysis: Essence witnessing" testEssenceWitnessing
   , TestLabel "TraceAnalysis: Full analysis" testFullAnalysis
@@ -158,7 +160,7 @@ minimalTrace = TurnReplayTrace
   , trcDreamCandidateApplied = Nothing
   , trcPerspectiveProjection = Nothing
   , trcPerspectiveProjections = []
-  , trcConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0.4 0.3 0.3 0.0 0.0)
+  , trcConatusEnergy = ConatusEnergy 14.0 (ConatusComponents 5.6 4.2 4.2 0.0 0.0)
   , trcSelfDivergenceTotal = Nothing
   , trcSelfDivergencePenalty = 0.0
   , trcSelfDivergenceWindowMean = Nothing
@@ -258,6 +260,28 @@ testConatusDegraded = TestCase $ do
   let analysis = analyzeConatusDynamics trace
   assertEqual "Degraded energy" "degraded" (caEnergyTrend analysis)
 
+-- | Audit: production log-scale ceScalar (~14-15) must NOT be flagged as
+-- 'excessive_conatus_energy'.  The embedded bar of 30.0 sits above the
+-- healthy band; the lower bar is single-sourced from lowEnergyThreshold.
+testConatusProductionScaleNoFalseExcessive :: Test
+testConatusProductionScaleNoFalseExcessive = TestCase $ do
+  let trace = minimalTrace
+        { trcConatusEnergy = ConatusEnergy 14.0 (ConatusComponents 6.0 4.0 4.0 0.0 0.0)
+        }
+  let analysis = analyzeConatusDynamics trace
+  assertEqual "Production-scale energy is healthy" "healthy" (caEnergyTrend analysis)
+  assertEqual "Production-scale energy is not an anomaly" Nothing (caAnomaly analysis)
+
+testConatusExcessive :: Test
+testConatusExcessive = TestCase $ do
+  let trace = minimalTrace
+        { trcConatusEnergy = ConatusEnergy 31.0 (ConatusComponents 10.0 10.0 10.0 1.0 0.0)
+        }
+  let analysis = analyzeConatusDynamics trace
+  assertEqual "Excessive energy trend" "healthy" (caEnergyTrend analysis)
+  assertEqual "Excessive energy anomaly"
+    (Just "excessive_conatus_energy") (caAnomaly analysis)
+
 testFieldBalanced :: Test
 testFieldBalanced = TestCase $ do
   let trace = minimalTrace
@@ -277,7 +301,7 @@ testFullAnalysis = TestCase $ do
   let trace = minimalTrace
   let summary = analyzeTrace trace
   assertEqual "Recovery policy" "enabled" (raPolicy $ tasRecovery summary)
-  assertEqual "Conatus scalar" 1.0 (caScalar $ tasConatus summary)
+  assertEqual "Conatus scalar" 14.0 (caScalar $ tasConatus summary)
   assertEqual "Field resonance" 0.5 (faResonance $ tasField summary)
   assertEqual "Salience driver" "formal_priority" (saDriver $ tasSalience summary)
 

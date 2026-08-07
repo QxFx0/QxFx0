@@ -27,6 +27,7 @@ module Test.Suite.SelfDivergence
   ( selfDivergenceTests
   ) where
 
+import qualified Data.Sequence as Seq
 import Test.HUnit (Test (..), assertBool, assertEqual, assertFailure)
 import Test.QuickCheck
   ( Gen
@@ -43,7 +44,18 @@ import QxFx0.Self.Conatus
   ( ConatusEnergy (..)
   , ConatusComponents (..)
   )
-import QxFx0.Self.Essence (defaultEssenceModulation)
+import QxFx0.Self.Essence
+  ( EssenceModulation (..)
+  , EssenceTrajectory (..)
+  , EssenceWitness (..)
+  , CommitmentTrigger (..)
+  , defaultEssenceModulation
+  , shouldCommit
+  , emptyTrajectory
+  , fieldSignature
+  )
+import QxFx0.Self.Deliberation (Agreement(..), ReconcileRule(..))
+import QxFx0.Self.Salience (SalienceDriver(..))
 import QxFx0.Self.Field
   ( Field (..)
   , emptyField
@@ -112,6 +124,16 @@ selfDivergenceTests =
       TestCase $
         assertBool "above-threshold window must fire"
           (sustainedDivergenceExceeds tuning [1.0, 1.0])
+    -- A->B coupling (audit): the self-consistency penalty feeds
+    -- 'ceScalar', which 'Essence.shouldCommit' reads through the
+    -- 'TriggerConatusErosion' window (last-8 witnesses below the
+    -- structural floor).  The penalty is a small /fraction/ of the
+    -- scalar, so a healthy production scalar stays above the floor and
+    -- the penalty alone never fabricates an erosion signal.
+  , TestLabel "A->B: healthy scalar penalty never fires TriggerConatusErosion" $
+      TestCase testHealthyPenaltyNoErosion
+  , TestLabel "A->B: only a genuinely sub-floor window fires erosion" $
+      TestCase testGenuinelySubFloorWindowFiresErosion
   ]
 
 quickCheckProperty :: String -> Property -> Test
@@ -198,8 +220,69 @@ propPenaltyPreservesInvariant =
            && (pShare < 0.0) == (total > sdtThreshold tuning)
 
 -- ---------------------------------------------------------------------------
--- Shared fixtures
+-- A->B coupling guards (audit): self-consistency penalty -> Essence
 -- ---------------------------------------------------------------------------
+
+-- | A healthy production scalar (~14, well above the structural floor
+-- 7.0) penalised at maximum divergence stays above the floor, so the
+-- penalty alone cannot trip 'TriggerConatusErosion'.
+testHealthyPenaltyNoErosion :: IO ()
+testHealthyPenaltyNoErosion = do
+  let healthy = ConatusEnergy
+        { ceScalar = 14.5
+        , ceComponents = ConatusComponents 3.0 3.0 3.0 4.0 1.5
+        }
+      (adjusted, _) =
+        selfConsistencyPenalty tuning
+          (emptySelfDivergenceE { sdeTotalDivergence = 1.0 })  -- max divergence
+          healthy
+      floorValue = emConatusStructuralFloor defaultEssenceModulation
+      traj = emptyTrajectory
+        { etWitnesses =
+            Seq.fromList (replicate 8 (mkErosionWitness (ceScalar adjusted)))
+        }
+  assertBool
+    ("penalty must keep a healthy scalar above the structural floor; got "
+      ++ show (ceScalar adjusted))
+    (ceScalar adjusted > floorValue)
+  assertEqual "penalty must not fabricate an erosion signal"
+    Nothing (shouldCommit defaultEssenceModulation traj)
+
+-- | A genuinely sub-floor window still triggers erosion — the guard
+-- proves the path is only reachable when energy really decayed.
+testGenuinelySubFloorWindowFiresErosion :: IO ()
+testGenuinelySubFloorWindowFiresErosion = do
+  let traj = emptyTrajectory
+        { etWitnesses = Seq.fromList (replicate 8 (mkErosionWitness 5.0)) }
+  case shouldCommit defaultEssenceModulation traj of
+    Just TriggerConatusErosion -> pure ()
+    other -> assertFailure
+      ("expected Just TriggerConatusErosion on a 5.0 window, got "
+        ++ show other)
+
+-- | One sub-floor witness against an otherwise healthy window must NOT
+-- fire erosion (window requires the full 'emConatusFloorWindow').
+testSubFloorWindowRequiresFullWindow :: IO ()
+testSubFloorWindowRequiresFullWindow = do
+  let window = emConatusFloorWindow em
+      traj = emptyTrajectory
+        { etWitnesses = Seq.fromList (replicate (window - 1) (mkErosionWitness 5.0)) }
+  assertEqual "short sub-floor window must not fire erosion"
+    Nothing (shouldCommit em traj)
+  where em = defaultEssenceModulation
+
+-- | One 'EssenceWitness' carrying the given Conatus scalar (sub-floor
+-- for erosion purposes when below 7.0).
+mkErosionWitness :: Double -> EssenceWitness
+mkErosionWitness scalar = EssenceWitness
+  { ewTurnOrdinal    = 1
+  , ewSalienceDriver = DrivenByDefault
+  , ewReconcileRule  = RuleAgreement
+  , ewAgreement      = Agree
+  , ewDivergence     = 0.0
+  , ewConatusScalar  = scalar
+  , ewFieldSignature = fieldSignature defaultEssenceModulation emptyField
+  }
 
 tuning :: SelfDivergenceTuning
 tuning = defaultSelfDivergenceTuning
