@@ -19,7 +19,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 |---|---|---|
 | `SLICE-015` runtime summary observability gaps (50/51) | DEFERRED | `stateSummaryLines` must surface pre-actor failure kind and restart authority status; documented in `docs/closure/SLICE-015_PLAN.md`; not in active scope |
 | `BD1` Envelope/angst parameter calibration | DEFERRED | `emAngst*` and `sdt*` stay hand-set; ADR-0012 §15.2 requires a production trace corpus (synthetic cannot produce `RuleHolisticAdvantage`/`RuleFormalAdvantage` divergence); unit-guards pin the invariants (`0 < sdtScaling <= 1`, `0 <= sdtThreshold <= 1`, `sdtWindow >= 1`, healthy scalar above `emConatusStructuralFloor`); A-slice/C-slice closed on 2026-08-07 (commits `6362c57`, `5832fff`, `7861323`, `7eb759a`, `72fe9db`) |
-| `M6-FELT` felt-evidence gate | DEFERRED | `rrEssenceActive = True` stamps the regime (Policy A, 2026-06-17) but is not M6-FELT evidence until SLICE-012 + a felt-evidence gate land; see `docs/closure/M6_CLAIM_PACKAGE.md` |
+| `M6-FELT` felt-evidence gate | IMPLEMENTED (NOT PROVEN) | mechanical checker `QxFx0.Core.M6FeltGate` over `[TurnReplayTrace]`: governed-evidence precondition (SLICE-012) + B3 Gates 1–5, fail-closed conjunction, per-gate verdict; `Test.Suite.M6FeltGate` (13 cases); `docs/closure/M6_FELT_GATE.md`; sessions become M6-FELT evidence only when the gate passes under `QXFX0_GOVERNED_EVIDENCE=1` + B2 human-eval |
 
 ## Closed this cycle (2026-06-27)
 

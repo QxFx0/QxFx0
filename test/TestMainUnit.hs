@@ -46,6 +46,7 @@ import Test.Suite.PGFErrorHandling (pgfErrorHandlingTests)
 import Test.Suite.StructuredErrors (structuredErrorsTests)
 import Test.Suite.Observability (observabilityTests)
 import Test.Suite.TraceAnalysis (traceAnalysisTests)
+import Test.Suite.M6FeltGate (m6FeltGateTests)
 import Test.Suite.DoubtLoop (doubtLoopTests)
 import Test.Suite.ContentSalience (contentSalienceTests)
 import Test.Suite.MemoryEpisodic (episodicMemoryTests)
@@ -116,6 +117,7 @@ main = do
             ++ structuredErrorsTests
             ++ observabilityTests
             ++ traceAnalysisTests
+            ++ m6FeltGateTests
             ++ doubtLoopTests
             ++ contentSalienceTests
             ++ episodicMemoryTests

@@ -204,6 +204,7 @@ library
     QxFx0.Runtime.Session.Autonomous
     QxFx0.Core.Observability
     QxFx0.Core.EvidenceAdmissibility
+    QxFx0.Core.M6FeltGate
      QxFx0.Core.SessionLock
      QxFx0.Core.TruthContract
      QxFx0.Core.R5Dynamics
@@ -699,6 +700,7 @@ common test-common
     Test.Suite.GFParityHarness
     Test.Suite.Observability
     Test.Suite.TraceAnalysis
+    Test.Suite.M6FeltGate
     Test.Suite.RoundTrip
     Test.Suite.NativeSQLiteNulls
     Test.Suite.ResponseContentAdmission
