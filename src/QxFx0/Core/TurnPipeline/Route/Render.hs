@@ -282,10 +282,16 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticNonUnknown = case semanticIntent of
         IntentUnknown _ -> generativeRequest
         _               -> True
-      -- M4-SEMANTIC-CORE-003 Phase C: content source classification for trace
+      -- M4-SEMANTIC-CORE-003 Phase C: content source classification for trace.
+      -- Classified from the response-plan topic (the topic the response
+      -- actually answers) rather than the raw bestTopic, so deep/challenge
+      -- turns are traced by their true content origin.
       semanticContentSource =
-        let isCovered = isCoveredTopic bestTopic
-            hasExactDef = isJust (lookupDefinitionContent bestTopic)
+        let planTopic = case mResponsePlan of
+              Just plan -> Just (fromMaybe bestTopic (rspTopic plan))
+              Nothing -> Just bestTopic
+            isCovered = maybe False isCoveredTopic planTopic
+            hasExactDef = maybe False (isJust . lookupDefinitionContent) planTopic
             hasExactDist = case semanticIntent of
               IntentDistinguish l r -> isJust (lookupDistinctionContent l r)
               _ -> False

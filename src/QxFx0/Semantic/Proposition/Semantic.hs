@@ -491,7 +491,9 @@ comparisonCandidates rawText =
     pair@(_:_:_) -> take 2 pair
     _ -> case splitByFrom normalized of
       pair@(_:_:_) -> take 2 pair
-      _ -> splitByEither normalized
+      _ -> case splitByRelated normalized of
+        pair@(_:_:_) -> take 2 pair
+        _ -> splitByEither normalized
   where
     normalized = T.unwords (T.words (T.toLower (T.replace "\n" " " rawText)))
     splitByEither txt =
@@ -537,6 +539,29 @@ comparisonCandidates rawText =
             , "как различить "
             , "отличить "
             , "различить "
+            ]
+      in stripKnownPrefix trimmed prefixes
+    -- Handle "как X связан(а/о) с Y?" — the relation-pattern distinction.
+    -- Matches any "связан..." inflection (связана / связан / связано / связаны).
+    splitByRelated txt =
+      case T.breakOn "связан" txt of
+        (left, rest)
+          | T.null rest -> []
+          | otherwise ->
+              case T.breakOn " с " rest of
+                (_, rightRaw)
+                  | T.null rightRaw -> []
+                  | otherwise ->
+                      let right = T.drop 3 rightRaw
+                          leftCandidate = cleanCandidate (stripRelationPrefix left)
+                          rightCandidate = cleanCandidate (trimAtQuestion right)
+                      in filter (not . T.null) [leftCandidate, rightCandidate]
+    stripRelationPrefix txt =
+      let trimmed = T.strip txt
+          prefixes =
+            [ "как ", "чем ", "что ", "где ", "почему "
+            , "зачем ", "когда ", "кто ", "какой ", "какая "
+            , "какие ", "а ", "и "
             ]
       in stripKnownPrefix trimmed prefixes
     stripKnownPrefix txt [] = txt

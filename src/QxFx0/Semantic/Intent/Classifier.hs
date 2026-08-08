@@ -29,13 +29,16 @@ module QxFx0.Semantic.Intent.Classifier
 
 import Data.Text (Text)
 import qualified Data.Text as T
+import Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as M
 import GHC.Generics (Generic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (ToJSON, FromJSON)
 
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns)
-import QxFx0.Types (MorphologyData, CanonicalMoveFamily(..))
+import QxFx0.Types (CanonicalMoveFamily(..))
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
@@ -101,7 +104,31 @@ data SemanticIntent
 classifyIntent :: Text -> [Text] -> MorphologyData -> SemanticIntent
 classifyIntent rawText tokens morph =
   let features = extractFeatures rawText tokens morph
-  in classifyFromFeatures rawText features
+  in normalizeIntentTopics morph (classifyFromFeatures rawText features)
+
+-- | Canonicalize intent topic surfaces to their nominative lemmas so that
+-- topic-coverage lookups against the corpus (nominative keys) succeed
+-- regardless of the surface case form ("ответственности" → "ответственность",
+-- "ответственностью" → "ответственность").  Pure reverse lookup over
+-- 'mdNominative'; unknown surfaces pass through unchanged.
+normalizeIntentTopics :: MorphologyData -> SemanticIntent -> SemanticIntent
+normalizeIntentTopics morph intent = case intent of
+  IntentDefine topic -> IntentDefine (canonicalTopic morph topic)
+  IntentDistinguish left right ->
+    IntentDistinguish (canonicalTopic morph left) (canonicalTopic morph right)
+  other -> other
+
+-- | Canonicalize a topic surface to its nominative lemma so topic-coverage
+-- lookups against the corpus (nominative keys) succeed regardless of the
+-- surface case form ("ответственности" / "ответственностью" →
+-- "ответственность").  Uses full morphological analysis first (handles
+-- instrumental etc. beyond the precomputed case maps), then the
+-- nominative map; unknown surfaces pass through unchanged.
+canonicalTopic :: MorphologyData -> Text -> Text
+canonicalTopic morph topic =
+  case extractContentNouns topic of
+    (lemma:_) -> lemma
+    [] -> fromMaybe topic (M.lookup (T.toLower (T.strip topic)) (mdNominative morph))
 
 -- | Core classification logic. Separated from extraction for testability.
 classifyFromFeatures :: Text -> SemanticFeatures -> SemanticIntent
@@ -210,14 +237,16 @@ classifyTopicSpecific f
 -- Topic extraction (deterministic, not keyword-based)
 -- ---------------------------------------------------------------------------
 
--- | Extract topic after a marker phrase.
+-- | Extract topic after a marker phrase, wherever the marker occurs.
 -- E.g., extractTopicAfter "что такое свобода" "что такое" → "свобода"
+-- E.g., extractTopicAfter "объясни подробнее, что такое свобода" "что такое" → "свобода"
 extractTopicAfter :: Text -> Text -> Text
 extractTopicAfter rawText marker =
   let lower = T.toLower (T.strip rawText)
       markerLower = T.toLower marker
-      raw = if markerLower `T.isPrefixOf` lower
-            then T.strip (T.drop (T.length marker + 1) (T.strip rawText))
+      (before, after) = T.breakOn markerLower lower
+      raw = if not (T.null after)
+            then T.strip (T.drop (T.length before + T.length markerLower) (T.strip rawText))
             else T.strip rawText
   in T.dropWhileEnd (`elem` ("?!.,;:" :: String)) raw
 

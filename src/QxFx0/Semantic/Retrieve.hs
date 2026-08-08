@@ -3,6 +3,7 @@
 module QxFx0.Semantic.Retrieve
   ( retrieve
   , detectCommitmentEngagement
+  , engagementTopicFor
   ) where
 
 import qualified Data.HashMap.Strict as HashMap
@@ -69,6 +70,24 @@ retrieve query store =
 isPoorToken :: Text -> Bool
 isPoorToken tok = tok == "amplified" || T.length tok <= 2
 
+-- | Pick the first candidate topic that shares significant words with an
+-- active commitment; fall back to the first (primary) candidate when none
+-- overlap.  Lets a challenge turn engage the held claim it actually
+-- references ("контрпример: свобода — ..." engages the claim about
+-- свобода) even when the parsed best topic is noise.
+engagementTopicFor :: SemanticCommitmentStore -> [Text] -> Text
+engagementTopicFor store topics =
+  case filter (not . T.null) topics of
+    [] -> ""
+    nonEmptyTopics ->
+      case filter (overlapsAny store) nonEmptyTopics of
+        (t:_) -> t
+        [] -> head nonEmptyTopics
+  where
+    overlapsAny store t =
+      any (snd . wordSetOverlap t . fcpStatement . fst . snd)
+          (HashMap.toList (scsActive store))
+
 -- | Detect whether the current turn engages or contradicts held commitments.
 -- Engaged = significant word overlap (whole-word, threshold ≥1) with active store.
 -- Contradicted = engaged AND (contradiction atom scoped to engaged claim OR poor-token fallback).
@@ -78,9 +97,13 @@ isPoorToken tok = tok == "amplified" || T.length tok <= 2
 detectCommitmentEngagement
   :: SemanticCommitmentStore
   -> Text
+  -- ^ the topic the turn is about ('inputTopic')
+  -> Text
+  -- ^ the raw input text of the turn ('inputText'), used to ground
+  --   contradiction atoms in the current utterance
   -> AtomSet
   -> CommitmentEngagement
-detectCommitmentEngagement store inputTopic atomSet =
+detectCommitmentEngagement store inputTopic inputText atomSet =
   let active = scsActive store
       engagedPairs =
         filter (\(_, (payload, _)) ->
@@ -89,14 +112,21 @@ detectCommitmentEngagement store inputTopic atomSet =
       engagedIds = map fst engagedPairs
       engagedPayloads = map (fst . snd) engagedPairs
       contradictionAtoms = filter (\a -> case maTag a of Contradiction _ _ -> True; _ -> False) (asAtoms atomSet)
-      -- Strong: contradiction token shares significant words with an engaged claim.
+      -- Strong: contradiction token shares significant words with an engaged
+      -- claim (direct challenge), or the contradiction atom is grounded in the
+      -- current utterance (its tokens occur in the input text) while the
+      -- engagement topic overlaps the held claim — a challenge request aimed
+      -- at the engaged topic counts even when the atom's own tokens are
+      -- challenge markers ("контрпример") rather than the concept itself.
       contradictionScoped = any (\atom ->
         case maTag atom of
           Contradiction tokL tokR ->
-            any (\payload ->
+            let groundedInInput = snd (wordSetOverlap tokL inputText) || snd (wordSetOverlap tokR inputText)
+            in any (\payload ->
                 let stmt = fcpStatement payload
                 in  snd (wordSetOverlap tokL stmt)
                  || snd (wordSetOverlap tokR stmt)
+                 || (groundedInInput && snd (wordSetOverlap inputTopic stmt))
             ) engagedPayloads
           _ -> False
         ) contradictionAtoms

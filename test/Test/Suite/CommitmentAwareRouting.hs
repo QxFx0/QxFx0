@@ -152,7 +152,7 @@ unitEngagedNotContradicted :: Test
 unitEngagedNotContradicted = TestLabel "engaged without contradiction atom" $
   TestCase $ do
     let store = makeStoreWithClaim "свобода есть право человека"
-        result = detectCommitmentEngagement store "свобода" atomSetWithoutContradiction
+        result = detectCommitmentEngagement store "свобода" "свобода" atomSetWithoutContradiction
     assertEqual "ceEngaged should be non-empty"
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
@@ -164,7 +164,7 @@ unitContradicted :: Test
 unitContradicted = TestLabel "engaged with contradiction atom" $
   TestCase $ do
     let store = makeStoreWithClaim "свобода есть право человека"
-        result = detectCommitmentEngagement store "свобода" atomSetWithContradiction
+        result = detectCommitmentEngagement store "свобода" "свобода" atomSetWithContradiction
     assertEqual "ceEngaged should be non-empty"
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be True"
@@ -176,7 +176,7 @@ unitNotEngaged :: Test
 unitNotEngaged = TestLabel "no overlap" $
   TestCase $ do
     let store = makeStoreWithClaim "свобода есть право человека"
-        result = detectCommitmentEngagement store "нравственность" atomSetWithContradiction
+        result = detectCommitmentEngagement store "нравственность" "нравственность" atomSetWithContradiction
     assertEqual "ceEngaged should be empty"
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
@@ -187,7 +187,7 @@ unitNotEngaged = TestLabel "no overlap" $
 unitEmptyStore :: Test
 unitEmptyStore = TestLabel "empty store" $
   TestCase $ do
-    let result = detectCommitmentEngagement emptySemanticCommitmentStore "свобода" atomSetWithContradiction
+    let result = detectCommitmentEngagement emptySemanticCommitmentStore "свобода" "свобода" atomSetWithContradiction
     assertEqual "ceEngaged should be empty"
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
@@ -199,7 +199,7 @@ unitInfixNoEngage :: Test
 unitInfixNoEngage = TestLabel "infix does not engage (word boundary)" $
   TestCase $ do
     let store = makeStoreWithClaim "несвобода — это рабство"
-        result = detectCommitmentEngagement store "свобода" atomSetWithoutContradiction
+        result = detectCommitmentEngagement store "свобода" "свобода" atomSetWithoutContradiction
     assertEqual "ceEngaged should be empty (no whole-word overlap)"
       0 (length (ceEngaged result))
     assertEqual "ceContradicted should be False"
@@ -212,7 +212,7 @@ unitCrossTopicNoContradiction :: Test
 unitCrossTopicNoContradiction = TestLabel "cross-topic contradiction is not contradicted" $
   TestCase $ do
     let store = makeStoreWithClaim "свобода есть право человека"
-        result = detectCommitmentEngagement store "свобода" atomSetWithCrossTopicContradiction
+        result = detectCommitmentEngagement store "свобода" "свобода" atomSetWithCrossTopicContradiction
     assertEqual "ceEngaged should be non-empty"
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be False (cross-topic)"
@@ -225,7 +225,7 @@ unitPoorTokenFallback :: Test
 unitPoorTokenFallback = TestLabel "poor-token contradiction falls back to contradicted" $
   TestCase $ do
     let store = makeStoreWithClaim "свобода есть право человека"
-        result = detectCommitmentEngagement store "свобода" atomSetWithPoorContradiction
+        result = detectCommitmentEngagement store "свобода" "свобода" atomSetWithPoorContradiction
     assertEqual "ceEngaged should be non-empty"
       1 (length (ceEngaged result))
     assertEqual "ceContradicted should be True (poor fallback)"

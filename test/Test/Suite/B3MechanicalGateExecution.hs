@@ -124,7 +124,7 @@ b3GateVerdict =
               }
             store0 = emptySemanticCommitmentStore
             (store1, _) = commitObservation payload store0
-            engagement = detectCommitmentEngagement store1 topic emptyAtomSet
+            engagement = detectCommitmentEngagement store1 topic topic emptyAtomSet
         in not (null (ceEngaged engagement))
         ) coveredTopics
 
@@ -149,7 +149,7 @@ b3GateVerdict =
         ) (zip topics10 [1..])
       storeS = foldr (\p s -> fst (commitObservation p s)) emptySemanticCommitmentStore payloads10
       activeCount = HashMap.size (scsActive storeS)
-      challengeEngaged = not (null (ceEngaged (detectCommitmentEngagement storeS "свобода" emptyAtomSet)))
+      challengeEngaged = not (null (ceEngaged (detectCommitmentEngagement storeS "свобода" "свобода" emptyAtomSet)))
       gate4 = activeCount >= 9 && challengeEngaged
 
       overall = gate5 && gate1 && gate2 && gate3 && gate4

@@ -354,7 +354,30 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   cases, SelfDeliberation severity ordering, TurnPipelineProtocol
   integration (window override drives the cause; fresh state does
   not). No trace-schema change (`trcRecoveryCause`/`Strategy` already
-  carry it); no math version bump.
+   carry it); no math version bump.
+
+  **M6-FELT bounded benchmark PROVEN (2026-08-08)**: the mechanical
+  felt-evidence gate now records `M6FeltProven` on the 12-turn bounded
+  benchmark session (`Test.Suite.M6FeltBenchmark`; evidence
+  `feTurnCount = 12, feFinalCommitmentCount = 12, feDistinctFocuses = 5,
+  feRepairTurns = 2`). All 12 turns render on the semantic core path
+  (`covered_exact`/`AuthorityCanonical`/`CsaAdmitCanonical`/
+  `EvidenceGoverned`, no fallback); challenge turns 7-8 register genuine
+  commitment contradiction → revision. Blocker closure came from runtime
+  defects, not GF linearizer coverage: `extractTopicAfter` now matches
+  "что такое" anywhere in the utterance; `normalizeIntentTopics`/
+  `canonicalTopic` lemmatize topic and distinction surfaces via full
+  morphology ("ответственности"/"ответственностью" → "ответственность");
+  `comparisonCandidates` gained the `связан`-linkage branch and `связан`
+  is a comparison mark; "контрпример"/"докажи"/"что если" are challenge
+  marks in both the classifier and `Effects.hasChallengeMarker`;
+  `Semantic.Retrieve` gained `engagementTopicFor` and contradiction is
+  scoped via the engagement topic (best topic ++ content nouns);
+  `trcContentSource` is classified from the response-plan topic. The
+  recorded-verdict test now asserts `M6FeltProven` + contour minima
+  (12 turns, ≥1 revision, ≥4 focuses, ≥1 repair) — a regression must
+  fail with a precise gate list again. Full M6-FELT status still needs
+  the B2 human-eval leg. See `docs/closure/M6_FELT_GATE.md`.
 
   **Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
   - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),

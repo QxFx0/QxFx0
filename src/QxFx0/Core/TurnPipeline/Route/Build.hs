@@ -81,7 +81,8 @@ import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily, diagnosticPropositionFamilyTyped)
-import QxFx0.Semantic.Retrieve (detectCommitmentEngagement)
+import QxFx0.Semantic.Retrieve (detectCommitmentEngagement, engagementTopicFor)
+import QxFx0.Semantic.Morphology (extractContentNouns)
 import QxFx0.Types
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), MatchKind(..))
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
@@ -248,7 +249,10 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
       commitmentEngagement =
         case ssSemanticCommitments ss of
-          Just store -> detectCommitmentEngagement store (tiBestTopic ti) atomSet
+          Just store ->
+            let nouns = extractContentNouns (ipfRawText (tiFrame ti))
+                topics = [tiBestTopic ti] ++ nouns
+            in detectCommitmentEngagement store (engagementTopicFor store topics) (ipfRawText (tiFrame ti)) atomSet
           Nothing    -> CommitmentEngagement [] False NoMatch
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)

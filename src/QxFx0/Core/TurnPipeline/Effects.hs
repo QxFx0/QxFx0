@@ -606,6 +606,7 @@ hasChallengeMarker input =
        , "ты говоришь", "оспариваю"
        , "это просто", "не более чем", "сводится к"
        , "всего лишь", "это лишь"
+       , "контрпример", "докажи", "что если"
        ]
 
 buildGeometricClassifier :: Ontology -> Map Text Text -> SemanticSpace -> Maybe IntentClassifier

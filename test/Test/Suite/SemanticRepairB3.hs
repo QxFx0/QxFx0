@@ -45,7 +45,7 @@ testGate3CommitmentEngagementForCoveredTopic =
           store0 = emptySemanticCommitmentStore
           (store1, _cid) = commitObservation payload store0
           -- Simulate a later turn mentioning 'свобода' (challenge)
-          engagement = detectCommitmentEngagement store1 "свобода" emptyAtomSet
+          engagement = detectCommitmentEngagement store1 "свобода" "свобода" emptyAtomSet
       assertBool "should engage ≥1 commitment"
                  (length (ceEngaged engagement) >= 1)
       assertBool "engagement should find the свобода commitment"
@@ -73,7 +73,7 @@ testGate3CommitmentEngagementForConsciousness =
             }
           store0 = emptySemanticCommitmentStore
           (store1, _cid) = commitObservation payload store0
-          engagement = detectCommitmentEngagement store1 "сознание" emptyAtomSet
+          engagement = detectCommitmentEngagement store1 "сознание" "сознание" emptyAtomSet
       assertBool "should engage ≥1 commitment"
                  (length (ceEngaged engagement) >= 1)
 
@@ -102,7 +102,7 @@ testGate3PriorClaimFindableByTopicWords =
              let payload = mkPayload topic
                  store0 = emptySemanticCommitmentStore
                  (store1, _) = commitObservation payload store0
-                 engagement = detectCommitmentEngagement store1 topic emptyAtomSet
+                 engagement = detectCommitmentEngagement store1 topic topic emptyAtomSet
              in null (ceEngaged engagement)
            failures = filter checkTopic coveredTopics
        assertBool ("Topics where prior claim is not found: " <> show failures)
@@ -126,7 +126,7 @@ testGate3OldAnchorDoesNotEngage =
             }
           store0 = emptySemanticCommitmentStore
           (store1, _) = commitObservation payload store0
-          engagement = detectCommitmentEngagement store1 "свобода" emptyAtomSet
+          engagement = detectCommitmentEngagement store1 "свобода" "свобода" emptyAtomSet
       assertBool "old-style anchor should NOT engage for 'свобода'"
                  (null (ceEngaged engagement))
 
@@ -191,7 +191,7 @@ testGate4TenTurnSessionPersistence =
       assertBool "should have ≥9 active commitments (some topics repeat)"
                  (activeCount >= 9)
       -- Verify that a challenge on 'свобода' still finds the prior commitment
-      let engagement = detectCommitmentEngagement store1 "свобода" emptyAtomSet
+      let engagement = detectCommitmentEngagement store1 "свобода" "свобода" emptyAtomSet
       assertBool "challenge on 'свобода' should engage prior commitment after 10 turns"
                  (not (null (ceEngaged engagement)))
 

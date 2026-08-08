@@ -164,7 +164,7 @@ extractHasComparisonMark rawLower tokens =
      any (`elem` tokens) ["между", "от", "или", "и"]
   || any (`T.isInfixOf` rawLower)
        [ "разниц", "различ", "отлич", "сравн", "сопостав"
-       , "versus", "vs"
+       , "связан", "versus", "vs"
        ]
 
 extractHasDefinitionMark :: Text -> Bool
@@ -181,6 +181,7 @@ extractHasChallengeMark rawLower =
     , "считаю иначе", "я думаю по-другому", "а если посмотреть"
     , "не совсем так", "не точн", "разве", "не согласен"
     , "не согласна", "сомневаюсь", "оспариваю", "ты говоришь"
+    , "что если", "докажи", "контрпример"
     ]
 
 extractHasRepairMark :: Text -> Bool

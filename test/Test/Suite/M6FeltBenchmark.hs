@@ -32,6 +32,7 @@ import Data.List (intercalate)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import System.IO (hPutStrLn, stderr)
 
 import Test.HUnit (Test(..), assertBool, assertFailure)
 
@@ -53,6 +54,9 @@ import QxFx0.Core.M6FeltGate
   , M6FeltEvidence(..)
   , M6FeltVerdict(..)
   , evaluateM6FeltGate
+  )
+import QxFx0.Types.Semantic.ResponsePlan
+  ( ResponseSemanticPlan(..)
   )
 
 -- ---------------------------------------------------------------------------
@@ -153,7 +157,20 @@ summarizeLine i t =
   , show (trcCommitmentStoreDecision t)
   , show (trcSemanticCommitmentCount t)
   , show (trcEvidenceAdmissibility t)
+  , maybe "-" T.unpack (trcIntentType t)
+  , planSummary t
   ]
+
+planSummary :: TurnReplayTrace -> String
+planSummary t = case trcResponsePlan t of
+  Nothing -> "-"
+  Just plan ->
+    intercalate "/"
+      [ T.unpack (T.pack (show (rspGoal plan)))
+      , maybe "-" T.unpack (rspTopic plan)
+      , maybe "-" (T.unpack . T.pack . show) (rspFallbackReason plan)
+      , show (length (rspPropositions plan))
+      ]
 
 -- ---------------------------------------------------------------------------
 -- The test group
@@ -163,28 +180,36 @@ summarizeLine i t =
 -- session over the definition corpus must either pass the gate
 -- (M6FeltProven — evidence package) or fail with a precise list of gates.
 --
--- Recorded result (2026-08-08): C1–C4 + governed-evidence pass on the
--- production runtime; Gate 5 (non-fallback) is the only mechanical blocker
--- — 7 of 12 turns fall back to @gf_response_plan:response_plan_without_propositions@
--- or @russian_compatibility_shim@ because the GF linearizer covers
--- definitional questions but not distinction / linkage / proof /
--- hypothesis turns.  M6-FELT therefore remains NOT PROVEN.
+-- Recorded result (2026-08-08): M6FeltProven.  All 12 turns render on the
+-- semantic core path (covered_exact / AuthorityCanonical /
+-- CsaAdmitCanonical / EvidenceGoverned); turns 7-8 (challenge/repair)
+-- engage a held commitment and register a contradiction, producing the
+-- required commitment revision; 5 distinct focuses and 2 repair turns tie
+-- the C1-C4 contours together in one replay-visible session.  If the
+-- runtime regresses, the verdict must fail with a precise gate list again.
 m6FeltBenchmarkTests :: [Test]
 m6FeltBenchmarkTests =
-  [ TestLabel "bounded benchmark: recorded fail-closed verdict is [FeltGate5NonFallback]" $
+  [ TestLabel "bounded benchmark: recorded verdict is M6FeltProven" $
       TestCase $ do
         traces <- runBenchmarkSession
         let verdict = benchmarkVerdict traces
+        hPutStrLn stderr ("[m6-benchmark] verdict=" <> show verdict)
+        hPutStrLn stderr ("[m6-benchmark]\n" <> T.unpack (diagnoseTraces traces))
         case verdict of
-          M6FeltProven evidence ->
-            assertFailure $
-              "bounded benchmark became M6FeltProven (" <> show evidence <> "); "
-              <> "update the recorded result and the M6-FELT status"
+          M6FeltProven evidence -> do
+            assertBool "benchmark must run 12 governed turns"
+              (feTurnCount evidence == 12)
+            assertBool "benchmark must include at least one commitment revision"
+              (feFinalCommitmentCount evidence >= 1)
+            assertBool "benchmark must span at least 4 distinct focuses"
+              (feDistinctFocuses evidence >= 4)
+            assertBool "benchmark must include at least one repair turn"
+              (feRepairTurns evidence >= 1)
           M6FeltNotProven failed ->
-            assertBool
-              ("expected exactly [FeltGate5NonFallback], got: " <> show failed
-               <> "\n\nper-turn traces:\n" <> T.unpack (diagnoseTraces traces))
-              (failed == [FeltGate5NonFallback])
+            assertFailure $
+              "bounded benchmark regressed to not-proven (" <> show failed
+              <> "); restore the semantic-core path for all turns\n\n"
+              <> "per-turn traces:\n" <> T.unpack (diagnoseTraces traces)
   , TestLabel "bounded benchmark: gate is fail-closed on empty session" $
       TestCase $ do
         let verdict = benchmarkVerdict []

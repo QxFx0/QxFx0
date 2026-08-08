@@ -113,8 +113,10 @@ semanticRoleTests = TestLabel "SemanticRoleClassification" $ TestList
   [ TestCase $ do
       case classify "разница между свободой и волей" of
         IntentDistinguish left right -> do
-          assertEqual "left concept" "свободой" left
-          assertEqual "right concept" "волей" right
+          -- Topics are canonicalized to their nominative lemmas so corpus
+          -- coverage lookups succeed regardless of surface case.
+          assertEqual "left concept" "свобода" left
+          assertEqual "right concept" "воля" right
         other -> assertEqual "expected IntentDistinguish" "IntentDistinguish" (show other)
 
   , TestCase $ assertEqual "challenge" IntentChallenge (classify "это неверно")

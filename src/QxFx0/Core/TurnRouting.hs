@@ -23,7 +23,8 @@ import QxFx0.Core.TurnPipeline.Types (RoutingDecision(..))
 import QxFx0.Core.Ego (updateEgoFromTurn)
 import QxFx0.Core.IdentitySignal (buildIdentitySignalSimple)
 import QxFx0.Semantic.SemanticInput (buildSemanticInputSimple)
-import QxFx0.Semantic.Retrieve (detectCommitmentEngagement)
+import QxFx0.Semantic.Retrieve (detectCommitmentEngagement, engagementTopicFor)
+import QxFx0.Semantic.Morphology (extractContentNouns)
 import QxFx0.Core.TurnModulation (computeTensionDelta)
 import QxFx0.Core.TurnRender
   ( deriveSemanticAnchor
@@ -138,7 +139,10 @@ routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss his
       routingSalience = svSalience selfVerdict
       commitmentEngagement =
         case ssSemanticCommitments ss of
-          Just store -> detectCommitmentEngagement store currentTopic atomSet
+          Just store ->
+            let nouns = extractContentNouns input
+                topics = [currentTopic] ++ nouns
+            in detectCommitmentEngagement store (engagementTopicFor store topics) input atomSet
           Nothing    -> CommitmentEngagement [] False NoMatch
       cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience conatusEnergy doubt retrievedEpisodes commitmentEngagement
       FamilyCascade{..} = cascade
