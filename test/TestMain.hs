@@ -46,6 +46,7 @@ import Test.Suite.TrainingCycle (trainingCycleTests)
 import Test.Suite.ReliabilityHardening (reliabilityHardeningTests)
 import Test.Suite.M6Witness (m6WitnessTests)
 import Test.Suite.M6FeltGate (m6FeltGateTests)
+import Test.Suite.M6FeltBenchmark (m6FeltBenchmarkTests)
 import Test.Suite.M5Regime (m5RegimeTests)
 import Test.Suite.SubstrateNetwork (substrateTests)
 import Test.Suite.AtomStore (atomStoreTests)
@@ -61,7 +62,7 @@ main :: IO ()
 main = do
   mGroup <- lookupEnv "QXFX0_AGGREGATE_GROUP"
   let coreTests = coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests
-        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ selfDivergenceTests ++ essenceCollapseTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m6FeltGateTests ++ m5RegimeTests ++ substrateTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
+        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ selfDivergenceTests ++ essenceCollapseTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m6FeltGateTests ++ m6FeltBenchmarkTests ++ m5RegimeTests ++ substrateTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
       groups =
         [ ("core", coreTests)
         , ("runtime", runtimeInfrastructureTests)

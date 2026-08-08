@@ -701,6 +701,7 @@ common test-common
     Test.Suite.Observability
     Test.Suite.TraceAnalysis
     Test.Suite.M6FeltGate
+    Test.Suite.M6FeltBenchmark
     Test.Suite.RoundTrip
     Test.Suite.NativeSQLiteNulls
     Test.Suite.ResponseContentAdmission

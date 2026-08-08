@@ -65,3 +65,43 @@ The gate currently fails fail-closed — as intended. Real sessions have
 not yet produced traces that pass all six gates under governed-evidence
 conditions. The measure by which a session becomes "M6-FELT evidence" is
 now mechanical and public.
+
+## 6. Bounded benchmark result (2026-08-08)
+
+Per `M6_WITNESS_PROTOCOL.md` §7.3, the bounded benchmark is a real
+12-turn domain-dialogue session (production runtime: real PGF, real
+SQLite persistence) read back exactly as a replay consumer sees it
+(`turn_quality.replay_trace_json`), evaluated by `evaluateM6FeltGate`.
+Fixture: `Test.Suite.M6FeltBenchmark` — 12 turns over the definition
+corpus (свобода, ответственность, истина) with a distinction turn, a
+challenge turn, and follow-ups.
+
+**Recorded mechanical verdict: `M6FeltNotProven [FeltGate5NonFallback]`.**
+
+- **Passing (mechanically established on the live session):**
+  `FeltGateGovernedEvidence` (every turn `EvidenceGoverned`),
+  Gate 1 (definition; turns 1–3 emit 3 predicates each with rendered
+  text), Gate 2 (distinction; focuses свобода / ответственность /
+  истина), Gate 3 (repair; challenge turns show
+  `trcCommitmentEngaged = 1` with `CsaSuppress`), Gate 4 (commitment;
+  12 turns, count 1→5, monotone without retraction).
+- **Blocking (Gate 5, non-fallback):** 7 of 12 turns do not linearize
+  through the semantic core.  Turns covering distinction, linkage,
+  proof, and hypothesis questions fall back to
+  `gf_response_plan:response_plan_without_propositions` (no GF
+  propositions produced) or `russian_compatibility_shim`; the
+  def-initional turns (`что такое X?`) linearize cleanly
+  (`covered_exact`, `AuthorityCanonical`, `linearizationOk`).
+
+**What this means.**  The M6-FELT gate is now mechanical, and its first
+real-session result is precise: C1–C4 contours hold on live governed
+sessions; the non-fallback precondition fails for non-definitional turns.
+M6-FELT stays NOT PROVEN.  The recorded blocker for B3/B2 progression is
+therefore a **GF linearizer coverage gap** (response-plan propositions
+are missing for distinction/linkage/proof/hypothesis moves), not a gap in
+the definition contour or in the evidence record.
+
+`Test.Suite.M6FeltBenchmark` pins this verdict as an anti-rot contract:
+if the verdict changes (gate starts passing, or another gate joins the
+failure list), the test fails and the recorded result must be updated
+deliberately.
