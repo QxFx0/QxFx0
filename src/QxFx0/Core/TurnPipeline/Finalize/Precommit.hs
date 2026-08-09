@@ -138,8 +138,8 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprFeedbackLoopActive = feedbackLoopActive
       }
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
-buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnInput turnSignals turnPlan turnArtifacts precommitPlan precommitResults = do
   let feedbackLoopActive = fprFeedbackLoopActive precommitResults
       static = fppStatic precommitPlan
       (newDreamState, newMeaningGraph, rewireEventsCount) =
@@ -156,6 +156,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface systemState turnInput turn
         buildNextSystemState
           updateHistory
           mClaimPayload
+          ablation
           systemState
           turnInput
           turnSignals

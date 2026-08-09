@@ -18,6 +18,7 @@ import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
 import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), emptyStanceDefense)
 import QxFx0.Semantic.Stance (defendOrAdapt, evidenceWeight, recoverStance, selectNearestSatisfying, selectFarthestPoint, extractUserStance, stanceSimilarity, collapseThreshold, Collapse(..))
 import Data.Maybe (fromJust, fromMaybe, isJust)
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.TurnPipeline.Protocol
   ( TurnPlan(..)
   , TurnInput(..)
@@ -256,6 +257,7 @@ revisionTests =
             bundle <- buildFinalizePrecommit
                         (pipelineUpdateHistory testProtocolPipelineIO)
                         (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                        defaultControlAAblation
                         ssWithStore ti' ts tp' ta precommitPlan precommitResults
             let nextSs = fpbNextSs bundle
                 mStore = ssSemanticCommitments nextSs

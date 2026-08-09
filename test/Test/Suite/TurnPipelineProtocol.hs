@@ -51,6 +51,7 @@ import QxFx0.Core.PipelineIO
   , pipelineParseAuthoritySurface
   )
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), PersistenceErrorDetails(..))
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.TurnPipeline.Protocol
   ( RoutingDecision(..)
   , DetectedAnomaly(..)
@@ -584,8 +585,8 @@ testPrepareEffectPlanDeterministicProperty :: Test
 testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect planning is deterministic" $
   forAll (elements prepareInputs) $ \rawInput ->
     let input = T.pack rawInput
-        plan1 = summarizePreparePlan (planPrepareEffects emptySystemState input testEpochZero)
-        plan2 = summarizePreparePlan (planPrepareEffects emptySystemState input testEpochZero)
+        plan1 = summarizePreparePlan (planPrepareEffects False emptySystemState input testEpochZero)
+        plan2 = summarizePreparePlan (planPrepareEffects False emptySystemState input testEpochZero)
     in plan1 == plan2
   where
     prepareInputs =
@@ -613,7 +614,7 @@ testPrepareEffectPlanDeterministicProperty = quickCheckTest "prepare effect plan
 testPrepareCurrentTimeDeterministicInjection :: Test
 testPrepareCurrentTimeDeterministicInjection = TestCase $ do
   let fixedTime = UTCTime (ModifiedJulianDay 12345) 3600
-      plan = planPrepareEffects emptySystemState "deterministic time test" fixedTime
+      plan = planPrepareEffects False emptySystemState "deterministic time test" fixedTime
   assertEqual "psCurrentTime must match injected time"
     fixedTime (psCurrentTime (pepStatic plan))
 
@@ -712,6 +713,7 @@ testBlockedConceptsRetentionIsBoundedAndDeduplicated = TestCase $
                   buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
                     (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                    defaultControlAAblation
                     state
                     tiBlocked
                     ts
@@ -762,7 +764,7 @@ testPrepareEffectsResolveConcurrently = TestCase $ do
           defaultTestPipelineConfig
             { tpcInterpreter = trackedPrepareInterpreter activeRef maxRef
             }
-      preparePlan = planPrepareEffects emptySystemState "что такое свобода" testEpochZero
+      preparePlan = planPrepareEffects False emptySystemState "что такое свобода" testEpochZero
   _ <- resolvePrepareEffects pio preparePlan
   maxActive <- readIORef maxRef
   assertBool "prepare effects should overlap instead of running strictly one-by-one" (maxActive >= 3)
@@ -795,7 +797,7 @@ testPrepareMetricsExposeHonestPhaseNames :: Test
 testPrepareMetricsExposeHonestPhaseNames = TestCase $
   withDeterministicEmbedding $ do
     let ss = emptySystemState
-        preparePlan = planPrepareEffects ss "что такое свобода" testEpochZero
+        preparePlan = planPrepareEffects False ss "что такое свобода" testEpochZero
     prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
     let ti = buildTurnInput ss "request-phase" "session-phase" preparePlan prepareResults
         phaseNames = sort (map ptPhase (tmPhases (tiMetrics ti)))
@@ -855,7 +857,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
     let ts = ts0 { tsNarrativeFragment = Just "narrative_override_attempt" }
         routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects strictShadowPio routePlan
-    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) Nothing False ss ti ts routePlan routeResults
+    let turnPlan = buildRouteTurnPlan FmarOff (pipelineShadowPolicy strictShadowPio) Nothing False False ss ti ts routePlan routeResults
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts turnPlan
     renderResults <- resolveRenderEffects strictShadowPio renderPlan
     let turnArtifacts = buildTurnArtifacts ss ti ts turnPlan renderPlan renderResults
@@ -865,6 +867,7 @@ testNarrativeHintCannotBypassShadowGate = TestCase $
           buildFinalizePrecommit
             (pipelineUpdateHistory strictShadowPio)
             (pipelineParseAuthoritySurface strictShadowPio)
+            defaultControlAAblation
             ss
             ti
             ts
@@ -916,6 +919,7 @@ testAdvisoryShadowDivergenceDoesNotTriggerRecovery = TestCase $
           buildFinalizePrecommit
             (pipelineUpdateHistory strictPio)
             (pipelineParseAuthoritySurface strictPio)
+            defaultControlAAblation
             ss
             ti
             ts
@@ -953,7 +957,7 @@ testShadowVetoAllowedWithinWindow = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False False ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger when count < max"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must increment"
@@ -981,7 +985,7 @@ testShadowVetoExhaustedAfterMax = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False False ss ti ts routePlan routeResults
     assertBool "shadow gate must be bypassed when exhausted"
       (not (tpShadowGateTriggered turnPlan))
     assertBool "shadow message must contain exhaustion telemetry"
@@ -1008,7 +1012,7 @@ testShadowVetoWindowResets = TestCase $
           , srDiagnostics = []
           }
         routeResults = RouteEffectResults shadowResult AgdaMissingInput
-        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False ss ti ts routePlan routeResults
+        turnPlan = buildRouteTurnPlan FmarOff ShadowBlockOnUnavailableOrDivergence Nothing False False ss ti ts routePlan routeResults
     assertBool "shadow gate must trigger after window reset"
       (tpShadowGateTriggered turnPlan)
     assertEqual "veto count must reset to 1 after expiry"
@@ -1758,6 +1762,7 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
             (pipelineParseAuthoritySurface testProtocolPipelineIO)
+            defaultControlAAblation
             ss
             ti
             ts
@@ -1780,8 +1785,8 @@ testFmarLiveOverridesRouting = TestCase $
     let routePlan = planRouteEffects ss ti ts
         pio = testProtocolPipelineIO
     routeResults <- resolveRouteEffects pio routePlan
-    let tpOff  = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
-        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+    let tpOff  = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
+        tpLive = buildRouteTurnPlan FmarLive (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
     case tpFmarDirective tpOff of
       Just _  -> assertFailure "FmarOff must not produce an FMAR directive"
       Nothing -> pure ()
@@ -2233,6 +2238,7 @@ testRenderBlockedPersistsSafeRecoveryTrace = TestCase $
           buildFinalizePrecommit
             (pipelineUpdateHistory testProtocolPipelineIO)
             (pipelineParseAuthoritySurface testProtocolPipelineIO)
+            defaultControlAAblation
             ss
             ti
             ts
@@ -2287,6 +2293,7 @@ testResponsePlanGfEffectUsesCanonicalSurface = TestCase $
       buildFinalizePrecommit
         (pipelineUpdateHistory pio)
         (pipelineParseAuthoritySurface pio)
+        defaultControlAAblation
         ss
         ti
         ts
@@ -2682,7 +2689,7 @@ buildPreparedFixture rawInput = do
             Map.empty
             Map.empty
         }
-      preparePlan = planPrepareEffects ss rawInput testEpochZero
+      preparePlan = planPrepareEffects False ss rawInput testEpochZero
   prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
   let ti = buildTurnInput ss "request-prop" "session-prop" preparePlan prepareResults
       ts = buildTurnSignals prepareResults
@@ -2693,7 +2700,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixture rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -2713,6 +2720,7 @@ buildFinalizeFixture rawInput = do
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
           (pipelineParseAuthoritySurface testProtocolPipelineIO)
+          defaultControlAAblation
           ss
           ti
           ts
@@ -2737,6 +2745,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
         buildFinalizePrecommit
           (pipelineUpdateHistory testProtocolPipelineIO)
           (pipelineParseAuthoritySurface testProtocolPipelineIO)
+          defaultControlAAblation
           ss
           ti
           ts
@@ -2763,14 +2772,14 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithState startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
   :: SystemState -> T.Text
   -> IO (SystemState, TurnInput, TurnSignals)
 buildPreparedFixtureWithState startSs rawInput = do
-  let preparePlan = planPrepareEffects startSs rawInput testEpochZero
+  let preparePlan = planPrepareEffects False startSs rawInput testEpochZero
   prepareResults <- resolvePrepareEffects testProtocolPipelineIO preparePlan
   let ti = buildTurnInput startSs "request-prop" "session-prop" preparePlan prepareResults
       ts = buildTurnSignals prepareResults
@@ -3155,7 +3164,7 @@ testPrepareConsciousnessUsesAdmittedEarlyFamily :: Test
 testPrepareConsciousnessUsesAdmittedEarlyFamily = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+      plan = planPrepareEffects False startSs semanticFrameInput testEpochZero
   case pepConsciousnessRequest plan of
     PrepareReqConsciousness semanticInput _ _ _ _ ->
       assertBool "prepare consciousness request should consume a weakened admitted early family rather than preserve raw CMDescribe"
@@ -3208,7 +3217,7 @@ testPrepareUsesAdmittedSemanticLogicFamily :: Test
 testPrepareUsesAdmittedSemanticLogicFamily = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+      plan = planPrepareEffects False startSs semanticFrameInput testEpochZero
   assertBool "prepare static should carry the admitted early family selected from admitted weighting"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair])
 
@@ -3252,7 +3261,7 @@ testPrepareUsesAdmittedSemanticContributionPlane :: Test
 testPrepareUsesAdmittedSemanticContributionPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs semanticFrameInput testEpochZero
+      plan = planPrepareEffects False startSs semanticFrameInput testEpochZero
   assertBool "prepare should carry the early family selected from admitted semantic contributions"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair])
 
@@ -3293,7 +3302,7 @@ testPrepareUsesAdmittedAtomContributionPlane :: Test
 testPrepareUsesAdmittedAtomContributionPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted atom contributions"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3334,7 +3343,7 @@ testPrepareUsesAdmittedAtomExtractionPlane :: Test
 testPrepareUsesAdmittedAtomExtractionPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted atom extraction plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3387,7 +3396,7 @@ testPrepareUsesAdmittedAtomFindingPlane :: Test
 testPrepareUsesAdmittedAtomFindingPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted atom finding plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3440,7 +3449,7 @@ testPrepareUsesAdmittedStructuralAtomPlane :: Test
 testPrepareUsesAdmittedStructuralAtomPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted structural atom plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3521,7 +3530,7 @@ testPrepareUsesAdmittedLexicalClusterPhraseDecisionPlane :: Test
 testPrepareUsesAdmittedLexicalClusterPhraseDecisionPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted lexical/cluster phrase decision plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3599,7 +3608,7 @@ testPrepareUsesAdmittedLexicalClusterPhraseContainmentPlane :: Test
 testPrepareUsesAdmittedLexicalClusterPhraseContainmentPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted lexical/cluster phrase containment plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3662,7 +3671,7 @@ testPrepareUsesAdmittedLexicalClusterHitPlane :: Test
 testPrepareUsesAdmittedLexicalClusterHitPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted lexical/cluster hit plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -3712,7 +3721,7 @@ testPrepareUsesAdmittedLexicalClusterMatchingPlane :: Test
 testPrepareUsesAdmittedLexicalClusterMatchingPlane = TestCase $ do
   let startSs = authoritativePreparedFixtureState
         { ssTruthContractStatus = LegacyIncompleteSurface }
-      plan = planPrepareEffects startSs "в чем смысл жизни" testEpochZero
+      plan = planPrepareEffects False startSs "в чем смысл жизни" testEpochZero
   assertBool "prepare should carry the early family selected from admitted lexical/cluster matching plane"
     (psRecommendedFamily (pepStatic plan) `elem` [CMClarify, CMRepair, CMGround, CMNextStep])
 
@@ -5050,7 +5059,7 @@ testAnomalyRenderedInArtifacts = TestCase $
     let routePlan = planRouteEffects ss ti ts
     routeResults <- resolveRouteEffects testProtocolPipelineIO routePlan
     let detected = DetectedAnomaly fakeAnomaly Nothing
-        tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just detected) False ss ti ts routePlan routeResults
+        tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy testProtocolPipelineIO) (Just detected) False False ss ti ts routePlan routeResults
     -- Check that anomaly is wired into TurnPlan
     assertBool "anomaly surface must be populated in TurnPlan"
       (case tpAnomalySurface tp of

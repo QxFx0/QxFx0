@@ -133,7 +133,7 @@ phaseM2dTests =
     -- Phase 2.5 (M2d) — psConatusEnergy invariant
   , TestLabel "buildPrepareEffectPlan stores psConatusEnergy matching direct computation" $
       TestCase $ do
-        let plan       = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
+        let plan       = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
             blanket    = computeSelfBlanket viableSystemState
             violations = checkInitialBlanket blanket
             expected   = computeConatusEnergy blanket violations
@@ -141,7 +141,7 @@ phaseM2dTests =
 
   , TestLabel "buildPrepareEffectPlan threads conatusEnergy into PrepareReqConsciousness" $
       TestCase $ do
-        let plan     = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
+        let plan     = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
             expected = psConatusEnergy (pepStatic plan)
         case pepConsciousnessRequest plan of
           PrepareReqConsciousness _ _ _ ce _ ->
@@ -151,7 +151,7 @@ phaseM2dTests =
 
   , TestLabel "buildPrepareEffectPlan threads conatusEnergy into PrepareReqIntuition" $
       TestCase $ do
-        let plan     = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
+        let plan     = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
             expected = psConatusEnergy (pepStatic plan)
         case pepIntuitionRequest plan of
           PrepareReqIntuition _ _ _ _ ce _ _ ->
@@ -161,7 +161,7 @@ phaseM2dTests =
 
   , TestLabel "viable SystemState yields a healthy ConatusEnergy (gate does not fire)" $
       TestCase $ do
-        let plan = buildPrepareEffectPlan viableSystemState "пробный ввод" testEpochZero
+        let plan = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
             ce   = psConatusEnergy (pepStatic plan)
         assertBool
           ("ceScalar should be >= 0 on a viable state, got " ++ show (ceScalar ce))

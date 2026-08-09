@@ -589,7 +589,7 @@ testPreparePathUsesDefaultFieldHeuristics = TestCase $ do
       ss = emptySystemState
         { ssSelfState = (ssSelfState emptySystemState) { selfFieldHeuristics = customHeuristics }
         }
-      plan = buildPrepareEffectPlan ss "что такое свобода" (UTCTime (fromGregorian 2026 1 1) 0)
+      plan = buildPrepareEffectPlan False ss "что такое свобода" (UTCTime (fromGregorian 2026 1 1) 0)
   assertEqual "prepare path should thread persisted field heuristics"
     (selfFieldHeuristics (ssSelfState ss))
     (psFieldHeuristics (pepStatic plan))

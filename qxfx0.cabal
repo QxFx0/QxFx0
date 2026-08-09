@@ -661,6 +661,7 @@ common test-common
     Test.Suite.RussianQuality
     Test.Suite.VecProperties
     Test.Suite.BoundedLists
+    Test.Suite.ControlAAblation
     Test.Suite.EgoRead
     Test.Suite.SelfBlanket
     Test.Suite.SelfConatus

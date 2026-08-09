@@ -364,9 +364,12 @@ maximumOrZero = foldr max 0.0
 
 -- | Extracted Phase: Essence commitment computation (CF-2).
 -- Evaluates witness + shouldCommit for the current turn, returning
--- the next Essence state and any commitment trigger.
-computeNextEssence :: SystemState -> TurnInput -> TurnPlan -> (Essence, Maybe CommitmentTrigger)
-computeNextEssence ss ti tp =
+-- the next Essence state and any commitment trigger. When
+-- @essenceCommitDisabled@ is set (B2 Control-A ablation), the trajectory
+-- is still witnessed and evolved, but 'shouldCommit' is bypassed and
+-- always yields 'Nothing' (no new commitments).
+computeNextEssence :: Bool -> SystemState -> TurnInput -> TurnPlan -> (Essence, Maybe CommitmentTrigger)
+computeNextEssence essenceCommitDisabled ss ti tp =
   case tpAnomalyStateEffect tp of
     Just (ResetEssence resetEssence _resetEvent) ->
       (resetEssence, Nothing)
@@ -383,14 +386,16 @@ computeNextEssence ss ti tp =
                 (fromMaybe defaultDeliberation (tpDeliberation tp))
                 trajectory
         -- no feature flag: Essence commitment is law-driven (ADR-0036 Policy A).
-        in case shouldCommit defaultEssenceModulation trajectory' of
-             Nothing      -> (EssenceUncommitted trajectory', Nothing)
-             Just trigger ->
-               ( EssenceCommitted
-                   trajectory'
-                   (commit (ssTurnCount ss + 1) trigger trajectory')
-               , Just trigger
-               )
+        in if essenceCommitDisabled
+             then (EssenceUncommitted trajectory', Nothing)
+             else case shouldCommit defaultEssenceModulation trajectory' of
+               Nothing      -> (EssenceUncommitted trajectory', Nothing)
+               Just trigger ->
+                 ( EssenceCommitted
+                     trajectory'
+                     (commit (ssTurnCount ss + 1) trigger trajectory')
+                 , Just trigger
+                 )
       EssenceCommitted trajectory commitment ->
         let trajectory' =
               witness
@@ -402,8 +407,8 @@ computeNextEssence ss ti tp =
                 trajectory
         in (EssenceCommitted trajectory' commitment, Nothing)
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
-buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
+buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
       turnSalience = turnInputSalience ti
@@ -411,7 +416,8 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
       narrativeSuccess = maybe False (not . T.null) (tsNarrativeFragment ts)
       newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
       -- WP1 (contour closure): law-driven commitment (CF-2: extracted to computeNextEssence).
-      (nextEssence, commitmentTrigger) = computeNextEssence ss ti tp
+      -- B2 Control-A: caDisableEssence bypasses shouldCommit entirely.
+      (nextEssence, commitmentTrigger) = computeNextEssence (caDisableEssence ablation) ss ti tp
       -- Phase 7: bounded calibration signal + rooted tree maintenance.
       -- Compute signal from conatus trend, uncertainty, loop risk,
       -- and branch health.  Only adapt when committed.
@@ -811,8 +817,12 @@ buildNextSystemState updateHistory mClaimPayload ss ti ts tp ta newDreamState ne
           }
         Nothing -> nextWithMood
       -- CTS-42: compute the admission decision once, apply to both
-      -- anchor and surface-parsed claims.
-      commitDecision = admitCommitmentToStore (etoTruthContractStatus executedOutcome)
+      -- anchor and surface-parsed claims. B2 Control-A: caDisableAdmission
+      -- bypasses CTS-42 — every claim is admitted (no suppression).
+      commitDecision =
+        if caDisableAdmission ablation
+          then CsaAdmitCanonical
+          else admitCommitmentToStore (etoTruthContractStatus executedOutcome)
       in ( nextWithMetrics
     , commitmentTrigger
     , commitDecision

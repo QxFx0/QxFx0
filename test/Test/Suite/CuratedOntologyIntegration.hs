@@ -46,6 +46,7 @@ testCuratedAndOntologyPersistence = TestLabel "Curated and ontology persistence 
     let (nextSs, _, _, _) = buildNextSystemState
                               (\_ h -> h) -- history
                               Nothing      -- claim
+                              defaultControlAAblation
                               ss
                               ti
                               ts

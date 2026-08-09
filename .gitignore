@@ -104,3 +104,6 @@ docs/infra-hardening-tz.md
 # Orphan worktree artifacts
 qxfx0-s13-wt/
 .worktrees/
+
+# B2-EXEC-001 eval packet output (regenerable via scripts/generate_b2_packet.sh)
+test/fixtures/b2-eval/generated/

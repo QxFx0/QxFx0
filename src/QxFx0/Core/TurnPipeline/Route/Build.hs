@@ -6,6 +6,7 @@ module QxFx0.Core.TurnPipeline.Route.Build
   ( buildRouteTurnPlan
   , routeTurnPlan
   , readFmarModeIO
+  , readControlAAblation
   ) where
 
 import QxFx0.Core.Intuition (flashThreshold)
@@ -76,6 +77,8 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnInput(..)
   , TurnPlan(..)
   , TurnSignals(..)
+  , ControlAAblation(..)
+  , controlAEnvVarNames
   )
 import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
@@ -96,8 +99,8 @@ import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe DetectedAnomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
-buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults =
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe DetectedAnomaly -> Bool -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled repairDisabled ss ti ts effectPlan effectResults =
   let atomSet = tiAtomSet ti
       mAnomaly = daAnomaly <$> mDetectedAnomaly
       intuitPosterior = tsIntuitPosterior ts
@@ -131,7 +134,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
                  then (shadowResolution0 { srGateTriggered = False }, True, vetoCount, windowStart)
                  else (shadowResolution0, False, vetoCount + 1, windowStart)
           else (shadowResolution0, False, vetoCount, windowStart)
-      family0 = if hasChallengeMarker (ipfRawText (tiFrame ti))
+      family0 = if hasChallengeMarker (ipfRawText (tiFrame ti)) && not repairDisabled
         then CMConfront
         else srEffectiveFamily shadowResolution
       (family, _, _) = familySenseBundle family0 (tiDialogueCommitmentLedger ti) (tiDialoguePhase ti) (tiDialogueThread ti) (tiSenseVector ti) (tiDoubtScore ti)
@@ -248,12 +251,14 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
 
       activeScene = inferActiveScene (tiNewTrace ti) (map maTag (asAtoms atomSet)) (ssActiveScene ss) defaultScenes
       commitmentEngagement =
-        case ssSemanticCommitments ss of
-          Just store ->
-            let nouns = extractContentNouns (ipfRawText (tiFrame ti))
-                topics = [tiBestTopic ti] ++ nouns
-            in detectCommitmentEngagement store (engagementTopicFor store topics) (ipfRawText (tiFrame ti)) atomSet
-          Nothing    -> CommitmentEngagement [] False NoMatch
+        if repairDisabled && hasChallengeMarker (ipfRawText (tiFrame ti))
+          then CommitmentEngagement [] False NoMatch
+          else case ssSemanticCommitments ss of
+            Just store ->
+              let nouns = extractContentNouns (ipfRawText (tiFrame ti))
+                  topics = [tiBestTopic ti] ++ nouns
+              in detectCommitmentEngagement store (engagementTopicFor store topics) (ipfRawText (tiFrame ti)) atomSet
+            Nothing    -> CommitmentEngagement [] False NoMatch
       metricsWithThresholds =
         recordThresholdProbe "shadow_gate" 1.0 (srGateTriggered shadowResolution)
           . recordThresholdProbe "legitimacy_pass" legitimacyPassThreshold
@@ -323,12 +328,29 @@ derivePostLegitTruthContractStatus preTruthStatus ti sc shadowResolution legitSc
 routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> IO TurnPlan
 routeTurnPlan pio ss ti ts effectPlan effectResults = do
   fmarMode <- readFmarModeIO pio
-  mSemanticDisable <- resolveTurnEffect pio (TurnReqReadEnv "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST")
-  let semanticFirstDisabled = case mSemanticDisable of
-        TurnResReadEnv (Just "1") -> True
-        _ -> False
+  ablation <- readControlAAblation pio
+  let semanticFirstDisabled = caDisableSemanticFirst ablation || caDisableContent ablation
       detectedAnomaly = QxFx0.Core.TurnPipeline.Route.Anomaly.detectAnomaly ss ti
-  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) detectedAnomaly semanticFirstDisabled ss ti ts effectPlan effectResults)
+  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) detectedAnomaly semanticFirstDisabled (caDisableRepair ablation) ss ti ts effectPlan effectResults)
+
+-- | Read the B2 Control-A ablation set from the environment through the
+-- pipeline effect boundary. 'Nothing' / any value other than @"1"@ means
+-- the ablation is inactive. See 'controlAEnvVarNames' for the key list.
+readControlAAblation :: PipelineIO -> IO ControlAAblation
+readControlAAblation pio = do
+  rs <- traverse (readOne pio) controlAEnvVarNames
+  let envTrue k = lookup k rs == Just True
+  pure (ControlAAblation
+    { caDisableSemanticFirst = envTrue "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST"
+    , caDisableEssence       = envTrue "QXFX0_CONTROL_A_DISABLE_ESSENCE"
+    , caDisableAdmission     = envTrue "QXFX0_CONTROL_A_DISABLE_ADMISSION"
+    , caDisableRepair        = envTrue "QXFX0_CONTROL_A_DISABLE_REPAIR"
+    , caDisableContent       = envTrue "QXFX0_CONTROL_A_DISABLE_CONTENT"
+    })
+  where
+    readOne pio key = do
+      result <- resolveTurnEffect pio (TurnReqReadEnv key)
+      pure (key, case result of TurnResReadEnv (Just "1") -> True; _ -> False)
 
 -- | Read 'QXFX0_FMAR' once via the pipeline IO boundary and parse it into
 -- an 'FmarMode'. Mirrors 'shouldUseGfRuntime' in the render stage.

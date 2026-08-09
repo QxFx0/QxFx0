@@ -66,6 +66,7 @@ import QxFx0.Core.PipelineIO
   , pipelineUpdateHistory
   , pipelineParseAuthoritySurface
   )
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 import Test.Support.TurnPipelineFixtures
@@ -256,7 +257,7 @@ integrationContradictionTraceAndLedger = TestLabel "contradiction trace and ledg
     -- Rebuild route plan with overridden input
     let routePlan = planRouteEffects ss tiOverride ts
     routeResults <- resolveRouteEffects pio routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss tiOverride ts routePlan routeResults
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss tiOverride ts routePlan routeResults
 
     -- Render
     let renderPlan = planRenderEffects LocalRecoveryEnabled ss tiOverride ts tp
@@ -269,6 +270,7 @@ integrationContradictionTraceAndLedger = TestLabel "contradiction trace and ledg
     bundle <- buildFinalizePrecommit
                 (pipelineUpdateHistory pio)
                 (pipelineParseAuthoritySurface pio)
+                defaultControlAAblation
                 ss tiOverride ts tp ta precommitPlan precommitResults
 
     let trace = tqpReplayTrace (fpbProjection bundle)
@@ -323,7 +325,7 @@ integrationNoContradictionNoHint = TestLabel "no contradiction -> no CMReflect h
     -- Rebuild route plan with overridden input
     let routePlan = planRouteEffects ss tiOverride ts
     routeResults <- resolveRouteEffects pio routePlan
-    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss tiOverride ts routePlan routeResults
+    let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss tiOverride ts routePlan routeResults
 
     -- Render
     let renderPlan = planRenderEffects LocalRecoveryEnabled ss tiOverride ts tp
@@ -336,6 +338,7 @@ integrationNoContradictionNoHint = TestLabel "no contradiction -> no CMReflect h
     bundle <- buildFinalizePrecommit
                 (pipelineUpdateHistory pio)
                 (pipelineParseAuthoritySurface pio)
+                defaultControlAAblation
                 ss tiOverride ts tp ta precommitPlan precommitResults
 
     let trace = tqpReplayTrace (fpbProjection bundle)

@@ -21,6 +21,7 @@ import QxFx0.Core.PipelineIO
   , pipelineUpdateHistory
   )
 import QxFx0.Core.TurnPipeline.Finalize.State (computeNextEssence)
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.TurnPipeline.Protocol
   ( FinalizePrecommitBundle(..)
   , AnomalyStateEffect(..)
@@ -354,7 +355,7 @@ testFinalizePreservesComputedSelfState =
     (ss, ti0, ts, tp0, ta) <- buildRenderedFixtureWithState calibrationReadyState "что такое свобода"
     let ti = ti0 { tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 } }
         tp = tp0 { tpCommitmentEngagement = emptyCommitmentEngagement }
-        (expectedEssence, _) = computeNextEssence ss ti tp
+        (expectedEssence, _) = computeNextEssence False ss ti tp
         oldSelf = ssSelfState ss
     bundle <- finalizeFixture ss ti ts tp ta
     let nextSs = fpbNextSs bundle
@@ -482,6 +483,7 @@ finalizeFixture ss ti ts tp ta = do
   buildFinalizePrecommit
     (pipelineUpdateHistory testProtocolPipelineIO)
     (pipelineParseAuthoritySurface testProtocolPipelineIO)
+    defaultControlAAblation
     ss ti ts tp ta plan results
 
 calibrationReadyState :: SystemState

@@ -1,3 +1,5 @@
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StrictData #-}
 {-|
 Description : observer — Shared turn-pipeline phase types for input/signals/plans/artifacts/results. -}
@@ -23,6 +25,9 @@ module QxFx0.Core.TurnPipeline.Types
   , tpStrategyFamily
   , tpPreShadowFamily
   , tpPrincipledModePair
+  , ControlAAblation(..)
+  , defaultControlAAblation
+  , controlAEnvVarNames
   ) where
 
 import QxFx0.Types
@@ -63,6 +68,41 @@ import QxFx0.Types.Anomaly (Anomaly, AnomalySurface, AnomalyTrace)
 
 import Data.Text (Text)
 import Data.Time.Clock (UTCTime)
+
+-- | B2 Control-A ablation set (structure-ablated, fluency-matched).
+--
+-- Each flag is read from a dedicated env var (see 'controlAEnvVarNames')
+-- so the generation harness can run the identical pipeline with
+-- subject-structure removed while keeping the surface engine intact.
+-- All fields default to False in 'defaultControlAAblation'.
+data ControlAAblation = ControlAAblation
+  { caDisableSemanticFirst :: !Bool
+    -- ^ Semantic-first path off: assembly/template fallback only.
+  , caDisableEssence :: !Bool
+    -- ^ 'shouldCommit' always returns 'Nothing' (no new commitments).
+  , caDisableAdmission :: !Bool
+    -- ^ CTS-42 bypassed: all claims admitted (no suppression/quarantine).
+  , caDisableRepair :: !Bool
+    -- ^ Challenge routed to the generic response, not the repair path.
+  , caDisableContent :: !Bool
+    -- ^ Semantic.Content predicates not appended (template-only output).
+  } deriving stock (Eq, Show)
+
+-- | No ablation: full System behaviour.
+defaultControlAAblation :: ControlAAblation
+defaultControlAAblation = ControlAAblation False False False False False
+
+-- | Env vars that drive the ablation set (kept in sync with
+-- 'readControlAAblation' in the route stage and with the runtime
+-- env allow-list in the HTTP sidecar).
+controlAEnvVarNames :: [Text]
+controlAEnvVarNames =
+  [ "QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST"
+  , "QXFX0_CONTROL_A_DISABLE_ESSENCE"
+  , "QXFX0_CONTROL_A_DISABLE_ADMISSION"
+  , "QXFX0_CONTROL_A_DISABLE_REPAIR"
+  , "QXFX0_CONTROL_A_DISABLE_CONTENT"
+  ]
 
 data RoutingDecision = RoutingDecision
   { rdFamily         :: !CanonicalMoveFamily

@@ -44,6 +44,8 @@ module QxFx0.Core.TurnPipeline.Protocol
   , planRouteEffects
   , resolveRouteEffects
   , buildRouteTurnPlan
+  , routeTurnPlan
+  , readControlAAblation
   , planRenderEffects
   , planRenderEffectsForRuntime
   , resolveRenderEffects
@@ -101,6 +103,8 @@ import QxFx0.Core.TurnPipeline.Types
   , TurnResult(..)
   , TurnSignals(..)
   , turnResultOutput
+  , ControlAAblation
+  , caDisableRepair
   )
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified Data.Map.Strict as Map
@@ -146,8 +150,8 @@ import QxFx0.Types.Persistence (StateVersion)
 data PreparedTurn = PreparedTurn !TurnInput !TurnSignals
 data PlannedTurn = PlannedTurn !TurnInput !TurnSignals !TurnPlan
 
-planPrepareEffects :: SystemState -> Text -> UTCTime -> PrepareEffectPlan
-planPrepareEffects = buildPrepareEffectPlan
+planPrepareEffects :: Bool -> SystemState -> Text -> UTCTime -> PrepareEffectPlan
+planPrepareEffects repairDisabled = buildPrepareEffectPlan repairDisabled
 
 resolvePrepareEffects :: PipelineIO -> PrepareEffectPlan -> IO PrepareEffectResults
 resolvePrepareEffects = Prepare.resolvePrepareEffects
@@ -164,8 +168,14 @@ planRouteEffects = Route.planRouteEffects
 resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects = Route.resolveRouteEffects
 
-buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe DetectedAnomaly -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
+buildRouteTurnPlan :: FmarMode -> ShadowPolicy -> Maybe DetectedAnomaly -> Bool -> Bool -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> TurnPlan
 buildRouteTurnPlan = Route.buildRouteTurnPlan
+
+routeTurnPlan :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> RouteEffectPlan -> RouteEffectResults -> IO TurnPlan
+routeTurnPlan = Route.routeTurnPlan
+
+readControlAAblation :: PipelineIO -> IO ControlAAblation
+readControlAAblation = Route.readControlAAblation
 
 planRenderEffects :: LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan
 planRenderEffects = Route.planRenderEffects emptyRuntimeParadigms
@@ -185,7 +195,7 @@ planFinalizePrecommit = Finalize.planFinalizePrecommit
 resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePrecommitResults
 resolveFinalizePrecommit = Finalize.resolveFinalizePrecommit
 
-buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
+buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
 buildFinalizePrecommit = Finalize.buildFinalizePrecommit
 
 planFinalizeCommit :: Text -> SystemState -> TurnInput -> TurnSignals -> TurnArtifacts -> FinalizePrecommitBundle -> FinalizeCommitPlan
@@ -204,7 +214,8 @@ prepareTurn :: PipelineIO -> SystemState -> Text -> Text -> Text -> IO PreparedT
 prepareTurn pio ss input sessionId requestId = do
   -- Phase C: resolve time up-front so buildPrepareEffectPlan is deterministic
   currentTime <- resolvePrepareCurrentTime pio
-  let prepareEffects = buildPrepareEffectPlan ss input currentTime
+  ablation <- Route.readControlAAblation pio
+  let prepareEffects = buildPrepareEffectPlan (caDisableRepair ablation) ss input currentTime
   prepareResults <- Prepare.resolvePrepareEffects pio prepareEffects
   let ti' = Prepare.buildTurnInput ss requestId sessionId prepareEffects prepareResults
       ts = Prepare.buildTurnSignals prepareResults
@@ -240,9 +251,10 @@ renderTurn pio ss (PlannedTurn ti ts tp) = do
 
 finalizeTurn :: PipelineIO -> SystemState -> Text -> StateVersion -> Text -> RenderedTurn -> IO TurnResult
 finalizeTurn pio ss sessionId expectedVersion _requestId (RenderedTurn ti ts tp ta) = do
+  ablation <- Route.readControlAAblation pio
   let precommitPlan = Finalize.planFinalizePrecommit ss ti ts tp ta
   precommitResults <- Finalize.resolveFinalizePrecommit pio precommitPlan
-  precommitBundle <- Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) (pipelineParseAuthoritySurface pio) ss ti ts tp ta precommitPlan precommitResults
+  precommitBundle <- Finalize.buildFinalizePrecommit (pipelineUpdateHistory pio) (pipelineParseAuthoritySurface pio) ablation ss ti ts tp ta precommitPlan precommitResults
   let commitPlan = Finalize.planFinalizeCommit sessionId ss ti ts ta precommitBundle
   commitResults <- Finalize.resolveFinalizeCommit pio expectedVersion commitPlan
   let turnResult = Finalize.buildFinalizeTurnResult (RenderedTurn ti ts tp ta) precommitBundle commitResults

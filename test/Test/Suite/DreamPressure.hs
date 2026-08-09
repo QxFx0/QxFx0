@@ -410,7 +410,7 @@ buildPreparedFixture rawInput = do
             Map.empty
             Map.empty
         }
-      preparePlan = planPrepareEffects ss rawInput testEpochZero
+      preparePlan = planPrepareEffects False ss rawInput testEpochZero
       pio = mkTestPipelineIO defaultTestPipelineConfig
   prepareResults <- resolvePrepareEffects pio preparePlan
   let ti = buildTurnInput ss "request-dream-pressure" "session-dream-pressure" preparePlan prepareResults
@@ -423,7 +423,7 @@ buildPlannedFixture rawInput = do
   let routePlan = planRouteEffects ss ti ts
       pio = mkTestPipelineIO defaultTestPipelineConfig
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

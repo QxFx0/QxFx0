@@ -23,12 +23,14 @@ module QxFx0.Core.TurnPipeline.Route
   , resolveRenderEffects
   , buildTurnArtifacts
   , readFmarModeIO
+  , readControlAAblation
   ) where
 
 import QxFx0.Core.TurnPipeline.Route.Build
   ( buildRouteTurnPlan
   , routeTurnPlan
   , readFmarModeIO
+  , readControlAAblation
   )
 import QxFx0.Core.TurnPipeline.Route.Anomaly
   ( detectAnomaly

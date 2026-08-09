@@ -27,6 +27,7 @@ import QxFx0.Types.State.SemanticCommitment
   )
 import QxFx0.Types.State.System (ssSemanticCommitments, ssTruthContractStatus)
 import QxFx0.Types.TurnProjection (tqpReplayTrace, trcCommitmentStoreDecision)
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.TurnPipeline.Protocol
   ( FinalizePrecommitBundle(..)
   , TurnArtifacts(..)
@@ -92,6 +93,7 @@ integrationCanonicalAdmits = TestLabel "CTS-42: canonical surface admits claims 
       bundle <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
                     (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                    defaultControlAAblation
                     ss ti ts tp taAuth precommitPlan precommitResults
       let nextSs = fpbNextSs bundle
           trace = tqpReplayTrace (fpbProjection bundle)
@@ -118,6 +120,7 @@ integrationDegradedSuppresses = TestLabel "CTS-42: degraded surface suppresses c
       bundle1 <- buildFinalizePrecommit
                     (pipelineUpdateHistory testProtocolPipelineIO)
                     (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                    defaultControlAAblation
                     ss ti ts tp taAuth precommitPlan precommitResults
       let ss1 = fpbNextSs bundle1
           count1 = maybe 0 (HashMap.size . scsActive) (ssSemanticCommitments ss1)

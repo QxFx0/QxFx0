@@ -24,6 +24,7 @@ import qualified Data.Text as T
 
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types
+import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Runtime.StateDefaults (emptySystemState)
 import QxFx0.Types.Readiness ()
 import QxFx0.Core.PipelineIO
@@ -81,7 +82,7 @@ buildPlannedFixture rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio defaultProtocolFixtureState rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixture :: T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)
@@ -103,6 +104,7 @@ buildFinalizeFixture rawInput = do
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           (pipelineParseAuthoritySurface pio)
+          defaultControlAAblation
           ss
           ti
           ts
@@ -125,6 +127,7 @@ buildFinalizeFixtureWithState startSs rawInput = do
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           (pipelineParseAuthoritySurface pio)
+          defaultControlAAblation
           ss
           ti
           ts
@@ -155,7 +158,7 @@ buildPlannedFixtureWithState startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildPreparedFixtureWithState
@@ -177,6 +180,7 @@ buildAuthoritativePerspectiveFinalizeFixture startSs rawInput = do
         buildFinalizePrecommit
           (pipelineUpdateHistory pio)
           (pipelineParseAuthoritySurface pio)
+          defaultControlAAblation
           ss
           ti
           ts
@@ -250,7 +254,7 @@ testEpochZero = UTCTime (ModifiedJulianDay 0) 0
 
 buildPreparedFixtureWithPipeline :: PipelineIO -> SystemState -> T.Text -> IO (SystemState, TurnInput, TurnSignals)
 buildPreparedFixtureWithPipeline pio startSs rawInput = do
-  let preparePlan = planPrepareEffects startSs rawInput testEpochZero
+  let preparePlan = planPrepareEffects False startSs rawInput testEpochZero
   prepareResults <- resolvePrepareEffects pio preparePlan
   let ti = buildTurnInput startSs "request-prop" "session-prop" preparePlan prepareResults
       ts = buildTurnSignals prepareResults
@@ -261,7 +265,7 @@ buildPlannedFixtureWithPipeline pio startSs rawInput = do
   (ss, ti, ts) <- buildPreparedFixtureWithPipeline pio startSs rawInput
   let routePlan = planRouteEffects ss ti ts
   routeResults <- resolveRouteEffects pio routePlan
-  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False ss ti ts routePlan routeResults
+  let tp = buildRouteTurnPlan FmarOff (pipelineShadowPolicy pio) Nothing False False ss ti ts routePlan routeResults
   pure (ss, ti, ts, tp)
 
 buildRenderedFixtureWithPipeline :: PipelineIO -> SystemState -> T.Text -> IO (SystemState, TurnInput, TurnSignals, TurnPlan, TurnArtifacts)

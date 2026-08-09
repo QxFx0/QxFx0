@@ -356,8 +356,8 @@ data PrepareEffectPlan = PrepareEffectPlan
   , pepApiHealthRequest :: !PrepareEffectRequest
   } deriving stock (Eq, Show)
 
-buildPrepareEffectPlan :: SystemState -> Text -> UTCTime -> PrepareEffectPlan
-buildPrepareEffectPlan ss input currentTime =
+buildPrepareEffectPlan :: Bool -> SystemState -> Text -> UTCTime -> PrepareEffectPlan
+buildPrepareEffectPlan repairDisabled ss input currentTime =
   let rawPhraseDecisions = collectRawLexicalClusterPhraseDecisions input (ssClusters ss)
       admittedPhraseDecisions = admitLexicalClusterPhraseDecisions (LexicalClusterPhraseDecisionAdmissionInput (ssTruthContractStatus ss)) rawPhraseDecisions
       rawPhraseContainment = buildRawLexicalClusterPhraseContainmentFromDecisions (alcpdDecisions admittedPhraseDecisions)
@@ -513,7 +513,7 @@ buildPrepareEffectPlan ss input currentTime =
         ((fam, _):_) -> fam
         [] -> CMGround
       challengeAdjustedRecommendedFamily =
-        if hasChallengeMarker input then CMConfront else recommendedFamily
+        if hasChallengeMarker input && not repairDisabled then CMConfront else recommendedFamily
       earlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
         { efaiTruthContractStatus = ssTruthContractStatus ss
         , efaiConatusGateFired = conatusGateFired

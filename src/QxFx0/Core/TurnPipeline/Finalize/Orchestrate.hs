@@ -36,6 +36,7 @@ finalizeTurnState pipelineIO systemState sessionId expectedVersion _requestId tu
         buildFinalizePrecommit
           (pipelineUpdateHistory pipelineIO)
           (pipelineParseAuthoritySurface pipelineIO)
+          defaultControlAAblation
           systemState
           turnInput
           turnSignals
