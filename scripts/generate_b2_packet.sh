@@ -231,6 +231,25 @@ for task_id in task_ids:
 
     answer_key[task_id] = {"A": label_a, "B": label_b}
 
+    # Pre-registration evidence admissibility: every transcript must carry
+    # EvidenceGoverned. The runtime fail-closes on inadmissible turns under
+    # QXFX0_GOVERNED_EVIDENCE=1, but the packet verifies it per turn from the
+    # captured guard_status (classifyEvidence: Allowed/Blocked -> governed).
+    def guard_evidence(rec):
+        try:
+            resp = json.loads(rec["response"])
+        except Exception:
+            return "EvidenceInadmissible"
+        tag = resp.get("guard_status", "")
+        return "EvidenceGoverned" if tag.startswith("Allowed") or tag.startswith("Blocked") else "EvidenceInadmissible"
+
+    for i, t in enumerate(sys_turns):
+        ev_a = guard_evidence(turns_a[i]) if i < len(turns_a) else "EvidenceInadmissible"
+        ev_b = guard_evidence(turns_b[i]) if i < len(turns_b) else "EvidenceInadmissible"
+        if ev_a != "EvidenceGoverned" or ev_b != "EvidenceGoverned":
+            print(f"  FAIL {task_id}: inadmissible evidence (A={ev_a}, B={ev_b})")
+            sys.exit(1)
+
     # Write blind pair
     pair = {
         "task_id": task_id,
@@ -240,6 +259,8 @@ for task_id in task_ids:
                 "user": t.get("user", ""),
                 "response_A": turns_a[i].get(list(turns_a[i].keys())[-1], "") if i < len(turns_a) else "",
                 "response_B": turns_b[i].get(list(turns_b[i].keys())[-1], "") if i < len(turns_b) else "",
+                "evidence_A": guard_evidence(turns_a[i]) if i < len(turns_a) else "EvidenceInadmissible",
+                "evidence_B": guard_evidence(turns_b[i]) if i < len(turns_b) else "EvidenceInadmissible",
             }
             for i, t in enumerate(sys_turns)
         ]
@@ -264,6 +285,37 @@ python3 - "$OUTPUT" <<'PYEOF'
 import json, os, datetime, hashlib, sys
 
 output = sys.argv[1]
+
+# Pre-registration: the packet script must VERIFY evidence admissibility
+# (all transcripts EvidenceGoverned) and record the status in metadata.
+admissible = 0
+inadmissible = 0
+total = 0
+for side in ("system", "control-a"):
+    side_dir = os.path.join(output, side)
+    if not os.path.isdir(side_dir):
+        continue
+    for fname in sorted(os.listdir(side_dir)):
+        if not fname.endswith(".jsonl"):
+            continue
+        for line in open(os.path.join(side_dir, fname)):
+            line = line.strip()
+            if not line:
+                continue
+            total += 1
+            rec = json.loads(line)
+            try:
+                resp = json.loads(rec["response"])
+            except Exception:
+                inadmissible += 1
+                continue
+            tag = resp.get("guard_status", "")
+            if tag.startswith("Allowed") or tag.startswith("Blocked"):
+                admissible += 1
+            else:
+                inadmissible += 1
+
+verified = inadmissible == 0
 metadata = {
     "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
     "governed_evidence_mode": os.environ.get("QXFX0_GOVERNED_EVIDENCE", "not_set"),
@@ -273,12 +325,80 @@ metadata = {
     "pre_registration_file": "test/fixtures/b2-eval/pre-registration.md",
     "control_a_config": "test/fixtures/b2-eval/control-a-config.json",
     "b3_gate_verdict": "PASS (conjunction Gates 1-5, commit d2e0182)",
-    "evidence_admissibility": "all transcripts must carry EvidenceGoverned; see pre-registration.md",
+    "evidence_admissibility": {
+        "verified": verified,
+        "admissible_turns": admissible,
+        "inadmissible_turns": inadmissible,
+        "total_turns": total,
+        "rule": "guard_status in {Allowed, Blocked} -> EvidenceGoverned (classifyEvidence); "
+                "runtime fail-closes inadmissible turns under QXFX0_GOVERNED_EVIDENCE=1",
+    },
     "m6_felt_status": "NOT PROVEN",
 }
+if not verified:
+    print(f"  FAIL: {inadmissible} inadmissible turn(s) out of {total}")
+    sys.exit(1)
 with open(os.path.join(output, "packet-metadata.json"), "w") as f:
     json.dump(metadata, f, ensure_ascii=False, indent=2)
-print("  metadata written")
+print(f"  metadata written (evidence verified: {admissible}/{total} governed)")
+PYEOF
+
+echo "[7/7] Building rater package (human-readable, no answer key)..."
+python3 - "$OUTPUT" "$(dirname "$0")/../test/fixtures/b2-eval/rubric-form.md" <<'PYEOF'
+import json, os, shutil, sys
+
+output = sys.argv[1]
+rubric_file = sys.argv[2]
+pkg = os.path.join(output, "rater-package")
+pairs_dir = os.path.join(pkg, "pairs")
+os.makedirs(pairs_dir, exist_ok=True)
+
+def response_text(payload_str):
+    try:
+        r = json.loads(payload_str)
+    except Exception:
+        return "(invalid)"
+    t = r.get("text") or r.get("surface") or "(no text)"
+    return t if isinstance(t, str) else json.dumps(t, ensure_ascii=False)
+
+blind_dir = os.path.join(output, "blind-pairs")
+for i, fname in enumerate(sorted(os.listdir(blind_dir)), 1):
+    pair = json.load(open(os.path.join(blind_dir, fname)))
+    tid = pair["task_id"]
+    lines = [f"# Pair {i:02d} — {tid}", ""]
+    for t in pair["turns"]:
+        lines += [f"### Turn {t['turn']}", "",
+                  f"**User:** {t['user']}", "",
+                  f"**System A:** {response_text(t['response_A'])}", "",
+                  f"**System B:** {response_text(t['response_B'])}", ""]
+    with open(os.path.join(pairs_dir, f"pair-{i:02d}-{tid}.md"), "w") as f:
+        f.write("\n".join(lines))
+
+shutil.copy2(rubric_file, os.path.join(pkg, "rubric-form.md"))
+readme = """# B2 Human-Eval Rater Package
+
+Blind paired discrimination — M6-FELT human-eval leg (B2-EXEC-002).
+
+## Contents
+- pairs/ — 10 blind pairs (def-ru-01..05, dist-ru-01..05); labels A/B are randomized per pair
+- rubric-form.md — rating form: fill one per pair (D1, D3, D5, D6 + overall)
+- README.md — this file
+
+## Protocol
+1. Read both transcripts of a pair fully before rating.
+2. For each dimension fill the forced choice + cite a specific transcript line.
+3. Do NOT skip the "Reason" field; uncited ratings are discarded.
+4. No answer key exists in this package. Blindness is structural — A/B mapping
+   is randomized per pair; do not attempt to infer the mapping from formatting.
+5. Total: 10 pairs; estimate ~15 min per pair.
+
+## Locked pre-registration (test/fixtures/b2-eval/pre-registration.md)
+- Pass requires System preferred on load-bearing D1 and D3 (independently, no averaging with D5/D6).
+- No rubric tweaking after rating starts.
+"""
+with open(os.path.join(pkg, "README.md"), "w") as f:
+    f.write(readme)
+print(f"  rater package: {pkg}")
 PYEOF
 
 echo ""
@@ -289,6 +409,7 @@ echo "  blind-pairs/   — Blind pairs for raters (randomized labels)"
 echo "  answer-key.json — Answer key (KEEP SEPARATE from raters)"
 echo "  answer-key.sha256 — Answer key hash"
 echo "  packet-metadata.json — Generation metadata + admissibility"
+echo "  rater-package/ — Human-readable blind transcript pairs + rubric (no answer key)"
 echo ""
-echo "Next: copy rubric-form.md + blind-pairs/ to raters."
+echo "Next: copy rater-package/ (pairs + rubric-form.md + README) to raters."
 echo "      DO NOT share answer-key.json with raters."
