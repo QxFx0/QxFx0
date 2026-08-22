@@ -70,7 +70,7 @@ import QxFx0.Self.Salience
   , salienceHolisticBias
   , isHolisticFamily
   )
-import QxFx0.Self.SelfDivergence (measureDivergence)
+import QxFx0.Self.SelfDivergence (measureDivergence, pushDivergenceSample)
 import QxFx0.Types.Self.SelfDivergence
   ( SelfDivergenceE(..)
   , SelfDivergenceTuning(..)
@@ -729,7 +729,9 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       -- deterministic prediction (predict -> witness -> diff).  The
       -- actual angst is the post-witness trajectory's angst level
       -- (post-collapse when the pentagon collapsed).  The window is
-      -- bounded to 'sdtWindow'.
+      -- bounded to 'sdtWindow' with drop-oldest semantics: the newest
+      -- sample is prepended, so a full window always retains the most
+      -- recent 'sdtWindow' samples and evicts the oldest one.
       (measuredDivergence, selfStateWithDivergence) =
         case tiSelfPrediction ti of
           Nothing -> (Nothing, selfStateAfterCollapse)
@@ -739,8 +741,9 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
                   EssenceUncommitted traj -> traj
                   EssenceCommitted traj _ -> traj
                 divE = measureDivergence prediction (tiField ti) (etAngstLevel actualTraj)
-                window0 = take (sdtWindow defaultSelfDivergenceTuning)
-                  (selfDivergenceWindow selfStateAfterCollapse <> [sdeTotalDivergence divE])
+                window0 = pushDivergenceSample defaultSelfDivergenceTuning
+                  (selfDivergenceWindow selfStateAfterCollapse)
+                  (sdeTotalDivergence divE)
                 fObservation = selfLastFieldObservation selfStateAfterCollapse
             in ( Just divE
                , selfStateAfterCollapse

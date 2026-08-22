@@ -32,6 +32,7 @@ module QxFx0.Self.SelfDivergence
   , measureDivergence
   , selfConsistencyPenalty
   , windowMeanDivergence
+  , pushDivergenceSample
   , sustainedDivergenceExceeds
   , clampUnit
   ) where
@@ -186,6 +187,14 @@ windowMeanDivergence :: [Double] -> Double
 windowMeanDivergence [] = 0.0
 windowMeanDivergence xs =
   sum xs / fromIntegral (length xs)
+
+-- | Bounded drop-oldest window maintenance: prepend the newest sample
+-- and keep at most 'sdtWindow' of the /most recent/ entries.  The
+-- newest sample is always retained; once the window is full the oldest
+-- sample is evicted.  Deterministic and total.
+pushDivergenceSample :: SelfDivergenceTuning -> [Double] -> Double -> [Double]
+pushDivergenceSample tuning window newest =
+  take (sdtWindow tuning) (newest : window)
 
 -- | C-slice (CD): the recovery trigger for 'RecoverySelfDivergence'.
 -- True exactly when a /non-empty/ bounded window of recent total

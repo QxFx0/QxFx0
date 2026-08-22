@@ -36,6 +36,7 @@ import Test.QuickCheck
   , forAll
   , property
   , quickCheckWithResult
+  , vectorOf
   )
 import Test.QuickCheck.Test (isSuccess)
 import Test.Support.QuickCheckConfig (qcArgs)
@@ -68,6 +69,7 @@ import QxFx0.Self.Field
 import QxFx0.Self.SelfDivergence
   ( measureDivergence
   , predictSelf
+  , pushDivergenceSample
   , selfConsistencyPenalty
   , sustainedDivergenceExceeds
   , windowMeanDivergence
@@ -136,6 +138,40 @@ selfDivergenceTests =
       TestCase $
         assertBool "above-threshold window must fire"
           (sustainedDivergenceExceeds tuning [1.0, 1.0])
+    -- Drop-oldest window maintenance (2026-08-22 audit fix): the
+    -- newest sample must always enter the window and the oldest must
+    -- be evicted once it is full.  The pre-fix append-and-take-left
+    -- order froze a full window on its oldest samples forever.
+  , TestLabel "pushDivergenceSample keeps the newest sample and evicts the oldest" $
+      TestCase $ do
+        let w0 = pushDivergenceSample tuning [] 1.0
+            w1 = foldl (pushDivergenceSample tuning) [] [1.0 .. 9.0]
+        assertEqual "empty window admits the first sample" [1.0] w0
+        assertEqual "full window retains the most recent samples, oldest evicted"
+          [9.0, 8.0, 7.0, 6.0, 5.0, 4.0, 3.0, 2.0] w1
+        assertBool "newest sample must be in the window after overflow"
+          (9.0 `elem` w1)
+        assertBool "oldest sample must be evicted after overflow"
+          (1.0 `notElem` w1)
+  , TestLabel "pushDivergenceSample keeps the newest sample on any sequence" $
+      quickCheckProperty "window always retains newest sample"
+        propWindowAlwaysRetainsNewest
+    -- Regression (2026-08-22 audit fix): a window full of calm
+    -- (zero-divergence) history followed by sustained out-of-envelope
+    -- divergence must eventually fire the C-slice recovery trigger.
+    -- Under the pre-fix append-and-take-left maintenance the fresh
+    -- samples never entered the full window and the trigger was
+    -- unreachable.
+  , TestLabel "sustained high divergence after a full calm window fires recovery" $
+      TestCase $ do
+        let calmWindow = pushDivergenceSample tuning (replicate (sdtWindow tuning) 0.0) 0.0
+            sustainedWindow =
+              foldl (pushDivergenceSample tuning) calmWindow
+                (replicate (sdtWindow tuning) highDivergence)
+        assertBool "calm full window must not fire"
+          (not (sustainedDivergenceExceeds tuning calmWindow))
+        assertBool "sustained divergence after a full calm window must fire"
+          (sustainedDivergenceExceeds tuning sustainedWindow)
     -- A->B coupling (audit): the self-consistency penalty feeds
     -- 'ceScalar', which 'Essence.shouldCommit' reads through the
     -- 'TriggerConatusErosion' window (last-8 witnesses below the
@@ -207,6 +243,18 @@ propDivergenceInUnit =
               divE = measureDivergence pred other angst
               t = sdeTotalDivergence divE
           in 0.0 <= t && t <= 1.0
+
+-- The bounded window always retains the newest sample, never exceeds
+-- 'sdtWindow' entries, and fills exactly to min(n, sdtWindow).
+propWindowAlwaysRetainsNewest :: Property
+propWindowAlwaysRetainsNewest =
+  forAll (choose (1, 32)) $ \n ->
+    forAll (vectorOf n (choose (0.0, 1.0))) $ \samples ->
+      property $
+        let window = foldl (pushDivergenceSample tuning) [] samples
+            newest = last samples
+        in newest `elem` window
+             && length window == min n (sdtWindow tuning)
 
 propPenaltyGatedByThreshold :: Property
 propPenaltyGatedByThreshold =
@@ -298,6 +346,12 @@ mkErosionWitness scalar = EssenceWitness
 
 tuning :: SelfDivergenceTuning
 tuning = defaultSelfDivergenceTuning
+
+-- Comfortably above 'sdtThreshold' so a window of these samples always
+-- fires 'sustainedDivergenceExceeds'; derived from the tuning so a
+-- future calibration cannot silently break the regression test.
+highDivergence :: Double
+highDivergence = min 1.0 (sdtThreshold tuning + 0.15)
 
 -- Production log-scale band: ceScalar ~ 10 like the live runtime
 -- (WP-F guard: penalty is a fraction of this, not a unit flat value).

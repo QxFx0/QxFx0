@@ -132,3 +132,14 @@ defects, not to a GF linearizer gap per se:
 if the runtime regresses (any gate failing, or the evidence fields
 shrinking below the contour minima), the test fails and the recorded
 result must be updated deliberately.
+## Re-run record (2026-08-22, П2 of the audit ТЗ)
+
+The self-divergence window drop-oldest fix (canonical
+`pushDivergenceSample`) changes runtime recovery behavior
+(`RecoverySelfDivergence` / `StrategySelfReanchoring` can now fire on
+sustained fresh divergence, which the pre-fix frozen window made
+unreachable). Per the ТЗ the evidence gate was re-run on the fixed
+runtime: `Test.Suite.M6FeltBenchmark` stays **M6FeltProven** with the
+pinned contour (12 turns, ≥1 revision, ≥4 focuses, ≥1 repair) — no
+contour values changed, so the pinned minimums remain as recorded
+above. Full M6-FELT status still awaits the B2 human-eval leg.
