@@ -1,6 +1,11 @@
 packages: .
 import: cabal.project.freeze
 
+-- Reproducibility pin (П1, 2026-08-22): solve against the same Hackage
+-- snapshot the pre-migration freeze was generated from, so a GHC
+-- 9.6.6 -> 9.6.7 move changes only compiler-bound packages (base et al).
+index-state: hackage.haskell.org 2026-04-22T17:45:50Z
+
 tests: True
 
 test-show-details: streaming

@@ -4,6 +4,27 @@
 - **Date**: 2026-06-17
 - **Related**: `docs/closure/SLICE-012_PLAN.md`, `audit-objective-2026-06-17.md §3`
 
+## Toolchain contract (П1, 2026-08-22)
+
+| Component | Contract |
+|---|---|
+| GHC | **9.6.7** (migrated from 9.6.6 on 2026-08-22; on top of `b67f9ef`) |
+| base | **4.18.3.0** (GHC 9.6.7-shipped) |
+| cabal-install | 3.14.2.0 locally; CI provisions `cabal-version: '3.10'` |
+| Hackage snapshot | `index-state: hackage.haskell.org 2026-04-22T17:45:50Z`, pinned both in `cabal.project` and regenerated `cabal.project.freeze` |
+| Machine-specific | `cabal.project.local` (gitignored) pins `with-compiler: ~/.ghcup/ghc/9.6.7/bin/ghc` and GF C-runtime paths |
+
+Migration diff of `cabal.project.freeze` is limited to compiler-bound
+packages (`base`, `ghc-boot-th`, `array`, `bytestring`, `filepath`,
+`unix`) plus the newly pinned `pgf2 ==1.3.0` (previously solved but
+unpinned). No Hackage package versions moved. CI
+(`ci.yml` core/extended, `ci-fast.yml`) installs GHC 9.6.7.
+
+> Historical note: the GHC 9.6.6 contract (2026-08-08) unblocked the
+> four-suite build after the pre-port `BlockArguments` failure; 9.6.7 is
+> a patch release of the same series and supersedes it as the single
+> standard.
+
 ## Policy
 
 > Guard Unavailable is allowed runtime degradation, but forbidden proof
