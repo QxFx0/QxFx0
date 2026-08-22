@@ -26,6 +26,16 @@ import Data.Text (Text)
 
 import QxFx0.Types.Observability (TruthContractStatus(..))
 
+-- C4.3 canonical proposition-admission types: the per-module
+-- Proposition*Admission modules are now thin re-export shims of these,
+-- so constructors, fields and decision tags come from here.
+import qualified QxFx0.Types.PropositionAdmissionTypes as Canon
+  ( PropositionAdmissionInput(..)
+  , RawPropositionTrigger(..)
+  , AdmittedPropositionTriggers(..)
+  , PropositionAdmissionDecision(..)
+  )
+
 import QxFx0.Self.Salience (SelfVerdict(..), Salience(..), SalienceDriver(..), SalienceVerdict(..))
 import QxFx0.Semantic.Logic (RankedFamily)
 
@@ -37,119 +47,119 @@ import QxFx0.Core.InterpretationAdmission (admitInterpretationCandidate, Interpr
 
 import QxFx0.Types.Admission.PropositionConfrontAdmission (admitPropositionConfrontTriggers)
 import QxFx0.Types.PropositionConfrontAdmission
-  ( PropositionConfrontAdmissionInput(..)
-  , PropositionConfrontAdmissionDecision(..)
-  , RawPropositionConfrontTrigger(..)
-  , AdmittedPropositionConfrontTriggers(..)
+  ( PropositionConfrontAdmissionInput
+  , PropositionConfrontAdmissionDecision
+  , RawPropositionConfrontTrigger
+  , AdmittedPropositionConfrontTriggers
   )
 
 import QxFx0.Types.Admission.PropositionWorldCauseAdmission (admitPropositionWorldCauseTriggers)
 import QxFx0.Types.PropositionWorldCauseAdmission
-  ( PropositionWorldCauseAdmissionInput(..)
-  , PropositionWorldCauseAdmissionDecision(..)
-  , RawPropositionWorldCauseTrigger(..)
-  , AdmittedPropositionWorldCauseTriggers(..)
+  ( PropositionWorldCauseAdmissionInput
+  , PropositionWorldCauseAdmissionDecision
+  , RawPropositionWorldCauseTrigger
+  , AdmittedPropositionWorldCauseTriggers
   )
 
 import QxFx0.Types.Admission.PropositionAffectiveSupportPhraseAdmission (admitPropositionAffectiveSupportPhraseTriggers)
 import QxFx0.Types.PropositionAffectiveSupportPhraseAdmission
-  ( PropositionAffectiveSupportPhraseAdmissionInput(..), PropositionAffectiveSupportPhraseAdmissionDecision(..)
-  , RawPropositionAffectiveSupportPhraseTrigger(..), AdmittedPropositionAffectiveSupportPhraseTriggers(..) )
+  ( PropositionAffectiveSupportPhraseAdmissionInput, PropositionAffectiveSupportPhraseAdmissionDecision
+  , RawPropositionAffectiveSupportPhraseTrigger, AdmittedPropositionAffectiveSupportPhraseTriggers )
 
 import QxFx0.Types.Admission.PropositionAffectiveSupportProbeAdmission (admitPropositionAffectiveSupportProbeTriggers)
 import QxFx0.Types.PropositionAffectiveSupportProbeAdmission
-  ( PropositionAffectiveSupportProbeAdmissionInput(..), PropositionAffectiveSupportProbeAdmissionDecision(..)
-  , RawPropositionAffectiveSupportProbeTrigger(..), AdmittedPropositionAffectiveSupportProbeTriggers(..) )
+  ( PropositionAffectiveSupportProbeAdmissionInput, PropositionAffectiveSupportProbeAdmissionDecision
+  , RawPropositionAffectiveSupportProbeTrigger, AdmittedPropositionAffectiveSupportProbeTriggers )
 
 import QxFx0.Types.Admission.PropositionConceptKnowledgeAdmission (admitPropositionConceptKnowledgeTriggers)
 import QxFx0.Types.PropositionConceptKnowledgeAdmission
-  ( PropositionConceptKnowledgeAdmissionInput(..), PropositionConceptKnowledgeAdmissionDecision(..)
-  , RawPropositionConceptKnowledgeTrigger(..), AdmittedPropositionConceptKnowledgeTriggers(..) )
+  ( PropositionConceptKnowledgeAdmissionInput, PropositionConceptKnowledgeAdmissionDecision
+  , RawPropositionConceptKnowledgeTrigger, AdmittedPropositionConceptKnowledgeTriggers )
 
 import QxFx0.Types.Admission.PropositionContemplativeTopicAdmission (admitPropositionContemplativeTopicTriggers)
 import QxFx0.Types.PropositionContemplativeTopicAdmission
-  ( PropositionContemplativeTopicAdmissionInput(..), PropositionContemplativeTopicAdmissionDecision(..)
-  , RawPropositionContemplativeTopicTrigger(..), AdmittedPropositionContemplativeTopicTriggers(..) )
+  ( PropositionContemplativeTopicAdmissionInput, PropositionContemplativeTopicAdmissionDecision
+  , RawPropositionContemplativeTopicTrigger, AdmittedPropositionContemplativeTopicTriggers )
 
 import QxFx0.Types.Admission.PropositionDistinctionAdmission (admitPropositionDistinctionTriggers)
 import QxFx0.Types.PropositionDistinctionAdmission
-  ( PropositionDistinctionAdmissionInput(..), PropositionDistinctionAdmissionDecision(..)
-  , RawPropositionDistinctionTrigger(..), AdmittedPropositionDistinctionTriggers(..) )
+  ( PropositionDistinctionAdmissionInput, PropositionDistinctionAdmissionDecision
+  , RawPropositionDistinctionTrigger, AdmittedPropositionDistinctionTriggers )
 
 import QxFx0.Types.Admission.PropositionLocationFormationAdmission (admitPropositionLocationFormationTriggers)
 import QxFx0.Types.PropositionLocationFormationAdmission
-  ( PropositionLocationFormationAdmissionInput(..), PropositionLocationFormationAdmissionDecision(..)
-  , RawPropositionLocationFormationTrigger(..), AdmittedPropositionLocationFormationTriggers(..) )
+  ( PropositionLocationFormationAdmissionInput, PropositionLocationFormationAdmissionDecision
+  , RawPropositionLocationFormationTrigger, AdmittedPropositionLocationFormationTriggers )
 
 import QxFx0.Types.Admission.PropositionMisunderstandingAdmission (admitPropositionMisunderstandingTriggers)
 import QxFx0.Types.PropositionMisunderstandingAdmission
-  ( PropositionMisunderstandingAdmissionInput(..), PropositionMisunderstandingAdmissionDecision(..)
-  , RawPropositionMisunderstandingTrigger(..), AdmittedPropositionMisunderstandingTriggers(..) )
+  ( PropositionMisunderstandingAdmissionInput, PropositionMisunderstandingAdmissionDecision
+  , RawPropositionMisunderstandingTrigger, AdmittedPropositionMisunderstandingTriggers )
 
 import QxFx0.Types.Admission.PropositionNextStepAdmission (admitPropositionNextStepTriggers)
 import QxFx0.Types.PropositionNextStepAdmission
-  ( PropositionNextStepAdmissionInput(..), PropositionNextStepAdmissionDecision(..)
-  , RawPropositionNextStepTrigger(..), AdmittedPropositionNextStepTriggers(..) )
+  ( PropositionNextStepAdmissionInput, PropositionNextStepAdmissionDecision
+  , RawPropositionNextStepTrigger, AdmittedPropositionNextStepTriggers )
 
 import QxFx0.Types.Admission.PropositionOperationalCauseAdmission (admitPropositionOperationalCauseTriggers)
 import QxFx0.Types.PropositionOperationalCauseAdmission
-  ( PropositionOperationalCauseAdmissionInput(..), PropositionOperationalCauseAdmissionDecision(..)
-  , RawPropositionOperationalCauseTrigger(..), AdmittedPropositionOperationalCauseTriggers(..) )
+  ( PropositionOperationalCauseAdmissionInput, PropositionOperationalCauseAdmissionDecision
+  , RawPropositionOperationalCauseTrigger, AdmittedPropositionOperationalCauseTriggers )
 
 import QxFx0.Types.Admission.PropositionOperationalStatusAdmission (admitPropositionOperationalStatusTriggers)
 import QxFx0.Types.PropositionOperationalStatusAdmission
-  ( PropositionOperationalStatusAdmissionInput(..), PropositionOperationalStatusAdmissionDecision(..)
-  , RawPropositionOperationalStatusTrigger(..), AdmittedPropositionOperationalStatusTriggers(..) )
+  ( PropositionOperationalStatusAdmissionInput, PropositionOperationalStatusAdmissionDecision
+  , RawPropositionOperationalStatusTrigger, AdmittedPropositionOperationalStatusTriggers )
 
 import QxFx0.Types.Admission.PropositionPurposeAdmission (admitPropositionPurposeTriggers)
 import QxFx0.Types.PropositionPurposeAdmission
-  ( PropositionPurposeAdmissionInput(..), PropositionPurposeAdmissionDecision(..)
-  , RawPropositionPurposeTrigger(..), AdmittedPropositionPurposeTriggers(..) )
+  ( PropositionPurposeAdmissionInput, PropositionPurposeAdmissionDecision
+  , RawPropositionPurposeTrigger, AdmittedPropositionPurposeTriggers )
 
 import QxFx0.Types.Admission.PropositionRepairDirectiveAdmission (admitPropositionRepairDirectiveTriggers)
 import QxFx0.Types.PropositionRepairDirectiveAdmission
-  ( PropositionRepairDirectiveAdmissionInput(..), PropositionRepairDirectiveAdmissionDecision(..)
-  , RawPropositionRepairDirectiveTrigger(..), AdmittedPropositionRepairDirectiveTriggers(..) )
+  ( PropositionRepairDirectiveAdmissionInput, PropositionRepairDirectiveAdmissionDecision
+  , RawPropositionRepairDirectiveTrigger, AdmittedPropositionRepairDirectiveTriggers )
 
 import QxFx0.Types.Admission.PropositionSelfKnowledgeAdmission (admitPropositionSelfKnowledgeTriggers)
 import QxFx0.Types.PropositionSelfKnowledgeAdmission
-  ( PropositionSelfKnowledgeAdmissionInput(..), PropositionSelfKnowledgeAdmissionDecision(..)
-  , RawPropositionSelfKnowledgeTrigger(..), AdmittedPropositionSelfKnowledgeTriggers(..) )
+  ( PropositionSelfKnowledgeAdmissionInput, PropositionSelfKnowledgeAdmissionDecision
+  , RawPropositionSelfKnowledgeTrigger, AdmittedPropositionSelfKnowledgeTriggers )
 
 import QxFx0.Types.Admission.PropositionSelfStateAdmission (admitPropositionSelfStateTriggers)
 import QxFx0.Types.PropositionSelfStateAdmission
-  ( PropositionSelfStateAdmissionInput(..), PropositionSelfStateAdmissionDecision(..)
-  , RawPropositionSelfStateTrigger(..), AdmittedPropositionSelfStateTriggers(..) )
+  ( PropositionSelfStateAdmissionInput, PropositionSelfStateAdmissionDecision
+  , RawPropositionSelfStateTrigger, AdmittedPropositionSelfStateTriggers )
 
 import QxFx0.Types.Admission.PropositionSystemLogicAdmission (admitPropositionSystemLogicTriggers)
 import QxFx0.Types.PropositionSystemLogicAdmission
-  ( PropositionSystemLogicAdmissionInput(..), PropositionSystemLogicAdmissionDecision(..)
-  , RawPropositionSystemLogicTrigger(..), AdmittedPropositionSystemLogicTriggers(..) )
+  ( PropositionSystemLogicAdmissionInput, PropositionSystemLogicAdmissionDecision
+  , RawPropositionSystemLogicTrigger, AdmittedPropositionSystemLogicTriggers )
 
 import QxFx0.Types.Admission.PropositionComparisonPlausibilityAdmission (admitPropositionComparisonPlausibilityTriggers)
 import QxFx0.Types.PropositionComparisonPlausibilityAdmission
-  ( PropositionComparisonPlausibilityAdmissionInput(..), PropositionComparisonPlausibilityAdmissionDecision(..)
-  , RawPropositionComparisonPlausibilityTrigger(..), AdmittedPropositionComparisonPlausibilityTriggers(..) )
+  ( PropositionComparisonPlausibilityAdmissionInput, PropositionComparisonPlausibilityAdmissionDecision
+  , RawPropositionComparisonPlausibilityTrigger, AdmittedPropositionComparisonPlausibilityTriggers )
 
 import QxFx0.Types.Admission.PropositionDialogueInvitationAdmission (admitPropositionDialogueInvitationTriggers)
 import QxFx0.Types.PropositionDialogueInvitationAdmission
-  ( PropositionDialogueInvitationAdmissionInput(..), PropositionDialogueInvitationAdmissionDecision(..)
-  , RawPropositionDialogueInvitationTrigger(..), AdmittedPropositionDialogueInvitationTriggers(..) )
+  ( PropositionDialogueInvitationAdmissionInput, PropositionDialogueInvitationAdmissionDecision
+  , RawPropositionDialogueInvitationTrigger, AdmittedPropositionDialogueInvitationTriggers )
 
 import QxFx0.Types.Admission.PropositionExploratoryPromptAdmission (admitPropositionExploratoryPromptTriggers)
 import QxFx0.Types.PropositionExploratoryPromptAdmission
-  ( PropositionExploratoryPromptAdmissionInput(..), PropositionExploratoryPromptAdmissionDecision(..)
-  , RawPropositionExploratoryPromptTrigger(..), AdmittedPropositionExploratoryPromptTriggers(..) )
+  ( PropositionExploratoryPromptAdmissionInput, PropositionExploratoryPromptAdmissionDecision
+  , RawPropositionExploratoryPromptTrigger, AdmittedPropositionExploratoryPromptTriggers )
 
 import QxFx0.Types.Admission.PropositionGenerativePromptAdmission (admitPropositionGenerativePromptTriggers)
 import QxFx0.Types.PropositionGenerativePromptAdmission
-  ( PropositionGenerativePromptAdmissionInput(..), PropositionGenerativePromptAdmissionDecision(..)
-  , RawPropositionGenerativePromptTrigger(..), AdmittedPropositionGenerativePromptTriggers(..) )
+  ( PropositionGenerativePromptAdmissionInput, PropositionGenerativePromptAdmissionDecision
+  , RawPropositionGenerativePromptTrigger, AdmittedPropositionGenerativePromptTriggers )
 
 import QxFx0.Types.Admission.PropositionContactAdmission (admitPropositionContactTriggers)
 import qualified QxFx0.Types.PropositionContactAdmission as Contact
-  ( PropositionContactAdmissionInput(..), PropositionContactAdmissionDecision(..)
-  , RawPropositionContactTrigger(..), AdmittedPropositionContactTriggers(..) )
+  ( PropositionContactAdmissionInput, PropositionContactAdmissionDecision
+  , RawPropositionContactTrigger, AdmittedPropositionContactTriggers )
 
 import QxFx0.Types.Admission.PropositionPhraseDecisionAdmission (admitPropositionPhraseDecisions)
 import QxFx0.Types.PropositionFallbackAdmission
@@ -161,7 +171,7 @@ import QxFx0.Types.Admission.PropositionAdmission (admitPropositionFrame, Propos
 import QxFx0.Core.SemanticFrameAdmission (admitSemanticFrameForInput, SemanticFrameAdmissionInput(..), SemanticFrameAdmissionDecision(..), AdmittedSemanticFrame(..))
 import QxFx0.Core.SenseVectorAdmission (admitSenseVector, SenseVectorAdmissionInput(..), SenseVectorAdmissionDecision(..), AdmittedSenseVector(..))
 
-import QxFx0.Types (InputPropositionFrame(..), SenseVector(..), SemanticNodeId(..), SenseAxis(..), SenseOperator(..), SensePolarity(..), Register(..), CanonicalMoveFamily(..), IllocutionaryForce(..), ClauseForm(..), SemanticLayer(..), EmotionalTone(..), MeaningAtom(..), AtomTag(..), AtomSet(..))
+import QxFx0.Types (InputPropositionFrame(..), SenseVector(..), SemanticNodeId(..), SenseAxis(..), SenseOperator(..), SensePolarity(..), Register(..), CanonicalMoveFamily(..), SemanticFrameTarget(..), IllocutionaryForce(..), ClauseForm(..), SemanticLayer(..), EmotionalTone(..), MeaningAtom(..), AtomTag(..), AtomSet(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Input.Model (SemanticTag(..))
 import qualified Data.Map.Strict as Map
@@ -233,7 +243,7 @@ threeBranchChecks name adm mkRaw safeLabel admittedCtor soften admitRaw preserve
 --   1. Authoritative → AdmitRaw, triggers untouched
 --   2. Non-authoritative → SuppressStrong, all matched triggers softened
 twoBranchChecks
-  :: (Eq raw, Show raw, Eq dec, Show dec, Eq admitted, Show admitted)
+  :: (Eq admitted, Show admitted)
   => String                                     -- ^ module label
   -> (TruthContractStatus -> [raw] -> admitted) -- ^ wrapped admit fn
   -> (Text -> Bool -> raw)                      -- ^ raw trigger builder (label matched)
@@ -256,90 +266,90 @@ twoBranchChecks name adm mkRaw admittedCtor soften admitRaw suppress =
 
 -- The 15 batch-converted modules.  Each line wires the module's own
 -- constructors/accessors; the irregular ones (Misunderstanding's Pm*,
--- AffectiveSupportProbe's PasprSuppressStrongProbe) are spelled out here.
+-- AffectiveSupportProbe's Canon.PadSuppressStrongTriggers) are spelled out here.
 batchChecks :: [Test]
 batchChecks = concat
   [ threeBranchChecks "AffectiveSupportPhrase"
-      (\i -> admitPropositionAffectiveSupportPhraseTriggers (PropositionAffectiveSupportPhraseAdmissionInput i))
-      RawPropositionAffectiveSupportPhraseTrigger "no_strength"
-      AdmittedPropositionAffectiveSupportPhraseTriggers (\t -> t { rptMatched = False })
-      PaspadAdmitRaw PaspadPreserveAmbiguous PaspadSuppressStrongTriggers
+      (\i -> admitPropositionAffectiveSupportPhraseTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "no_strength"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "AffectiveSupportProbe"
-      (\i -> admitPropositionAffectiveSupportProbeTriggers (PropositionAffectiveSupportProbeAdmissionInput i))
-      RawPropositionAffectiveSupportProbeTrigger "question_gate"
-      AdmittedPropositionAffectiveSupportProbeTriggers (\t -> t { rpasprMatched = False })
-      PasprAdmitRaw PasprPreserveAmbiguous PasprSuppressStrongProbe
+      (\i -> admitPropositionAffectiveSupportProbeTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "question_gate"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "ConceptKnowledge"
-      (\i -> admitPropositionConceptKnowledgeTriggers (PropositionConceptKnowledgeAdmissionInput i))
-      RawPropositionConceptKnowledgeTrigger "concept_like_noun_guard"
-      AdmittedPropositionConceptKnowledgeTriggers (\t -> t { rpckMatched = False })
-      PckdAdmitRaw PckdPreserveAmbiguous PckdSuppressStrongTriggers
+      (\i -> admitPropositionConceptKnowledgeTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "concept_like_noun_guard"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "ContemplativeTopic"
-      (\i -> admitPropositionContemplativeTopicTriggers (PropositionContemplativeTopicAdmissionInput i))
-      RawPropositionContemplativeTopicTrigger "bare_self_pronoun"
-      AdmittedPropositionContemplativeTopicTriggers (\t -> t { rpctMatched = False })
-      PpctdAdmitRaw PpctdPreserveAmbiguous PpctdSuppressStrongTriggers
+      (\i -> admitPropositionContemplativeTopicTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "bare_self_pronoun"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "Distinction"
-      (\i -> admitPropositionDistinctionTriggers (PropositionDistinctionAdmissionInput i))
-      RawPropositionDistinctionTrigger "from_token_present"
-      AdmittedPropositionDistinctionTriggers (\t -> t { rpdtMatched = False })
-      PdadAdmitRaw PdadPreserveAmbiguous PdadSuppressStrongTriggers
+      (\i -> admitPropositionDistinctionTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "from_token_present"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "LocationFormation"
-      (\i -> admitPropositionLocationFormationTriggers (PropositionLocationFormationAdmissionInput i))
-      RawPropositionLocationFormationTrigger "mental_noun_guard"
-      AdmittedPropositionLocationFormationTriggers (\t -> t { rplfMatched = False })
-      PlfdAdmitRaw PlfdPreserveAmbiguous PlfdSuppressStrongTriggers
+      (\i -> admitPropositionLocationFormationTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "mental_noun_guard"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "Misunderstanding"
-      (\i -> admitPropositionMisunderstandingTriggers (PropositionMisunderstandingAdmissionInput i))
-      RawPropositionMisunderstandingTrigger "apology_tokens"
-      AdmittedPropositionMisunderstandingTriggers (\t -> t { rpmtMatched = False })
-      PmAdmitRaw PmPreserveAmbiguous PmSuppressStrongTriggers
+      (\i -> admitPropositionMisunderstandingTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "apology_tokens"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "NextStep"
-      (\i -> admitPropositionNextStepTriggers (PropositionNextStepAdmissionInput i))
-      RawPropositionNextStepTrigger "direct_text_short"
-      AdmittedPropositionNextStepTriggers (\t -> t { rpnstMatched = False })
-      PnsdAdmitRaw PnsdPreserveAmbiguous PnsdSuppressStrongTriggers
+      (\i -> admitPropositionNextStepTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "direct_text_short"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "OperationalCause"
-      (\i -> admitPropositionOperationalCauseTriggers (PropositionOperationalCauseAdmissionInput i))
-      RawPropositionOperationalCauseTrigger "subject_present"
-      AdmittedPropositionOperationalCauseTriggers (\t -> t { rpocMatched = False })
-      PocdAdmitRaw PocdPreserveAmbiguous PocdSuppressStrongTriggers
+      (\i -> admitPropositionOperationalCauseTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "subject_present"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "OperationalStatus"
-      (\i -> admitPropositionOperationalStatusTriggers (PropositionOperationalStatusAdmissionInput i))
-      RawPropositionOperationalStatusTrigger "subject_present"
-      AdmittedPropositionOperationalStatusTriggers (\t -> t { rpostMatched = False })
-      PosdAdmitRaw PosdPreserveAmbiguous PosdSuppressStrongTriggers
+      (\i -> admitPropositionOperationalStatusTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "subject_present"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "Purpose"
-      (\i -> admitPropositionPurposeTriggers (PropositionPurposeAdmissionInput i))
-      RawPropositionPurposeTrigger "purpose_subject_guard"
-      AdmittedPropositionPurposeTriggers (\t -> t { rpptMatched = False })
-      PpadAdmitRaw PpadPreserveAmbiguous PpadSuppressStrongTriggers
+      (\i -> admitPropositionPurposeTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "purpose_subject_guard"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "RepairDirective"
-      (\i -> admitPropositionRepairDirectiveTriggers (PropositionRepairDirectiveAdmissionInput i))
-      RawPropositionRepairDirectiveTrigger "confused_en"
-      AdmittedPropositionRepairDirectiveTriggers (\t -> t { rprdMatched = False })
-      PrdadAdmitRaw PrdadPreserveAmbiguous PrdadSuppressStrongTriggers
+      (\i -> admitPropositionRepairDirectiveTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "confused_en"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "SelfKnowledge"
-      (\i -> admitPropositionSelfKnowledgeTriggers (PropositionSelfKnowledgeAdmissionInput i))
-      RawPropositionSelfKnowledgeTrigger "single_thought_subject_guard"
-      AdmittedPropositionSelfKnowledgeTriggers (\t -> t { rpskMatched = False })
-      PskdAdmitRaw PskdPreserveAmbiguous PskdSuppressStrongTriggers
+      (\i -> admitPropositionSelfKnowledgeTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "single_thought_subject_guard"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "SelfState"
-      (\i -> admitPropositionSelfStateTriggers (PropositionSelfStateAdmissionInput i))
-      RawPropositionSelfStateTrigger "guard_identity"
-      AdmittedPropositionSelfStateTriggers (\t -> t { rpssMatched = False })
-      PssadAdmitRaw PssadPreserveAmbiguous PssadSuppressStrongTriggers
+      (\i -> admitPropositionSelfStateTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "guard_identity"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "SystemLogic"
-      (\i -> admitPropositionSystemLogicTriggers (PropositionSystemLogicAdmissionInput i))
-      RawPropositionSystemLogicTrigger "subject_present"
-      AdmittedPropositionSystemLogicTriggers (\t -> t { rpslMatched = False })
-      PsldAdmitRaw PsldPreserveAmbiguous PsldSuppressStrongTriggers
+      (\i -> admitPropositionSystemLogicTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "subject_present"
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   , threeBranchChecks "Contact"
-      (\i -> admitPropositionContactTriggers (Contact.PropositionContactAdmissionInput i))
-      Contact.RawPropositionContactTrigger "farewell"
-      Contact.AdmittedPropositionContactTriggers
-      (\t -> Contact.RawPropositionContactTrigger (Contact.rpctLabel t) False)
-      Contact.PcadAdmitRaw Contact.PcadPreserveAmbiguous Contact.PcadSuppressStrongTriggers
+      (\i -> admitPropositionContactTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger "farewell"
+      Canon.AdmittedPropositionTriggers
+      (\t -> Canon.RawPropositionTrigger (Canon.rptLabel t) False)
+      Canon.PadAdmitRaw Canon.PadPreserveAmbiguous Canon.PadSuppressStrongTriggers
   ]
 
 -- ---------------------------------------------------------------------------
@@ -348,24 +358,24 @@ batchChecks = concat
 
 confrontTests :: [Test]
 confrontTests =
-  let safeMatched   = RawPropositionConfrontTrigger "contradiction_noun" True
-      unsafeMatched = RawPropositionConfrontTrigger "aggressive_phrase" True
-      run i ts = admitPropositionConfrontTriggers (PropositionConfrontAdmissionInput i) ts
+  let safeMatched   = Canon.RawPropositionTrigger "contradiction_noun" True
+      unsafeMatched = Canon.RawPropositionTrigger "aggressive_phrase" True
+      run i ts = admitPropositionConfrontTriggers (Canon.PropositionAdmissionInput i) ts
   in
   [ TestLabel "Confront: authoritative -> AdmitRaw, triggers untouched" $ TestCase $
       assertEqual "authoritative passes raw through unchanged"
-        (AdmittedPropositionConfrontTriggers [unsafeMatched] [unsafeMatched] PcondAdmitRaw)
+        (Canon.AdmittedPropositionTriggers [unsafeMatched] [unsafeMatched] Canon.PadAdmitRaw)
         (run authoritative [unsafeMatched])
   , TestLabel "Confront: non-auth + all-safe -> PreserveAmbiguous, untouched" $ TestCase $
       assertEqual "all-safe under non-auth is preserved"
-        (AdmittedPropositionConfrontTriggers [safeMatched] [safeMatched] PcondPreserveAmbiguous)
+        (Canon.AdmittedPropositionTriggers [safeMatched] [safeMatched] Canon.PadPreserveAmbiguous)
         (run nonAuthoritative [safeMatched])
   , TestLabel "Confront: non-auth + unsafe -> SuppressStrong, unsafe softened" $ TestCase $
       assertEqual "unsafe matched trigger is softened to Matched=False; safe preserved"
-        (AdmittedPropositionConfrontTriggers
+        (Canon.AdmittedPropositionTriggers
            [safeMatched, unsafeMatched]
-           [safeMatched, unsafeMatched { rpconfMatched = False }]
-           PcondSuppressStrongTriggers)
+           [safeMatched, unsafeMatched { Canon.rptMatched = False }]
+           Canon.PadSuppressStrongTriggers)
         (run nonAuthoritative [safeMatched, unsafeMatched])
   ]
 
@@ -375,24 +385,24 @@ confrontTests =
 
 worldCauseTests :: [Test]
 worldCauseTests =
-  let safeMatched   = RawPropositionWorldCauseTrigger "world_noun_guard" True
-      unsafeMatched = RawPropositionWorldCauseTrigger "speculative_cause" True
-      run i ts = admitPropositionWorldCauseTriggers (PropositionWorldCauseAdmissionInput i) ts
+  let safeMatched   = Canon.RawPropositionTrigger "world_noun_guard" True
+      unsafeMatched = Canon.RawPropositionTrigger "speculative_cause" True
+      run i ts = admitPropositionWorldCauseTriggers (Canon.PropositionAdmissionInput i) ts
   in
   [ TestLabel "WorldCause: authoritative -> AdmitRaw, triggers untouched" $ TestCase $
       assertEqual "authoritative passes raw through unchanged"
-        (AdmittedPropositionWorldCauseTriggers [unsafeMatched] [unsafeMatched] PwcAdmitRaw)
+        (Canon.AdmittedPropositionTriggers [unsafeMatched] [unsafeMatched] Canon.PadAdmitRaw)
         (run authoritative [unsafeMatched])
   , TestLabel "WorldCause: non-auth + all-safe -> PreserveAmbiguous, untouched" $ TestCase $
       assertEqual "all-safe under non-auth is preserved"
-        (AdmittedPropositionWorldCauseTriggers [safeMatched] [safeMatched] PwcPreserveAmbiguous)
+        (Canon.AdmittedPropositionTriggers [safeMatched] [safeMatched] Canon.PadPreserveAmbiguous)
         (run nonAuthoritative [safeMatched])
   , TestLabel "WorldCause: non-auth + unsafe -> SuppressStrong, unsafe softened" $ TestCase $
       assertEqual "unsafe matched trigger is softened to Matched=False; safe preserved"
-        (AdmittedPropositionWorldCauseTriggers
+        (Canon.AdmittedPropositionTriggers
            [safeMatched, unsafeMatched]
-           [safeMatched, unsafeMatched { rpwcMatched = False }]
-           PwcSuppressStrongTriggers)
+           [safeMatched, unsafeMatched { Canon.rptMatched = False }]
+           Canon.PadSuppressStrongTriggers)
         (run nonAuthoritative [safeMatched, unsafeMatched])
   ]
 
@@ -400,25 +410,25 @@ worldCauseTests =
 twoGuardChecks :: [Test]
 twoGuardChecks = concat
   [ twoBranchChecks "ComparisonPlausibility"
-      (\i -> admitPropositionComparisonPlausibilityTriggers (PropositionComparisonPlausibilityAdmissionInput i))
-      RawPropositionComparisonPlausibilityTrigger
-      AdmittedPropositionComparisonPlausibilityTriggers (\t -> t { rpcppMatched = False })
-      PcpadAdmitRaw PcpadSuppressStrongTriggers
+      (\i -> admitPropositionComparisonPlausibilityTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadSuppressStrongTriggers
   , twoBranchChecks "DialogueInvitation"
-      (\i -> admitPropositionDialogueInvitationTriggers (PropositionDialogueInvitationAdmissionInput i))
-      RawPropositionDialogueInvitationTrigger
-      AdmittedPropositionDialogueInvitationTriggers (\t -> t { rpdiMatched = False })
-      PpdiadAdmitRaw PpdiadSuppressStrongTriggers
+      (\i -> admitPropositionDialogueInvitationTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadSuppressStrongTriggers
   , twoBranchChecks "ExploratoryPrompt"
-      (\i -> admitPropositionExploratoryPromptTriggers (PropositionExploratoryPromptAdmissionInput i))
-      RawPropositionExploratoryPromptTrigger
-      AdmittedPropositionExploratoryPromptTriggers (\t -> t { rpeptMatched = False })
-      PpeptdAdmitRaw PpeptdSuppressStrongTriggers
+      (\i -> admitPropositionExploratoryPromptTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadSuppressStrongTriggers
   , twoBranchChecks "GenerativePrompt"
-      (\i -> admitPropositionGenerativePromptTriggers (PropositionGenerativePromptAdmissionInput i))
-      RawPropositionGenerativePromptTrigger
-      AdmittedPropositionGenerativePromptTriggers (\t -> t { rpgpMatched = False })
-      PpgpdAdmitRaw PpgpdSuppressStrongTriggers
+      (\i -> admitPropositionGenerativePromptTriggers (Canon.PropositionAdmissionInput i))
+      Canon.RawPropositionTrigger
+      Canon.AdmittedPropositionTriggers (\t -> t { Canon.rptMatched = False })
+      Canon.PadAdmitRaw Canon.PadSuppressStrongTriggers
   ]
 
 -- ---------------------------------------------------------------------------

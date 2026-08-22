@@ -658,7 +658,7 @@ common test-common
     Test.Suite.ResponsePlan
     Test.Suite.ReplayGate
     Test.Suite.ReplayDeterminism
-    -- Test.Suite.AdmissionEquivalence  -- FIXME: C4.3 migration needed
+    Test.Suite.AdmissionEquivalence
     Test.Suite.RussianQuality
     Test.Suite.VecProperties
     Test.Suite.BoundedLists

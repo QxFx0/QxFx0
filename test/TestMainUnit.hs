@@ -24,8 +24,7 @@ import Test.Suite.SelfAdjunction (selfAdjunctionTests)
 import Test.Suite.SelfField (selfFieldTests)
 import Test.Suite.ReplayGate (replayGateTests)
 import Test.Suite.ReplayDeterminism (replayDeterminismTests)
--- import Test.Suite.AdmissionEquivalence (admissionEquivalenceTests)
--- FIXME: AdmissionEquivalence tests need migration to canonical types (C4.3)
+import Test.Suite.AdmissionEquivalence (admissionEquivalenceTests)
 import Test.Suite.TraceSchema (traceSchemaTests)
 import Test.Suite.RegenerableDerived (regenerableDerivedTests)
 import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
@@ -96,7 +95,7 @@ main = do
          ++ selfFieldTests
          ++ replayGateTests
          ++ replayDeterminismTests
-         -- ++ admissionEquivalenceTests  -- FIXME: C4.3 migration needed
+         ++ admissionEquivalenceTests
          ++ selfSalienceTests
            ++ selfDeliberationTests
            ++ traceSchemaTests
