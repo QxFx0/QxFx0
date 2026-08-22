@@ -612,6 +612,7 @@ common test-common
     , HUnit        >=1.6 && <1.7
     , stm          >=2.5 && <2.6
     , QuickCheck   >=2.14 && <2.15
+    , deepseq       >=1.4 && <1.6
     , hspec         >=2.7 && <2.12
     , vector        >=0.12 && <0.14
     , async         >=2.2 && <2.3

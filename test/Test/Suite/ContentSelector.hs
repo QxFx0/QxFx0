@@ -4,9 +4,25 @@ module Test.Suite.ContentSelector (contentSelectorTests) where
 import qualified Data.Sequence as Seq
 
 import Test.HUnit
+import Control.DeepSeq (force)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Vector as V
+import Data.Text (Text)
+import qualified Data.Text as T
+
+import Test.QuickCheck
+  ( Gen
+  , Property
+  , elements
+  , forAll
+  , listOf
+  , oneof
+  , property
+  , quickCheckWithResult
+  )
+import Test.QuickCheck.Test (isSuccess)
+import Test.Support.QuickCheckConfig (qcArgs)
 
 import QxFx0.Semantic.ContentSelector
 import QxFx0.Semantic.Space
@@ -42,6 +58,38 @@ contentSelectorTests =
           field = emptyField
           result = selectPredicates cs field "unknown_topic" Nothing
       assertEqual "should return empty list" [] result
+
+  , TestLabel "selectPredicates is total for a topic with an empty predicate pool" $ TestCase $ do
+      -- 2026-08-22 audit fix: a topic mapped to [] (corpus/selector
+      -- desync) must behave like an unknown topic, not crash the
+      -- unscored fallback on `head`.
+      let cs = buildContentSelector emptySemanticSpace M.empty (M.singleton "empty_topic" []) M.empty Nothing
+          field = emptyField
+          result = selectPredicates cs field "empty_topic" Nothing
+      assertEqual "should return empty list for empty predicate pool" [] result
+
+  , TestLabel "selectPredicates is total for arbitrary predicate maps" $
+      -- 2026-08-22 audit fix (П3): totality property over arbitrary
+      -- maps, including topics mapped to empty pools and absent
+      -- topics.  Forcing the full result (NFData) surfaces any
+      -- hidden partial call (the historical `head` crash).
+      quickCheckProperty "selectPredicates total for arbitrary maps"
+        propSelectPredicatesTotal
+
+  , TestLabel "composeFromActivation pins an empty predicate pool to no composition" $ TestCase $ do
+      -- 2026-08-22 audit fix (П3): pin the second empty-pool branch
+      -- (`Just [] -> Nothing` in composeBestForActivation): a topic
+      -- whose predicate pool is empty composes nothing and the call
+      -- stays total.
+      let atoms = M.fromList
+            [ ("пустой", S.fromList ["атом_один"])
+            , ("сосед", S.fromList ["атом_один", "атом_два"])
+            ]
+          preds = M.fromList [("пустой", []), ("сосед", [])]
+          cs = buildContentSelector emptySemanticSpace atoms preds M.empty Nothing
+          result = force
+            (composeFromActivation cs emptyField defaultFieldHeuristics "пустой" emptySemanticNetwork)
+      assertEqual "empty predicate pools must compose nothing" [] result
 
   , TestLabel "selectPredicates returns predicates for known topic" $ TestCase $ do
       let space = emptySemanticSpace
@@ -377,3 +425,62 @@ contentSelectorTests =
       assertBool "should return predicates" (not (null result))
       assertBool "should return at most 3 predicates" (length result <= 3)
   ]
+
+-- ---------------------------------------------------------------------------
+-- П3 totality property (2026-08-22 audit)
+-- ---------------------------------------------------------------------------
+
+-- | 'selectPredicates' is total for any selector built from an
+-- arbitrary predicate map: absent topics, topics with empty pools and
+-- topics with non-empty pools all yield a fully-forceable selection
+-- list without exceptions.
+propSelectPredicatesTotal :: Property
+propSelectPredicatesTotal =
+  forAll arbitraryPredicateMap $ \predMap ->
+    forAll (arbitraryLookupTopic predMap) $ \topic ->
+      property (selectPredicatesTotal predMap topic)
+
+selectPredicatesTotal :: M.Map Text [SemanticPredicate] -> Text -> Bool
+selectPredicatesTotal predMap topic =
+  let cs = buildContentSelector emptySemanticSpace M.empty predMap M.empty Nothing
+      selected = selectPredicates cs emptyField topic Nothing
+  in force selected `seq` True
+
+arbitraryPredicateMap :: Gen (M.Map Text [SemanticPredicate])
+arbitraryPredicateMap = do
+  keys <- listOf arbitrarySmallText
+  pools <- listOf (listOf arbitraryPredicate)
+  pure (M.fromList (zip keys pools))
+
+-- | Half the lookups hit a key present in the map (possibly mapped to
+-- an empty pool), half hit an absent key.
+arbitraryLookupTopic :: M.Map Text [SemanticPredicate] -> Gen Text
+arbitraryLookupTopic predMap
+  | M.null predMap = arbitrarySmallText
+  | otherwise = oneof [elements (M.keys predMap), arbitrarySmallText]
+
+-- No Arbitrary Text without quickcheck-instances; opaque tokens over a
+-- fixed alphabet are enough to exercise map lookups (incl. collisions).
+arbitrarySmallText :: Gen Text
+arbitrarySmallText =
+  T.pack <$> listOf (elements (['а' .. 'я'] ++ ['a' .. 'z'] ++ "0123456789_ -"))
+
+arbitraryPredicate :: Gen SemanticPredicate
+arbitraryPredicate =
+  SemanticPredicate
+    <$> elements [RoleProperty, RoleRelation, RoleStructure, RoleDifferentiator]
+    <*> arbitrarySmallText
+    <*> arbitrarySmallText
+    <*> arbitrarySmallText
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+    <*> pure Nothing
+
+quickCheckProperty :: String -> Property -> Test
+quickCheckProperty label prop = TestCase $ do
+  args <- qcArgs
+  result <- quickCheckWithResult args prop
+  if isSuccess result
+    then pure ()
+    else assertFailure ("Property failed: " ++ label)

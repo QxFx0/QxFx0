@@ -45,9 +45,16 @@ buildContentSelector space atoms predicates lemmaMap mOntology = ContentSelector
 selectPredicates :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> [SelectedPredicate]
 selectPredicates cs field topic mActivatedNetwork =
   case M.lookup topic (csTopicPredicates cs) of
+    -- An absent topic and a topic mapped to an empty predicate pool are
+    -- equivalent: no selection is possible.  (A bare `Just []` used to
+    -- crash the unscored fallback below on `head`.)
     Nothing -> []
+    Just [] -> []
     Just preds ->
       let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) mActivatedNetwork) preds
+      -- Fallback guarantee: when no predicate clears the hidden 0.1
+      -- affinity floor inside 'scorePred', the topic still yields its
+      -- first predicate with score 0.0 rather than an empty answer.
       in case scored of
             [] -> [SelectedPredicate topic 0.0 [head preds]]
             _  -> let (bestPred, bestScore) = maximumBy (comparing snd) scored
