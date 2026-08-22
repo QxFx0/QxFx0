@@ -751,6 +751,15 @@ common test-common
     Test.Suite.RuntimeLLMFeedback
     Test.Suite.RuntimeProjection
     Test.Suite.PromotionRuntime
+    Test.Suite.AtomStore
+    Test.Suite.AuthoritySurface
+    Test.Suite.ConatusGate
+    Test.Suite.ConfigExternalize
+    Test.Suite.CorpusTuning
+    Test.Suite.GeneratedPredicateGate
+    Test.Suite.IntentClassifier
+    Test.Suite.SemanticCommitmentCorpus
+    Test.Suite.SubstrateCandidate
 
 test-suite qxfx0-test-unit
   import:        test-common
