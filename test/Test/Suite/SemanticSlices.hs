@@ -35,6 +35,49 @@ import QxFx0.Types.Persistence (LoadStateResult(..), PersistenceDiagnostic, Stat
 import QxFx0.Types.Observability (emptyMeaningGraph, MeaningGraph(..))
 
 import Test.Support (withFakeNixInstantiateForConcepts, withFixedRuntimeTime, withRuntimeEnv)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import System.IO.Unsafe (unsafePerformIO)
+
+import QxFx0.Runtime.Session.Bootstrap (mergeMorphology)
+import QxFx0.Resources.Morphology (loadMorphologyData)
+import QxFx0.Semantic.Morphology (buildLemmaMap)
+import QxFx0.Types.Domain.Atoms (MorphologyData(..))
+
+-- | Persisted state JSON does not carry the runtime morphology
+-- resource; production bootstrap re-attaches it after every restore
+-- (Bootstrap.hs: @ssMorphology = mergeMorphology morphology
+-- (ssMorphology ss)@).  A raw @loadStateWithVersion@ + 'Runtime.runTurn'
+-- path must perform the same re-attachment, otherwise the commit-time
+-- self-blanket fails closed with @BlanketEmptyMorphology@
+-- (IdentityRupture).  2026-08-22 fix: these scenario helpers were born
+-- dead (never compiled/ran) and skipped this step.
+--
+-- The resource morphology and its lemma map are loaded /once/ per
+-- process and shared (M.union over an empty persisted side shares the
+-- resource's map structure); re-loading per scenario multiplied the
+-- ~163k-entry dictionaries and OOM-killed the suite host.
+reattachRuntimeMorphology :: SystemState -> IO SystemState
+reattachRuntimeMorphology st = do
+  (resourceMorph, cachedLemmaMap) <- sharedMorphologyResource
+  let merged = mergeMorphology resourceMorph (ssMorphology st)
+  pure st { ssMorphology = merged, ssLemmaMap = cachedLemmaMap }
+
+sharedMorphologyResource :: IO (MorphologyData, M.Map T.Text T.Text)
+sharedMorphologyResource = do
+  cached <- readIORef morphologyResourceRef
+  case cached of
+    Just pair -> pure pair
+    Nothing -> do
+      md <- loadMorphologyData
+      let lm = buildLemmaMap md
+      writeIORef morphologyResourceRef (Just (md, lm))
+      pure (md, lm)
+
+morphologyResourceRef :: IORef (Maybe (MorphologyData, M.Map T.Text T.Text))
+morphologyResourceRef = unsafePerformIO (newIORef Nothing)
+{-# NOINLINE morphologyResourceRef #-}
+
+
 
 semanticSliceTests :: [Test]
 semanticSliceTests =
@@ -653,7 +696,8 @@ runLoadScenario rt sessionId input mutate scenarioId = do
   maybe (pure ()) (mutatePersistedStateObject rt sessionId) mutate
   (loaded, version) <- StatePersistence.loadStateWithVersion (Runtime.withRuntimeDb rt) sessionId
   case loaded of
-    LoadStateRestored restored -> do
+    LoadStateRestored restored0 -> do
+      restored <- reattachRuntimeMorphology restored0
       let contour = contourStatusText (ssTruthContractStatus restored)
       if contour /= "authoritative_preserved"
         then do
@@ -911,7 +955,8 @@ runLoadTrajectoryScenario :: Runtime.RuntimeContext -> T.Text -> [T.Text] -> T.T
 runLoadTrajectoryScenario rt sessionId prompts scenarioId = do
   (loaded, version) <- StatePersistence.loadStateWithVersion (Runtime.withRuntimeDb rt) sessionId
   case loaded of
-    LoadStateRestored restored -> do
+    LoadStateRestored restored0 -> do
+      restored <- reattachRuntimeMorphology restored0
       let contour = contourStatusText (ssTruthContractStatus restored)
       if contour /= "authoritative_preserved"
         then do
@@ -1155,14 +1200,14 @@ runMeaningGraphShortHorizonScenarios =
 
 runBlockedConceptsImmediateScenarios :: IO (ImmediateRunRecord, ImmediateRunRecord, ImmediateRunRecord, ImmediateRunRecord)
 runBlockedConceptsImmediateScenarios =
-  withFakeNixInstantiateForConcepts ["смерть", "запрет"] $
+  withFakeNixInstantiateForConcepts ["запрет"] $
     withRuntimeEnv "qxfx0_test_blocked_concepts_immediate.db" $ do
       let seedSessionId = "BC-AUTH-SEED"
           loadCtrlId = "BC-L-CTRL"
           bootCtrlId = "BC-B-CTRL"
           loadEmptyId = "BC-L-EMPTY"
           bootEmptyId = "BC-B-EMPTY"
-          fixtureTurns = ["Что такое смерть?", "Сформулируй, где именно возник запрет"]
+          fixtureTurns = ["Что такое запрет?", "Сформулируй, где именно возник запрет"]
           followUp = "Продолжай и скажи, что всё ещё мешает"
       session0 <- Runtime.bootstrapSession True seedSessionId
       fixtureSession <- foldTurns session0 fixtureTurns
@@ -1198,14 +1243,14 @@ runBlockedConceptsImmediateScenarios =
 
 runBlockedConceptsShortHorizonScenarios :: IO (ShortHorizonRunRecord, ShortHorizonRunRecord)
 runBlockedConceptsShortHorizonScenarios =
-  withFakeNixInstantiateForConcepts ["смерть", "запрет"] $
+  withFakeNixInstantiateForConcepts ["запрет"] $
     withRuntimeEnv "qxfx0_test_blocked_concepts_short_horizon.db" $ do
       let seedSessionId = "BC-AUTH-SH-SEED"
           loadCtrlId = "BC-L-CTRL-SH"
           bootCtrlId = "BC-B-CTRL-SH"
           loadEmptyId = "BC-L-EMPTY-SH"
           bootEmptyId = "BC-B-EMPTY-SH"
-          fixtureTurns = ["Что такое смерть?", "Сформулируй, где именно возник запрет"]
+          fixtureTurns = ["Что такое запрет?", "Сформулируй, где именно возник запрет"]
           prompts = ["Продолжай и скажи, что всё ещё мешает", "Где здесь остался пробел?", "Что нужно, чтобы снять это ограничение?"]
       session0 <- Runtime.bootstrapSession True seedSessionId
       fixtureSession <- foldTurns session0 fixtureTurns

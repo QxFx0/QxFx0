@@ -10,6 +10,7 @@ module QxFx0.Runtime.Session.Bootstrap
   , checkSessionReadiness
   , generateFallbackSessionId
   , minimalMorphologyFallback
+  , mergeMorphology
   , recoverBootstrapBlanket
   , useExternalKnowledge
   , readExternalKnowledgeEnabled

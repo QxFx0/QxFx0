@@ -5,6 +5,8 @@ module Test.Support
   , queryCount
   , withFakeSouffle
   , withFakeNixInstantiateOk
+  , withFakeNixInstantiateForConcepts
+  , withFixedRuntimeTime
   , withRuntimeEnv
   , withStrictRuntimeEnv
   , withEnvVar
@@ -120,6 +122,51 @@ withFakeNixInstantiateOk action = do
       [ "#!/bin/sh"
       , "printf 'true\\n'"
       ]
+
+-- | Fake 'nix-instantiate' that answers the constitutional probe
+-- /blocked/ ("false") for the listed concepts and /allowed/ ("true")
+-- for everything else.  Mirrors the per-call @--expr@ probing contract
+-- of @QxFx0.Bridge.NixGuard.runNixInstantiate@ (stdout "true" ->
+-- Allowed, "false" -> Blocked).
+withFakeNixInstantiateForConcepts :: [T.Text] -> IO a -> IO a
+withFakeNixInstantiateForConcepts blockedConcepts action = do
+  oldPath <- lookupEnv "PATH"
+  binDir <- freshTestPath "qxfx0_fake_nix_concepts_bin"
+  let cleanup = removeDirIfExists binDir
+      scriptPath = binDir </> "nix-instantiate"
+      fakePath = binDir <> maybe "" (\p -> ":" <> p) oldPath
+  bracket_ (createDirectoryIfMissing True binDir) cleanup $ do
+    writeFile scriptPath (unlines (fakeBlockedNixScript blockedConcepts))
+    perms <- getPermissions scriptPath
+    setPermissions scriptPath perms { executable = True }
+    withEnvVar "PATH" (Just fakePath) $
+      withEnvVar "QXFX0_NIX_INSTANTIATE_BIN" (Just scriptPath) action
+
+fakeBlockedNixScript :: [T.Text] -> [String]
+fakeBlockedNixScript blockedConcepts =
+  [ "#!/bin/sh"
+  , "expr=''"
+  , "prev=''"
+  , "for arg in \"$@\"; do"
+  , "  if [ \"$prev\" = '--expr' ]; then expr=\"$arg\"; fi"
+  , "  prev=\"$arg\""
+  , "done"
+  , "case \"$expr\" in"
+  ] <> concatMap conceptCase blockedConcepts <>
+  [ "  *) printf 'true\\n' ;;"
+  , "esac"
+  ]
+  where
+    conceptCase concept =
+      [ "  *" <> T.unpack concept <> "*) printf 'false\\n' ;;" ]
+
+-- | Pin the runtime clock to the given epoch seconds via
+-- @QXFX0_TEST_FIXED_TIME@ (each read advances by one second, see
+-- @QxFx0.Runtime.Wiring.Context.resolveTimeSource@).  Keeps
+-- dream-state and other time-derived fixtures deterministic.
+withFixedRuntimeTime :: Integer -> IO a -> IO a
+withFixedRuntimeTime epochSeconds =
+  withEnvVar "QXFX0_TEST_FIXED_TIME" (Just (show epochSeconds))
 
 testTempDir :: IO FilePath
 testTempDir = do
