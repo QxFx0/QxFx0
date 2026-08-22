@@ -20,7 +20,8 @@ separate step.
 |---|---|---|
 | `test/fixtures/b2-eval/corpus.jsonl` | Fixed scripted user turns (23 turns, 10 tasks: 5 definition + 5 distinction, each with challenge turns) | ❌ no (raters see transcripts only) |
 | `test/fixtures/b2-eval/control-a-config.json` | Control-A definition: what is disabled, what is preserved, fluency-matching rationale | ❌ no |
-| `test/fixtures/b2-eval/rubric-form.md` | Rating form: D1 (semantic depth), D3 (repair), D5 (identity continuity), D6 (non-fallback), forced-choice + reason + overall preference | ✅ yes (this IS the rating form) |
+| `test/fixtures/b2-eval/rubric-form.md` | Locked EN original of the rating form: D1 (semantic depth), D3 (repair), D5 (identity continuity), D6 (non-fallback), forced-choice + reason + overall preference | ❌ no (locked source, never edited) |
+| `test/fixtures/b2-eval/rubric-form-ru.md` | Russian translation of the locked EN form (2026-08-22, anchors unchanged; see `protocol_errata` in generated `packet-metadata.json`) — the canonical rater rubric | ✅ yes (this IS the rating form shipped to raters) |
 | `test/fixtures/b2-eval/pre-registration.md` | Locked fail/pivot conditions — no rubric tweaking, no post-hoc threshold changes | ✅ yes (transparency) |
 | `scripts/generate_b2_packet.sh` | Harness script: runs System + Control-A, creates blind pairs, answer key, metadata | ❌ no (operator only) |
 | `generated/` (output) | System transcripts, Control-A transcripts, blind pairs, answer key, metadata | blind-pairs/ + rubric only |

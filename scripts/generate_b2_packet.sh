@@ -21,15 +21,19 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CORPUS="$ROOT/test/fixtures/b2-eval/corpus.jsonl"
-RUBRIC="$ROOT/test/fixtures/b2-eval/rubric-form.md"
+# Rubric contract (2026-08-22 remediation): the EN form is the LOCKED
+# pre-registration original; the RU form is its translation (anchors
+# unchanged) and is what actually ships to raters.
+RUBRIC_LOCKED_EN="$ROOT/test/fixtures/b2-eval/rubric-form.md"
+RUBRIC_RATER_RU="$ROOT/test/fixtures/b2-eval/rubric-form-ru.md"
 PREREG="$ROOT/test/fixtures/b2-eval/pre-registration.md"
 CONTROL_CONFIG="$ROOT/test/fixtures/b2-eval/control-a-config.json"
 OUTPUT="${1:-$ROOT/test/fixtures/b2-eval/generated}"
 
 mkdir -p "$OUTPUT/system" "$OUTPUT/control-a" "$OUTPUT/blind-pairs"
 
-echo "[1/6] Verifying prerequisites..."
-for req in "$CORPUS" "$RUBRIC" "$PREREG" "$CONTROL_CONFIG"; do
+echo "[1/7] Verifying prerequisites..."
+for req in "$CORPUS" "$RUBRIC_LOCKED_EN" "$RUBRIC_RATER_RU" "$PREREG" "$CONTROL_CONFIG"; do
   if [ ! -f "$req" ]; then
     echo "FAIL: missing $req"
     exit 1
@@ -37,7 +41,7 @@ for req in "$CORPUS" "$RUBRIC" "$PREREG" "$CONTROL_CONFIG"; do
 done
 echo "  corpus: $(wc -l < "$CORPUS") turns"
 
-echo "[2/6] Verifying governed-evidence conditions..."
+echo "[2/7] Verifying governed-evidence conditions..."
 if [ "${QXFX0_GOVERNED_EVIDENCE:-}" != "1" ]; then
   echo "WARN: QXFX0_GOVERNED_EVIDENCE not set to 1"
   echo "  Transcripts will be EvidenceDegradedGuardUnavailable, not admissible."
@@ -45,7 +49,7 @@ if [ "${QXFX0_GOVERNED_EVIDENCE:-}" != "1" ]; then
   echo "  Continuing anyway for dev/testing..."
 fi
 
-echo "[3/6] Generating System transcripts..."
+echo "[3/7] Generating System transcripts..."
 # System: run the full pipeline with all features enabled.
 # Each task_id is a multi-turn session; turns within a task are sequential.
  cabal run -v0 qxfx0-main -- --serve-http 9180 2>/dev/null &
@@ -61,7 +65,6 @@ for i in $(seq 1 30); do
   sleep 1
 done
 
-SYSTEM_ARGS=""
 TASK_IDS=$(grep -o '"task_id":"[^"]*"' "$CORPUS" | sort -u | sed 's/"task_id":"//;s/"//')
 
 for task_id in $TASK_IDS; do
@@ -120,7 +123,7 @@ done
 
 kill $HTTP_PID 2>/dev/null || true
 
-echo "[4/6] Generating Control-A transcripts..."
+echo "[4/7] Generating Control-A transcripts..."
 # Control-A: same system with structure-ablated env vars.
 export QXFX0_CONTROL_A_DISABLE_ESSENCE=1
 export QXFX0_CONTROL_A_DISABLE_ADMISSION=1
@@ -195,7 +198,7 @@ done
 
 kill $HTTP_PID 2>/dev/null || true
 
-echo "[5/6] Creating blind pairs + answer key..."
+echo "[5/7] Creating blind pairs + answer key..."
 # For each task, create a blind pair with randomized labels.
 python3 - "$OUTPUT" "$TASK_IDS" <<'PYEOF'
 import json, os, random, sys, hashlib
@@ -280,9 +283,9 @@ with open(os.path.join(output, "answer-key.sha256"), "w") as f:
     f.write(h)
 PYEOF
 
-echo "[6/6] Recording metadata..."
+echo "[6/7] Recording metadata..."
 python3 - "$OUTPUT" <<'PYEOF'
-import json, os, datetime, hashlib, sys
+import json, os, datetime, hashlib, subprocess, sys
 
 output = sys.argv[1]
 
@@ -316,15 +319,34 @@ for side in ("system", "control-a"):
                 inadmissible += 1
 
 verified = inadmissible == 0
+try:
+    gen_commit = subprocess.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        capture_output=True, text=True, check=True
+    ).stdout.strip()
+except Exception:
+    gen_commit = "unknown"
 metadata = {
     "generated_at": datetime.datetime.utcnow().isoformat() + "Z",
+    "generated_at_commit": gen_commit,
     "governed_evidence_mode": os.environ.get("QXFX0_GOVERNED_EVIDENCE", "not_set"),
     "concepts_path": os.environ.get("QXFX0_CONCEPTS_PATH", "not_set"),
     "corpus_file": "test/fixtures/b2-eval/corpus.jsonl",
-    "rubric_file": "test/fixtures/b2-eval/rubric-form.md",
+    "rubric_file": "test/fixtures/b2-eval/rubric-form-ru.md",
+    "rubric_locked_source": "test/fixtures/b2-eval/rubric-form.md",
     "pre_registration_file": "test/fixtures/b2-eval/pre-registration.md",
     "control_a_config": "test/fixtures/b2-eval/control-a-config.json",
     "b3_gate_verdict": "PASS (conjunction Gates 1-5, commit d2e0182)",
+    "protocol_errata": [
+        {
+            "date": "2026-08-22",
+            "issue": "rater rubric switched to Russian translation",
+            "detail": "rubric_file is rubric-form-ru.md, a translation of the locked EN "
+                      "original (rubric_locked_source); rating anchors are unchanged. "
+                      "The locked pre-registration.md was NOT modified (erratum "
+                      "discipline: correction recorded here instead).",
+        }
+    ],
     "evidence_admissibility": {
         "verified": verified,
         "admissible_turns": admissible,
@@ -344,7 +366,7 @@ print(f"  metadata written (evidence verified: {admissible}/{total} governed)")
 PYEOF
 
 echo "[7/7] Building rater package (human-readable, no answer key)..."
-python3 - "$OUTPUT" "$(dirname "$0")/../test/fixtures/b2-eval/rubric-form.md" <<'PYEOF'
+python3 - "$OUTPUT" "$(dirname "$0")/../test/fixtures/b2-eval/rubric-form-ru.md" <<'PYEOF'
 import json, os, shutil, sys
 
 output = sys.argv[1]
@@ -381,8 +403,18 @@ Blind paired discrimination — M6-FELT human-eval leg (B2-EXEC-002).
 
 ## Contents
 - pairs/ — 10 blind pairs (def-ru-01..05, dist-ru-01..05); labels A/B are randomized per pair
-- rubric-form.md — rating form: fill one per pair (D1, D3, D5, D6 + overall)
+- rubric-form.md — rating form in Russian (translation of the locked
+  test/fixtures/b2-eval/rubric-form.md; anchors unchanged): fill one per pair
+  (D1, D3, D5, D6 + overall)
 - README.md — this file
+
+## Protocol erratum (2026-08-22)
+The rating form shipped in this package is the Russian translation
+(rubric-form-ru.md) of the locked EN original
+(test/fixtures/b2-eval/rubric-form.md); rating anchors are unchanged.
+The locked pre-registration.md is intentionally NOT modified; this
+erratum and packet-metadata.json (`protocol_errata`) record the
+substitution.
 
 ## Protocol
 1. Read both transcripts of a pair fully before rating.
