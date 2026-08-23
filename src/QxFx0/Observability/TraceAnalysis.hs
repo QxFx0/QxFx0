@@ -33,6 +33,9 @@ This module consumes:
 * Essence: 'trcEssenceMode', 'trcEssenceCommitted', 'trcEssenceAngstLevel', 'trcEssenceTrigger'
 * Deliberation: 'trcDeliberationRule', 'trcDeliberationAgreement', 'trcDeliberationDivergence'
 * Salience: 'trcSalienceDriver', 'trcSalienceHolisticBias', 'trcSalienceConfidence'
+* User regime (concept v3): 'trcUserRegime' — crisis protocol verdict,
+  user R5 contour, prediction residual.  Activates the previously
+  write-only regime traces (audit P1-5, 2026-08-23).
 -}
 module QxFx0.Observability.TraceAnalysis
   ( -- * Analysis types
@@ -42,6 +45,7 @@ module QxFx0.Observability.TraceAnalysis
   , EssenceAnalysis(..)
   , DeliberationAnalysis(..)
   , SalienceAnalysis(..)
+  , UserRegimeAnalysis(..)
   , TraceAnalysisSummary(..)
     -- * Analysis functions
   , analyzeRecoveryPattern
@@ -50,6 +54,7 @@ module QxFx0.Observability.TraceAnalysis
   , analyzeEssenceCommitment
   , analyzeDeliberation
   , analyzeSalience
+  , analyzeUserRegime
   , analyzeTrace
     -- * Anomaly detection
   , hasRecoveryAnomaly
@@ -58,6 +63,7 @@ module QxFx0.Observability.TraceAnalysis
   , hasEssenceAnomaly
   , hasDeliberationAnomaly
   , hasSalienceAnomaly
+  , hasUserRegimeAnomaly
   , hasAnyAnomaly
     -- * Observability integration
   , emitTraceMetrics
@@ -72,7 +78,9 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
-import QxFx0.Types.TurnProjection (TurnReplayTrace(..))
+import QxFx0.Types.TurnProjection (TurnReplayTrace(..), UserRegimeTrace(..))
+import QxFx0.Types.Safety.Crisis (CrisisGuardTrace(..))
+import QxFx0.Types.User.R5 (UserR5Trace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ceScalar, lowEnergyThreshold)
 import QxFx0.Self.Field
@@ -204,6 +212,7 @@ data TraceAnalysisSummary = TraceAnalysisSummary
   , tasEssence :: !EssenceAnalysis
   , tasDeliberation :: !DeliberationAnalysis
   , tasSalience :: !SalienceAnalysis
+  , tasUserRegime :: !UserRegimeAnalysis
   , tasAnomalyCount :: !Int
     -- ^ Total number of anomalies detected
   } deriving stock (Eq, Show, Generic)
@@ -415,6 +424,58 @@ detectSalienceAnomaly bias confidence
       Just "salience_confidence_out_of_range"
   | otherwise = Nothing
 
+-- | Concept v3 user-regime analysis (audit P1-5): activates the
+-- previously write-only regime trace fields.
+data UserRegimeAnalysis = UserRegimeAnalysis
+  { uraProtocolB :: !Bool
+    -- ^ Protocol B executed this turn.
+  , uraCrisisCause :: !(Maybe Text)
+    -- ^ 'crisisCauseTag' when Protocol B fired.
+  , uraOutsideContour :: !Bool
+    -- ^ The user state was classified outside the viability contour.
+  , uraPredictionError :: !(Maybe Double)
+    -- ^ Residual against the previous turn's transition prediction.
+  , uraAnomaly :: !(Maybe Text)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | Analyze the user-regime trace.  A hard lexical trigger is the
+-- guardrail working as designed — not an anomaly.  An
+-- /encoder-driven/ contour exit is exactly the decision the
+-- operator must be able to see (the contour is hand-set v1), and a
+-- large prediction residual means the transition model is wrong.
+analyzeUserRegime :: TurnReplayTrace -> UserRegimeAnalysis
+analyzeUserRegime trace =
+  case trcUserRegime trace of
+    Nothing ->
+      UserRegimeAnalysis False Nothing False Nothing Nothing
+    Just regime ->
+      let crisis = urtCrisis regime
+          userR5 = urtUserR5 regime
+          anomaly
+            | cgtCause crisis == Just "contour_exit" =
+                Just "user_contour_exit"
+            | Just err <- ur5PredictionError userR5
+            , err > userResidualAnomalyThreshold =
+                Just "user_model_high_residual"
+            | otherwise = Nothing
+      in UserRegimeAnalysis
+           { uraProtocolB = cgtProtocolB crisis
+           , uraCrisisCause = cgtCause crisis
+           , uraOutsideContour = ur5OutsideContour userR5
+           , uraPredictionError = ur5PredictionError userR5
+           , uraAnomaly = anomaly
+           }
+
+-- | Prediction-residual level that flags the transition model as
+-- wrong (mean absolute component distance; 0.35 ≈ a third of the
+-- axis range).  Hand-set v1.
+userResidualAnomalyThreshold :: Double
+userResidualAnomalyThreshold = 0.35
+
+hasUserRegimeAnomaly :: UserRegimeAnalysis -> Bool
+hasUserRegimeAnomaly analysis = uraAnomaly analysis /= Nothing
+
 -- | Comprehensive trace analysis
 analyzeTrace :: TurnReplayTrace -> TraceAnalysisSummary
 analyzeTrace trace =
@@ -424,7 +485,8 @@ analyzeTrace trace =
       essence = analyzeEssenceCommitment trace
       deliberation = analyzeDeliberation trace
       salience = analyzeSalience trace
-      anomalyCount = countAnomalies recovery conatus field essence deliberation salience
+      userRegime = analyzeUserRegime trace
+      anomalyCount = countAnomalies recovery conatus field essence deliberation salience userRegime
   in TraceAnalysisSummary
        { tasRecovery = recovery
        , tasConatus = conatus
@@ -432,12 +494,13 @@ analyzeTrace trace =
        , tasEssence = essence
        , tasDeliberation = deliberation
        , tasSalience = salience
+       , tasUserRegime = userRegime
        , tasAnomalyCount = anomalyCount
        }
 
 -- | Count total anomalies
-countAnomalies :: RecoveryAnalysis -> ConatusAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> Int
-countAnomalies recovery conatus field essence deliberation salience =
+countAnomalies :: RecoveryAnalysis -> ConatusAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> UserRegimeAnalysis -> Int
+countAnomalies recovery conatus field essence deliberation salience userRegime =
   length $ filter (/= Nothing)
     [ raAnomaly recovery
     , caAnomaly conatus
@@ -445,6 +508,7 @@ countAnomalies recovery conatus field essence deliberation salience =
     , eaAnomaly essence
     , daAnomaly deliberation
     , saAnomaly salience
+    , uraAnomaly userRegime
     ]
 
 -- | Check if recovery has anomaly
@@ -536,6 +600,11 @@ logTraceAnomalies trace summary = do
     Just anomaly -> logWarn ("Deliberation anomaly: " <> anomaly) baseCtx
     Nothing -> pure ()
   
+  -- Log user-regime anomalies (concept v3)
+  case uraAnomaly (tasUserRegime summary) of
+    Just anomaly -> logWarn ("UserRegime anomaly: " <> anomaly) baseCtx
+    Nothing -> pure ()
+
   -- Log Salience anomalies
   case saAnomaly (tasSalience summary) of
     Just anomaly -> logWarn ("Salience anomaly: " <> anomaly) baseCtx

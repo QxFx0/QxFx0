@@ -45,42 +45,14 @@ import qualified Data.Text as T
 
 import QxFx0.Types.Semantic.OntologicalAxis
 import QxFx0.Types.User.R5 (UserR5State (..))
-
-beingPositiveMarkers :: [Text]
-beingPositiveMarkers =
-  [ "я есть", "я живу", "живу", "существует", "есть смысл"
-  , "реально", "присутствует", "полноценно"
-  ]
-
-beingNegativeMarkers :: [Text]
-beingNegativeMarkers =
-  [ "нет смысла", "бессмыслен", "пусто", "ничто", "небытие"
-  , "не существует", "исчез", "меня нет", "без меня"
-  ]
-
-strivingPositiveMarkers :: [Text]
-strivingPositiveMarkers =
-  [ "хочу", "могу", "стремлюсь", "ищу", "выбираю", "мечтаю"
-  , "попробую", "буду", "намерен", "сделаю"
-  ]
-
-strivingNegativeMarkers :: [Text]
-strivingNegativeMarkers =
-  [ "не хочу", "не буду", "отказываюсь", "бросаю", "надоело"
-  , "всё равно", "все равно", "сдаюсь", "не могу", "ничего не хочется"
-  ]
-
-affirmationPositiveMarkers :: [Text]
-affirmationPositiveMarkers =
-  [ "создаю", "строю", "утверждаю", "люблю", "поддерживаю"
-  , "развиваю", "усиливаю", "берегу", "дорожу"
-  ]
-
-affirmationNegativeMarkers :: [Text]
-affirmationNegativeMarkers =
-  [ "разрушаю", "уничтож", "ломаю", "рушу", "ненавижу", "топчу"
-  , "стираю", "сжигаю"
-  ]
+import QxFx0.Semantic.Markers
+  ( beingPositiveMarkers
+  , beingNegativeMarkers
+  , strivingPositiveMarkers
+  , strivingNegativeMarkers
+  , affirmationPositiveMarkers
+  , affirmationNegativeMarkers
+  )
 
 -- | Classify the ontological directedness of one utterance.  Total
 -- and deterministic; empty and marker-free input yields

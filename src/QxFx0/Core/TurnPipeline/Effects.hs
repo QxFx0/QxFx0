@@ -494,7 +494,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       userScore = userConatusScore defaultUserConatusWeights userR5Now
       priorUserContour = ssUserR5Contour ss
       userOutsideContour = outsideViabilityContour defaultViabilityContour
-                             (u5Baseline priorUserContour) userScore
+                             (u5Baseline priorUserContour) userR5Now userScore
       crisisTrigger = detectCrisisTrigger input
       userProtocol = decideProtocol crisisTrigger
                        (if userOutsideContour then Just userScore else Nothing)

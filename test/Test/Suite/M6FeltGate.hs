@@ -365,10 +365,7 @@ passingTrace = TurnReplayTrace
   , trcOverlayContentUsed = False
   , trcSelectorDiagnostics = []
   , trcResponsePlan = Nothing
-  , trcCrisisProtocol = Nothing
-  , trcUserR5 = Nothing
-  , trcOntologicalVector = Nothing
-  , trcOntologicalMove = Nothing
+  , trcUserRegime = Nothing
   }
 
 -- | A session of @n@ identical passing turns, with the dialogue focus

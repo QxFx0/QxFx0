@@ -6,6 +6,7 @@
 module QxFx0.Types.TurnProjection
   ( ParserStatus(..)
   , TurnReplayTrace(..)
+  , UserRegimeTrace(..)
   , ReplayTraceEnvelope(..)
   , currentReplayTraceEnvelopeVersion
   , encodePersistedReplayTrace
@@ -488,27 +489,38 @@ data TurnReplayTrace = TurnReplayTrace
      -- ^ Observed selector decisions from the rendered semantic artifact.
    , trcResponsePlan :: !(Maybe ResponseSemanticPlan)
      -- ^ Versioned grounded content plan, when a content-producing move used one.
-   , trcCrisisProtocol :: !(Maybe CrisisGuardTrace)
-     -- ^ Concept v3 §2: crisis-guard observability (protocol verdict,
-     --   cause, acute category, resource-pack version).  Always
-     --   populated on new turns; @Nothing@ on traces recorded before
-     --   the two-protocol regime landed.
-   , trcUserR5 :: !(Maybe UserR5Trace)
-     -- ^ Concept v3 §4/§6: the decoded user-side R5 state, its
-     --   viability score, baseline, contour membership, and the
-     --   prediction residual against the previous turn.  @Nothing@
-     --   on pre-regime traces.
-   , trcOntologicalVector :: !(Maybe OntologicalVector)
-     -- ^ Concept v3 §5: the ontological directedness of the input
-     --   utterance (being/non-being, striving/denial,
-     --   affirmation/destruction).  @Nothing@ on pre-regime traces.
-   , trcOntologicalMove :: !(Maybe OntologicalMoveTrace)
-     -- ^ Concept v3 §6: the computed ontological transition operator
-     --   (move tag, predicted distances to S* before/after, and the
-     --   resonance-gate state).  @Nothing@ when no move fired this
-     --   turn or on pre-regime traces.
+   , trcUserRegime :: !(Maybe UserRegimeTrace)
+     -- ^ Concept v3 (two-protocol regime) observability, grouped as a
+     --   single sub-record instead of growing the top-level
+     --   god-record: crisis-guard verdict, decoded user R5 state +
+     --   contour, ontological directedness, the computed move, and
+     --   the frozen encoder version.  Always populated on new turns;
+     --   @Nothing@ on traces recorded before the regime landed.
    } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
+
+-- | Grouped concept-v3 regime observability for one turn (see
+-- 'trcUserRegime').  Sub-record discipline per the 'EffectSnapshot'
+-- precedent: new regime fields grow this record, not the top-level
+-- 'TurnReplayTrace'.
+data UserRegimeTrace = UserRegimeTrace
+  { urtCrisis :: !CrisisGuardTrace
+    -- ^ Concept v3 §2: protocol verdict, cause, acute category,
+    --   resource-pack version.
+  , urtUserR5 :: !UserR5Trace
+    -- ^ Concept v3 §4/§6: decoded user state, viability score,
+    --   baseline, contour membership, prediction residual.
+  , urtOntologicalVector :: !OntologicalVector
+    -- ^ Concept v3 §5: ontological directedness of the input.
+  , urtOntologicalMove :: !(Maybe OntologicalMoveTrace)
+    -- ^ Concept v3 §6: the computed transition operator, or Nothing
+    --   when no move fired this turn.
+  , urtEncoderVersion :: !Int
+    -- ^ The frozen user-R5 encoder version ('r5EncoderVersion'),
+    --   machine-visible per-model (global math version is
+    --   'trcRegimeVersion').
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
 
 -- | Versioned representation stored in @turn_quality.replay_trace_json@.
 -- Version 1 contains the current trace schema under @trace@. Bare trace
@@ -729,10 +741,7 @@ instance FromJSON TurnReplayTrace where
       <*> pure overlayUsed
        <*> pure selectorDiagnostics
        <*> o .:? "trcResponsePlan"
-       <*> o .:? "trcCrisisProtocol"
-       <*> o .:? "trcUserR5"
-       <*> o .:? "trcOntologicalVector"
-       <*> o .:? "trcOntologicalMove"
+       <*> o .:? "trcUserRegime"
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

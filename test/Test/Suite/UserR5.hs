@@ -38,22 +38,23 @@ userR5Tests =
       assertBool "score must be above the absolute floor"
         (score >= vcAbsoluteFloor defaultViabilityContour)
       assertBool "must be inside without a baseline"
-        (not (outsideViabilityContour defaultViabilityContour Nothing score))
+        (not (outsideViabilityContour defaultViabilityContour Nothing state score))
       assertBool "must be inside against a neutral-ish personalized baseline"
-        (not (outsideViabilityContour defaultViabilityContour (Just 0.24) score))
+        (not (outsideViabilityContour defaultViabilityContour (Just 0.24) state score))
   , TestLabel "concept edge: exhaustion pile-up exits the contour" $ TestCase $ do
       let state = encodeR5 "всё бессмысленно, я не могу больше, нет сил, не выдерживаю, всё пусто" ""
           score = userConatusScore defaultUserConatusWeights state
       assertBool "pile-up must fall outside the contour"
-        (outsideViabilityContour defaultViabilityContour Nothing score)
+        (outsideViabilityContour defaultViabilityContour Nothing state score)
   , TestLabel "concept edge: philosophical pessimism stays inside" $ TestCase $ do
       let state = encodeR5 "жизнь бессмысленна как философская позиция камю" ""
           score = userConatusScore defaultUserConatusWeights state
       assertBool "a stated position must not exit the contour"
-        (not (outsideViabilityContour defaultViabilityContour Nothing score))
+        (not (outsideViabilityContour defaultViabilityContour Nothing state score))
   , TestLabel "neutral state is inside the contour" $ TestCase $
       assertBool "neutral must be inside"
         (not (outsideViabilityContour defaultViabilityContour Nothing
+               neutralUserR5State
                (userConatusScore defaultUserConatusWeights neutralUserR5State)))
   , TestLabel "all encoder components are clamped to [0,1]" $ TestCase $ do
       let state = encodeR5 "ТРЕВОГА ТРЕВОГА!!! БОЛЬНО СТРАШНО НЕ МОГУ НЕТ СИЛ ПУСТО ОТЧАЯНИЕ ТЯЖЕЛО ОДИНОКО!!!" ""
@@ -98,10 +99,28 @@ userR5Tests =
           b = neutralUserR5State { r5Confidence = 0.1 }
       assertEqual "identical states have zero distance" 0.0 (r5Distance a a)
       assertEqual "distance is symmetric" (r5Distance a b) (r5Distance b a)
-  , TestLabel "v1 transition model is the persistence hypothesis" $ TestCase $
-      assertEqual "predictNextUserR5 is identity in v1"
-        (encodeR5 "я хочу понять" "")
-        (predictNextUserR5 (encodeR5 "я хочу понять" ""))
+  , TestLabel "negativeEvidenceEarned: form alone does not earn a drop" $ TestCase $ do
+      let calm = mkUserR5State 0.5 0.25 0.5 0.5 0.4
+          tense = mkUserR5State 0.5 0.45 0.5 0.5 0.4
+          deflated = mkUserR5State 0.5 0.25 0.35 0.5 0.4
+      assertBool "calm form is unearned" (not (negativeEvidenceEarned calm))
+      assertBool "raised tension is earned" (negativeEvidenceEarned tense)
+      assertBool "lowered agency is earned" (negativeEvidenceEarned deflated)
+  , TestLabel "audit P0-2 pin: style-driven score drop does not exit the contour" $ TestCase $ do
+      let question = encodeR5 "что такое свобода?" "свобода"
+          questionScore = userConatusScore defaultUserConatusWeights question
+          challenge = encodeR5 "ты говоришь ерунду, это просто неверно" ""
+          challengeScore = userConatusScore defaultUserConatusWeights challenge
+      assertBool "the drop must be real (sanity of the fixture)"
+        (challengeScore < questionScore - 0.10)
+      assertBool "an unearned style drop must not exit the contour"
+        (not (outsideViabilityContour defaultViabilityContour
+                (Just questionScore) challenge challengeScore))
+      assertBool "an earned drop below baseline does exit"
+        (outsideViabilityContour defaultViabilityContour
+           (Just 0.55)
+           (mkUserR5State 0.5 0.25 0.40 0.5 0.4)
+           (userConatusScore defaultUserConatusWeights (mkUserR5State 0.5 0.25 0.40 0.5 0.4)))
   , TestLabel "mkUserR5State clamps out-of-range inputs" $ TestCase $ do
       let state = mkUserR5State 5 (-5) 2 (-2) 1.5
       assertBool "all clamped" (all in01 [ r5Resonance state, r5Atmosphere state

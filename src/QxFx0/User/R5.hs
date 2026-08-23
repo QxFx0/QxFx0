@@ -43,7 +43,7 @@ so a negated positive can never leak into the positive count.
   base.
 -}
 module QxFx0.User.R5
-  ( r5EncoderVersion
+  ( r5EncoderVersion -- re-exported from QxFx0.Types.User.R5 (canonical)
   , encodeR5
     -- * Marker lexicons (exported for tests and audit)
   , r5DistressMarkers
@@ -58,53 +58,18 @@ import Data.Text (Text)
 import qualified Data.Text as T
 
 import QxFx0.Types.User.R5
-
--- | Version of the frozen encoder model.  Bump together with
--- @currentMathVersion@ when the offline fit replaces the hand-set
--- constants.
-r5EncoderVersion :: Int
-r5EncoderVersion = 1
-
-r5DistressMarkers :: [Text]
-r5DistressMarkers =
-  [ "грустно", "тоскливо", "страшно", "тревожно", "плохо", "одиноко"
-  , "устал", "устала", "больно", "тяжело", "бесит", "раздражает"
-  , "не могу", "нет сил", "надоело", "выгорел", "выгорела"
-  , "опустош", "отчаян", "безнадеж", "безнадёж", "бессмыслен"
-  , "не выдерживаю", "не получается", "пусто", "давит"
-  ]
-
-r5AgencyNegativeMarkers :: [Text]
-r5AgencyNegativeMarkers =
-  [ "не хочу", "не буду", "не могу", "не смогу", "не получается"
-  , "бесполезно", "безнадежно", "безнадёжно", "никогда не получится"
-  , "надоело", "сдаюсь", "бросаю", "всё равно", "все равно"
-  , "ничего не хочется", "не знаю зачем", "не выдерживаю", "нет сил"
-  ]
-
-r5AgencyPositiveMarkers :: [Text]
-r5AgencyPositiveMarkers =
-  [ "хочу", "могу", "смогу", "буду", "сделаю", "попробую", "выберу"
-  , "стремлюсь", "ищу", "мечтаю", "намерен", "планирую", "решаю"
-  ]
-
-r5ResonanceAddressMarkers :: [Text]
-r5ResonanceAddressMarkers =
-  [ "ты можешь", "как ты", "а ты", "скажи", "ответь", "ты считаешь"
-  , "ты думаешь", "по-твоему", "помоги мне понять"
-  ]
-
-r5ConsolidationMarkers :: [Text]
-r5ConsolidationMarkers =
-  [ "потому что", "значит", "следовательно", "итак", "поэтому"
-  , "связано", "исходя из", "отсюда", "таким образом"
-  ]
-
-r5CounterfactualMarkers :: [Text]
-r5CounterfactualMarkers =
-  [ "или", "может быть", "а если", "что если", "другой", "другие"
-  , "иначе", "вариант", "предположим", "альтернатива", "с другой стороны"
-  ]
+  ( UserR5State
+  , r5EncoderVersion
+  , mkUserR5State
+  )
+import QxFx0.Semantic.Markers
+  ( r5DistressMarkers
+  , r5AgencyNegativeMarkers
+  , r5AgencyPositiveMarkers
+  , r5ResonanceAddressMarkers
+  , r5ConsolidationMarkers
+  , r5CounterfactualMarkers
+  )
 
 -- | Encode one utterance into an 'UserR5State'.  Total and
 -- deterministic: a pure function of the input text and the topic

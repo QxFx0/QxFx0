@@ -1767,10 +1767,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
            , trcResponsePlan = Nothing
-           , trcCrisisProtocol = Nothing
-           , trcUserR5 = Nothing
-           , trcOntologicalVector = Nothing
-           , trcOntologicalMove = Nothing
+           , trcUserRegime = Nothing
                   }
            , tqpDivergence = True
            }
@@ -2319,10 +2316,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
            , trcResponsePlan = Nothing
-           , trcCrisisProtocol = Nothing
-           , trcUserR5 = Nothing
-           , trcOntologicalVector = Nothing
-           , trcOntologicalMove = Nothing
+           , trcUserRegime = Nothing
                   }
            , tqpDivergence = True
            }

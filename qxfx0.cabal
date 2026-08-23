@@ -151,6 +151,7 @@ library
     QxFx0.User.R5
     QxFx0.Semantic.Ontological
     QxFx0.Semantic.MoveGraph
+    QxFx0.Semantic.Markers
     QxFx0.User.Decompress
     QxFx0.Learning.Need
     QxFx0.Learning.Tool

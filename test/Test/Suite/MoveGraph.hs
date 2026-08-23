@@ -91,15 +91,27 @@ moveGraphTests =
           predicted m = r5Distance (applyMoveEffect m struggleState) target
       assertBool "chosen move is the best admissible by predicted distance"
         (all (\m -> predicted m >= ompDistanceAfter plan - 1e-12) admissible)
-  , TestLabel "drift below the baseline fires without an ontological act" $ TestCase $ do
+  , TestLabel "earned drift below the baseline fires without an ontological act" $ TestCase $ do
       let calmOnto = OntologicalVector 0 0 0
-          calmState = mkUserR5State 0.5 0.25 0.5 0.5 0.4
-          calmScore = userConatusScore defaultUserConatusWeights calmState
-          baseline = calmScore + moveDriftMargin + 0.05
-      assertBool "significant drift must fire the move layer"
-        (planOntologicalMove calmState calmOnto (Just baseline) calmScore /= Nothing)
+          drifting = mkUserR5State 0.5 0.25 0.40 0.5 0.4  -- conf 0.40 < 0.45: earned
+          driftingScore = userConatusScore defaultUserConatusWeights drifting
+          baseline = driftingScore + moveDriftMargin + 0.05
+      assertBool "earned drift must fire the move layer"
+        (planOntologicalMove drifting calmOnto (Just baseline) driftingScore /= Nothing)
       assertBool "minor drop below baseline must not fire"
-        (planOntologicalMove calmState calmOnto (Just (calmScore + 0.05)) calmScore == Nothing)
+        (planOntologicalMove drifting calmOnto (Just (driftingScore + 0.05)) driftingScore == Nothing)
+  , TestLabel "audit P0-2 pin: challenge after a topic question does not fire the move" $ TestCase $ do
+      let questionState = encodeR5 "что такое свобода?" "свобода"
+          questionScore = userConatusScore defaultUserConatusWeights questionState
+          challengeText = "ты говоришь ерунду, это просто неверно"
+          challengeState = encodeR5 challengeText ""
+          challengeScore = userConatusScore defaultUserConatusWeights challengeState
+          challengeOnto = classifyOntological challengeText
+      assertBool "fixture sanity: the score really drops by style"
+        (challengeScore < questionScore - moveDriftMargin)
+      assertEqual "a style-driven drop must not fire the move layer"
+        Nothing
+        (planOntologicalMove challengeState challengeOnto (Just questionScore) challengeScore)
   , TestLabel "transition model: persistence without a move, effect with one" $ TestCase $ do
       let s = mkUserR5State 0.5 0.25 0.5 0.5 0.4
       assertEqual "no move = identity" s (transitionUserR5 Nothing s)

@@ -574,6 +574,41 @@ flag-gated):
   invariant, drift firing, decompression concentrate, totality).
   Corpus-level decompression (predicate choice per receiver) and
   offline transition fitting remain deferred (calibration phase).
+- **Skeptical-audit closure P0–P1 (2026-08-23)**:
+  * *P0-1*: the whole regime is committed (`4fc79f9` П-era
+    comments, `aa638f7` concept-v3 regime, plus this fix commit).
+  * *P0-2/P0-3 evidence gate*: the encoder's score conflates
+    utterance form (question shape, topic continuity) with user
+    state, so both the move-layer drift branch
+    (`MoveGraph.moveNeeded`) and the relative contour-exit branch
+    (`outsideViabilityContour`) are now gated by
+    `negativeEvidenceEarned` (atmosphere > 0.30 ∨ confidence <
+    0.45): a style-driven score drop (challenge after a definitional
+    question) can no longer fire a move or a Protocol B exit; the
+    drop must be earned by negative signals in the state itself.
+    The absolute-floor branch needs no gate — v1 encoder arithmetic
+    makes a sub-floor score unreachable without a distress pile-up.
+    Pinned by tests in `UserR5`/`MoveGraph` (style-drop pin).
+  * *P1-4*: the four regime trace fields collapsed into one
+    sub-record `trcUserRegime :: Maybe UserRegimeTrace` (crisis,
+    userR5, ontological vector, move, `urtEncoderVersion`) — sub-
+    record discipline per the EffectSnapshot precedent; new regime
+    fields grow the sub-record, not the god-record.
+  * *P1-5*: the regime traces are no longer write-only —
+    `TraceAnalysis.analyzeUserRegime` flags
+    `user_contour_exit` (encoder-driven Protocol B; hard triggers
+    are the law working, not an anomaly) and
+    `user_model_high_residual` (residual > 0.35).
+  * *P1-6*: all marker lexicons moved to the single canonical
+    source `QxFx0.Semantic.Markers`; `User.R5` and
+    `Semantic.Ontological` re-export (Intent/Features keeps its own
+    pre-existing lexicons — folding them in is a separate change).
+  * *P1-7*: GAPS.md stale "30 topics" marked; M6-FELT checklist
+    line annotated with the 2026-08-23 green verification.
+  * *P1-8*: `predictNextUserR5` deleted (superseded by
+    `transitionUserR5`); `r5EncoderVersion` moved to Types and
+    stamped per-turn in the trace.
+
 - **Open follow-ups (not in this landing)**: corpus-level
   receiver-conditioned decompression via `fieldAwareRendering`;
   offline fitting of the encoder/effect matrix on a labelled 30–50

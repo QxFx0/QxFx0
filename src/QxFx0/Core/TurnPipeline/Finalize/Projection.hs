@@ -92,6 +92,7 @@ import QxFx0.Types.User.R5
   ( UserR5State(..)
   , UserR5Trace(..)
   , defaultUserConatusWeights
+  , r5EncoderVersion
   , u5Baseline
   , userConatusScore
   )
@@ -461,30 +462,33 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcOverlayContentUsed = not (null overlayPredicateIds)
            , trcSelectorDiagnostics = taSelectorDiagnostics ta
            , trcResponsePlan = taResponsePlan ta
-           , trcCrisisProtocol = Just CrisisGuardTrace
-               { cgtProtocolB = protocolBFired
-               , cgtCause = crisisCauseTag <$> mProtocolCause
-               , cgtCategory = crisisCategoryTag <$> (mProtocolCause >>= crisisCauseCategory)
-               , cgtResourceVersion = if protocolBFired then crisisResourceVersion else 0
+           , trcUserRegime = Just UserRegimeTrace
+               { urtCrisis = CrisisGuardTrace
+                   { cgtProtocolB = protocolBFired
+                   , cgtCause = crisisCauseTag <$> mProtocolCause
+                   , cgtCategory = crisisCategoryTag <$> (mProtocolCause >>= crisisCauseCategory)
+                   , cgtResourceVersion = if protocolBFired then crisisResourceVersion else 0
+                   }
+               , urtUserR5 = UserR5Trace
+                   { ur5Resonance = r5Resonance (tiUserR5 ti)
+                   , ur5Atmosphere = r5Atmosphere (tiUserR5 ti)
+                   , ur5Confidence = r5Confidence (tiUserR5 ti)
+                   , ur5Consolidation = r5Consolidation (tiUserR5 ti)
+                   , ur5Counterfactual = r5Counterfactual (tiUserR5 ti)
+                   , ur5ConatusScore = userConatusScore defaultUserConatusWeights (tiUserR5 ti)
+                   , ur5Baseline = u5Baseline (ssUserR5Contour nextSs)
+                   , ur5OutsideContour = outsideFromProtocol
+                   , ur5PredictionError = tiUserPredictionError ti
+                   }
+               , urtOntologicalVector = tiOntologicalVector ti
+               , urtOntologicalMove =
+                   OntologicalMoveTrace
+                     <$> (ontologicalMoveTag . ompMove <$> tpOntologicalMove tp)
+                     <*> (ompDistanceBefore <$> tpOntologicalMove tp)
+                     <*> (ompDistanceAfter <$> tpOntologicalMove tp)
+                     <*> (ompAffirmGatePassed <$> tpOntologicalMove tp)
+               , urtEncoderVersion = r5EncoderVersion
                }
-           , trcUserR5 = Just UserR5Trace
-               { ur5Resonance = r5Resonance (tiUserR5 ti)
-               , ur5Atmosphere = r5Atmosphere (tiUserR5 ti)
-               , ur5Confidence = r5Confidence (tiUserR5 ti)
-               , ur5Consolidation = r5Consolidation (tiUserR5 ti)
-               , ur5Counterfactual = r5Counterfactual (tiUserR5 ti)
-               , ur5ConatusScore = userConatusScore defaultUserConatusWeights (tiUserR5 ti)
-               , ur5Baseline = u5Baseline (ssUserR5Contour nextSs)
-               , ur5OutsideContour = outsideFromProtocol
-               , ur5PredictionError = tiUserPredictionError ti
-               }
-           , trcOntologicalVector = Just (tiOntologicalVector ti)
-           , trcOntologicalMove =
-               OntologicalMoveTrace
-                 <$> (ontologicalMoveTag . ompMove <$> tpOntologicalMove tp)
-                 <*> (ompDistanceBefore <$> tpOntologicalMove tp)
-                 <*> (ompDistanceAfter <$> tpOntologicalMove tp)
-                 <*> (ompAffirmGatePassed <$> tpOntologicalMove tp)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

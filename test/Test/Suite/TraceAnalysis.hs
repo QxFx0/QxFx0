@@ -225,10 +225,7 @@ minimalTrace = TurnReplayTrace
           , trcOverlayContentUsed = False
           , trcSelectorDiagnostics = []
           , trcResponsePlan = Nothing
-          , trcCrisisProtocol = Nothing
-          , trcUserR5 = Nothing
-          , trcOntologicalVector = Nothing
-          , trcOntologicalMove = Nothing
+          , trcUserRegime = Nothing
   }
 
 testRecoveryNoTrigger :: Test
@@ -332,10 +329,7 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
           , trcOverlayContentUsed = False
           , trcSelectorDiagnostics = []
           , trcResponsePlan = Nothing
-          , trcCrisisProtocol = Nothing
-          , trcUserR5 = Nothing
-          , trcOntologicalVector = Nothing
-          , trcOntologicalMove = Nothing
+          , trcUserRegime = Nothing
         }
   let decoded = decode (encode trace)
   assertEqual "Activated concepts round-trip" (Just ["свобода", "выбор"]) (trcActivatedConcepts <$> decoded)

@@ -54,6 +54,7 @@ import QxFx0.Types.Semantic.OntologicalAxis (OntologicalVector (..))
 import QxFx0.Types.User.R5
   ( UserR5State
   , mkUserR5State
+  , negativeEvidenceEarned
   , r5Distance
   )
 
@@ -84,22 +85,29 @@ viabilityTarget (Just baseline) =
        0.50
 
 -- | Does this turn need an ontological counter-move at all?
+-- The drift branch is evidence-gated by 'negativeEvidenceEarned':
+-- the encoder's score conflates utterance form (question shape,
+-- topic continuity) with user state, so a style change alone
+-- (e.g. a challenge after a definitional question) must not fire
+-- the move layer — the drop has to be earned by negative signals.
 moveNeeded
-  :: OntologicalVector
-  -> Maybe Double  -- ^ personalized baseline, if any
-  -> Double        -- ^ observed user Conatus score
+  :: UserR5State    -- ^ observed state (evidence for the drift branch)
+  -> OntologicalVector
+  -> Maybe Double   -- ^ personalized baseline, if any
+  -> Double         -- ^ observed user Conatus score
   -> Bool
-moveNeeded onto mBaseline score
+moveNeeded userState onto mBaseline score
   | ovStriving onto < 0 = True
   | ovBeing onto < 0 = True
   | ovAffirmation onto < 0 = True
   | Just baseline <- mBaseline
+  , negativeEvidenceEarned userState
   , score < baseline - moveDriftMargin = True
   | otherwise = False
 
 -- | Deterministic search for the ontological transition operator.
 -- Total: every (state, directedness, baseline, score) tuple yields
--- either 'Nothing' (no act to answer, no drift) or the best
+-- either 'Nothing' (no act to answer, no earned drift) or the best
 -- admissible move with its predicted distances.
 planOntologicalMove
   :: UserR5State           -- ^ decoded user state S_t
@@ -108,7 +116,7 @@ planOntologicalMove
   -> Double                -- ^ observed user Conatus score
   -> Maybe OntologicalMovePlan
 planOntologicalMove userState onto mBaseline score
-  | not (moveNeeded onto mBaseline score) = Nothing
+  | not (moveNeeded userState onto mBaseline score) = Nothing
   | otherwise =
       let target = viabilityTarget mBaseline
           gatePassed = ontologicalMoveAdmissible userState

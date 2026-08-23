@@ -39,7 +39,8 @@ EMA over the first turns; one extreme utterance must not redefine
 the norm — 'updateUserBaseline').
 
 The residual-audit carriers ('UserR5ContourState',
-'predictNextUserR5', 'r5Distance', 'pushR5Sample') clone the proven
+'r5Distance', 'pushR5Sample', and the move-conditioned
+'QxFx0.Types.Semantic.MoveGraph.transitionUserR5') clone the proven
 A-slice self-divergence pattern (predict → witness → diff → bounded
 window) onto the user side: each turn the encoder observes the
 actual user state, it is compared against the deterministic
@@ -65,8 +66,9 @@ module QxFx0.Types.User.R5
   , updateUserBaseline
     -- * Residual audit (predict -> witness -> diff)
   , r5Distance
-  , predictNextUserR5
   , pushR5Sample
+  , negativeEvidenceEarned
+  , r5EncoderVersion
     -- * Persisted per-session carry
   , UserR5ContourState(..)
   , emptyUserR5ContourState
@@ -178,16 +180,36 @@ defaultViabilityContour = ViabilityContour
 
 -- | Contour membership.  Concept v3 §9 invariant: the answer is a
 -- single 'Bool' — a state can never be both inside and outside.
+--
+-- The /relative/ branch (below the personalized baseline) is
+-- evidence-gated by 'negativeEvidenceEarned': the encoder's score
+-- conflates utterance form (question shape, topic continuity) with
+-- user state, so a style change alone must not read as a contour
+-- exit — the drop has to be /earned/ by negative signals in the
+-- state itself.  The absolute-floor branch needs no gate: the v1
+-- encoder's arithmetic makes a sub-floor score unreachable without
+-- a distress pile-up.
 outsideViabilityContour
   :: ViabilityContour
-  -> Maybe Double  -- ^ personalized baseline, if one exists
-  -> Double        -- ^ observed user Conatus score
+  -> Maybe Double      -- ^ personalized baseline, if one exists
+  -> UserR5State       -- ^ observed state (evidence for the relative branch)
+  -> Double            -- ^ observed user Conatus score
   -> Bool
-outsideViabilityContour contour mBaseline score
+outsideViabilityContour contour mBaseline state score
   | score < vcAbsoluteFloor contour = True
   | Just baseline <- mBaseline
+  , negativeEvidenceEarned state
   , score < baseline - vcPersonalMargin contour = True
   | otherwise = False
+
+-- | Has the utterance earned a below-baseline reading?  True when
+-- the state itself carries negative signals (raised tension or
+-- lowered agency), not merely a quieter form.  Hand-set v1
+-- (frozen); thresholds track the encoder's neutral point
+-- (atmosphere 0.25, confidence 0.5).
+negativeEvidenceEarned :: UserR5State -> Bool
+negativeEvidenceEarned s =
+  r5Atmosphere s > 0.30 || r5Confidence s < 0.45
 
 -- | Slow EMA update of the personalized baseline.  The first
 -- observation initializes the baseline; afterwards the baseline
@@ -218,13 +240,18 @@ r5Distance a b =
         ]
   in sum ds / 5.0
 
--- | v1 transition model: the persistence hypothesis (predicted next
--- state = current state).  Honest and total; learning real
+-- | The v1 transition model lives in
+-- 'QxFx0.Types.Semantic.MoveGraph.transitionUserR5'
+-- (move-conditioned, persistence without a move).  Fitting real
 -- transitions offline (concept v3 §6 \"обновление\") is a governed
 -- later phase — until then the recorded residuals measure exactly
--- how wrong persistence is.
-predictNextUserR5 :: UserR5State -> UserR5State
-predictNextUserR5 = id
+-- how wrong the model is.
+
+-- | Version of the frozen user-R5 encoder model.  Canonical home is
+-- this Types module so the replay trace can stamp it without an
+-- implementation import; @User.R5@ re-exports it.
+r5EncoderVersion :: Int
+r5EncoderVersion = 1
 
 -- | Bounded drop-oldest push for the residual window (mirrors
 -- 'QxFx0.Self.SelfDivergence.pushDivergenceSample'): prepend the

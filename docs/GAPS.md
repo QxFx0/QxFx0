@@ -4,7 +4,7 @@ This file lists concepts that appear in the curated atom-graph seed (`resources/
 
 ## Method
 
-Static scan comparing the `from`/`to` tokens of the 666 curated relations against the 30 topics currently present in `QxFx0.Semantic.Content.definitionCorpus`.
+Static scan comparing the `from`/`to` tokens of the 666 curated relations against the topics currently present in `QxFx0.Semantic.Content.definitionCorpus` (2026-08-23 fact-check: the corpus has grown to ~120 topics; the historical "30" count below is stale — recount before using these gap numbers).
 
 ## Summary
 
