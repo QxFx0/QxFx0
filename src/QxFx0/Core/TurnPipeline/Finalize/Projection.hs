@@ -75,7 +75,7 @@ import qualified QxFx0.Types.CognitiveSignals as CS
 import QxFx0.Types
 import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
-import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
+import QxFx0.Types.RuntimeRegime (rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
 import QxFx0.Semantic.Network.Types (ActivationArtifact(..), ActivationStep(..), EdgeSource(..))
 import QxFx0.Safety.CrisisGuard (crisisResourceVersion)
@@ -237,7 +237,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       derivedInferenceCount = if derivedInferenceActive
                                 then Just (length (deriveAtoms (asAtoms (tiAtomSet ti))))
                                 else Nothing
-      familyDivergenceOccurred = if rrFamilyDivergenceActive defaultRuntimeRegime
+      -- Read the live session regime, not the static default, so replay
+      -- reflects the regime actually governing this turn (restored sessions
+      -- may carry a different persisted regime).
+      liveRegime = ssCurrentRegime nextSs
+      familyDivergenceOccurred = if rrFamilyDivergenceActive liveRegime
                                    then Just (tpPreShadowFamily tp /= tpFamily tp)
                                    else Nothing
       -- Concept v3 §2: protocol projection for the crisis trace.
@@ -400,8 +404,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 then recallForTrace (ssEpisodic nextSs)
                 else Nothing
           , trcEpisodicForgetting = (0, Nothing)
-          , trcRegimeVersion = rrMathVersion defaultRuntimeRegime
-          , trcFamilyDivergenceActive = rrFamilyDivergenceActive defaultRuntimeRegime
+          , trcRegimeVersion = rrMathVersion liveRegime
+          , trcFamilyDivergenceActive = rrFamilyDivergenceActive liveRegime
            , trcSemanticCommitmentCount = case ssSemanticCommitments nextSs of
                Nothing    -> 0
                Just store -> HashMap.size (scsActive store)
@@ -438,9 +442,6 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcGenerationTrace = taGenerationTrace ta
           -- R4: read the live turn regime, not the static default, so replay
           -- reflects the morphology path actually used this turn.
-          -- (Note: 'trcRegimeVersion'/'trcFamilyDivergenceActive' above still
-          -- read defaultRuntimeRegime — same latent issue, left for a separate
-          -- pass to avoid changing math-version semantics here.)
           , trcMorphologyVersion = if rrRglMorphologyActive (ssCurrentRegime nextSs) then 1 else 0
           , trcEffectSnapshot = Just EffectSnapshot
               { esApiHealthy = tsApiHealthy ts
