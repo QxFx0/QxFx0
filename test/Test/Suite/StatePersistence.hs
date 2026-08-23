@@ -1446,6 +1446,10 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
            , trcResponsePlan = Nothing
+           , trcCrisisProtocol = Nothing
+           , trcUserR5 = Nothing
+           , trcOntologicalVector = Nothing
+           , trcOntologicalMove = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

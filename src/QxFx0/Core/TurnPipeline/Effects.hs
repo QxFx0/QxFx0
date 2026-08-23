@@ -86,6 +86,22 @@ import QxFx0.Types.Self.SelfDivergence
   ( SelfPrediction
   , defaultSelfDivergenceTuning
   )
+import QxFx0.Safety.CrisisGuard (decideProtocol, detectCrisisTrigger)
+import QxFx0.User.R5 (encodeR5)
+import QxFx0.Semantic.Ontological (classifyOntological)
+import QxFx0.Semantic.MoveGraph (planOntologicalMove)
+import QxFx0.Types.Safety.Crisis (ProtocolVerdict(..))
+import QxFx0.Types.Semantic.OntologicalAxis (OntologicalVector)
+import QxFx0.Types.Semantic.MoveGraph (OntologicalMovePlan)
+import QxFx0.Types.User.R5
+  ( UserR5State
+  , UserR5ContourState(..)
+  , defaultUserConatusWeights
+  , defaultViabilityContour
+  , outsideViabilityContour
+  , r5Distance
+  , userConatusScore
+  )
 import QxFx0.Learning.Tool (ExternalTool)
 import QxFx0.Learning.Need (LearningNeed)
 import QxFx0.Types.ExternalQuery (ExternalQueryError, ExternalQueryResponse)
@@ -332,10 +348,38 @@ data PrepareStatic = PrepareStatic
     --   Finalize can measure the divergence without recomputing.
   , psSelfDivergencePenalty :: !Double
     -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
-    --   from the previous turn's measured divergence.  @0@ when the
-    --   previous turn had no measurement or divergence was below
+    --   from the previous turn's divergence.  @0@ when the previous
+    --   turn had no measurement or divergence was below the
     --   'sdtThreshold'.  Threaded through 'tiSelfDivergencePenalty'
     --   for trace observability.
+  , psUserR5 :: !UserR5State
+    -- ^ Concept v3 §4: the decoded user-side R5 state (the state of
+    --   the system-human, distinct from the system's own 'Field').
+    --   Computed once per turn by the frozen v1 encoder
+    --   ('QxFx0.User.R5.encodeR5') from the raw input and topic
+    --   continuity.
+  , psUserProtocol :: !ProtocolVerdict
+    -- ^ Concept v3 §2: the two-protocol verdict (Protocol A
+    --   everyday-ontological / Protocol B bounded crisis).  Resolved
+    --   by 'QxFx0.Safety.CrisisGuard.decideProtocol': the hard
+    --   lexical crisis trigger outranks every numeric estimate; a
+    --   viability-contour exit is the soft backstop.
+  , psUserPredictionError :: !(Maybe Double)
+    -- ^ Concept v3 §6: residual audit of the /user/ transition model
+    --   — @r5Distance@ between the previous turn's deterministic
+    --   prediction and this turn's observed state.  @Nothing@ on the
+    --   first turn.  The user-side clone of the A-slice self-divergence
+    --   pattern (predict → witness → diff).
+  , psOntologicalVector :: !OntologicalVector
+    -- ^ Concept v3 §5: the ontological directedness of the input
+    --   utterance (being/non-being, striving/denial,
+    --   affirmation/destruction) from 'QxFx0.Semantic.Ontological'.
+  , psOntologicalMove :: !(Maybe OntologicalMovePlan)
+    -- ^ Concept v3 §6: the computed ontological transition operator
+    --   (deterministic search toward S*), or Nothing when the turn
+    --   carries no ontological act to answer and no drift toward
+    --   the contour edge.  Protocol A only — under Protocol B the
+    --   bounded surface replaces the ontological move entirely.
   } deriving stock (Eq, Show)
 
 data PrepareEffectRequest
@@ -441,6 +485,31 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
             in Just (predictSelf defaultEssenceModulation prevField preTurnAngst)
       violationCount = length violations
       conatusGateFired = conatusGateFires conatusEnergy
+      -- Concept v3 §4/§6: decode the user's R5 state from the raw
+      -- signal, audit it against the previous turn's deterministic
+      -- prediction, and resolve the two-protocol verdict.  The hard
+      -- crisis gate runs on the raw text before any numeric estimate
+      -- and cannot be suppressed.
+      userR5Now = encodeR5 input (ssLastTopic ss)
+      userScore = userConatusScore defaultUserConatusWeights userR5Now
+      priorUserContour = ssUserR5Contour ss
+      userOutsideContour = outsideViabilityContour defaultViabilityContour
+                             (u5Baseline priorUserContour) userScore
+      crisisTrigger = detectCrisisTrigger input
+      userProtocol = decideProtocol crisisTrigger
+                       (if userOutsideContour then Just userScore else Nothing)
+      userPredictionError =
+        r5Distance <$> u5PredictedNext priorUserContour <*> pure userR5Now
+      ontologicalVector = classifyOntological input
+      -- Concept v3 §6: search for the ontological transition
+      -- operator — only under Protocol A, and only when there is an
+      -- act to answer (negative directedness) or a downward drift
+      -- below the personalized baseline.
+      ontologicalMovePlan = case userProtocol of
+        ProtocolA -> planOntologicalMove
+                       userR5Now ontologicalVector
+                       (u5Baseline priorUserContour) userScore
+        ProtocolB _ -> Nothing
       -- Phase 7: populate four of five Field components via
       -- the calibrated 'FieldHeuristics' compute functions.
       -- 'fieldConfidence' is derived below.
@@ -574,6 +643,11 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
        , psGeoResult = geoClassification
        , psSelfPrediction = selfPrediction
        , psSelfDivergencePenalty = divergencePenalty
+       , psUserR5 = userR5Now
+       , psUserProtocol = userProtocol
+       , psUserPredictionError = userPredictionError
+       , psOntologicalVector = ontologicalVector
+       , psOntologicalMove = ontologicalMovePlan
        }
   in PrepareEffectPlan
       { pepStatic = static

@@ -133,6 +133,11 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
 , tiGeoResult = psGeoResult prepareStatic
           , tiSelfPrediction = psSelfPrediction prepareStatic
           , tiSelfDivergencePenalty = psSelfDivergencePenalty prepareStatic
+          , tiUserR5 = psUserR5 prepareStatic
+          , tiUserProtocol = psUserProtocol prepareStatic
+          , tiUserPredictionError = psUserPredictionError prepareStatic
+          , tiOntologicalVector = psOntologicalVector prepareStatic
+          , tiOntologicalMove = psOntologicalMove prepareStatic
           , tiDoubtScore = computeDoubt (svSalience (psSelfVerdict prepareStatic))
          , tiRetrievedEpisodes = retrievedEpisodes
          }

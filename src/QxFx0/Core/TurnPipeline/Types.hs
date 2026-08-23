@@ -55,6 +55,10 @@ import QxFx0.Semantic.SemanticInput (SemanticInput)
 -- import QxFx0.Types.State.DialogueDevelopment (DialogueCommitmentLedger, DialoguePhase, DialogueThread)
 import QxFx0.Types.ShadowDivergence (ShadowDivergenceKind, ShadowDivergenceSeverity, ShadowSnapshotId, ShadowVetoState)
 import QxFx0.Types.Self.SelfDivergence (SelfPrediction)
+import QxFx0.Types.Safety.Crisis (CrisisSurface, ProtocolVerdict)
+import QxFx0.Types.Semantic.MoveGraph (OntologicalMovePlan)
+import QxFx0.Types.Semantic.OntologicalAxis (OntologicalVector)
+import QxFx0.Types.User.R5 (UserR5State)
 import QxFx0.Core.ResponseContentAdmission (ResponseContentAdmissionDecision)
 -- import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse(..))
 import QxFx0.Learning.Guardrails (ExternalActionDecisionTrace)
@@ -216,6 +220,23 @@ data TurnInput = TurnInput
     --   from the previous turn's measured divergence.  Mirrors
     --   'psSelfDivergencePenalty'; recorded on the trace by the
     --   Finalize stage without recomputing.
+  , tiUserR5 :: !UserR5State
+    -- ^ Concept v3 §4: decoded user-side R5 state (system-human,
+    --   not the system's own Field).  Mirrors 'psUserR5'.
+  , tiUserProtocol :: !ProtocolVerdict
+    -- ^ Concept v3 §2: the per-turn two-protocol verdict.  Mirrors
+    --   'psUserProtocol'.  Protocol B carries the crisis cause and
+    --   forces the bounded surface at render time.
+  , tiUserPredictionError :: !(Maybe Double)
+    -- ^ Concept v3 §6: user-transition residual (predicted vs
+    --   observed R5 state).  Mirrors 'psUserPredictionError';
+    --   @Nothing@ on the first turn.
+  , tiOntologicalVector :: !OntologicalVector
+    -- ^ Concept v3 §5: ontological directedness of the input.
+    --   Mirrors 'psOntologicalVector'.
+  , tiOntologicalMove :: !(Maybe OntologicalMovePlan)
+    -- ^ Concept v3 §6: the computed ontological transition operator
+    --   under Protocol A, or Nothing.  Mirrors 'psOntologicalMove'.
   }
 
 data TurnSignals = TurnSignals
@@ -296,6 +317,18 @@ data TurnPlan = TurnPlan
     -- ^ B2 Control-A ablation: when True, render pipeline skips semantic-first
     --   path and uses assembly/template fallback only. Set from env var
     --   QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST in routeTurnPlan.
+  , tpCrisisSurface :: !(Maybe CrisisSurface)
+    -- ^ Concept v3 §2: typed Protocol B payload when the crisis
+    --   verdict fired this turn (hard lexical trigger or viability
+    --   contour exit).  Nothing under Protocol A.  The render phase
+    --   materializes the bounded surface from it with priority over
+    --   every other surface, including anomaly surfaces.
+  , tpOntologicalMove :: !(Maybe OntologicalMovePlan)
+    -- ^ Concept v3 §6: the computed ontological transition operator
+    --   (Protocol A).  The render phase leads the turn with the
+    --   receiver-conditioned act line ('QxFx0.User.Decompress')
+    --   before the content surface; it never replaces the content
+    --   path (staged cutover).
   }
 
 tpNewEgo :: TurnPlan -> EgoState

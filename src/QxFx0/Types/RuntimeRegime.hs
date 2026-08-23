@@ -68,8 +68,20 @@ data RuntimeRegime = RuntimeRegime
 -- diff → allergen → Conatus): new Conatus component channel
 -- @ccSelfDivergence@, new tunables @sdtScaling@/@sdtThreshold@/@sdtWindow@,
 -- and the one-turn-delayed energy-fraction penalty enter the runtime math.
+-- Version 3 = concept v3 two-protocol regime landed: frozen v1 user-side
+-- R5 encoder (@QxFx0.User.R5@), the linear user viability contour
+-- (@UserConatusWeights@/@ViabilityContour@ incl. EMA personalization),
+-- the hard crisis gate + Protocol A/B resolution
+-- (@QxFx0.Safety.CrisisGuard@), the ontological-axis classifier
+-- (@QxFx0.Semantic.Ontological@), the ontological move graph
+-- (@QxFx0.Semantic.MoveGraph@: effect matrix, connected-calm target
+-- S*, deterministic search, move-conditioned transition model), and
+-- receiver-conditioned decompression (@QxFx0.User.Decompress@).
+-- All constants are hand-set v1 and frozen on release; replacing
+-- them with fitted values is an offline, governed bump of this
+-- version.
 currentMathVersion :: Int
-currentMathVersion = 2
+currentMathVersion = 3
 
 -- | Current CTS constitution version.
 -- Initial value 44 = CTS-44 (commitment promotion).

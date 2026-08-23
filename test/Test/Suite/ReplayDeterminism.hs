@@ -211,6 +211,10 @@ minimalReplayTrace apiHealthy =
           , trcOverlayContentUsed = False
           , trcSelectorDiagnostics = []
           , trcResponsePlan = Nothing
+          , trcCrisisProtocol = Nothing
+          , trcUserR5 = Nothing
+          , trcOntologicalVector = Nothing
+          , trcOntologicalMove = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.

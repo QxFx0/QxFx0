@@ -76,6 +76,19 @@ import QxFx0.Types.Self.SelfDivergence
   , SelfDivergenceTuning(..)
   , defaultSelfDivergenceTuning
   )
+import QxFx0.Types.User.R5
+  ( UserR5ContourState(..)
+  , defaultUserConatusWeights
+  , defaultViabilityContour
+  , pushR5Sample
+  , updateUserBaseline
+  , userConatusScore
+  , vcDivergenceWindow
+  )
+import QxFx0.Types.Semantic.MoveGraph
+  ( OntologicalMovePlan(..)
+  , transitionUserR5
+  )
 import QxFx0.Self.Deliberation
   ( Deliberation(..)
   , DeliberationTrace(..)
@@ -813,12 +826,41 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       nextWithMood = nextWithUserModel
         { ssMood = updateMood (ssMood nextWithUserModel) turnValence
         }
+      -- Concept v3 §6: user-side residual audit and baseline
+      -- personalization.  The observed R5 state becomes the new
+      -- anchor; the viability baseline moves as a slow EMA so a
+      -- single extreme utterance cannot redefine the user's norm;
+      -- the transition prediction for the next turn is
+      -- move-conditioned (S_t+1 = transition(S_t, move) — the
+      -- effect matrix when the move layer fired, persistence
+      -- otherwise); and this turn's prediction error (computed in
+      -- Prepare against the previous prediction) enters the bounded
+      -- drop-oldest window.  The user-side clone of the A-slice
+      -- self-divergence pattern.
+      userR5Carry0 = ssUserR5Contour nextWithMood
+      userScoreNow = userConatusScore defaultUserConatusWeights (tiUserR5 ti)
+      userR5Carry' = userR5Carry0
+        { u5LastState = Just (tiUserR5 ti)
+        , u5Baseline = updateUserBaseline
+            defaultViabilityContour (u5Baseline userR5Carry0) userScoreNow
+        , u5PredictedNext = Just
+            (transitionUserR5 (ompMove <$> tiOntologicalMove ti) (tiUserR5 ti))
+        , u5DivergenceWindow =
+            case tiUserPredictionError ti of
+              Nothing -> u5DivergenceWindow userR5Carry0
+              Just err -> pushR5Sample
+                (vcDivergenceWindow defaultViabilityContour)
+                (u5DivergenceWindow userR5Carry0) err
+        }
+      nextWithUserR5 = nextWithMood
+        { ssUserR5Contour = userR5Carry'
+        }
       -- Phase 2: record A/B validation metrics for geometric classifier
       nextWithMetrics = case tiGeoResult ti of
-        Just geoResult -> nextWithMood
+        Just geoResult -> nextWithUserR5
           { ssGeometricMetrics = recordABValidation (ssGeometricMetrics ss) geoResult outcomeFamily
           }
-        Nothing -> nextWithMood
+        Nothing -> nextWithUserR5
       -- CTS-42: compute the admission decision once, apply to both
       -- anchor and surface-parsed claims. B2 Control-A: caDisableAdmission
       -- bypasses CTS-42 — every claim is admitted (no suppression).

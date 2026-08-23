@@ -78,6 +78,28 @@ import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime, rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
 import QxFx0.Semantic.Network.Types (ActivationArtifact(..), ActivationStep(..), EdgeSource(..))
+import QxFx0.Safety.CrisisGuard (crisisResourceVersion)
+import QxFx0.Types.Safety.Crisis
+  ( CrisisCause(..)
+  , CrisisGuardTrace(..)
+  , ProtocolVerdict(..)
+  , crisisCauseCategory
+  , crisisCauseTag
+  , crisisCategoryTag
+  , protocolBCause
+  )
+import QxFx0.Types.User.R5
+  ( UserR5State(..)
+  , UserR5Trace(..)
+  , defaultUserConatusWeights
+  , u5Baseline
+  , userConatusScore
+  )
+import QxFx0.Types.Semantic.MoveGraph
+  ( OntologicalMovePlan(..)
+  , OntologicalMoveTrace(..)
+  , ontologicalMoveTag
+  )
 import qualified Data.Sequence as Seq
 import qualified Data.Foldable as F
 import qualified Data.HashMap.Strict as HashMap
@@ -217,6 +239,14 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       familyDivergenceOccurred = if rrFamilyDivergenceActive defaultRuntimeRegime
                                    then Just (tpPreShadowFamily tp /= tpFamily tp)
                                    else Nothing
+      -- Concept v3 §2: protocol projection for the crisis trace.
+      mProtocolCause = protocolBCause (tiUserProtocol ti)
+      protocolBFired = case tiUserProtocol ti of
+        ProtocolB _ -> True
+        ProtocolA  -> False
+      outsideFromProtocol = case mProtocolCause of
+        Just (CrisisContourExit _) -> True
+        _                          -> False
       (modeTag, committedFlag, angst, triggerTag) =
         case postEssence of
           EssenceUncommitted t ->
@@ -431,6 +461,30 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcOverlayContentUsed = not (null overlayPredicateIds)
            , trcSelectorDiagnostics = taSelectorDiagnostics ta
            , trcResponsePlan = taResponsePlan ta
+           , trcCrisisProtocol = Just CrisisGuardTrace
+               { cgtProtocolB = protocolBFired
+               , cgtCause = crisisCauseTag <$> mProtocolCause
+               , cgtCategory = crisisCategoryTag <$> (mProtocolCause >>= crisisCauseCategory)
+               , cgtResourceVersion = if protocolBFired then crisisResourceVersion else 0
+               }
+           , trcUserR5 = Just UserR5Trace
+               { ur5Resonance = r5Resonance (tiUserR5 ti)
+               , ur5Atmosphere = r5Atmosphere (tiUserR5 ti)
+               , ur5Confidence = r5Confidence (tiUserR5 ti)
+               , ur5Consolidation = r5Consolidation (tiUserR5 ti)
+               , ur5Counterfactual = r5Counterfactual (tiUserR5 ti)
+               , ur5ConatusScore = userConatusScore defaultUserConatusWeights (tiUserR5 ti)
+               , ur5Baseline = u5Baseline (ssUserR5Contour nextSs)
+               , ur5OutsideContour = outsideFromProtocol
+               , ur5PredictionError = tiUserPredictionError ti
+               }
+           , trcOntologicalVector = Just (tiOntologicalVector ti)
+           , trcOntologicalMove =
+               OntologicalMoveTrace
+                 <$> (ontologicalMoveTag . ompMove <$> tpOntologicalMove tp)
+                 <*> (ompDistanceBefore <$> tpOntologicalMove tp)
+                 <*> (ompDistanceAfter <$> tpOntologicalMove tp)
+                 <*> (ompAffirmGatePassed <$> tpOntologicalMove tp)
            }
   in TurnProjection
       { tqpTurn = ssTurnCount nextSs

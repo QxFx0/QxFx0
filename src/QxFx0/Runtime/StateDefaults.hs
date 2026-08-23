@@ -54,6 +54,7 @@ import QxFx0.Types.Observability
 import QxFx0.Types.Persistence (PersistenceEnvelope(..))
 import QxFx0.Types.RuntimeRegime (defaultRuntimeRegime)
 import QxFx0.Types.Semantic.Ontology (Ontology(..))
+import QxFx0.Types.User.R5 (emptyUserR5ContourState)
 import QxFx0.Types.ShadowDivergence (defaultShadowVetoState)
 import QxFx0.Types.State.Dialogue (DialogueState(..), emptyDialogueState)
 import QxFx0.Types.State.DialogueDevelopment
@@ -198,6 +199,7 @@ instance ToJSON SystemState where
     , "runtimeGraph" .= ssRuntimeGraph ss
     , "definitionCorpus" .= ssDefinitionCorpus ss
     , "emittedPredicates" .= ssEmittedPredicates ss
+    , "userR5Contour" .= ssUserR5Contour ss
     ]
 
 instance FromJSON SystemState where
@@ -276,6 +278,7 @@ instance FromJSON SystemState where
       <*> o .:? "runtimeGraph" .!= seedGraph
       <*> o .:? "definitionCorpus" .!= M.empty <*> pure Nothing
       <*> o .:? "emittedPredicates" .!= Set.empty
+      <*> o .:? "userR5Contour" .!= emptyUserR5ContourState
 
 instance ToJSON PersistenceEnvelope where
   toJSON envelope = object
@@ -342,6 +345,7 @@ emptySystemState = SystemState
   , ssDefinitionCorpus = M.empty
   , ssCuratedOverlay = Nothing
   , ssEmittedPredicates = Set.empty
+  , ssUserR5Contour = emptyUserR5ContourState
   }
 
 currentSystemStateSchemaVersion :: Int

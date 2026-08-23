@@ -21,6 +21,10 @@ module QxFx0.Core.TurnPipeline.Route.Render
 import QxFx0.Types
 import QxFx0.Types.Anomaly (AnomalySurface(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
+import QxFx0.Types.Safety.Crisis (CrisisCause(..), CrisisSurface(..))
+import QxFx0.Safety.CrisisGuard (crisisResourcesRu, renderCrisisSurface)
+import QxFx0.User.Decompress (renderMoveLine)
+import QxFx0.Types.Semantic.MoveGraph (OntologicalMovePlan(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..), AtomSet(..), MeaningAtom(..))
 import Data.Maybe (isJust, isNothing)
 import qualified Data.Map.Strict as Data.Map
@@ -657,6 +661,22 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
   let contentSelector = ssContentSelector ss
       field = tiField ti
       currentAtoms = Set.fromList $ map maText $ asAtoms $ tiAtomSet ti
+      -- Concept v3 §2: the bounded Protocol B surface has priority
+      -- over every other surface — anomaly surfaces included.  A
+      -- crisis turn is answered with the honest limit + real
+      -- resources, never with an ontological move, a recovery plan,
+      -- or an anomaly refusal.
+      crisisText = fmap
+        (renderCrisisSurface crisisResourcesRu . csCause)
+        (tpCrisisSurface tp)
+      -- Concept v3 §6/§7: the ontological move LEADS the turn with
+      -- its receiver-conditioned act line (decompressed for the
+      -- user's R5 state).  It never fires under Protocol B and never
+      -- replaces the content path — the staged cutover keeps the
+      -- corpus-backed surface intact.
+      moveLeadText = case tpOntologicalMove tp of
+        Nothing   -> ""
+        Just plan -> renderMoveLine (tiUserR5 ti) (ompMove plan) <> " "
       anomalyText = fmap (renderAnomalySurface contentSelector field currentAtoms) (tpAnomalySurface tp)
       renderStatic = if semanticFirstDisabled
                      then repRenderStatic effectPlan
@@ -668,10 +688,11 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       localRecoveryText = lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       preSafetyRendered =
-        case (anomalyText, localRecoveryText) of
-          (Just anom, _) -> anom
-          (Nothing, Just fb) -> renderWithBg <> "\n" <> fb <> knowledgeFragment
-          (Nothing, Nothing) -> renderWithBg <> knowledgeFragment
+        case (crisisText, anomalyText, localRecoveryText) of
+          (Just crisis, _, _) -> crisis
+          (Nothing, Just anom, _) -> anom
+          (Nothing, Nothing, Just fb) -> moveLeadText <> renderWithBg <> "\n" <> fb <> knowledgeFragment
+          (Nothing, Nothing, Nothing) -> moveLeadText <> renderWithBg <> knowledgeFragment
       preSafetySurface =
         Guard.GuardSurface
           { Guard.gsRenderedText = preSafetyRendered

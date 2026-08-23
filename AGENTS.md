@@ -28,6 +28,12 @@
     (2026-06-17, `ESSENCE-REGIME-RECONCILE.md`) accepts this as structural
     runtime law; it is **not** M6-FELT evidence until SLICE-012 + a
     felt-evidence gate land.
+    **Single intentional exception (2026-08-22 fact-check)**: the B2
+    Control-A ablation hook `essenceCommitDisabled` / `caDisableEssence`
+    (`Finalize/State.hs`, `computeNextEssence`) bypasses `shouldCommit`
+    for the ablated control arm only; it is the one deliberate flag that
+    can suppress commitment, so the "no flag" thesis above means "no
+    runtime feature flag", not "no flag exists at all".
 
   **Phase 7 (structural calibration infrastructure) completed 2026-05-18**:
   `FieldHeuristics` + 3 compute functions extracted from Phase-5.5d
@@ -35,6 +41,11 @@
   (range, monotonicity, Conatus-priority) landed in
   `Test.Suite.SelfField` and `Test.Suite.SelfSalience`.
   Empirical tuning against production trace corpora remains deferred.
+  **2026-08-22 fact-check**: the current function set is the original
+  three **plus** `computeAtmosphereDecoupled` (WP-E, preferred
+  implementation) and the deprecated legacy `computeAtmosphere`
+  (`Self/Field.hs`); the deprecated one is kept for compat and is
+  superseded wherever decoupled selection applies.
 
   **WP-C (Content Saliency) completed 2026-06-04**: Spectral clustering
   wired into Salience controller as 6th contribution
@@ -50,9 +61,15 @@
 
   **WP-D (Doubt Loop) completed 2026-06-04**: Metacognitive doubt loop
   closed. `tiDoubtScore :: Double` added to `TurnInput`, computed from
-  `psSelfVerdict` via `computeDoubt` (FieldConfidence, counterfactual
-  entropy, shadow-Datalog divergence). Doubt-driven routing: doubt ≥ 0.7
-  → CMClarify family override. Explicitness modulation: high doubt
+  `psSelfVerdict` via `computeDoubt` (FieldConfidence complement,
+  counterfactual-spread amplification, Conatus-gate floor).
+  **2026-08-22 fact-check**: shadow-Datalog divergence is **not** part
+  of `computeDoubt` — shadow disagreement is a separate
+  `CognitiveSignals` channel (`csShadowDisagreement`,
+  `Finalize/Projection.hs`). Doubt-driven routing: doubt ≥
+  `doubtSuppressionThreshold` (**0.75**, `ConsciousnessLoop.hs`; also
+  the explicitness-reduction threshold in `SensePlan.hs`) → CMClarify
+  family override. Explicitness modulation: high doubt
   reduces explicitness by up to 0.20. Anti-rot tests in
   `Test.Suite.DoubtLoop`. Outcome calibration (predicted success vs
   acceptance markers) deferred to Phase II.
@@ -129,8 +146,11 @@
     GHC 9.6 `BlockArguments`/`do`-in-pattern issue in
     `RuntimeInfrastructure.hs:1476` — **RESOLVED (2026-08-08)**: all four
     test suites (`qxfx0-test`, `-fast`, `-property`, `-integration`)
-    now build and link clean on GHC 9.6.6; the erstwhile failure was an
-    artefact of the pre-port state that no longer reproduces.
+    built and linked clean on GHC 9.6.6 back then. **Superseded
+    (2026-08-22, П1 of the audit ТЗ)**: the toolchain contract is now
+    **GHC 9.6.7 / base 4.18.3.0** with `index-state` pinned in
+    `cabal.project` — see `docs/closure/ENV_CONTRACT.md` (Toolchain
+    contract section) for the authoritative version.
 
   **M4-SEMANTIC-CORE-003 Phase C cutover (2026-06-18)**: semantic-first
   path is now PRIMARY for ALL input. `isCoveredTopic` gate removed from
@@ -144,16 +164,26 @@
   revision pipeline completed. `revisePosition` determines revision action
   based on self-state: high angst (>0.7) → RcRevised (confidence decay 0.9),
   low conatus (<5.0) → RcQuarantined (move to quarantine), stable → RcRetained.
+  **SUPERSEDED by Anomaly v3.0 (2026-08-22 fact-check)**: the production
+  revision path is `defendOrAdapt` (`Semantic/Stance.hs`, called from
+  `Finalize/State.hs` ~:683); `revisePosition` is a test/back-compat
+  wrapper over it (its own docstring says so), and the angst/conatus
+  thresholds above describe the retired v1 mapping.
   `applyRevisionDecision` applies decisions to `SemanticCommitmentStore` with
   full lineage tracking (LineageRevised events, ContradictionEvent records).
   Integration test verifies pipeline fires when `ceContradicted = True`.
   `seedFromCorpus` creates initial `SemanticNetwork` from `definitionCorpus`
-  (34 topics, edges between topics sharing atoms), ensuring `contentDensityGate`
+  (**120 topics** as of 2026-08-22, `Semantic/Content.hs` — the historical
+  "34" grew with the corpus; edges between topics sharing atoms, explicit
+  edge weight = `sharedCount / 10.0`, not a flat 1.0 — flat 1.0 remains
+  only for synonym-type `TopicRelations`), ensuring `contentDensityGate`
   (≥50 edges, ≥15 nodes) passes from first turn. `emptySystemState` now
   initializes `ssSemanticNetwork = seedFromCorpus` instead of empty network.
   `mergeSemanticNetworks` merges seeded network with runtime MeaningGraph edges
   (union of nodes, update-wins for edges, preserves base decayRate/maxHops),
-  preventing seed overwrite on each turn. All 1319 tests pass.
+  preventing seed overwrite on each turn. All 1319 tests pass
+  (historical count at the 2026-06-18 landing; current per-suite counts
+  below).
 
   **Topic normalization fix (2026-06-19)**: semantic predicates now surface
   in live sessions. Root cause: `extractTopicAfter` in `Intent/Classifier.hs`
@@ -218,18 +248,22 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   `CommitmentId (size active + size quarantine + 1)` вместо `scsNextId`.
   При удалении/карантине коммитментов возможны коллизии ID. Фикс:
   `nextCid = CommitmentId (scsNextId store)`, `scsNextId = scsNextId store + 1`.
-- **Блокер 2 (отложен)**: `mClaimPayload` в State.hs:639 — raw-parsed, не
-  admitted. Если `commitDecision = CsaSuppress`, suppressed claim всё равно
-  используется для `synthesizeResolution`. `OriginSynthetic` + низкая
-  confidence (0.5/0.3) — честная маркировка. Не corruption, а архитектурная
-  неопрятность. Средний приоритет.
-- **Блокер 3 (известное ограничение)**: `fcpTopic` обязателен в `FromJSON` —
-  старые persisted stores упадут. Для development — ок. Для production —
-  нужна миграция. Зафиксировано ранее.
-- **Блокер 4 (premature)**: Analogy без provenance tag. Сейчас analogy
-  активируется только через `findNearestCoveredTopic` + `fallbackSimilarity` —
-  это common-prefix matching, не authority claim. Ответы не маркируются как
-  analogical source. Для B3/M6-FELT нужна маркировка, сейчас — нет.
+- **Блокер 2 — FIXED (verified 2026-08-22)**: `mClaimPayload` больше не
+  попадает в `synthesizeResolution` под suppress — `Finalize/State.hs`
+  (`admittedClaimPayload`) передаёт payload только при
+  `CsaAdmitCanonical`, иначе `Nothing`.
+- **Блокер 3 — FIXED (verified 2026-08-22)**: `fcpTopic` опционален в
+  `FromJSON` (`Types/State/SemanticCommitment.hs`:
+  `o .:? "fcpTopic" .!= ""`); старые persisted stores декодируются.
+  Остаточный риск: миграция production-сторов с пустым топиком требует
+  обратной заливки топиков — считать открытым только для production
+  миграций, для development закрыт.
+- **Блокер 4 — FIXED на уровне трейса (verified 2026-08-22)**:
+  `trcAnalogicalSource` (`Types/TurnProjection.hs`, заполняется в
+  `Route/Render.hs` через `analogical_source=` тег) маркирует
+  analogical-происхождение в replay-трейсе. In-band маркера в самом
+  ответе пользователя нет — осознанное ограничение (маркировка только
+  в governed-evidence трейсе, не в surface).
 
 **Anomaly Architecture v3.0 completed (2026-06-19)**:
 - **Revision Slice (Layer 3)**: Full implementation with graded trajectory.
@@ -240,9 +274,11 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   confidence level.
 - **SelfReferentialCollapse (Anomaly-3)**: Implemented in
   `Core/TurnPipeline/Route/Anomaly.hs`. Triggered when system encounters
-  self-referential questions at high angst (>0.9). Gate: subject ∈ ["я", "ты",
-  "QxFx0", "система"] ∧ angst > 0.9. Causes Essence reset with full trace
-  recording.
+  self-referential questions at high angst (>0.9). Gate (2026-08-22
+  fact-check): subject matched by **substring** (`T.isInfixOf`) against
+  **8 subjects**: `["я", "ты", "qxfx0", "система", "i", "you",
+  "myself", "yourself"]` ∧ angst > 0.9. Causes Essence reset with full
+  trace recording.
 - **AntiConatusChoice (Anomaly-2)**: Implemented in
   `Core/TurnPipeline/Route/Anomaly.hs`. Triggered when move would weaken
   system's position. Gate: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧
@@ -253,12 +289,15 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   seen before. Relevance combines size relevance (70%, based on challenge size
   up to threshold of 5 atoms) and context relevance (30%, overlap with seen
   evidence). This replaces the old 70% novelty + 30% momentum formula.
+  **2026-08-22 fact-check**: `evidenceWeight` lives in
+  `Semantic/Stance.hs` (~:90–109), not in `Anomaly.hs`.
 - **Governed Slice integration**: `buildRouteTurnPlan` now accepts `Maybe
   Anomaly` parameter. When anomaly is detected, `tpAnomalySurface` and
   `tpAnomalyTrace` are populated. Render phase uses `renderAnomalySurface` to
   generate user-facing messages for each anomaly type (Unclassifiable,
   AntiConatus, SelfReferential, Temporal).
-- **Test coverage**: 1370 tests passing. Added tests for
+- **Test coverage**: 1370 tests passing (historical count at the
+  2026-06-19 landing; current per-suite counts below). Added tests for
   `reviseStance` graded trajectory (3 tests), anomaly rendering (4 tests).
   Updated `evidenceWeight` tests for new formula. Threshold for StanceDoubted →
   StanceRevised transition adjusted from 0.7 to 0.6 to account for new
@@ -286,6 +325,7 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   attempts to find farthest predicate from current stance and includes it in
   response ("Я предлагаю рассмотреть: ...").
 - **Test updates**: All tests updated for new signatures and semantics. 1370 tests
+  (historical; current counts below)
   passing.
 
   **A-slice (deterministic self-divergence contour) completed 2026-08-07**:
@@ -334,6 +374,42 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   reachability/recommit), registered in cabal + all three TestMains.
   See `docs/closure/ESSENCE_SOFT_RUPTURE.md`.
 
+  **Self-divergence window drop-oldest fix (2026-08-22, П2 of the
+  audit ТЗ)**: the bounded `selfDivergenceWindow` was maintained by
+  appending the newest sample at the END and `take`-ing from the FRONT,
+  so once the window filled (8 entries) the newest divergence never
+  entered it and `windowMeanDivergence` / `sustainedDivergenceExceeds`
+  (the `RecoverySelfDivergence` / `StrategySelfReanchoring` trigger)
+  evaluated stale data forever. Fix: canonical total morphism
+  `pushDivergenceSample` (`Self/SelfDivergence.hs`) — prepend newest,
+  keep the `sdtWindow` most recent samples, evict the oldest; wired in
+  `Finalize/State.hs`. Constants (`sdtThreshold`/`sdtScaling`/
+  `sdtWindow`) unchanged; schema unchanged (same list shape).
+  Anti-rot: `Test.Suite.SelfDivergence` (newest-always-present
+  property, calm-then-divergent recovery regression, drop-oldest unit)
+  plus the existing `TurnPipelineProtocol` integration pin.
+
+  **П4.3 SemanticSlices reactivation (2026-08-22, audit ТЗ)**: the
+  `Test.Suite.SemanticSlices` suite (14 tests) was born dead — committed
+  importing `withFakeNixInstantiateForConcepts` /
+  `withFixedRuntimeTime` helpers that never existed in `Test.Support`,
+  so it never compiled at any commit. Reactivated in `qxfx0-test-fast`;
+  the dead runner `TestMainSemanticSlices.hs` is deleted. Two rot fixes
+  were required to make it green. (1) The raw `loadStateWithVersion` +
+  `Runtime.runTurn` scenario paths skipped production's restore step
+  (`mergeMorphology` in `Bootstrap.hs`): persisted state JSON does not
+  carry the morphology resource, so the commit-time self-blanket failed
+  closed with `BlanketEmptyMorphology` (`IdentityRupture`) in every
+  load-scenario session; the test now re-attaches a process-shared
+  runtime morphology before running turns, and `mergeMorphology` is
+  exported from Bootstrap for exactly this contract. (2) The
+  blocked-concepts fixture probed "смерть", which sits in
+  `philosophicalTopicWhitelist` (`NixGuard.hs`) and is Allowed without
+  ever consulting nix; the fixture now uses the non-whitelisted
+  "запрет" so the fake constitutional guard actually blocks. Suite:
+  14/14 green; failures were proven pre-existing (identical with the
+  П2/П3 runtime changes reverted).
+
   **C-slice (self-divergence recovery envelope) completed 2026-08-07**:
   the A-slice divergence signal now drives the local recovery machine.
   New `RecoverySelfDivergence` cause (`LocalRecoveryCause`) and
@@ -380,11 +456,22 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
   the B2 human-eval leg. See `docs/closure/M6_FELT_GATE.md`.
 
   **Substrate Network (2026-06-20)**: Two-layer knowledge graph enrichment.
-  - **Explicit layer**: 30 philosophical topics, ~50 edges (weight 1.0),
-    from `seedFromCorpus` (definitionCorpus predicates). Only source of output.
-  - **Substrate layer**: same 30 topics, ~78 edges (weight 0.3),
+  - **Explicit layer**: from `seedFromCorpus` (definitionCorpus
+    predicates); edge weight is `sharedCount / 10.0`
+    (`Network/Seed.hs`), flat 1.0 only for synonym-type `TopicRelations`.
+    The historical "30 topics / ~50 edges" described the 2026-06-20
+    corpus; `definitionCorpus` has since grown to **120 topics**
+    (2026-08-22 count), so node/edge counts scale with the corpus.
+    Only source of output.
+  - **Substrate layer**: same topic set, weight 0.3,
     from `buildSubstrateEdges` (brain_kb co-occurrence in triggers).
     Routes spreading activation only, never appears in output.
+    **2026-08-22 fact-check**: `brain_kb.jsonl` is NOT in the repository
+    (gitignored data source, `Substrate.hs` `loadBrainKB` returns `[]`
+    when the file is absent) — on a fresh clone the substrate layer is
+    silently empty and only the explicit layer routes. Restoring the
+    file (53K entries, external source) or documenting its origin is an
+    open ops task.
   - **Integration**: `Bootstrap.hs` loads `brain_kb.jsonl`, builds substrate
     edges, merges into `SemanticNetwork` (explicit wins at same key).
   - **Data source**: `brain_kb.jsonl` (53K entries), filtered by
@@ -400,3 +487,130 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
     explicit predicates under governed retrieval. Relation Graph is deferred until
     a curated relation corpus exists; it must not be reconstructed by regex over
     reflective `brain_kb` prose.
+
+**Concept v3 two-protocol regime (2026-08-23)**: the first three
+slices of the concept-v3 re-centring are law-driven and unconditional
+(no feature flag — ADR-0013 Rule 5 keeps only `Bridge.ExternalLLM`
+flag-gated):
+
+- **Protocol B crisis guard** (`Safety/CrisisGuard.hs` +
+  `Types/Safety/Crisis.hs`): high-precision hard lexical gate
+  (`acuteCrisisMarkers`, RU+EN: «не хочу жить», «покончить с собой»,
+  «суицид», self-harm, "kill myself", …). `decideProtocol` resolves
+  the two-protocol verdict: a hard trigger forces Protocol B
+  **regardless of any score** («ворота не доверяют модели»); without
+  a trigger only a viability-contour exit can. `renderCrisisSurface`
+  is the bounded honest response carrying the real resource pack
+  (`crisisResourcesRu`, version 1: 112 + детский телефон доверия
+  8-800-2000-122). **Ops duty**: resource lines must be re-verified
+  periodically; bump `crVersion` on any change. Wired in Prepare
+  (`buildPrepareEffectPlan`), Route (`tpCrisisSurface`), Render
+  (`buildTurnArtifacts` overrides every other surface, anomaly
+  surfaces included).
+- **User-side R5** (`Types/User/R5.hs` + `User/R5.hs`): `UserR5State
+  ∈ ℝ⁵` (renamed from the concept's `R5State` — that name is taken
+  by `Types/Dream`; axes mirror the system `Field` but the subject is
+  the **system-human**, never conflated with the self-Field). Encoder
+  v1 (`encodeR5`) is linear, interpretable, frozen-on-release
+  (hand-set constants; offline fitted replacement requires a
+  `currentMathVersion` bump). Linear viability contour
+  (`userConatusScore`, `defaultViabilityContour`: absoluteFloor 0.05,
+  personalMargin 0.25, EMA baseline window 10, residual window 8) +
+  EMA personalization (`updateUserBaseline` — one extreme utterance
+  cannot redefine the norm). Persisted carry `ssUserR5Contour`
+  (JSON backward-compatible). Residual audit is the user-side clone
+  of the A-slice pattern: `predictNextUserR5` (v1 = persistence
+  hypothesis — identity, honest about no learned transitions yet),
+  `r5Distance` predicted-vs-observed, bounded `pushR5Sample` window.
+- **Ontological layer** (`Types/Semantic/OntologicalAxis.hs` +
+  `Semantic/Ontological.hs`): `classifyOntological` projects the
+  utterance onto three category pairs (Бытие/Небытие,
+  Стремление/Отрицание, Утверждение/Разрушение), each in [-1,1],
+  total-count normalized (philosophical questions carry **no**
+  ontological act; philosophical pessimism is being−, not a crisis).
+  Negation-safe via blank-then-count («не хочу» is striving−, never
+  striving+). `ontologicalMoveAdmissible` +
+  `resonanceGateThreshold` (0.55) is the pure resonance gate the
+  future move graph consumes: mirror the state → establish resonance
+  → only then the ontological move.
+- **Trace**: `trcCrisisProtocol` / `trcUserR5` /
+  `trcOntologicalVector` on `TurnReplayTrace` (JSON backward-compat
+  `Nothing`). Governance: `currentMathVersion` bumped 2→3.
+- **Anti-rot**: `Test.Suite.CrisisGuard` / `Test.Suite.UserR5` /
+  `Test.Suite.OntologicalAxis`, registered in shared `test-common`
+  + all three TestMains. Pinned concept edge cases: «мне всё надоело»
+  stays **inside** the contour (Protocol A); an exhaustion pile-up
+  exits; decoys (философский пессимизм, чёрный юмор, «камю писал о
+  самоубийстве как проблеме философии») never fire the hard gate;
+  the bounded surface always contains real resources and never
+  directive patterns.
+- **Move graph (2026-08-23, steps 4–6)**: generation-as-search landed
+  as a leading layer, not a replacement (staged cutover — the
+  corpus-backed semantic-first path and M6-FELT are untouched).
+  `Types/Semantic/MoveGraph.hs` + `Semantic/MoveGraph.hs`: a closed
+  ordered set of four operators (MoveMirrorState →
+  MoveEstablishResonance → MoveAffirmBeing → MoveOpenAlternative),
+  a frozen v1 effect matrix Δ on the R5 axes, the connected-calm
+  target S* (res 0.65 / atm 0.20 / mid others, baseline-anchored
+  confidence), and `planOntologicalMove` — a total deterministic
+  search for the operator with minimal predicted `r5Distance` to
+  S*. The §5 ordering (mirror → resonance → affirm) EMERGES from
+  the search: below the resonance gate `MoveAffirmBeing` is
+  inadmissible and mirror/resonance dominate on their own merits.
+  The layer fires only under Protocol A, and only when the input
+  carries a negative ontological act or the score drifts below the
+  personalized baseline by > `moveDriftMargin` (0.10). At render
+  the move LEADS the turn with its act line
+  (`QxFx0.User.Decompress.renderMoveLine`), decompressed for the
+  receiver: under high pressure (atmosphere > 0.6) only the first,
+  densest sentence survives (concept §7 concentrate). The
+  transition model is now move-conditioned: `transitionUserR5` —
+  `S_{t+1} = transition(S_t, move)` via the effect matrix,
+  persistence without a move — so the residual audit measures
+  whether the transition model is right, not just persistence.
+  Trace: `trcOntologicalMove` (move tag, distances to S*
+  before/after, gate state). Anti-rot: `Test.Suite.MoveGraph`
+  (gate-inside-search, ordering emergence, best-admissible
+  invariant, drift firing, decompression concentrate, totality).
+  Corpus-level decompression (predicate choice per receiver) and
+  offline transition fitting remain deferred (calibration phase).
+- **Open follow-ups (not in this landing)**: corpus-level
+  receiver-conditioned decompression via `fieldAwareRendering`;
+  offline fitting of the encoder/effect matrix on a labelled 30–50
+  utterance set; a learning-targets ADR for transition learning;
+  absorption of the flag-off `ssUserModel` Bayesian niche.
+
+## Test counts (2026-08-22, after the audit-closure run on GHC 9.6.7)
+
+Per-suite HUnit case counts from the clean post-migration runs (all
+green, 0 errors / 0 failures each; QuickCheck properties included in
+the suites that run them):
+
+| Suite | Cases |
+|---|---|
+| qxfx0-test | 1239 |
+| qxfx0-test-fast | 1754 |
+| qxfx0-test-unit | 1491 |
+| qxfx0-test-property | 227 |
+| qxfx0-test-integration | 46 |
+| qxfx0-test-slow | see below |
+
+The historical single numbers (1319 / 1320 / 1333 / 1370) inside the
+dated sections above are landing-time records, not current state.
+
+## Hygiene (2026-08-22, П6 mini-section)
+
+- `libHSqxfx0-0.1.0.0-inplace.so` was accidentally tracked at the repo
+  root — untracked and removed; `libHSqxfx0*.so` and `*.qxfx0.db` are
+  gitignored now (`R5Verdict.csv`, `ShadowAlert.csv`, `src/**/*.hi|o`
+  and the test DBs were already covered).
+- `brain_kb.jsonl` (substrate source, 53K entries) is NOT in the
+  repository — see the Substrate Network fact-check above.
+
+## Pointers
+
+- Audit 2026-08-22 → closed by the six-point ТЗ (П1 toolchain 9.6.7,
+  П2 self-divergence window, П3 selectPredicates totality, П4 test
+  infrastructure, П5 B2 RU rater rubric + truthful metadata, П6 this
+  sync). Landing commits: П4.2 `bc4398c`, П1 `57be6a9`, П2 `fb0c5f3`,
+  П3 `a73ea0e`, П4.1 `508d8d7`, П4.3 `4051861`, П5 `85a21c6`.

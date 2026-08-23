@@ -35,6 +35,10 @@ import Test.Suite.SelfEssenceCommit (selfEssenceCommitTests)
 import Test.Suite.SelfDivergence (selfDivergenceTests)
 import Test.Suite.ControlAAblation (controlAAblationTests)
 import Test.Suite.EssenceCollapse (essenceCollapseTests)
+import Test.Suite.CrisisGuard (crisisGuardTests)
+import Test.Suite.UserR5 (userR5Tests)
+import Test.Suite.OntologicalAxis (ontologicalAxisTests)
+import Test.Suite.MoveGraph (moveGraphTests)
 import Test.Suite.P5Governance (p5GovernanceTests)
 import Test.Suite.PhaseM2d (phaseM2dTests)
 import Test.Suite.LearningLoop (learningLoopTests)
@@ -106,6 +110,10 @@ main = do
             ++ selfDivergenceTests
             ++ controlAAblationTests
             ++ essenceCollapseTests
+            ++ crisisGuardTests
+            ++ userR5Tests
+            ++ ontologicalAxisTests
+            ++ moveGraphTests
             ++ p5GovernanceTests
             ++ phaseM2dTests
             ++ learningLoopTests

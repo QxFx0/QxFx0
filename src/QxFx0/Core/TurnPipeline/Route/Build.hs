@@ -96,6 +96,7 @@ import QxFx0.Types.Thresholds
   , parserLowConfidenceThreshold
   )
 import QxFx0.Types.Anomaly (Anomaly(..), AnomalySurface(..), AnomalyTrace(..))
+import QxFx0.Types.Safety.Crisis (CrisisSurface(..), ProtocolVerdict(..))
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -297,11 +298,16 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
             , tpFamilyDerivationChain = familyDerivationChain
             , tpResponseAdmission = admittedDecision
             , tpCommitmentEngagement = commitmentEngagement
-            , tpAnomalySurface = fmap aSurface mAnomaly
-            , tpAnomalyTrace = fmap aTrace mAnomaly
-            , tpAnomalyStateEffect = mDetectedAnomaly >>= daStateEffect
-            , tpSemanticFirstDisabled = semanticFirstDisabled
-            }
+          , tpAnomalySurface = fmap aSurface mAnomaly
+          , tpAnomalyTrace = fmap aTrace mAnomaly
+          , tpAnomalyStateEffect = mDetectedAnomaly >>= daStateEffect
+          , tpSemanticFirstDisabled = semanticFirstDisabled
+          , tpCrisisSurface =
+              case tiUserProtocol ti of
+                ProtocolB cause -> Just (CrisisSurface cause)
+                ProtocolA       -> Nothing
+          , tpOntologicalMove = tiOntologicalMove ti
+          }
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
 derivePreRenderTruthContractStatus ti sc shadowResolution family

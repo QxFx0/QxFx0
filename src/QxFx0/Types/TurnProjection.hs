@@ -42,6 +42,10 @@ import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.Self.Essence (EssenceResetEvent)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
+import QxFx0.Types.Safety.Crisis (CrisisGuardTrace)
+import QxFx0.Types.User.R5 (UserR5Trace)
+import QxFx0.Types.Semantic.OntologicalAxis (OntologicalVector)
+import QxFx0.Types.Semantic.MoveGraph (OntologicalMoveTrace)
 import QxFx0.Types.Memory.Episodic
   ( EpisodicQuery
   , EpisodicId
@@ -343,7 +347,7 @@ data TurnReplayTrace = TurnReplayTrace
     --   consumer of the seam.
   , trcDoubtScore :: !(Maybe Double)
     -- ^ P8 (WP-D): doubt score in @[0,1]@ from 'tiDoubtScore'. High doubt
-    --   (≥ 0.7) signals uncertainty and can drive routing toward clarifying
+    --   (≥ 0.75, doubtSuppressionThreshold) signals uncertainty and can drive routing toward clarifying
     --   moves or reduce explicitness. @Nothing@ when doubt computation is
     --   disabled or unavailable.
   , trcEpisodicRetrievalCount :: !(Maybe Int)
@@ -484,6 +488,25 @@ data TurnReplayTrace = TurnReplayTrace
      -- ^ Observed selector decisions from the rendered semantic artifact.
    , trcResponsePlan :: !(Maybe ResponseSemanticPlan)
      -- ^ Versioned grounded content plan, when a content-producing move used one.
+   , trcCrisisProtocol :: !(Maybe CrisisGuardTrace)
+     -- ^ Concept v3 §2: crisis-guard observability (protocol verdict,
+     --   cause, acute category, resource-pack version).  Always
+     --   populated on new turns; @Nothing@ on traces recorded before
+     --   the two-protocol regime landed.
+   , trcUserR5 :: !(Maybe UserR5Trace)
+     -- ^ Concept v3 §4/§6: the decoded user-side R5 state, its
+     --   viability score, baseline, contour membership, and the
+     --   prediction residual against the previous turn.  @Nothing@
+     --   on pre-regime traces.
+   , trcOntologicalVector :: !(Maybe OntologicalVector)
+     -- ^ Concept v3 §5: the ontological directedness of the input
+     --   utterance (being/non-being, striving/denial,
+     --   affirmation/destruction).  @Nothing@ on pre-regime traces.
+   , trcOntologicalMove :: !(Maybe OntologicalMoveTrace)
+     -- ^ Concept v3 §6: the computed ontological transition operator
+     --   (move tag, predicted distances to S* before/after, and the
+     --   resonance-gate state).  @Nothing@ when no move fired this
+     --   turn or on pre-regime traces.
    } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 
@@ -706,6 +729,10 @@ instance FromJSON TurnReplayTrace where
       <*> pure overlayUsed
        <*> pure selectorDiagnostics
        <*> o .:? "trcResponsePlan"
+       <*> o .:? "trcCrisisProtocol"
+       <*> o .:? "trcUserR5"
+       <*> o .:? "trcOntologicalVector"
+       <*> o .:? "trcOntologicalMove"
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

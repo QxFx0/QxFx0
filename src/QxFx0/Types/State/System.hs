@@ -139,6 +139,7 @@ import QxFx0.Types.State.Stance
   , UserStanceTracker
   , StanceLineage
   )
+import QxFx0.Types.User.R5 (UserR5ContourState)
 
 -- | Bootstrap-derived provenance for the explicitly active promotion overlay.
 -- This is intentionally runtime-only: the overlay is reconstructed from the
@@ -325,6 +326,12 @@ data SystemState = SystemState
     -- ^ P2.2: cross-turn coherence buffer. Tracks predicate surface forms
     --   (spRu) emitted in recent turns on the same topic, so the renderer
     --   can avoid repeating them. Cleared on topic change.
+  , ssUserR5Contour :: !UserR5ContourState
+    -- ^ Concept v3 §4/§6: user-side R5 contour carry — last observed
+    --   user state, personalized viability baseline (slow EMA),
+    --   deterministic prediction for the next turn, and the bounded
+    --   prediction-residual window.  JSON backward-compatible:
+    --   initialised to 'emptyUserR5ContourState'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
