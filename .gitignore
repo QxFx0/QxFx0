@@ -111,3 +111,6 @@ test/fixtures/b2-eval/generated/
 # Build artifacts leaking into the worktree root (2026-08-22 hygiene)
 libHSqxfx0*.so
 *.qxfx0.db
+
+# Test-suite SQLite artifacts in the worktree root (native-sqlite nulls suite)
+*_test_*.db

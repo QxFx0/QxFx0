@@ -490,8 +490,9 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
 
 **Concept v3 two-protocol regime (2026-08-23)**: the first three
 slices of the concept-v3 re-centring are law-driven and unconditional
-(no feature flag — ADR-0013 Rule 5 keeps only `Bridge.ExternalLLM`
-flag-gated):
+(no feature flag — ADR-0034 §3 Rule 5, mechanized as FOLLOWUPS.md
+Rule [15], keeps only `Bridge.ExternalLLM` flag-gated; there is no
+ADR-0013 — that number was retired in the 0013-collision renumbering):
 
 - **Protocol B crisis guard** (`Safety/CrisisGuard.hs` +
   `Types/Safety/Crisis.hs`): high-precision hard lexical gate
@@ -615,23 +616,51 @@ flag-gated):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (2026-08-22, after the audit-closure run on GHC 9.6.7)
+## Test counts (updated 2026-08-23)
 
-Per-suite HUnit case counts from the clean post-migration runs (all
-green, 0 errors / 0 failures each; QuickCheck properties included in
-the suites that run them):
+Per-suite HUnit case counts (QuickCheck properties included in the
+suites that run them). `qxfx0-test` and `qxfx0-test-integration` were
+re-verified green on 2026-08-23 after the audit-follow-up landing
+(1304 / 46, 0 errors / 0 failures each); the other rows are the clean
+2026-08-22 post-migration counts, not re-run since:
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1239 |
+| qxfx0-test | 1304 |
 | qxfx0-test-fast | 1754 |
 | qxfx0-test-unit | 1491 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | see below |
 
-The historical single numbers (1319 / 1320 / 1333 / 1370) inside the
-dated sections above are landing-time records, not current state.
+The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
+inside the dated sections above are landing-time records, not current
+state. The 1239→1304 growth is concept-v3 (+56, landed 2026-08-23
+before this count) plus the audit follow-up below (+9).
+
+**Audit follow-up landing (2026-08-23)**: (1) the ADR-0013 dangling
+reference corrected to ADR-0034 §3 Rule 5 / FOLLOWUPS Rule [15];
+(2) GAPS.md 311/312 totals annotated as curation-inventory numbers
+(runtime corpus is 120 topics); (3) empty-substrate bootstrap now logs
+a WARN (`brain_kb.jsonl loaded 0 entries…`) instead of degrading
+silently, and `loadBrainKB` has direct tests (missing path → `[]`;
+JSONL parse with bad-line skip); (4) dead suite
+`Test.Suite.RenderAuthorityStub` deleted (superseded by
+`Test.Suite.AuthoritySurface`), born-dead `Test.Suite.
+MorphologicalNormalization` (6 cases, HUnit) reactivated in
+`qxfx0-test`; (5) `*_test_*.db` gitignore pattern covers root test
+artifacts (`qxfx0_test_native_sqlite_nulls.db`); (6) the regime
+stamps `trcRegimeVersion` / `trcFamilyDivergenceActive` /
+`trcFamilyDivergenceOccurred` now read the LIVE session regime
+(`ssCurrentRegime`) instead of the static `defaultRuntimeRegime`
+(`Finalize/Projection.hs`, closing the "left for a separate pass"
+note from the R4 morphology fix) — a restored session carrying a
+foreign persisted regime now surfaces it verbatim in the trace;
+regression pin `m5RegimeStampsLiveSessionRegime` in
+`Test.Suite.M5Regime`. One-off flakiness:
+the first 2026-08-23 `qxfx0-test` run showed 2 extra failures that
+did not reproduce in two subsequent full runs (names not captured;
+re-observe before treating as real).
 
 ## Hygiene (2026-08-22, П6 mini-section)
 
@@ -644,6 +673,11 @@ dated sections above are landing-time records, not current state.
 
 ## Pointers
 
+- Audit 2026-08-23 → session backup + open-debt register + forward
+  plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
+  landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
+  doc integrity, live-regime trace stamps; verification 1304/46
+  green; fast/unit/property/slow rows stale pending re-run).
 - Audit 2026-08-22 → closed by the six-point ТЗ (П1 toolchain 9.6.7,
   П2 self-divergence window, П3 selectPredicates totality, П4 test
   infrastructure, П5 B2 RU rater rubric + truthful metadata, П6 this

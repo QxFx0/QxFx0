@@ -54,6 +54,7 @@ import Test.Suite.M6FeltGate (m6FeltGateTests)
 import Test.Suite.M6FeltBenchmark (m6FeltBenchmarkTests)
 import Test.Suite.M5Regime (m5RegimeTests)
 import Test.Suite.SubstrateNetwork (substrateTests)
+import Test.Suite.MorphologicalNormalization (morphologicalNormalizationTests)
 import Test.Suite.AtomStore (atomStoreTests)
 import Test.Suite.PathFinder (pathFinderTests)
 import Test.Suite.GeneratedPredicateGate (generatedPredicateGateTests)
@@ -67,7 +68,7 @@ main :: IO ()
 main = do
   mGroup <- lookupEnv "QXFX0_AGGREGATE_GROUP"
   let coreTests = coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests
-        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ selfDivergenceTests ++ controlAAblationTests ++ essenceCollapseTests ++ crisisGuardTests ++ userR5Tests ++ ontologicalAxisTests ++ moveGraphTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m6FeltGateTests ++ m6FeltBenchmarkTests ++ m5RegimeTests ++ substrateTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
+        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ selfDivergenceTests ++ controlAAblationTests ++ essenceCollapseTests ++ crisisGuardTests ++ userR5Tests ++ ontologicalAxisTests ++ moveGraphTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m6FeltGateTests ++ m6FeltBenchmarkTests ++ m5RegimeTests ++ substrateTests ++ morphologicalNormalizationTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
       groups =
         [ ("core", coreTests)
         , ("runtime", runtimeInfrastructureTests)

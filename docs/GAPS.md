@@ -355,6 +355,13 @@ Full list contains 100 concepts; top 100 shown.
 
 ## Summary
 
+> **2026-08-23 fact-check**: the totals below describe the *curation
+> effort* over the relations-graph concept list, not the landed corpus.
+> The production `definitionCorpus` (`src/QxFx0/Semantic/Content.hs`)
+> currently carries **120 topics**; the remaining ~190 curated concepts
+> exist only in this document and are not surfaced by the runtime.
+> Treat 311/312 as curation-inventory numbers, not runtime coverage.
+
 - **ALL GAPS COVERED**: **311/311** concepts from relations graph now have curated predicates (100% coverage)
 - Total curated topics: **312** (includes 1 extra: "благодарность" not in relations)
 - Original seed topics: **30**

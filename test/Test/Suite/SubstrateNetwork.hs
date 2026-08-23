@@ -14,8 +14,12 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as TE
 import qualified Data.Sequence as Seq
+import qualified Data.ByteString.Lazy as BL
 import Data.Foldable (toList)
+
+import Test.Support (freshTestPath, removeIfExists)
 
 import QxFx0.Semantic.Network.Substrate
 import QxFx0.Semantic.Network.Types
@@ -75,6 +79,28 @@ substrateTests =
   , TestLabel "empty brain_kb produces no edges" $ TestCase $ do
       let edges = buildSubstrateEdges [] (S.fromList ["свобода", "страх"])
       assertBool "no edges from empty brain_kb" (null edges)
+
+  , TestLabel "loadBrainKB returns [] for a missing file" $ TestCase $ do
+      missing <- freshTestPath "qxfx0_brain_kb_missing"
+      entries <- loadBrainKB missing
+      assertBool "missing file must yield empty list, not an exception" (null entries)
+
+  , TestLabel "loadBrainKB parses JSONL and skips bad lines" $ TestCase $ do
+      path <- freshTestPath "qxfx0_brain_kb_sample"
+      let content = T.intercalate "\n"
+            [ "{\"text\":\"текст 1\",\"triggers\":[\"свобода\",\"страх\"],\"layer\":\"ontology\",\"kind\":\"claim\"}"
+            , "not json at all"
+            , "{\"text\":\"текст 2\",\"triggers\":[\"страх\"],\"layer\":\"dialogue\",\"kind\":\"claim\"}"
+            , ""
+            ] <> "\n"
+      BL.writeFile path (BL.fromStrict (TE.encodeUtf8 content))
+      entries <- loadBrainKB path
+      removeIfExists path
+      case entries of
+        [e1, e2] -> do
+          assertBool "first entry text" (beText e1 == "текст 1")
+          assertBool "second entry layer" (beLayer e2 == "dialogue")
+        _ -> assertFailure ("Expected 2 parsed entries, got " ++ show (length entries))
 
   , TestLabel "entries filtered by layer" $ TestCase $ do
       let entries =

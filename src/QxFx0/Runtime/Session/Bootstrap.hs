@@ -638,6 +638,15 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
   -- Load brain_kb for substrate network enrichment
   brainKBPath <- resolveBrainKBPath
   brainKBEntries <- loadBrainKB brainKBPath
+  -- An empty substrate (missing/unreadable brain_kb.jsonl) is non-fatal but
+  -- must be observable: only the explicit layer will route spreading
+  -- activation, silently degrading associative reach.
+  if null brainKBEntries
+    then Log.logWarn "brain_kb.jsonl loaded 0 entries; substrate layer will be empty (explicit layer only)"
+      (Log.addContext "path" (T.pack brainKBPath) Log.emptyContext)
+    else Log.logInfo "brain_kb.jsonl loaded"
+      (Log.addContext "path" (T.pack brainKBPath) $
+       Log.addContext "entries" (T.pack (show (length brainKBEntries))) Log.emptyContext)
 
   -- ADR-0052 Phase IV: load ontology once for category classification.
   -- Failure is non-fatal: the classifier falls back to lexical markers.
