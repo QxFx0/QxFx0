@@ -515,16 +515,18 @@ dominantDriver cs
 -- contributions.
 --
 -- Concretely: let @dominant = max |c_i|@ and
--- @other = sum |c_i| − dominant@; with @n = 5@ contributions,
+-- @other = sum |c_i| − dominant@; with @n@ contributions,
 -- @confidence = max 0 (1 − other / ((n−1) × dominant))@. This
 -- yields @1.0@ when one contribution dominates and the others
--- are zero, and @0.0@ when all five contributions are equal in
+-- are zero, and @0.0@ when all contributions are equal in
 -- magnitude. All-zero contributions return @1.0@ (no signal to
--- disagree on).
+-- disagree on). WP-C added 'contribContentSaliency', so the
+-- divisor hard-codes @n − 1 = 5@ (six contributions); extend it
+-- in lockstep with 'Contributions' if further signals land.
 computeConfidence :: Contributions -> Double
 computeConfidence cs
   | dominant == 0.0 = 1.0
-  | otherwise       = max 0.0 (1.0 - other / (5.0 * dominant))  -- WP-C: now 6 contributions, so n-1 = 5
+  | otherwise       = max 0.0 (1.0 - other / (5.0 * dominant))  -- n-1 = 5 (six contributions, WP-C)
   where
     magnitudes =
       [ abs (contribResonance       cs)

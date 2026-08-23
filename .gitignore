@@ -107,3 +107,7 @@ qxfx0-s13-wt/
 
 # B2-EXEC-001 eval packet output (regenerable via scripts/generate_b2_packet.sh)
 test/fixtures/b2-eval/generated/
+
+# Build artifacts leaking into the worktree root (2026-08-22 hygiene)
+libHSqxfx0*.so
+*.qxfx0.db

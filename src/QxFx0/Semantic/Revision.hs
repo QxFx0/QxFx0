@@ -26,14 +26,19 @@ import QxFx0.Semantic.Space (tokenizePredicate)
 import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), stanceConfidence, emptyStanceDefense)
 import QxFx0.Semantic.Stance (defendOrAdapt, Collapse(..))
 
--- | Result of contradiction-driven revision.
+-- | Result of contradiction-driven revision.  Since Anomaly v3.0 the
+-- production path is 'QxFx0.Semantic.Stance.defendOrAdapt' (wired in
+-- @Finalize/State.hs@); 'revisePosition' is a thin wrapper over it kept
+-- for direct tests and 'applyRevisionDecision'.  The constructors map
+-- the pentagon transitions:
 data RevisedCommitment
   = RcRevised !CommitmentId !ContradictionKind
-    -- ^ High angst → flexible position, revise the commitment
+    -- ^ StanceDoubted + strong challenge → StanceRevised (full revision)
   | RcQuarantined !CommitmentId !ContradictionKind
-    -- ^ Low conatus → weak position, quarantine the commitment
+    -- ^ StanceDoubted + low conatus → Collapse (quarantine)
   | RcRetained !CommitmentId !ContradictionKind
-    -- ^ Stable state → retain the commitment despite contradiction
+    -- ^ Held / defended / exited-cycle transitions (StanceHeld under
+    --   strong challenge steps to StanceDoubted without revision)
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
