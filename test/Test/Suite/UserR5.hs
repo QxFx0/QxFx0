@@ -20,7 +20,8 @@ module Test.Suite.UserR5
   ( userR5Tests
   ) where
 
-import Data.Aeson (eitherDecode, encode)
+import Data.Aeson (Value (..), eitherDecode, encode, toJSON)
+import qualified Data.Aeson.KeyMap as KM
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import QxFx0.User.R5 (encodeR5)
@@ -137,10 +138,23 @@ userR5Tests =
             , ur5Baseline = Just 0.24
             , ur5OutsideContour = False
             , ur5PredictionError = Nothing
+            , ur5WindowMean = Just 0.15
             }
       assertEqual "roundtrip must preserve the trace"
         (Right trace)
         (eitherDecode (encode trace))
+      -- Old persisted traces predate ur5WindowMean; the derived
+      -- FromJSON must decode them with the field as Nothing.
+      let Object obj = toJSON (trace :: UserR5Trace)
+          legacy = Object (KM.delete "ur5WindowMean" obj)
+      assertEqual "legacy JSON without ur5WindowMean decodes to Nothing"
+        (Right trace { ur5WindowMean = Nothing })
+        (eitherDecode (encode legacy))
+  , TestLabel "r5ResidualWindowMean: empty window is Nothing, mean otherwise" $ TestCase $ do
+      assertEqual "empty window -> Nothing" Nothing (r5ResidualWindowMean [])
+      -- Dyadic values so the mean is exactly representable.
+      assertEqual "mean over the window" (Just 0.375) (r5ResidualWindowMean [0.5, 0.25])
+      assertEqual "single sample" (Just 0.25) (r5ResidualWindowMean [0.25])
   , TestLabel "UserR5ContourState JSON roundtrip" $ TestCase $ do
       let carry = UserR5ContourState
             { u5LastState = Just neutralUserR5State

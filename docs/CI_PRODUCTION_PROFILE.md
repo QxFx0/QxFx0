@@ -25,7 +25,7 @@
 | Resource | Minimum | Notes |
 |----------|---------|-------|
 | OS | Ubuntu 22.04/24.04 LTS | Or equivalent Linux x86_64 |
-| RAM | 8 GB | For `cabal build all` + fast tests |
+| RAM | 8 GB | For `cabal build all` + fast tests **run sequentially** (build peaks ~4 GB, fast suite ~3.1 GB max residency; concurrent suites risk OOM-kill — measured 2026-09-08) |
 | Disk | 20 GB | Cabal store + build artifacts |
 | Timeout | 25 min | Per job |
 | GHC | 9.6.6 | `haskell-actions/setup@v2` |

@@ -19,8 +19,15 @@ contract that produced this module.
 This module is /not/ a model of phenomenal selfhood. It is a
 structural accumulator over the right- and left-hemispheric
 verdicts already produced by 'QxFx0.Self.Deliberation'. The
-forcing dynamics (Phase 10) live behind a feature flag; until
-then, every essence remains 'EssenceUncommitted'.
+forcing dynamics (Phase 10) are law-driven and unconditionally
+active since 2026-05-19: 'shouldCommit' is evaluated every turn,
+'validatePlan' guards the committed plan, and 'rrEssenceActive'
+is 'True' (Policy A, ESSENCE-REGIME-RECONCILE.md).  Commitment is
+law-driven, not flag-gated, by design (the historical ADR-0012
+flag was never implemented); the single
+intentional exception is the B2 Control-A ablation hook
+'essenceCommitDisabled' / 'caDisableEssence', which bypasses
+'shouldCommit' for the ablated control arm only.
 -}
 module QxFx0.Self.Essence
   ( -- * Core types
@@ -142,8 +149,10 @@ fieldSignature em f = FieldSignature
 --
 -- This implements Anomaly-3 from the Anomaly Architecture v3.0 specification.
 -- When the system encounters a self-referential question at high angst
--- (subject ∈ ["я", "ты", "QxFx0", "система"] ∧ angst > 0.9), it performs
--- a structural reset: clears witnesses, resets angst and conatus floor.
+-- (subject matched by substring against 8 subjects
+-- ["я", "ты", "qxfx0", "система", "i", "you", "myself", "yourself"]
+-- — see QxFx0.Core.TurnPipeline.Route.Anomaly — ∧ angst > 0.9),
+-- it performs a structural reset: clears witnesses, resets angst and conatus floor.
 --
 -- The reset is replay-visible via 'EssenceResetEvent', making the loss
 -- observable in traces. This is "losing what you've been through", not

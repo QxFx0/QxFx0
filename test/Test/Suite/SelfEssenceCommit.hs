@@ -42,6 +42,10 @@ import Data.Aeson (decode, encode)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
 import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+import QxFx0.Core.TurnPipeline.Protocol (FinalizePrecommitBundle (..))
+import QxFx0.Types.State.System (SystemState (..))
+import QxFx0.Types.State.SelfState (SelfState (..))
+import Test.Suite.TurnPipelineProtocol (buildFinalizeFixture, withDeterministicEmbedding)
 import QxFx0.Self.Deliberation
   ( Agreement (..)
   , Deliberation (..)
@@ -94,10 +98,12 @@ selfEssenceCommitTests =
       quickCheckProperty "neutral tone always admissible"
         propNeutralToneAlwaysAdmissible
 
-    -- Regression — pre-threshold shape stays uncommitted
-    -- TODO: replace with an actual buildNextSystemState call once
-    -- a reusable Phase-10 fixture builder is extracted; see
-    -- docs/post-phase-10-roadmap-closure-spec.md §1.2.
+    -- Regression — pre-threshold trajectory stays uncommitted.
+    -- Real-pipeline pin (2026-08-23): runs the full turn pipeline via
+    -- the Phase-10 fixture builder (Test.Support.TurnPipelineFixtures)
+    -- and asserts on the post-finalize SystemState, replacing the
+    -- former shape-only TODO (docs/post-phase-10-roadmap-closure-spec.md
+    -- §1.2, closed by audit P3-7).
   , TestLabel "pre-threshold trajectory stays EssenceUncommitted with one witness" $
       TestCase testFlagOffEssenceUncommittedShape
 
@@ -421,27 +427,23 @@ propReconcileCourtesyNeverWidens =
 -- Unit tests
 -- ---------------------------------------------------------------------------
 
--- | TODO: this test currently asserts shape only (one witness,
--- angst bounded).  It does not invoke the actual
--- 'buildNextSystemState' function because no reusable fixture
--- builder for the full turn-pipeline state exists yet.  See
--- docs/post-phase-10-roadmap-closure-spec.md §1.2.
+-- | Real-pipeline regression (audit P3-7): a fresh session through
+-- the full turn pipeline (prepare → route → render → finalize via
+-- 'buildFinalizeFixture') must leave the essence trajectory
+-- uncommitted — 'shouldCommit' evaluates every turn, and one calm
+-- definitional turn cannot cross the angst threshold — while still
+-- accumulating exactly one witness for the turn.
 testFlagOffEssenceUncommittedShape :: IO ()
-testFlagOffEssenceUncommittedShape = do
-  let traj = emptyTrajectory
-      fd   = emptyField
-      ce   = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0 0.0)
-      p    = defaultPlan
-      delib = defaultDeliberation { delibReconciled = p }
-      traj' = witness defaultEssenceModulation 1 ce fd delib traj
-      -- Simulate what buildNextSystemState does when flag is off
-      next = EssenceUncommitted traj'
-  case next of
-    EssenceUncommitted t -> do
-      assertEqual "witness count" 1 (Seq.length (etWitnesses t))
-      assertBool "angst in [0,1]" (etAngstLevel t >= 0.0 && etAngstLevel t <= 1.0)
-    EssenceCommitted _ _ ->
-      assertFailure "flag-off must never produce EssenceCommitted"
+testFlagOffEssenceUncommittedShape =
+  withDeterministicEmbedding $ do
+    (_, _, _, _, _, bundle) <- buildFinalizeFixture "что такое свобода?"
+    let nextEssence = selfEssence (ssSelfState (fpbNextSs bundle))
+    case nextEssence of
+      EssenceUncommitted t -> do
+        assertEqual "one witness per turn" 1 (Seq.length (etWitnesses t))
+        assertBool "angst in [0,1]" (etAngstLevel t >= 0.0 && etAngstLevel t <= 1.0)
+      EssenceCommitted _ _ ->
+        assertFailure "a fresh calm turn must never produce EssenceCommitted"
 
 testFlagOnCommitmentFires :: IO ()
 testFlagOnCommitmentFires = do

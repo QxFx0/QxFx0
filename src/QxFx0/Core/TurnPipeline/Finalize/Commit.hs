@@ -14,7 +14,7 @@ module QxFx0.Core.TurnPipeline.Finalize.Commit
 import Control.Monad (unless)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 
 import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ResponseObservation(..))
@@ -95,7 +95,10 @@ resolveFinalizeCommit pipelineIO expectedVersion commitPlan = do
     Left v   -> throwQxFx0
                   (EssenceRupture ("commit: " <> renderEssenceViolation v))
 
-  let saveStart = fcpCapturedCurrentTime commitPlan
+  -- Audit 2026-09-15: wall-clock the persistence window honestly.
+  -- The previous code stamped both ends with the turn-start capture,
+  -- so every persist phase reported 0ms.
+  saveStart <- getCurrentTime
   saveResult <-
     resolveTurnEffect
       pipelineIO
@@ -172,7 +175,7 @@ resolveFinalizeCommit pipelineIO expectedVersion commitPlan = do
     maybeInjectPostCommitTailException pipelineIO
     _ <- resolveTurnEffect pipelineIO (TurnReqCheckpoint (ssTurnCount savedState))
     pure ()
-  let saveEnd = fcpCapturedCurrentTime commitPlan
+  saveEnd <- getCurrentTime
   pure
     FinalizeCommitResults
       { fcrSavedSs = savedState

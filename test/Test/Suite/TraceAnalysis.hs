@@ -12,7 +12,11 @@ import QxFx0.Core.TurnPipeline.Finalize.Projection (activatedConcepts, missingPr
 import QxFx0.Semantic.Content (definitionCorpus)
 import QxFx0.Observability.TraceAnalysis
 import QxFx0.Runtime (RuntimeMode(..))
-import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
+import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..), UserRegimeTrace(..))
+import QxFx0.Types.Safety.Crisis (CrisisGuardTrace(..))
+import QxFx0.Types.User.R5 (UserR5Trace(..), r5EncoderVersion)
+import QxFx0.Types.Semantic.OntologicalAxis (neutralOntologicalVector)
+import QxFx0.Types.Self.Essence (EssenceResetEvent(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
@@ -51,6 +55,11 @@ traceAnalysisTests =
   , TestLabel "TraceAnalysis: Trace backward compatibility" testTraceBackwardCompatibility
   , TestLabel "TraceAnalysis: Activated concepts" testActivatedConcepts
   , TestLabel "TraceAnalysis: Missing predicate concepts" testMissingPredicateConcepts
+  , TestLabel "TraceAnalysis: SelfLayer sustained divergence flags" testSelfLayerSustainedDivergence
+  , TestLabel "TraceAnalysis: SelfLayer essence soft rupture observable" testSelfLayerEssenceReset
+  , TestLabel "TraceAnalysis: SelfLayer penalty without prediction invariant" testSelfLayerPenaltyWithoutPrediction
+  , TestLabel "TraceAnalysis: SelfLayer calm trace has no anomaly" testSelfLayerCalm
+  , TestLabel "TraceAnalysis: UserRegime sustained residual flags" testUserRegimeSustainedResidual
   ]
 
 -- | Audit C: LocalRecoveryCause/Strategy serialize via rendered snake_case but
@@ -362,3 +371,96 @@ testMissingPredicateConcepts :: Test
 testMissingPredicateConcepts = TestCase $ do
   let artifact = ActivationArtifact [] (Map.fromList [("квантовый туман", 0.1), ("ответственность", 0.1)]) Seq.empty []
   assertEqual "Missing predicate concepts" ["квантовый туман"] (missingPredicateConcepts definitionCorpus (Just artifact))
+
+-- | Audit P1-1: the divergence window mean above sdtThreshold (0.35
+-- in the default tuning) is exactly the RecoverySelfDivergence
+-- trigger predicate, and must surface as a self-layer anomaly.
+testSelfLayerSustainedDivergence :: Test
+testSelfLayerSustainedDivergence = TestCase $ do
+  let hot = minimalTrace
+        { trcSelfDivergenceWindowMean = Just 0.5
+        , trcSelfDivergencePredictionActive = True
+        }
+      calm = hot { trcSelfDivergenceWindowMean = Just 0.2 }
+      analysis = analyzeSelfLayer hot
+  assertEqual "sustained window mean flags self_divergence_sustained"
+    (Just "self_divergence_sustained") (slaAnomaly analysis)
+  assertBool "flag agrees with hasSelfLayerAnomaly" (hasSelfLayerAnomaly analysis)
+  assertEqual "window mean is surfaced on the analysis"
+    (Just 0.5) (slaDivergenceWindowMean analysis)
+  assertEqual "window mean below threshold does not flag"
+    Nothing (slaAnomaly (analyzeSelfLayer calm))
+
+-- | Audit P1-1: a recorded EssenceResetEvent is an observable soft
+-- rupture (reset + resume), visible in analysis output — not only in
+-- raw trace JSON.
+testSelfLayerEssenceReset :: Test
+testSelfLayerEssenceReset = TestCase $ do
+  let event = EssenceResetEvent
+        { ereTurn = 7
+        , erePreviousAngst = 0.81
+        , erePreviousWitnessCount = 3
+        }
+      analysis = analyzeSelfLayer minimalTrace
+        { trcSelfDivergencePredictionActive = True
+        , trcEssenceResetEvent = Just event
+        }
+  assertEqual "a recorded reset event flags essence_soft_rupture"
+    (Just "essence_soft_rupture") (slaAnomaly analysis)
+  assertEqual "the reset turn is surfaced" (Just 7) (slaEssenceResetTurn analysis)
+
+-- | Audit P1-1: a nonzero divergence penalty with the prediction
+-- chain off violates the A-slice wiring (the penalty is gated on
+-- prior-turn divergence, which presupposes an active prediction).
+testSelfLayerPenaltyWithoutPrediction :: Test
+testSelfLayerPenaltyWithoutPrediction = TestCase $ do
+  let analysis = analyzeSelfLayer minimalTrace
+        { trcSelfDivergencePenalty = 0.1
+        , trcSelfDivergencePredictionActive = False
+        }
+  assertEqual "nonzero penalty with prediction off is a wiring violation"
+    (Just "self_penalty_without_prediction") (slaAnomaly analysis)
+
+-- | Audit P1-1: a calm trace produces no self-layer flags, and the
+-- analyzer is wired into the shared summary.
+testSelfLayerCalm :: Test
+testSelfLayerCalm = TestCase $ do
+  let analysis = analyzeSelfLayer minimalTrace
+  assertEqual "calm trace: no self-layer anomaly" Nothing (slaAnomaly analysis)
+  assertEqual "calm trace: analyzer feeds the summary"
+    (slaAnomaly analysis) (slaAnomaly (tasSelfLayer (analyzeTrace minimalTrace)))
+
+-- | Audit P1-2: a per-turn residual below the threshold but a window
+-- mean above it is sustained model degradation, not one noisy turn.
+testUserRegimeSustainedResidual :: Test
+testUserRegimeSustainedResidual = TestCase $ do
+  let regimeTrace windowMean = Just UserRegimeTrace
+        { urtCrisis = CrisisGuardTrace
+            { cgtProtocolB = False
+            , cgtCause = Nothing
+            , cgtCategory = Nothing
+            , cgtResourceVersion = 0
+            }
+        , urtUserR5 = UserR5Trace
+            { ur5Resonance = 0.5
+            , ur5Atmosphere = 0.3
+            , ur5Confidence = 0.4
+            , ur5Consolidation = 0.5
+            , ur5Counterfactual = 0.5
+            , ur5ConatusScore = 0.3
+            , ur5Baseline = Just 0.3
+            , ur5OutsideContour = False
+            , ur5PredictionError = Just 0.1
+            , ur5WindowMean = windowMean
+            }
+        , urtOntologicalVector = neutralOntologicalVector
+        , urtOntologicalMove = Nothing
+        , urtEncoderVersion = r5EncoderVersion
+            }
+      sustained = analyzeUserRegime minimalTrace { trcUserRegime = regimeTrace (Just 0.5) }
+      healthy = analyzeUserRegime minimalTrace { trcUserRegime = regimeTrace (Just 0.1) }
+  assertEqual "sustained window residual flags user_model_sustained_residual"
+    (Just "user_model_sustained_residual") (uraAnomaly sustained)
+  assertEqual "window mean is surfaced on the analysis"
+    (Just 0.5) (uraResidualWindowMean sustained)
+  assertEqual "healthy window does not flag" Nothing (uraAnomaly healthy)

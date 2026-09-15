@@ -130,7 +130,7 @@ import qualified Data.List as L
 import Data.Maybe (fromMaybe, isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 
 data RenderStatic = RenderStatic
   { rsRenderWithBg :: !Text
@@ -579,7 +579,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
 
 resolveRenderEffects :: PipelineIO -> RenderEffectPlan -> IO RenderEffectResults
 resolveRenderEffects pio effectPlan = do
-  let tRender0 = tiStartTime (repTurnInput effectPlan)
+  -- Audit 2026-09-15: wall-clock the render phase honestly.  The previous
+  -- code stamped both ends with 'tiStartTime', so every render phase
+  -- reported 0ms in 'tpMetrics'.
+  tRender0 <- getCurrentTime
   warnMorphologyFallback <- shouldWarnMorphologyFallback pio
   case repRenderMorphologyWarning effectPlan of
     Just bestTopic | warnMorphologyFallback ->
@@ -617,7 +620,7 @@ resolveRenderEffects pio effectPlan = do
           Nothing -> Nothing
           Just (TurnResExternalQuery res) -> Just res
           Just _ -> Just (Left (EqeInvalidResponse "unexpected_effect_result"))
-  let tRender1 = tiStartTime (repTurnInput effectPlan)
+  tRender1 <- getCurrentTime
   pure RenderEffectResults
     { rerRenderTimeline = RenderTimeline
         { rtlRenderStart = tRender0
@@ -725,7 +728,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       authorityClass = deriveAuthorityClass renderStatic contractProv surfaceProv assemblyPath
       artifactManifest = deriveArtifactManifest renderStatic templateArtifact assemblyPath authorityClass
       rendered = Guard.gsRenderedText renderedSurface
-      (recoveryCause, recoveryStrategy, recoveryEvidence) =
+      (recoveryCause, localRecoveryStrategy, localRecoveryEvidence) =
         case surfaceProv of
           FromRecovery ->
             (Just RecoveryRenderBlocked, Just StrategySafeRecovery, ["render_guard=blocked"])
@@ -742,6 +745,17 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       -- (severity 100, dominates everything).
       delibRecoveryCause = tpDeliberation tp >>= planRecoveryCause . delibReconciled
       finalRecoveryCause = pickHigherSeverity delibRecoveryCause recoveryCause
+      -- Audit 2026-09-15: strategy/evidence come only from the local plan,
+      -- which carries no strategy for a deliberation-won cause.  Attributing
+      -- the local strategy to a deliberation cause (e.g. cause=ConatusGate
+      -- + strategy=ask_clarification) lies in the trace — surface the
+      -- mismatch explicitly instead of emitting a coherent-looking lie.
+      delibCauseWon = delibRecoveryCause == finalRecoveryCause
+        && recoveryCause /= finalRecoveryCause
+      (recoveryStrategy, recoveryEvidence) =
+        if delibCauseWon
+          then (Nothing, ["deliberation_cause_without_local_strategy"])
+          else (localRecoveryStrategy, localRecoveryEvidence)
       decisionFamily = case surfaceProv of
         FromRecovery -> CMRepair
         _ | hasChallengeMarkerForDecision (ipfRawText (tiFrame ti)) -> CMConfront

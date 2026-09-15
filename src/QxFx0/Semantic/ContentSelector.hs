@@ -46,8 +46,8 @@ selectPredicates :: ContentSelector -> Field -> Text -> Maybe SemanticNetwork ->
 selectPredicates cs field topic mActivatedNetwork =
   case M.lookup topic (csTopicPredicates cs) of
     -- An absent topic and a topic mapped to an empty predicate pool are
-    -- equivalent: no selection is possible.  (A bare `Just []` used to
-    -- crash the unscored fallback below on `head`.)
+    -- equivalent: no selection is possible.  (The unscored fallback below
+    -- picks via `take 1`, total for any pool shape.)
     Nothing -> []
     Just [] -> []
     Just preds ->
@@ -56,7 +56,9 @@ selectPredicates cs field topic mActivatedNetwork =
       -- affinity floor inside 'scorePred', the topic still yields its
       -- first predicate with score 0.0 rather than an empty answer.
       in case scored of
-            [] -> [SelectedPredicate topic 0.0 [head preds]]
+            [] -> [SelectedPredicate topic 0.0 (take 1 preds)]
+                   -- 'preds' is non-empty here: the 'Just []' arm above
+                   -- handles the empty pool (take 1 keeps it total).
             _  -> let (bestPred, bestScore) = maximumBy (comparing snd) scored
                   in [SelectedPredicate topic bestScore [bestPred]]
 
@@ -352,9 +354,11 @@ composeBestForActivation cs field heuristics activatedNetwork t =
                 , S.member a (M.findWithDefault S.empty t (csTopicAtoms cs))
                 ]
           in if topicActivation > 0.05
-               then let depthBoost = ontologyDepthBoost cs heuristics t
-                        p = head preds
-                    in Just (t, p, 0.3 * (1.0 + depthBoost))
+               then case listToMaybe preds of
+                      Nothing -> Nothing
+                      Just p ->
+                        let depthBoost = ontologyDepthBoost cs heuristics t
+                        in Just (t, p, 0.3 * (1.0 + depthBoost))
                else Nothing
         scored ->
           let depthBoost = ontologyDepthBoost cs heuristics t

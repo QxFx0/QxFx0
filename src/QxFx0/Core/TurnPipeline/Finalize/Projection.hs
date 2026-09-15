@@ -93,7 +93,9 @@ import QxFx0.Types.User.R5
   , UserR5Trace(..)
   , defaultUserConatusWeights
   , r5EncoderVersion
+  , r5ResidualWindowMean
   , u5Baseline
+  , u5DivergenceWindow
   , userConatusScore
   )
 import QxFx0.Types.Semantic.MoveGraph
@@ -454,7 +456,12 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcSubstrateActivated = substrateActivated
           , trcSubstrateEdgesUsed = length substrateSteps
           , trcActivationSteps = activationSteps
-          , trcSubstrateHops = length substrateSteps
+          -- Hops = the deepest substrate hop reached in the activation
+          -- walk (0 = seeds only), NOT the traversal count — that is
+          -- trcSubstrateEdgesUsed.  Previously both fields carried the
+          -- same number (audit P1-3 duplicate).
+          , trcSubstrateHops =
+              if null substrateSteps then 0 else maximum (map asHop substrateSteps)
           , trcActivatedConcepts = activatedConcepts activationArtifact
           , trcMissingPredicates = missingPredicateConcepts (ssDefinitionCorpus nextSs) activationArtifact
           , trcEmittedPredicates = taEmittedPredicates ta
@@ -480,14 +487,21 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                    , ur5Baseline = u5Baseline (ssUserR5Contour nextSs)
                    , ur5OutsideContour = outsideFromProtocol
                    , ur5PredictionError = tiUserPredictionError ti
+                   , ur5WindowMean =
+                       r5ResidualWindowMean (u5DivergenceWindow (ssUserR5Contour nextSs))
                    }
                , urtOntologicalVector = tiOntologicalVector ti
+               -- Audit 2026-09-15: the move never renders under
+               -- Protocol B (the crisis surface overrides every other
+               -- surface), so the trace must not claim one fired.
+               -- 'Nothing' here means "no move led this turn".
                , urtOntologicalMove =
-                   OntologicalMoveTrace
-                     <$> (ontologicalMoveTag . ompMove <$> tpOntologicalMove tp)
-                     <*> (ompDistanceBefore <$> tpOntologicalMove tp)
-                     <*> (ompDistanceAfter <$> tpOntologicalMove tp)
-                     <*> (ompAffirmGatePassed <$> tpOntologicalMove tp)
+                   if protocolBFired then Nothing else
+                     OntologicalMoveTrace
+                       <$> (ontologicalMoveTag . ompMove <$> tpOntologicalMove tp)
+                       <*> (ompDistanceBefore <$> tpOntologicalMove tp)
+                       <*> (ompDistanceAfter <$> tpOntologicalMove tp)
+                       <*> (ompAffirmGatePassed <$> tpOntologicalMove tp)
                , urtEncoderVersion = r5EncoderVersion
                }
            }

@@ -107,10 +107,13 @@ suggestNewRelations :: OntologyLearningConfig -> Ontology -> DynamicOntologyStat
 suggestNewRelations config ontology state =
   let observations = dosObservations state
       groupedByRelation = groupBy (\ a b -> loRelationType a == loRelationType b) observations
-      relationGroups = map (\ group ->
-                         let relType = loRelationType (head group)
-                             confidence = averageConfidence group
-                         in (relType, confidence, group))
+      relationGroups = concatMap (\ group ->
+                         case group of
+                           [] -> []
+                           (firstObs:_) ->
+                             let relType = loRelationType firstObs
+                                 confidence = averageConfidence group
+                             in [(relType, confidence, group)])
                         groupedByRelation
       sortedGroups = sortBy (comparing (\ (_, conf, _) -> conf)) relationGroups
       topSuggestions = take (olcMaxSuggestions config) sortedGroups

@@ -29,10 +29,11 @@ untouched).  It fires only under Protocol A when at least one holds:
 
 @S*@ is the centre of viability — 'neutralUserR5State' — anchored
 toward the personalized baseline where one exists: with a baseline
-the resonance\/confidence mid-point shifts halfway toward the
-baseline's implied operating point.  This is a hand-set v1
-definition, frozen with the rest of the regime; concept v3 leaves
-finer target shapes to the calibrated phase.
+the confidence mid-point alone shifts halfway toward the baseline's
+implied operating point (resonance stays at the fixed connected-calm
+0.65).  This is a hand-set v1 definition, frozen with the rest of
+the regime; concept v3 leaves finer target shapes to the calibrated
+phase.
 
 == Search
 

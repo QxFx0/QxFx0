@@ -70,7 +70,7 @@ test-suites for CI-budget reasons:
 
 | Suite                    | Purpose                                       |
 |--------------------------|-----------------------------------------------|
-| `qxfx0-test-fast`        | Sub-30s sanity gate, included in every PR     |
+| `qxfx0-test-fast`        | Full-fidelity PR gate (1812 cases, minutes-scale: ~23 session bootstraps inside), sequential-only |
 | `qxfx0-test-unit`        | Unit + property tests, no SQLite required     |
 | `qxfx0-test-property`    | QuickCheck-only properties                    |
 | `qxfx0-test-integration` | SQLite + GF + cross-layer integration         |

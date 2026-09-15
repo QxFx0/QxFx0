@@ -2,6 +2,7 @@
 # Purpose: fast feedback on push/PR without duplicating existing gates.
 #
 # This workflow does NOT replace ci.yml. It adds:
+# - architecture gate (static rules, build-less)
 # - cabal build qxfx0 (lib only, fast)
 # - hlint + ormolu checks
 # - GF compile check (pre-quality, not full gate)
@@ -67,6 +68,17 @@ jobs:
       # stays lint/format/gf-compile only — static checks that need neither the
       # GF runtime nor a built library, so it gives quick per-push feedback.
 
+      # ── Architecture gate (static rules, build-less) ─────────────────
+      # Gate 3 drift caught at push time (2026-09-08 finding: HEAD failed
+      # check_architecture.sh with 6 violations while no CI job ran it on
+      # push). Static-only skips rule [10] (needs a linked qxfx0-main);
+      # the full gate stays in ci_gate_contract.sh / Core Contract.
+      # Memory: negligible (rg + python3 over source files).
+      - name: Architecture gate (static rules)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ripgrep
+          QXFX0_ARCH_STATIC_ONLY=1 bash scripts/check_architecture.sh
+
       # ── hlint ───────────────────────────────────────────────────────
       - name: Install hlint
         run: cabal install hlint --overwrite-policy=always -j"$(nproc)" 2>&1 | tail -5
@@ -102,7 +114,8 @@ jobs:
       # ── What this does NOT do (already in ci_gate_contract.sh) ──────
       # - cabal build all (Gate 1)
       # - cabal test fast (Gate 2)
-      # - check_architecture.sh (Gate 3)
+      # - check_architecture.sh rule [10] EmbeddedSQL sync (needs a linked
+      #   binary; the static rules run above with QXFX0_ARCH_STATIC_ONLY=1)
       # - check_calibration_codomain.sh (Gate 3b)
       # - check_replay_gate.sh (Gate 3c)
       # - gf_quality_gate.sh (Gate 4)

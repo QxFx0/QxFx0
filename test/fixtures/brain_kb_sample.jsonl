@@ -1,0 +1,5 @@
+{"text":"размышление о свободе и страхе","triggers":["свобода","страх"],"layer":"ontology","kind":"claim"}
+not json at all
+{"text":"вера и страх в бытии","triggers":["вера","страх"],"layer":"dialogue","kind":"claim"}
+{"text":"runtime noise","triggers":["свобода","страх"],"layer":"runtime","kind":"claim"}
+{"text":"single trigger","triggers":["свобода"],"layer":"ontology","kind":"claim"}

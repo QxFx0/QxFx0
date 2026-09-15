@@ -304,10 +304,12 @@ pickHigherSeverity a b
 -- ---------------------------------------------------------------------------
 
 -- | A placeholder 'Deliberation' used when a turn did not run
--- 'reconcile' (e.g. Conatus-gated early exit).  Fields are chosen
--- to have minimal impact on the 'EssenceTrajectory': agreement
--- with zero divergence, neutral tone, and a stable driver so that
--- 'witness' does not accrue or decay angst artificially.
+-- 'reconcile' (e.g. Conatus-gated early exit).  Fields mirror what a
+-- real 'reconcile' of two identical proposals would emit: agreement
+-- with zero divergence under 'RuleAgreement', so that 'witness'
+-- decays angst exactly as on a genuine agreement turn (audit
+-- 2026-09-15: the previous 'RuleSalienceLead' fell into the witness
+-- no-op branch and froze angst on every gated turn).
 defaultDeliberation :: Deliberation
 defaultDeliberation = Deliberation
   { delibHolistic   = defaultPlan
@@ -316,7 +318,7 @@ defaultDeliberation = Deliberation
   , delibTrace      = DeliberationTrace
       { dtAgreement      = Agree
       , dtDivergence     = 0.0
-      , dtRule           = RuleSalienceLead
+      , dtRule           = RuleAgreement
       , dtSalienceDriver = DrivenByDefault
       }
   }

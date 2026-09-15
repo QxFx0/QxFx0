@@ -7,6 +7,7 @@ module QxFx0.Semantic.Retrieve
   ) where
 
 import qualified Data.HashMap.Strict as HashMap
+import Data.Maybe (fromMaybe, listToMaybe)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -82,7 +83,9 @@ engagementTopicFor store topics =
     nonEmptyTopics ->
       case filter (overlapsAny store) nonEmptyTopics of
         (t:_) -> t
-        [] -> head nonEmptyTopics
+        -- 'nonEmptyTopics' is non-empty by construction (the outer case
+        -- branches on []); listToMaybe keeps the pick total anyway.
+        [] -> fromMaybe "" (listToMaybe nonEmptyTopics)
   where
     overlapsAny store t =
       any (snd . wordSetOverlap t . fcpStatement . fst . snd)

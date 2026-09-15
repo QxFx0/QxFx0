@@ -227,7 +227,10 @@ gate4CommitmentHolds traces
   | length traces < 10 = False
   | otherwise =
       let counts = map trcSemanticCommitmentCount traces
-      in last counts >= 1 && monotoneOrRetracted counts traces
+      in case reverse counts of
+           (lastCount:_) ->
+             lastCount >= 1 && monotoneOrRetracted counts traces
+           [] -> False
   where
     monotoneOrRetracted (c0 : c1 : rest) (t0 : t1 : tRest)
       | c1 < c0 = trcCommitmentStoreDecision t1 /= CsaAdmitCanonical
@@ -244,9 +247,9 @@ summarize :: [TurnReplayTrace] -> M6FeltEvidence
 summarize traces = M6FeltEvidence
   { feTurnCount = length traces
   , feFinalCommitmentCount =
-      case traces of
-        [] -> 0
-        _  -> trcSemanticCommitmentCount (last traces)
+      case reverse traces of
+        (t:_) -> trcSemanticCommitmentCount t
+        []    -> 0
   , feDistinctFocuses = length (nub (map trcDialogueFocus traces))
   , feRepairTurns = length (filter repairTurn traces)
   }

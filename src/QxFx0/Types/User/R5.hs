@@ -67,6 +67,7 @@ module QxFx0.Types.User.R5
     -- * Residual audit (predict -> witness -> diff)
   , r5Distance
   , pushR5Sample
+  , r5ResidualWindowMean
   , negativeEvidenceEarned
   , r5EncoderVersion
     -- * Persisted per-session carry
@@ -260,6 +261,13 @@ pushR5Sample :: Int -> [Double] -> Double -> [Double]
 pushR5Sample n window newest =
   take (max 1 n) (newest : window)
 
+-- | Mean of the bounded residual window; 'Nothing' when the window
+-- is empty (first turn).  Exposed so the replay trace and the
+-- anomaly analyzer share one definition of "sustained residual".
+r5ResidualWindowMean :: [Double] -> Maybe Double
+r5ResidualWindowMean [] = Nothing
+r5ResidualWindowMean xs = Just (sum xs / fromIntegral (length xs))
+
 -- | Persisted per-session carry for the user contour.  JSON
 -- backward-compatible: absent field decodes to
 -- 'emptyUserR5ContourState'.
@@ -300,6 +308,11 @@ data UserR5Trace = UserR5Trace
   , ur5PredictionError :: !(Maybe Double)
     -- ^ Residual against the previous turn's prediction; Nothing on
     --   the first turn.
+  , ur5WindowMean :: !(Maybe Double)
+    -- ^ Mean of the bounded residual window ('u5DivergenceWindow')
+    --   after this turn's push; Nothing while the window is empty.
+    --   Sustained degradation is invisible in the per-turn residual
+    --   alone (audit P1-2).
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 

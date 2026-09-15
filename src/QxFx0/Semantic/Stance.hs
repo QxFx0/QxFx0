@@ -121,6 +121,12 @@ stanceSimilarity a b =
 --
 -- Range: [2, 6]. Higher confidence = higher threshold (harder to collapse).
 -- Formula: 2 + floor(confidence * 4)
+--
+-- NOTE (audit 2026-09-15): this helper is pinned by
+-- 'Test.Suite.Stance' but is NOT consumed by 'defendOrAdapt' — the
+-- production collapse path keys off 'cpConatusFloor' and the
+-- AdversaryClassified state instead.  Do not wire it back in without
+-- a pentagon-spec change.
 collapseThreshold :: Double -> Int
 collapseThreshold confidence =
   let clamped = min 1.0 (max 0.0 confidence)
@@ -147,8 +153,6 @@ defendOrAdapt
 defendOrAdapt sd conatus challengeAtoms =
   let weight = evidenceWeight sd challengeAtoms
       stance = sdStance sd
-      confidence = stanceConfidence stance
-      threshold = collapseThreshold confidence
       conatusScalar = ceScalar conatus
       conatusFloor = cpConatusFloor (sdCollapsePolicy sd)
   in case stance of
@@ -202,14 +206,17 @@ defendOrAdapt sd conatus challengeAtoms =
 -- * confidence > 0.7 → StanceDoubted (high confidence, but challenged)
 -- * confidence ≤ 0.7 → StanceRevised (low confidence, needs revision)
 --
--- Records the transition in lineage.
+-- NOTE (audit 2026-09-15): the 'StanceTransition' is NOT recorded here —
+-- 'StanceDefense' carries no lineage handle (lineage lives in the
+-- per-topic store consumed by temporal-anomaly detection).  Callers that
+-- own a 'StanceLineage' must append via 'addTransition' themselves.
 reviseStance
   :: StanceDefense
   -> Text
   -- ^ New position text
   -> TurnSeq
   -> StanceDefense
-reviseStance sd newText turnSeq =
+reviseStance sd newText _turnSeq =
   let oldStance = sdStance sd
       oldConfidence = stanceConfidence oldStance
       -- Graded revision based on confidence
@@ -218,12 +225,6 @@ reviseStance sd newText turnSeq =
           StanceDoubted (oldConfidence * 0.8)
         else -- Low confidence: revise to new position
           StanceRevised newText
-      transition = StanceTransition
-        { stFrom = oldStance
-        , stTo = newStance
-        , stTrigger = "graded revision"
-        , stTurn = turnSeq
-        }
   in sd { sdStance = newStance }
 
 -- | Recover confidence when no attacks occur.

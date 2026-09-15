@@ -74,6 +74,19 @@ Public declaration scope lives in `docs/closure/M6_DECLARATION.md` (bounded/part
 2. When math constants change → follow `MATH_CHANGE_PROTOCOL.md`.
 3. Legacy decode windows (SR-05) — monitor for retirement triggers.
 4. New: untracked source under `src/` is an architecture risk — the arch gate (`scripts/check_architecture.sh`) and CI see none of the promotion/response-plan modules.
+5. Gate 3 regression fixed 2026-09-08 (HEAD failed `check_architecture.sh` with 6 violations while ci-fast.yml keeps Gate 3 commented out): 5 bare `head`/`last` sites in Semantic/Core made total by construction (ContentSelector, Retrieve, ResponsePlan, Ontology/Dynamic, M6FeltGate — behavior-preserving, `qxfx0-test-fast` 1812/1812 green after), plus rule [11] now whitelists `QxFx0.Core.M6FeltGate` as a test/CI-consumed evidence gate (same boundary rationale as the `*Admission` whitelist). Consider re-enabling Gate 3 in ci-fast or a scheduled job so drift is caught at push time, not at verify.sh time.
+6. Measured boot cost (2026-09-08): `qxfx0-test-fast` spends ~215s in 23 `bootstrapSession` calls (median 8.9s each; breakdown: self-blanket ~6s + health probes ~2.7s + state build ~2.5s), which is why the "< 60s" README claim only holds with warm caches and no concurrent load; heap headroom is thin too (3.1GB max residency, OOM-killed under a second concurrent suite). Candidates: memoize `checkHealth`'s nix/souffle probes per process (morphology/PGF are already memoized), and split per-suite `other-modules` (audit P3-6) before adding more live-session slices to the fast gate.
+
+## Open follow-ups — concept v3 and audit 2026-08-23 (mirror)
+
+Mirrored from AGENTS.md so they live in the execution coordinator, not only in the operator log (audit register P3-9):
+
+1. Corpus-level receiver-conditioned decompression via `fieldAwareRendering` (concept v3 §7 calibration phase).
+2. Offline fitting of the R5 encoder / move effect matrix on a labelled 30–50 utterance set (hand-set v1 constants are frozen until then; any replacement bumps `currentMathVersion`).
+3. Learning-targets ADR for transition learning (`docs/closure/LEARNING_ALLOWED_TARGETS.md` governance).
+4. Absorption of the flag-off `ssUserModel` Bayesian niche.
+5. test-common compiles all 149 `Test.Suite` modules into each of the 6 suites — split per-suite `other-modules`, measure build time before/after (audit P3-6).
+6. `brain_kb.jsonl` absent on fresh clones; provenance/restore contract now in `docs/operations/BRAIN_KB_PROVENANCE.md` (audit P3-8, open ops task).
 
 ## Notes
 

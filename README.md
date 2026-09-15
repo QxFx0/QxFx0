@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: 1247 fast tests, 0 failures. B3 mechanical gates 1-5 passing.
+**Tests**: 1812 fast-suite cases, 0 failures (2026-09-08). B3 mechanical gates 1-5 passing.
 
 ### Verified Capabilities
 
@@ -68,7 +68,7 @@ python3 >= 3.9  # for build scripts
 
 ```bash
 cabal build all
-cabal test qxfx0-test-fast  # 1247 tests, < 60s
+cabal test qxfx0-test-fast  # 1812 cases; minutes-scale (see Testing below), ~3-4 GB heap
 ```
 
 ### Run
@@ -143,10 +143,12 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-fast | 1247 | ✅ 0 failures |
+| qxfx0-test-fast | 1812 | ✅ 0 failures |
 | qxfx0-test-slow (state) | 36 | ✅ 0 failures |
 | qxfx0-test-slow (runtime) | 93 | 2 non-critical (state summary format) |
 | qxfx0-test-slow (http) | 22 | 1 (requires HTTP server) |
+
+The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1812 cases include ~23 full runtime session bootstraps (median ~9 s each, ~215 s total), measured locally at ~20 min wall-clock and ~3.1 GB max heap residency (2026-09-08, GHC 9.6.7). Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 
 ## Audit History
 

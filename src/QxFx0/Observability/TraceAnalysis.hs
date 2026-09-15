@@ -36,6 +36,11 @@ This module consumes:
 * User regime (concept v3): 'trcUserRegime' — crisis protocol verdict,
   user R5 contour, prediction residual.  Activates the previously
   write-only regime traces (audit P1-5, 2026-08-23).
+* Self layer (audit P1-1, 2026-08-23): 'trcSelfDivergenceTotal',
+  'trcSelfDivergenceWindowMean', 'trcSelfDivergencePredictionActive',
+  'trcSelfDivergencePenalty', 'trcEssenceResetEvent' — the A-slice
+  divergence group and the B-slice soft-rupture event, previously
+  write-only.
 -}
 module QxFx0.Observability.TraceAnalysis
   ( -- * Analysis types
@@ -46,6 +51,7 @@ module QxFx0.Observability.TraceAnalysis
   , DeliberationAnalysis(..)
   , SalienceAnalysis(..)
   , UserRegimeAnalysis(..)
+  , SelfLayerAnalysis(..)
   , TraceAnalysisSummary(..)
     -- * Analysis functions
   , analyzeRecoveryPattern
@@ -55,6 +61,7 @@ module QxFx0.Observability.TraceAnalysis
   , analyzeDeliberation
   , analyzeSalience
   , analyzeUserRegime
+  , analyzeSelfLayer
   , analyzeTrace
     -- * Anomaly detection
   , hasRecoveryAnomaly
@@ -64,6 +71,7 @@ module QxFx0.Observability.TraceAnalysis
   , hasDeliberationAnomaly
   , hasSalienceAnomaly
   , hasUserRegimeAnomaly
+  , hasSelfLayerAnomaly
   , hasAnyAnomaly
     -- * Observability integration
   , emitTraceMetrics
@@ -81,6 +89,8 @@ import GHC.Generics (Generic)
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..), UserRegimeTrace(..))
 import QxFx0.Types.Safety.Crisis (CrisisGuardTrace(..))
 import QxFx0.Types.User.R5 (UserR5Trace(..))
+import QxFx0.Types.Self.SelfDivergence (defaultSelfDivergenceTuning, sdtThreshold)
+import QxFx0.Types.Self.Essence (EssenceResetEvent(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
 import QxFx0.Self.Conatus (ConatusEnergy(..), ceScalar, lowEnergyThreshold)
 import QxFx0.Self.Field
@@ -213,6 +223,7 @@ data TraceAnalysisSummary = TraceAnalysisSummary
   , tasDeliberation :: !DeliberationAnalysis
   , tasSalience :: !SalienceAnalysis
   , tasUserRegime :: !UserRegimeAnalysis
+  , tasSelfLayer :: !SelfLayerAnalysis
   , tasAnomalyCount :: !Int
     -- ^ Total number of anomalies detected
   } deriving stock (Eq, Show, Generic)
@@ -435,6 +446,10 @@ data UserRegimeAnalysis = UserRegimeAnalysis
     -- ^ The user state was classified outside the viability contour.
   , uraPredictionError :: !(Maybe Double)
     -- ^ Residual against the previous turn's transition prediction.
+  , uraResidualWindowMean :: !(Maybe Double)
+    -- ^ Mean of the bounded residual window; a sustained high value
+    --   means the transition model is /persistently/ wrong, not just
+    --   noisy on one turn (audit P1-2).
   , uraAnomaly :: !(Maybe Text)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
@@ -448,7 +463,7 @@ analyzeUserRegime :: TurnReplayTrace -> UserRegimeAnalysis
 analyzeUserRegime trace =
   case trcUserRegime trace of
     Nothing ->
-      UserRegimeAnalysis False Nothing False Nothing Nothing
+      UserRegimeAnalysis False Nothing False Nothing Nothing Nothing
     Just regime ->
       let crisis = urtCrisis regime
           userR5 = urtUserR5 regime
@@ -458,12 +473,16 @@ analyzeUserRegime trace =
             | Just err <- ur5PredictionError userR5
             , err > userResidualAnomalyThreshold =
                 Just "user_model_high_residual"
+            | Just m <- ur5WindowMean userR5
+            , m > userResidualAnomalyThreshold =
+                Just "user_model_sustained_residual"
             | otherwise = Nothing
       in UserRegimeAnalysis
            { uraProtocolB = cgtProtocolB crisis
            , uraCrisisCause = cgtCause crisis
            , uraOutsideContour = ur5OutsideContour userR5
            , uraPredictionError = ur5PredictionError userR5
+           , uraResidualWindowMean = ur5WindowMean userR5
            , uraAnomaly = anomaly
            }
 
@@ -476,6 +495,63 @@ userResidualAnomalyThreshold = 0.35
 hasUserRegimeAnomaly :: UserRegimeAnalysis -> Bool
 hasUserRegimeAnomaly analysis = uraAnomaly analysis /= Nothing
 
+-- | Self-layer analysis (audit P1-1): activates the previously
+-- write-only A-slice divergence traces and the B-slice soft-rupture
+-- event.
+data SelfLayerAnalysis = SelfLayerAnalysis
+  { slaDivergenceTotal :: !(Maybe Double)
+    -- ^ This turn's measured self-divergence (Nothing on the first
+    --   turn, before a prediction exists).
+  , slaDivergenceWindowMean :: !(Maybe Double)
+    -- ^ Mean of the bounded divergence window (Nothing while empty).
+  , slaPredictionActive :: !Bool
+    -- ^ Whether the divergence was measured against a prediction.
+  , slaEssenceResetTurn :: !(Maybe Int)
+    -- ^ Turn of the last essence soft rupture, if one occurred.
+  , slaAnomaly :: !(Maybe Text)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | Analyze the self layer.  Three flags, in order of severity:
+--
+-- * @self_penalty_without_prediction@ — a nonzero divergence
+--   penalty with the prediction chain off is a wiring invariant
+--   violation (the penalty is gated on prior-turn divergence, which
+--   presupposes an active prediction).
+-- * @self_divergence_sustained@ — the divergence window mean is
+--   strictly above 'sdtThreshold'; this is exactly the predicate
+--   behind the @RecoverySelfDivergence@ trigger
+--   ('sustainedDivergenceExceeds' with the default tuning), so a
+--   sustained flag without a recovery cause on the same trace means
+--   the recovery branch did not fire when it should have.
+-- * @essence_soft_rupture@ — an 'EssenceResetEvent' was recorded
+--   this turn; the rupture itself is the observable, the operator
+--   must see it in analysis output, not only in raw JSON.
+analyzeSelfLayer :: TurnReplayTrace -> SelfLayerAnalysis
+analyzeSelfLayer trace =
+  let total = trcSelfDivergenceTotal trace
+      windowMean = trcSelfDivergenceWindowMean trace
+      predictionActive = trcSelfDivergencePredictionActive trace
+      anomaly
+        | trcSelfDivergencePenalty trace /= 0.0 && not predictionActive =
+            Just "self_penalty_without_prediction"
+        | Just m <- windowMean
+        , m > sdtThreshold defaultSelfDivergenceTuning =
+            Just "self_divergence_sustained"
+        | Just _ <- trcEssenceResetEvent trace =
+            Just "essence_soft_rupture"
+        | otherwise = Nothing
+  in SelfLayerAnalysis
+       { slaDivergenceTotal = total
+       , slaDivergenceWindowMean = windowMean
+       , slaPredictionActive = predictionActive
+       , slaEssenceResetTurn = ereTurn <$> trcEssenceResetEvent trace
+       , slaAnomaly = anomaly
+       }
+
+hasSelfLayerAnomaly :: SelfLayerAnalysis -> Bool
+hasSelfLayerAnomaly analysis = slaAnomaly analysis /= Nothing
+
 -- | Comprehensive trace analysis
 analyzeTrace :: TurnReplayTrace -> TraceAnalysisSummary
 analyzeTrace trace =
@@ -486,7 +562,8 @@ analyzeTrace trace =
       deliberation = analyzeDeliberation trace
       salience = analyzeSalience trace
       userRegime = analyzeUserRegime trace
-      anomalyCount = countAnomalies recovery conatus field essence deliberation salience userRegime
+      selfLayer = analyzeSelfLayer trace
+      anomalyCount = countAnomalies recovery conatus field essence deliberation salience userRegime selfLayer
   in TraceAnalysisSummary
        { tasRecovery = recovery
        , tasConatus = conatus
@@ -495,12 +572,13 @@ analyzeTrace trace =
        , tasDeliberation = deliberation
        , tasSalience = salience
        , tasUserRegime = userRegime
+       , tasSelfLayer = selfLayer
        , tasAnomalyCount = anomalyCount
        }
 
 -- | Count total anomalies
-countAnomalies :: RecoveryAnalysis -> ConatusAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> UserRegimeAnalysis -> Int
-countAnomalies recovery conatus field essence deliberation salience userRegime =
+countAnomalies :: RecoveryAnalysis -> ConatusAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> UserRegimeAnalysis -> SelfLayerAnalysis -> Int
+countAnomalies recovery conatus field essence deliberation salience userRegime selfLayer =
   length $ filter (/= Nothing)
     [ raAnomaly recovery
     , caAnomaly conatus
@@ -509,6 +587,7 @@ countAnomalies recovery conatus field essence deliberation salience userRegime =
     , daAnomaly deliberation
     , saAnomaly salience
     , uraAnomaly userRegime
+    , slaAnomaly selfLayer
     ]
 
 -- | Check if recovery has anomaly
@@ -563,7 +642,16 @@ emitTraceMetrics registry trace summary = do
   -- Salience metrics
   recordGauge registry "salience_holistic_bias" (saHolisticBias $ tasSalience summary) tags
   recordGauge registry "salience_confidence" (saConfidence $ tasSalience summary) tags
-  
+
+  -- Self-layer metrics (audit P1-1)
+  case slaDivergenceWindowMean (tasSelfLayer summary) of
+    Just m -> recordGauge registry "self_divergence_window_mean" m tags
+    Nothing -> pure ()
+  case slaEssenceResetTurn (tasSelfLayer summary) of
+    Just turn -> recordCounter registry "essence_soft_rupture" 1
+                   (Map.insert "reset_turn" (T.pack (show turn)) tags)
+    Nothing -> pure ()
+
   -- Anomaly metrics
   recordCounter registry "trace_anomalies_total" (fromIntegral $ tasAnomalyCount summary) tags
   recordCounter registry "recovery_triggered" (if raTriggered (tasRecovery summary) then 1 else 0) tags
@@ -603,6 +691,11 @@ logTraceAnomalies trace summary = do
   -- Log user-regime anomalies (concept v3)
   case uraAnomaly (tasUserRegime summary) of
     Just anomaly -> logWarn ("UserRegime anomaly: " <> anomaly) baseCtx
+    Nothing -> pure ()
+
+  -- Log self-layer anomalies (A-slice divergence / B-slice rupture)
+  case slaAnomaly (tasSelfLayer summary) of
+    Just anomaly -> logWarn ("SelfLayer anomaly: " <> anomaly) baseCtx
     Nothing -> pure ()
 
   -- Log Salience anomalies

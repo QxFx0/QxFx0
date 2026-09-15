@@ -8,13 +8,21 @@
 Module      : QxFx0.Semantic.Network.Substrate
 Description : Substrate Network — brain_kb enrichment of SemanticNetwork edges.
 
-Two-layer knowledge graph:
-  Explicit: 30 philosophical topics, ~50 edges, weight 1.0
-  Substrate: same 30 topics, ~78 edges, weight 0.3
+Two-layer knowledge graph (scales with the corpus; 120 topics as
+of 2026-08-22 — the historical "30 topics / ~50 edges" described the
+2026-06-20 corpus):
+  Explicit: definitionCorpus topics, weight sharedCount\/10.0
+    (flat 1.0 only for synonym-type TopicRelations)
+  Substrate: same topic set, weight 0.3, from brain_kb co-occurrence
 
 Substrate adds edges between existing explicit topics via co-occurrence
 of philosophical words in brain_kb triggers. Substrate edges never appear
 in output — they only route spreading activation.
+
+Ops note: brain_kb.jsonl is NOT in the repository (gitignored external
+source, 53K entries); on a fresh clone 'loadBrainKB' returns [] and the
+substrate layer is empty — only the explicit layer routes.  See
+docs\/operations\/BRAIN_KB_PROVENANCE.md.
 -}
 module QxFx0.Semantic.Network.Substrate
   ( BrainKBEntry(..)

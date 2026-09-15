@@ -156,7 +156,12 @@ while IFS= read -r file; do
 done < <(find "$SRC" "$APP" -name "*.hs" 2>/dev/null || true)
 
 echo "  [10] EmbeddedSQL.hs must be in sync with spec/sql..."
-if ! cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1; then
+# QXFX0_ARCH_STATIC_ONLY=1 skips this rule for build-less contours (CI Fast):
+# it is the only check that needs a linked qxfx0-main binary. The full gate
+# (ci_gate_contract.sh / Core Contract) always runs it.
+if [ "${QXFX0_ARCH_STATIC_ONLY:-0}" = "1" ]; then
+  echo "  [10] SKIPPED (QXFX0_ARCH_STATIC_ONLY=1: build-less contour)"
+elif ! cabal run qxfx0-main -- --check-embedded-sql >/dev/null 2>&1; then
   fail_violation "EmbeddedSQL.hs/migration are out of sync with spec/sql (run: cabal run qxfx0-main -- --sync-embedded-sql)"
 fi
 
@@ -308,6 +313,12 @@ def allowed(mod: str) -> bool:
     if mod.startswith("QxFx0.Core.Proposition") and mod.endswith("Admission"):
         return True
     if mod.endswith("Admission") and mod.startswith("QxFx0.Core."):
+        return True
+    # Evidence-verification gates (M6-FELT) are consumed by the test/CI
+    # contour (Test.Suite.M6FeltGate / M6FeltBenchmark), not by the
+    # runtime; they are exposed so test suites can link them against the
+    # library, not because a pipeline call site must reach them.
+    if mod == "QxFx0.Core.M6FeltGate":
         return True
     return mod in reachable
 

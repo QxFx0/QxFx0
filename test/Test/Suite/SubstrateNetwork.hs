@@ -20,6 +20,8 @@ import qualified Data.ByteString.Lazy as BL
 import Data.Foldable (toList)
 
 import Test.Support (freshTestPath, removeIfExists)
+import System.Directory (getCurrentDirectory)
+import System.FilePath ((</>))
 
 import QxFx0.Semantic.Network.Substrate
 import QxFx0.Semantic.Network.Types
@@ -84,6 +86,18 @@ substrateTests =
       missing <- freshTestPath "qxfx0_brain_kb_missing"
       entries <- loadBrainKB missing
       assertBool "missing file must yield empty list, not an exception" (null entries)
+
+  -- Audit 2026-09-15: checked-in fixture exercising the nonzero path
+  -- (fresh clones have no brain_kb.jsonl, so production only ever sees
+  -- the empty-substrate branch without this).
+  , TestLabel "checked-in fixture loads and builds substrate edges" $ TestCase $ do
+      root <- getCurrentDirectory
+      entries <- loadBrainKB (root </> "test/fixtures/brain_kb_sample.jsonl")
+      assertBool ("fixture must parse 4 entries, got " ++ show (length entries))
+        (length entries == 4)
+      let edges = buildSubstrateEdges entries (S.fromList ["свобода", "страх", "вера"])
+      assertBool "fixture must yield at least one substrate edge" (not (null edges))
+      assertBool "substrate weight is fixed 0.3" (all (== 0.3) (map seiWeight edges))
 
   , TestLabel "loadBrainKB parses JSONL and skips bad lines" $ TestCase $ do
       path <- freshTestPath "qxfx0_brain_kb_sample"
