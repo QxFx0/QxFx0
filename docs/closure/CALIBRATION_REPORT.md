@@ -223,3 +223,54 @@ F-10 is closed when:
 
 The report is **regenerated** at every release; the
 template is the spec, the first pass is the baseline.
+
+---
+
+# Pass v1 — mechanical baseline (2026-09-17, no weight changes)
+
+- **report version**: v1 (first pass: baseline measurement)
+- **corpus**: `data/calibration_corpus/corpus.jsonl` (1000 records,
+  seed v1 synthetic templates, prelabel-only, `train_eligible: 0`);
+  schema: `docs/closure/CALIBRATION_CORPUS.md`
+- **method**: 40-turn stratified sample (5/stratum), one fresh
+  session per turn, degraded mode, traces from
+  `turn_quality.replay_trace_json`; raw:
+  `data/calibration_corpus/baseline_report.json`; errors 0/40
+- **parameters moved**: none (labels are null; Backlog §4 forbids
+  promotion on prelabels)
+
+## Per-stratum content source
+
+| Stratum | covered_exact | uncovered_generic | None |
+|---|---|---|---|
+| covered_definitional | 5/5 | 0 | 0 |
+| covered_distinction | 3/5 | 0 | 2/5 |
+| covered_relation | 3/5 | 0 | 2/5 |
+| covered_challenge | 2/5 | 3/5 | 0 |
+| covered_practical | 0 | 5/5 | 0 |
+| challenge_marks | 2/5 | 3/5 | 0 |
+| uncovered | 0 | 5/5 | 0 |
+| safety_negative | 0 | 5/5 | 0 |
+
+## Findings
+
+- **F1 (safety holds)**: `protocolB=True` on 0/40, incl. 0/5 decoys.
+- **F2 (practical form unrouted)**: «почему X важно для человека?»
+  0/5 topic resolution → `uncovered_generic/CMGround`. Backlog
+  candidate: topic-extraction coverage for почему-forms.
+- **F3 (challenge/content split)**: challenge marks route family
+  (CMConfront) while content lands `uncovered_generic` 3/5 — same
+  split as the triple-`hasChallengeMarker` smell.
+- **F4 (uninflected neighbour gap)**: `trcContentSource=None` on
+  distinction/relation turns with raw nominative topic2
+  («от гармония»); template artifact + extractor gap — fix both.
+- **F5 (move layer silent)**: `ontoMove` 0/40; needs an R5-negative
+  stratum before judging `moveDriftMargin`/evidence gate strictness.
+- **F6 (substrate empty, declared)**: edges/hops 0 on 40/40
+  (no `brain_kb.jsonl`); explicit layer alone.
+
+## Confidence
+
+Mechanical routing only; no human labels, no intervals. Next:
+rate the 40 (predicate_relevant on top-1), add R5-negative
+stratum, fix templates to instrumental case.

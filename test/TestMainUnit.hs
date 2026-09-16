@@ -64,6 +64,7 @@ import Test.Suite.IntentClassifier (intentClassifierTests)
 import Test.Suite.SemanticNetwork (semanticNetworkTests)
 import Test.Suite.SemanticSpace (semanticSpaceTests)
 import Test.Suite.ContentSelector (contentSelectorTests)
+import Test.Suite.Composition (compositionTests)
 import Test.Suite.Analogy (analogyTests)
 import Test.Suite.GeometricClassifier (geometricClassifierTests)
 import Test.Suite.Revision (revisionTests)
@@ -140,6 +141,7 @@ main = do
                   ++ semanticNetworkTests
                    ++ semanticSpaceTests
                     ++ contentSelectorTests
+                     ++ compositionTests
                      ++ [analogyTests]
                      ++ geometricClassifierTests
                      ++ [anomalyTests]

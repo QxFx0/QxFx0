@@ -41,6 +41,7 @@ frozen-on-release. Любое изменение требует bump `currentMat
 | defend strong-challenge | `weight < 0.88` (шкала [0.7, 1.0]!) | `Semantic/Stance.hs` |
 | synthesis Conjunction/Irreducible | shared ≥ 2 атома | `Semantic/Revision.hs` |
 | confidence decay / synthesis conf | ×0.9 / 0.5 / 0.3 | `Semantic/Revision.hs` |
+| `structScore` weights (SHADOW v1) | 0.5 / 0.3 / 0.15 / 0.05 | `Semantic/Composition.hs` (`defaultStructWeights`, ranges.json) |
 
 ## 4. Concept-v3 / user contour
 

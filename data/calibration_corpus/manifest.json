@@ -1,0 +1,18 @@
+{
+  "corpusVersion": 1,
+  "total": 1000,
+  "strata": {
+    "covered_definitional": 120,
+    "covered_distinction": 120,
+    "covered_relation": 120,
+    "covered_challenge": 120,
+    "covered_practical": 120,
+    "uncovered": 200,
+    "challenge_marks": 150,
+    "safety_negative": 50
+  },
+  "source": "synthetic_template_v1",
+  "labels_rated": 0,
+  "train_eligible": 0,
+  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels"
+}
