@@ -19,7 +19,7 @@ selectorPolicyVersion :: Text
 selectorPolicyVersion = "selector-policy-v3-topic-relevance-modulated"
 
 selectorMathVersion :: Text
-selectorMathVersion = "selector-math-v3-topic-field-activation-ontology"
+selectorMathVersion = "selector-math-v4-topic-field-activation-ontology-assembly"
 
 emptyContentSelector :: ContentSelector
 emptyContentSelector = ContentSelector

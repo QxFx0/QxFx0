@@ -1766,6 +1766,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
           , trcOverlayPredicateIds = []
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
+           , trcAssemblyCandidates = []
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
                   }
@@ -2315,6 +2316,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
           , trcOverlayPredicateIds = []
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
+           , trcAssemblyCandidates = []
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
                   }

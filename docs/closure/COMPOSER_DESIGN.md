@@ -56,3 +56,22 @@ the admission authority — the composer never bypasses the gate).
 2. Wiring behind `selectorMathVersion` bump + corpus win on
    human-labelled `assembly_pairs` (coherent ≥ 2 majority).
 3. Never: bypass of `GeneratedPredicateGate.validatePath`.
+
+## Wiring outcome (2026-09-17, selector math v4)
+
+- `assembleViaGraph` (direct + mediated bridges, gate enforced) ships in
+  `QxFx0.Semantic.Assembly`; `buildAssemblyCandidates` populates
+  `trcAssemblyCandidates` per turn (proposed, never decided).
+- `selectorMathVersion` =
+  `selector-math-v4-topic-field-activation-ontology-assembly`.
+- Live: «чем свобода отличается от ответственности?» → 3 candidates
+  (bridges свобода→выбор, свобода→ответственность, pathLen 1).
+- Debugging found and fixed a real integration smell: `tiBestTopic`
+  arrives inflected while map keys are nominative (`normalizeTopic`
+  only folds case) — matching now goes through the lemma map.
+- **Known limitation (data, not architecture)**: `acRelations` is
+  often empty because seed path edges carry `relVerbText = Nothing`
+  (the `rel` helper) and term verbs depend on lemmaMap coverage.
+  Follow-up: `withVerb` pass over seed edges (or a frozen
+  RelationType→infinitive map, same discipline as relationLexicon).
+  The trace shows the gap honestly (`acRelations: []`).

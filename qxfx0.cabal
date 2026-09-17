@@ -119,6 +119,7 @@ library
     QxFx0.Types.Learning.Signal
     QxFx0.Types.Policy.Metacognition
     QxFx0.Types.Memory.Episodic
+    QxFx0.Types.Semantic.Assembly
     QxFx0.Types.Semantic.AtomGraph
     QxFx0.Types.Semantic.Content
     QxFx0.Types.Semantic.ContentSelector

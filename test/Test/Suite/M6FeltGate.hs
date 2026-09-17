@@ -364,6 +364,7 @@ passingTrace = TurnReplayTrace
   , trcOverlayPredicateIds = []
   , trcOverlayContentUsed = False
   , trcSelectorDiagnostics = []
+  , trcAssemblyCandidates = []
   , trcResponsePlan = Nothing
   , trcUserRegime = Nothing
   }

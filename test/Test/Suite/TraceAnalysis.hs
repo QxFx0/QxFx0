@@ -233,6 +233,7 @@ minimalTrace = TurnReplayTrace
           , trcOverlayPredicateIds = []
           , trcOverlayContentUsed = False
           , trcSelectorDiagnostics = []
+          , trcAssemblyCandidates = []
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
   }
@@ -337,6 +338,7 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
           , trcOverlayPredicateIds = []
           , trcOverlayContentUsed = False
           , trcSelectorDiagnostics = []
+          , trcAssemblyCandidates = []
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
         }

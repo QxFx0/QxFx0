@@ -28,6 +28,7 @@ import QxFx0.Types.Recovery (LocalRecoveryCause, LocalRecoveryStrategy)
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import QxFx0.Types.Semantic.Network (ActivationStep(..))
 import QxFx0.Types.Semantic.ContentSelector (SelectorDiagnostic)
+import QxFx0.Types.Semantic.Assembly (AssemblyCandidate)
 import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -487,6 +488,11 @@ data TurnReplayTrace = TurnReplayTrace
     -- active promotion overlay.
    , trcSelectorDiagnostics :: ![SelectorDiagnostic]
      -- ^ Observed selector decisions from the rendered semantic artifact.
+   , trcAssemblyCandidates :: ![AssemblyCandidate]
+     -- ^ Graph-wired meaning assemblies proposed (never decided) this
+     --   turn: topic pair, bridge concept, lemma-form head\/relations,
+     --   validated path length\/score.  Populated for calibration
+     --   observability; selection and rendering never consult it.
    , trcResponsePlan :: !(Maybe ResponseSemanticPlan)
      -- ^ Versioned grounded content plan, when a content-producing move used one.
    , trcUserRegime :: !(Maybe UserRegimeTrace)
@@ -589,6 +595,7 @@ instance FromJSON TurnReplayTrace where
     overlayIds <- o .:? "trcOverlayPredicateIds" .!= []
     overlayUsed <- o .:? "trcOverlayContentUsed" .!= False
     selectorDiagnostics <- o .:? "trcSelectorDiagnostics" .!= []
+    assemblyCandidates <- o .:? "trcAssemblyCandidates" .!= []
     TurnReplayTrace
       <$> o .: "trcRequestId"
       <*> o .: "trcSessionId"
@@ -740,6 +747,7 @@ instance FromJSON TurnReplayTrace where
       <*> pure overlayIds
       <*> pure overlayUsed
        <*> pure selectorDiagnostics
+       <*> pure assemblyCandidates
        <*> o .:? "trcResponsePlan"
        <*> o .:? "trcUserRegime"
 

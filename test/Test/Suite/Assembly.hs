@@ -14,6 +14,9 @@ import Test.HUnit
 
 import QxFx0.Semantic.Assembly
 import QxFx0.Semantic.Composition
+import QxFx0.Semantic.ContentSelector.Types (selectorMathVersion)
+import QxFx0.Types.Semantic.AtomGraph
+import QxFx0.Semantic.Content.AtomStore (seedGraph)
 
 testLemmaMap :: M.Map T.Text T.Text
 testLemmaMap = M.fromList
@@ -111,4 +114,105 @@ assemblyTests =
   , TestLabel "rating labels are the decided two" $ TestCase $
       assertEqual "coherent + grounded"
         ["assembly_coherent", "assembly_grounded"] assemblyRatingLabels
+  ] ++ graphAssemblyTests
+
+-- ---------------------------------------------------------------------------
+-- Graph wiring (selector math v4)
+-- ---------------------------------------------------------------------------
+
+testGraph :: RelationSource -> AtomGraph
+testGraph src = AtomGraph
+  [edge]
+  (M.singleton (AtomId "свобода") [edge])
+  "test-fixture"
+  where
+    edge = Relation
+      { relFrom = AtomId "свобода"
+      , relTo = AtomId "ответственность"
+      , relType = RelRequires
+      , relObjectCase = CaseNominative
+      , relObjectText = "ответственность"
+      , relVerbText = Just "требовать"
+      , relRuOriginal = "свобода требует ответственности"
+      , relEnOriginal = "freedom requires responsibility"
+      , relSource = src
+      , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
+      }
+
+graphAssemblyTests :: [Test]
+graphAssemblyTests =
+  [ TestLabel "validated graph path wires the assembly" $ TestCase $ do
+      let a = ("свобода", "свобода требует ответственности",
+               term "свобода требует ответственности")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+          res = assembleViaGraph (testGraph Curated)
+                  (S.singleton "свобода") (S.singleton "ответственность") a b
+      case res of
+        ((asm, proof, _score) : _) -> do
+          assertEqual "direct bridge ranks first" "ответственность" (asmBridge asm)
+          assertEqual "one validated edge" 1 (length (ppEdges proof))
+        [] -> assertFailure "expected at least one wired assembly"
+
+  , TestLabel "raw-substrate path is blocked by the gate" $ TestCase $ do
+      let a = ("свобода", "свобода требует ответственности",
+               term "свобода требует ответственности")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+      assertEqual "G4 must block SubstrateExtractedRaw"
+        []
+        (assembleViaGraph (testGraph SubstrateExtractedRaw)
+          (S.singleton "свобода") (S.singleton "ответственность") a b)
+
+  , TestLabel "unreached topic yields no assembly" $ TestCase $ do
+      let a = ("свобода", "свобода требует ответственности",
+               term "свобода требует ответственности")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+      assertEqual "no path into зло"
+        []
+        (assembleViaGraph (testGraph Curated)
+          (S.singleton "свобода") (S.singleton "зло") a b)
+
+  , TestLabel "skeleton bridge still required with a graph" $ TestCase $ do
+      let a = ("свобода", "свобода требует ответственности",
+               term "свобода требует ответственности")
+          b = ("зло", "зло", term "зло")
+      assertEqual "bridgeless terms never wire"
+        []
+        (assembleViaGraph (testGraph Curated)
+          (S.singleton "свобода") (S.singleton "зло") a b)
+
+  , TestLabel "mediated bridge composes across a validated path" $ TestCase $ do
+      let a = ("свобода", "свобода держит выбор",
+               term "свобода держит выбор")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+      assertEqual "no shared concept, skeleton refuses"
+        Nothing (assemblePair a b)
+      case assembleViaGraph (testGraph Curated)
+             (S.singleton "свобода") (S.singleton "ответственность") a b of
+        [] -> assertFailure "validated свобода→ответственность path expected"
+        ((asm, proof, _score) : _) -> do
+          assertEqual "path bridge" "свобода\8594ответственность" (asmBridge asm)
+          assertEqual "one validated edge" 1 (length (ppEdges proof))
+          assertBool "path verb contributes a relation pair"
+            (S.member ("требовать", "ответственность") (ptRels (asmTerm asm)))
+
+  , TestLabel "seed graph wires свобода/ответственность (integration pin)" $ TestCase $ do
+      let a = ("свобода", "свобода предполагает возможность выбора",
+               parsePredicateTerm M.empty "свобода предполагает возможность выбора")
+          b = ("ответственность", "ответственность требует осознания последствий",
+               parsePredicateTerm M.empty "ответственность требует осознания последствий")
+          res = assembleViaGraph seedGraph
+                  (S.singleton "свобода") (S.singleton "ответственность") a b
+      assertBool "real seed graph must yield at least one assembly" (not (null res))
+
+  , TestLabel "selector math version stamps the wiring regime" $ TestCase $
+      assertEqual "math v4"
+        "selector-math-v4-topic-field-activation-ontology-assembly"
+        selectorMathVersion
   ]

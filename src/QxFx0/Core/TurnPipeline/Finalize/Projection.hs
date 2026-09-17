@@ -15,7 +15,9 @@ module QxFx0.Core.TurnPipeline.Finalize.Projection
 import Control.Applicative ((<|>))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (fromMaybe)
+import Data.List (nub)
+import qualified Data.List as L
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as S
@@ -36,9 +38,16 @@ import QxFx0.Core.TruthContract
   , truthContractIsAuthoritative
   )
 import QxFx0.Types.Evidence (EvidenceAdmissibility)
+import QxFx0.Types.Semantic.ContentSelector (ContentSelector(..), SelectorDiagnostic(..))
+import QxFx0.Types.Semantic.Assembly (AssemblyCandidate(..))
+import QxFx0.Types.Semantic.AtomGraph (PathProof(..))
+import QxFx0.Semantic.Assembly (Assembly(..), assembleViaGraph, assemblyProposition)
+import QxFx0.Semantic.Composition (parsePredicateTerm)
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.Guardrails (ExternalActionDecisionReason(..), ExternalActionDecisionTrace(..), ExternalActionKind(..))
 import QxFx0.Semantic.Content (DefinitionContent(..))
+import QxFx0.Semantic.Content (isCoveredTopic, normalizeTopic)
+import QxFx0.Semantic.Content (isCoveredTopic)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Semantic.Proposition (parseProposition)
 import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
@@ -469,6 +478,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcOverlayPredicateIds = overlayPredicateIds
           , trcOverlayContentUsed = not (null overlayPredicateIds)
            , trcSelectorDiagnostics = taSelectorDiagnostics ta
+           , trcAssemblyCandidates =
+               buildAssemblyCandidates nextSs ti ta
            , trcResponsePlan = taResponsePlan ta
            , trcUserRegime = Just UserRegimeTrace
                { urtCrisis = CrisisGuardTrace
@@ -541,6 +552,82 @@ data LearningReplayVerdict = LearningReplayVerdict
   , lrvGraftTurn :: !(Maybe Int)
   , lrvRejectReason :: !(Maybe Text)
   }
+
+-- | Selector math v4: graph-wired assembly candidates for calibration
+-- observability.  Proposed, never decided: selection and rendering do
+-- not consult this list.  The turn's best topic pairs with up to two
+-- other selected candidate topics; each pair composes through
+-- 'assembleViaGraph' (shared-concept bridge + validated atom-graph
+-- path, gate never bypassed).  Capped at 3 candidates; empty when the
+-- turn selected nothing or the graph admits no path.
+buildAssemblyCandidates :: SystemState -> TurnInput -> TurnArtifacts -> [AssemblyCandidate]
+buildAssemblyCandidates ss ti ta =
+  let selector = ssContentSelector ss
+      lemmaMap = csLemmaMap selector
+      topicMap = csTopicAtoms selector
+      -- The best topic arrives inflected («ответственности») while map
+      -- keys are nominative, and 'normalizeTopic' only folds case.
+      -- Identify the best topic with all of its key forms through the
+      -- morphology lemma map.  Without this the helper silently
+      -- attempts nothing.
+      rawBest = tiBestTopic ti
+      bestKeys = nub
+        [ normalizeTopic k
+        | k <- [rawBest, T.toLower rawBest
+               , M.findWithDefault rawBest rawBest lemmaMap] ]
+      bestKeySet = S.fromList bestKeys
+      bestKey = case [ k | k <- bestKeys, M.member k topicMap ] of
+                  (k : _) -> k
+                  []      -> normalizeTopic rawBest
+      normDiagTopic d = normalizeTopic (sdCandidateTopic d)
+      isBestTopic t = t `S.member` bestKeySet
+      atomsOf t = S.unions
+        [ M.findWithDefault S.empty k topicMap
+        | k <- nub [t, M.findWithDefault t t lemmaMap] ]
+      diags = taSelectorDiagnostics ta
+      -- Admitted pool surfaces per topic: selected first, then the rest
+      -- of the pool (top-1 pairs rarely share a concept; the pool is
+      -- still admitted material, so composing from it stays governed).
+      surfacesOf t =
+        let pool = [ s | d <- diags
+                       , normDiagTopic d == t
+                       , Just s <- [sdPredicateSurface d] ]
+            sel = [ s | d <- filter sdSelected diags
+                      , normDiagTopic d == t
+                      , Just s <- [sdPredicateSurface d] ]
+        in take 3 (nub (sel ++ pool))
+      -- Prefer corpus-covered others over generated junk topics; the
+      -- bridge still decides, this only orders attempts.
+      others = take 2 (nub
+        [ t | d <- filter sdSelected diags
+        , let t = normDiagTopic d
+        , not (isBestTopic t) ])
+      coveredFirst = L.sortOn (\t -> if isCoveredTopic t then 0 else 1 :: Int) others
+      surfsA = surfacesOf bestKey
+      atomsA = atomsOf bestKey
+      attempted =
+        [ (asm, proof, score, other)
+        | other <- coveredFirst
+        , surfA <- surfsA
+        , surfB <- surfacesOf other
+        , let termA = parsePredicateTerm lemmaMap surfA
+        , let termB = parsePredicateTerm lemmaMap surfB
+        , (asm, proof, score) <-
+            assembleViaGraph (ssRuntimeGraph ss)
+              atomsA (atomsOf other)
+              (bestKey, surfA, termA) (other, surfB, termB)
+        ]
+      ranked = take 3 (L.sortOn (\(_, proof, score, _) -> (length (ppEdges proof), negate score)) attempted)
+  in [ AssemblyCandidate
+         { acTopicA = bestKey
+         , acTopicB = other
+         , acBridge = asmBridge asm
+         , acHead = fst (assemblyProposition asm)
+         , acRelations = snd (assemblyProposition asm)
+         , acPathLen = length (ppEdges proof)
+         , acPathScore = score
+         }
+     | (asm, proof, score, other) <- ranked ]
 
 derivePreActorFailureEvent :: TurnArtifacts -> Maybe PreActorFailureEvent
 derivePreActorFailureEvent ta =

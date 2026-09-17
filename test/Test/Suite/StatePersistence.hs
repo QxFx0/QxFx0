@@ -1445,6 +1445,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
           , trcOverlayPredicateIds = []
           , trcOverlayContentUsed = False
            , trcSelectorDiagnostics = []
+           , trcAssemblyCandidates = []
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
     }

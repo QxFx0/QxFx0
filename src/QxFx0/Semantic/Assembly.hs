@@ -41,6 +41,8 @@ module QxFx0.Semantic.Assembly
   , assemblyConcepts
     -- * Diagnostics
   , assemblySourceOverlap
+    -- * Graph wiring (PathFinder + gate, v4)
+  , assembleViaGraph
     -- * Rating labels (schema reference)
   , assemblyRatingLabels
   ) where
@@ -49,11 +51,30 @@ import Control.DeepSeq (NFData)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
+import qualified Data.Text as T
 import GHC.Generics (Generic)
+
+import qualified Data.List as L
+import Data.Ord (comparing)
 
 import QxFx0.Semantic.Composition
   ( PredicateTerm(..)
   , jaccardBaseline
+  )
+import QxFx0.Semantic.Content.PathFinder
+  ( AtomGraph
+  , RankedPath(..)
+  , PathScore(..)
+  , findPathsFrom
+  )
+import QxFx0.Semantic.Content.GeneratedPredicateGate
+  ( validatePath
+  , GateVerdict(..)
+  )
+import QxFx0.Types.Semantic.AtomGraph
+  ( AtomId(..)
+  , PathProof(..)
+  , Relation(..)
   )
 
 -- | A composed meaning: the term, its two sources, the bridge.
@@ -131,3 +152,112 @@ assemblySourceOverlap asm termA termB =
   ( jaccardBaseline (asmTerm asm) termA
   , jaccardBaseline (asmTerm asm) termB
   )
+
+-- ---------------------------------------------------------------------------
+-- Graph wiring (selector math v4)
+-- ---------------------------------------------------------------------------
+
+-- | Compose through the atom graph: the skeleton shared-concept bridge
+-- is still required, and additionally at least one 'PathFinder' path
+-- (up to 3 edges, the API cap — rating decides quality within it,
+-- decision 3) must run from A's atoms into B's atoms AND pass
+-- 'validatePath' (G1–G5, source whitelist included).  The gate is
+-- never bypassed: an unvalidated path yields no assembly, however
+-- tempting the term-level bridge.
+--
+-- Results are ranked by (path length, path score) and capped at 4.
+-- Pure, total, deterministic.
+--
+-- Two bridge kinds (operator decision 3: no hop cap imposed by the
+-- composer; 'findPathsFrom' contributes up to 3 edges and rating
+-- decides quality within that):
+--
+-- * direct: the skeleton shared-concept bridge; the atom-graph path
+--   only has to reach B's atoms (it certifies the topics connect);
+-- * mediated: no shared concept — instead a validated path runs from
+--   a concept of A to a concept of B, and the path edges contribute
+--   their (verb, object) pairs to the composed term.  This is genuine
+--   multi-hop composition, still gated end to end.
+assembleViaGraph
+  :: AtomGraph
+  -> Set Text
+  -- ^ Atoms of topic A (lemmas; lowercased variants tried as well).
+  -> Set Text
+  -- ^ Atoms of topic B.
+  -> (Text, Text, PredicateTerm)
+  -- ^ Sourced term A (head donor).
+  -> (Text, Text, PredicateTerm)
+  -- ^ Sourced term B.
+  -> [(Assembly, PathProof, Double)]
+assembleViaGraph graph atomsA atomsB srcA@(topicA, surfaceA, termA) srcB@(topicB, surfaceB, termB) =
+  take 4 (L.sortBy (comparing (\(_, proof, s) -> (length (ppEdges proof), negate s)))
+    (direct ++ mediated))
+  where
+    starts = take 8 (L.sort (S.toList (S.fromList
+      [ AtomId a | x <- S.toList atomsA, a <- [x, T.toLower x] ])))
+    lowersB = S.fromList
+      [ b | x <- S.toList atomsB, b <- [x, T.toLower x] ]
+    -- Perf bound (documented, not a quality gate): shortest paths
+    -- first, bounded per start; the graph is finite and small.
+    allPaths = concatMap (take 40 . findPathsFrom graph 3) starts
+    admittedPaths =
+      [ (rpProof p, psTotal (rpScore p))
+      | p <- allPaths
+      , gvOverall (validatePath (rpProof p))
+      ]
+    -- Direct: skeleton bridge + any validated path reaching B.
+    direct =
+      case assemblePair srcA srcB of
+        Nothing -> []
+        Just asm ->
+          [ (asm, proof, s)
+          | (proof, s) <- admittedPaths
+          , pathReaches lowersB proof
+          ]
+    -- Mediated: validated path from a concept of A to a concept of B.
+    mediated =
+      [ ( Assembly
+            { asmTerm = PredicateTerm
+                { ptHead = case ptHead termA of
+                             Just h  -> Just h
+                             Nothing -> ptHead termB
+                , ptRels = S.unions
+                    [ ptRels termA
+                    , ptRels termB
+                    , S.fromList
+                        [ (v, o)
+                        | e <- ppEdges proof
+                        , Just v <- [relVerbText e]
+                        , let o = relObjectText e
+                        , not (T.null v) && not (T.null o)
+                        ]
+                    ]
+                , ptMods = S.union (ptMods termA) (ptMods termB)
+                , ptNeg  = ptNeg termA || ptNeg termB
+                }
+            , asmSources = [(topicA, surfaceA), (topicB, surfaceB)]
+            , asmBridge = cA <> "\8594" <> cB
+            , asmPathLen = length (ppEdges proof)
+            }
+        , proof, s )
+      | cA <- L.sort (S.toList (assemblyConcepts termA))
+      , cB <- L.sort (S.toList (assemblyConcepts termB))
+      , cA /= cB
+      , (proof, s) <- pathsBetween cA cB
+      ]
+    pathsBetween cA cB =
+      take 1
+        [ (proof, s)
+        | start <- [AtomId cA, AtomId (T.toLower cA)]
+        , p <- take 40 (findPathsFrom graph 3 start)
+        , let proof = rpProof p
+        , gvOverall (validatePath proof)
+        , pathReaches (S.fromList [cB, T.toLower cB]) proof
+        -- The mediated path must still land in topic B's atoms:
+        -- reaching the bare concept is not enough.
+        , pathReaches lowersB proof
+        , let s = psTotal (rpScore p)
+        ]
+    pathReaches targets proof =
+      any (\(AtomId t) -> t `S.member` targets || T.toLower t `S.member` targets)
+          [ relTo e | e <- ppEdges proof ]
