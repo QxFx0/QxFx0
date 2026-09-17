@@ -98,8 +98,8 @@ compositionTests =
         (not (S.member "не" relationLexicon))
   , TestLabel "stem fallback tags inflected verbs unknown to morphology" $ TestCase $ do
       let t = parsePredicateTerm M.empty "свобода требует ответственности"
-      assertEqual "требует is a relation verb"
-        (S.singleton ("требует", "ответственности")) (ptRels t)
+      assertEqual "требует normalizes to требовать"
+        (S.singleton ("требовать", "ответственности")) (ptRels t)
       assertEqual "head unaffected" (Just "свобода") (ptHead t)
 
   , TestLabel "known nouns never become relations via stem" $ TestCase $ do
@@ -112,4 +112,8 @@ compositionTests =
   , TestLabel "short-prefix verbs stay unreachable" $ TestCase $ do
       let t = parsePredicateTerm M.empty "труд даёт смысл"
       assertBool "даёт is not forced into the lexicon" (S.null (ptRels t))
+  , TestLabel "stem-matched verbs normalize to infinitive" $ TestCase $ do
+      let t = parsePredicateTerm M.empty "любовь соединяют страх"
+      assertEqual "infinitive in pair, not raw inflection"
+        (S.singleton ("соединять", "страх")) (ptRels t)
   ]

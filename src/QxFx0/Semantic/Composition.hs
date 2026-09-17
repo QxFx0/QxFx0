@@ -61,6 +61,7 @@ module QxFx0.Semantic.Composition
 
 import Control.DeepSeq (NFData)
 import Data.Map.Strict (Map)
+import Data.Maybe (listToMaybe)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
@@ -133,11 +134,13 @@ negationMarkers = S.fromList ["не", "ни", "нет", "без"]
 stemMatchesLexicon :: Set Text -> Text -> Bool
 stemMatchesLexicon lemmaKeys token
   | token `S.member` lemmaKeys = False
-  | otherwise = any (commonPrefixAtLeast5 token) (S.toList relationLexicon)
-  where
-    commonPrefixAtLeast5 a b =
-      T.length a >= 5
-        && length (takeWhile (uncurry (==)) (zip (T.unpack a) (T.unpack b))) >= 4
+  | otherwise = any (commonPrefix5 token) (S.toList relationLexicon)
+
+-- | Shared >= 4-char prefix with the token itself >= 5 chars.
+commonPrefix5 :: Text -> Text -> Bool
+commonPrefix5 a b =
+  T.length a >= 5
+    && length (takeWhile (uncurry (==)) (zip (T.unpack a) (T.unpack b))) >= 4
 
 -- | Closed v1 stopword list.  Deliberately separate from the Space.hs
 -- inline list (which also drops «не»\/«ни» and len<=3 tokens — exactly
@@ -164,16 +167,26 @@ parsePredicateTerm lemmaMap text =
       core = [ t | t <- toks
              , not (t `S.member` negationMarkers)
              , not (t `S.member` compositionStopWords) ]
-      isRel t = t `S.member` relationLexicon
-                || stemMatchesLexicon (M.keysSet lemmaMap) t
+      -- A stem-matched verb is rewritten to its lexicon infinitive
+      -- («соединяют» -> «соединять»): relation pairs cite lemmas,
+      -- never raw inflections.  First match in lexicon order keeps it
+      -- deterministic.
+      relLemmaOf t
+        | t `S.member` relationLexicon = Just t
+        | t `S.member` M.keysSet lemmaMap = Nothing
+        | otherwise = listToMaybe
+            [ v | v <- S.toList relationLexicon, commonPrefix5 t v ]
+      isRel t = case relLemmaOf t of
+                  Just _  -> True
+                  Nothing -> False
       concepts = [ t | t <- core, not (isRel t) ]
       headTok = case concepts of
                   (h : _) -> Just h
                   []      -> Nothing
       rels = S.fromList
-        [ (r, obj)
+        [ (verb, obj)
         | (i, r) <- zip [0 :: Int ..] core
-        , isRel r
+        , Just verb <- [relLemmaOf r]
         , let following = [ c | c <- drop (i + 1) core
                           , not (isRel c) ]
               obj = case following of
