@@ -1357,12 +1357,12 @@ evaluateCompetitiveUtility topic topicAtoms basePredicates lemmaMap edge =
       baseNetwork = seedFromCorpus lemmaMap
       transientNetwork = withTransientCandidate baseNetwork edge relation
       baseSelector = buildContentSelector
-        (buildSemanticSpace baseNetwork topicAtoms)
+        (buildSemanticSpace lemmaMap baseNetwork topicAtoms)
         topicAtoms (M.singleton topic baseTopicPredicates) lemmaMap Nothing
       transientAtoms = M.insertWith S.union topic
         (S.fromList [seFrom edge, relation, seTo edge]) topicAtoms
       transientSelector = buildContentSelector
-        (buildSemanticSpace transientNetwork transientAtoms)
+        (buildSemanticSpace lemmaMap transientNetwork transientAtoms)
         transientAtoms (M.singleton topic (baseTopicPredicates ++ [candidatePredicate])) lemmaMap Nothing
       fields = preflightPrototypeFields
       fieldAudits =
@@ -1511,7 +1511,7 @@ basePrimaryForTopic topic topicAtoms predicates lemmaMap =
   selectedPrimarySurface (fst (selectPredicatesWithDiagnostics selector promptField topic (Just activated)))
   where
     baseNetwork = seedFromCorpus lemmaMap
-    selector = buildContentSelector (buildSemanticSpace baseNetwork topicAtoms)
+    selector = buildContentSelector (buildSemanticSpace lemmaMap baseNetwork topicAtoms)
       topicAtoms (M.singleton topic predicates) lemmaMap Nothing
     promptField = emptyField { fieldResonance = Resonance 0.8 }
     activated = activateTopicWithField promptField
@@ -1544,7 +1544,7 @@ selectorPreflightDiagnostic topic topicAtoms basePredicates lemmaMap edge =
             (semanticEdge (seFrom edge) (seTo edge) (seWeight edge) (seCoOccurrence edge) (seSource edge))
             (snEdges baseNetwork)
         }
-      selector = buildContentSelector (buildSemanticSpace transientNetwork atomMap)
+      selector = buildContentSelector (buildSemanticSpace lemmaMap transientNetwork atomMap)
         atomMap predicateMap lemmaMap Nothing
       topicAtomsForActivation = M.findWithDefault S.empty topic atomMap
       prototypeFields =

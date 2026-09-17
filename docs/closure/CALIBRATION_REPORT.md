@@ -442,3 +442,23 @@ labels flip to 0/0 and the fallback path needs a guard)?
   inflections («соединяют» vs lemma «соединять»). Future: normalize
   backstop hits to infinitive via the verb table (verbs.json author
  itative form) or mark them unlemmatized in the candidate.
+
+---
+
+# Prototype normalization + fast green + harvest saturation (2026-09-17)
+
+- **Root cause of the fast overlay failure**: `fieldDimensionPrototypes`
+  hand-written in raw inflections, calibrated against the nouns-only
+  map. After verb paradigms, predicate atoms lemmatize but prototypes
+  do not → cosine 0. Fix: `buildSemanticSpace`/`buildPrototypes` take
+  the lemma map and normalize prototypes by construction (5 call
+  sites: Bootstrap, Finalize/State, Autonomous ×3); no hand-sync ever
+  again. Overlap probe test updated to use a lemma map (honest regime).
+- **Fast suite**: 1812/1812, 0 errors / 0 failures with `-M10G`
+  (the earlier `-M6G` OOM was heap tightness, not a leak — no single
+  new retention source found; helper cost per turn is bounded small).
+- **Harvest-3**: 80 varied-form turns → 16 candidates, 0 new unique.
+  Assembly space saturated at 35 unique under distinction/relation/
+  practical/challenge forms × current graph. More turns of the same
+  kind are pointless; reaching 50+ needs wider helper caps (more
+  others/surfaces per turn) or pair-space expansion, not reruns.

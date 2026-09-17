@@ -720,7 +720,7 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
       candidates = extractCandidates brainKBEntries topicList
       (admitted, _rejected) = admitCandidates defaultAdmissionConfig knownAtomIds candidates
       promotedRelations = promoteAll admitted
-      seedSpace = buildSemanticSpace finalNetwork topicAtoms
+      seedSpace = buildSemanticSpace lemmaMap finalNetwork topicAtoms
       seedSelector = buildContentSelector seedSpace topicAtoms topicPredicates lemmaMap (Just ontology)
       -- Initialize ContentSelectorState with optimizations
       selectorState = initSelectorWithOptimizations seedSpace topicAtoms topicPredicates lemmaMap (Just ontology)

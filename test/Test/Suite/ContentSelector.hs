@@ -44,11 +44,19 @@ contentSelectorTests =
       assertBool "should keep 'осознания'" (S.member "осознания" result)
 
   , TestLabel "tokenizePredicate overlaps with fieldDimensionPrototypes" $ TestCase $ do
-      let predicates = [ "истина претендует на соответствие реальности"
+      -- Prototypes are lemma-form since verb paradigms landed, so the
+      -- overlap probe uses the same lemma map the runtime would.
+      let lemmaMap = M.fromList
+            [ ("претендует", "претендовать")
+            , ("требует", "требовать")
+            , ("выражает", "выражать")
+            , ("соответствие", "соответствие")
+            ]
+          predicates = [ "истина претендует на соответствие реальности"
                        , "ответственность требует осознания последствий"
                        , "мнение выражает позицию субъекта"
                        ]
-          allTokens = S.unions [tokenizePredicate M.empty p | p <- predicates]
+          allTokens = S.unions [tokenizePredicate lemmaMap p | p <- predicates]
           allPrototypeWords = S.unions [S.fromList words | words <- M.elems fieldDimensionPrototypes]
           overlap = S.intersection allTokens allPrototypeWords
       assertBool "should have overlap with prototypes" (not (S.null overlap))
@@ -168,7 +176,7 @@ contentSelectorTests =
           sn = buildSemanticNetwork mg
           topic = "истина"
           topicAtoms = M.singleton topic tokenizedAtoms
-          space = buildSemanticSpace sn topicAtoms
+          space = buildSemanticSpace M.empty sn topicAtoms
           topicPreds = M.singleton topic predicates
           cs = buildContentSelector space topicAtoms topicPreds M.empty Nothing
           field1 = emptyField { fieldResonance = Resonance 0.9, fieldAtmosphere = Atmosphere 0.1 0.5, fieldConsolidation = Consolidation 0.9 }

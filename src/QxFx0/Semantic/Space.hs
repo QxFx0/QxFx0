@@ -56,14 +56,20 @@ computeFieldAffinity space dim pv =
          then 0.0
          else dotProduct / (normPV * normProto)
 
-buildSemanticSpace :: SemanticNetwork -> Map Text (Set Text) -> SemanticSpace
-buildSemanticSpace sn topicAtoms =
+-- | The lemma map is threaded in so field-dimension prototypes are
+-- normalized exactly like predicate atoms: prototypes hand-written in
+-- raw inflections silently stop overlapping once verbs lemmatize
+-- (measured: overlay affinity dropped to 0 after verb paradigms).
+buildSemanticSpace :: Map Text Text -> SemanticNetwork -> Map Text (Set Text) -> SemanticSpace
+buildSemanticSpace lemmaMap sn topicAtoms =
   let topicAtomNodes = S.unions (M.elems topicAtoms)
-      prototypeAtoms = S.fromList (concat (M.elems fieldDimensionPrototypes))
+      normalize w = M.findWithDefault w w lemmaMap
+      prototypeAtoms = S.fromList
+        [ normalize w | ws <- M.elems fieldDimensionPrototypes, w <- ws ]
       nodeList = S.toList (snNodes sn `S.union` topicAtomNodes `S.union` prototypeAtoms)
       atomIndex = M.fromList $ zip nodeList [0..]
       dimCount = length nodeList
-      prototypes = buildPrototypes atomIndex dimCount
+      prototypes = buildPrototypes lemmaMap atomIndex dimCount
       predicateVecs = M.fromList
         [ (topic, PredicateVector topic atoms (buildPredicateVec atomIndex dimCount atoms))
         | (topic, atoms) <- M.toList topicAtoms
@@ -76,12 +82,13 @@ buildSemanticSpace sn topicAtoms =
     , ssFactVectors = M.empty
     }
 
-buildPrototypes :: Map Text Int -> Int -> Map FieldDimension DimensionPrototype
-buildPrototypes atomIndex dimCount =
-  M.fromList
+buildPrototypes :: Map Text Text -> Map Text Int -> Int -> Map FieldDimension DimensionPrototype
+buildPrototypes lemmaMap atomIndex dimCount =
+  let normalize w = M.findWithDefault w w lemmaMap
+  in M.fromList
     [ (dim, DimensionPrototype dim atoms (buildPrototypeVector atomIndex dimCount atoms))
     | (dim, atomList) <- M.toList fieldDimensionPrototypes
-    , let atoms = S.fromList atomList
+    , let atoms = S.fromList (map normalize atomList)
     ]
 
 buildPrototypeVector :: Map Text Int -> Int -> Set Text -> Vector Double

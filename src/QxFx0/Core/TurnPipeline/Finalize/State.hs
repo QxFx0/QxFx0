@@ -624,7 +624,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
         | (topic, dc) <- M.toList (ssDefinitionCorpus ss)
         ]
       semanticSpace = if contentDensityGate semanticNetwork
-                       then buildSemanticSpace semanticNetwork topicAtomsSetMap
+                       then buildSemanticSpace (ssLemmaMap ss) semanticNetwork topicAtomsSetMap
                        else emptySemanticSpace
       contentSelector = if contentDensityGate semanticNetwork
                           then buildContentSelector semanticSpace (buildTopicAtoms topicAtomsMap) topicPredicatesMap (ssLemmaMap ss) (Just (ssOntology ss))

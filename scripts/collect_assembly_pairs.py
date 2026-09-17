@@ -30,8 +30,29 @@ def main():
                    encoding="utf-8")]
     pool = [r for r in corpus if r["stratum"] in
             ("covered_distinction", "covered_relation")]
-    step = max(1, len(pool) // want)
-    sample = pool[::step][:want]
+    uncovered = {r["topic"] for r in corpus
+                 if r["stratum"] == "uncovered"}
+    topics = sorted({r["topic"] for r in corpus if r["topic"]
+                     and r["topic"] not in uncovered})
+    # Varied-form harvest (v2): non-cyclic topic pairs (i, i*7) across
+    # four surface forms — cyclic sampling saturates at ~35 unique
+    # (harvest-2: 48 records, 0 new). Forms rotate to vary pool selection.
+    forms = ["чем {a} отличается от {b}?", "как {a} связано с {b}?",
+             "почему {a} важно для человека, а {b} нет?",
+             "{A} — это иллюзия, а {b} нет. докажи обратное"]
+    varied = []
+    i = 0
+    while len(varied) < want:
+        a = topics[i % len(topics)]
+        b = topics[(i * 7) % len(topics)]
+        if a != b:
+            tpl = forms[len(varied) % len(forms)]
+            varied.append({"id": f"var-{len(varied):04d}",
+                           "input": tpl.format(a=a, b=b, A=a[0].upper()+a[1:])})
+        i += 1
+        if i > want * len(topics):
+            break
+    sample = [{"id": r["id"], "input": r["input"]} for r in varied]
     print(f"sample={len(sample)} turns", flush=True)
 
     tmp = Path(tempfile.mkdtemp(prefix="calib-asm-"))
