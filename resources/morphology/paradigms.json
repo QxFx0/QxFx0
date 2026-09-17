@@ -361039,5 +361039,408 @@
       "LocSg": "антифебрине",
       "LocPl": "антифебринах"
     }
+  },
+  "требовать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "требовать",
+      "Pres3Sg": "требует",
+      "PastMasc": "требовал",
+      "PastFem": "требовала",
+      "PastNeut": "требовало",
+      "PastPl": "требовали"
+    }
+  },
+  "предполагать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "предполагать",
+      "Pres3Sg": "предполагает",
+      "PastMasc": "предполагал",
+      "PastFem": "предполагала",
+      "PastNeut": "предполагало",
+      "PastPl": "предполагали"
+    }
+  },
+  "ограничивать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "ограничивать",
+      "Pres3Sg": "ограничивает",
+      "PastMasc": "ограничивал",
+      "PastFem": "ограничивала",
+      "PastNeut": "ограничивало",
+      "PastPl": "ограничивали",
+      "PartShortMasc": "ограничен",
+      "PartShortFem": "ограничена",
+      "PartShortNeut": "ограничено",
+      "PartShortPl": "ограничены"
+    }
+  },
+  "исключать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "исключать",
+      "Pres3Sg": "исключает",
+      "PastMasc": "исключал",
+      "PastFem": "исключала",
+      "PastNeut": "исключало",
+      "PastPl": "исключали",
+      "PartShortMasc": "исключён",
+      "PartShortFem": "исключена",
+      "PartShortNeut": "исключено",
+      "PartShortPl": "исключены"
+    }
+  },
+  "связать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "perf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "связать",
+      "Pres3Sg": "свяжет",
+      "PastMasc": "связал",
+      "PastFem": "связала",
+      "PastNeut": "связало",
+      "PastPl": "связали",
+      "PartShortMasc": "связан",
+      "PartShortFem": "связана",
+      "PartShortNeut": "связано",
+      "PartShortPl": "связаны"
+    }
+  },
+  "давать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "давать",
+      "Pres3Sg": "даёт",
+      "PastMasc": "давал",
+      "PastFem": "давала",
+      "PastNeut": "давало",
+      "PastPl": "давали"
+    }
+  },
+  "означать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "означать",
+      "Pres3Sg": "означает",
+      "PastMasc": "означал",
+      "PastFem": "означала",
+      "PastNeut": "означало",
+      "PastPl": "означали"
+    }
+  },
+  "определять": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "определять",
+      "Pres3Sg": "определяет",
+      "PastMasc": "определял",
+      "PastFem": "определяла",
+      "PastNeut": "определяло",
+      "PastPl": "определяли",
+      "PartShortMasc": "определён",
+      "PartShortFem": "определена",
+      "PartShortNeut": "определено",
+      "PartShortPl": "определены"
+    }
+  },
+  "оставаться": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "оставаться",
+      "Pres3Sg": "остаётся",
+      "PastMasc": "оставался",
+      "PastFem": "оставалась",
+      "PastNeut": "оставалось",
+      "PastPl": "оставались"
+    }
+  },
+  "отражать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "отражать",
+      "Pres3Sg": "отражает",
+      "PastMasc": "отражал",
+      "PastFem": "отражала",
+      "PastNeut": "отражало",
+      "PastPl": "отражали",
+      "PartShortMasc": "отражён",
+      "PartShortFem": "отражена",
+      "PartShortNeut": "отражено",
+      "PartShortPl": "отражены"
+    }
+  },
+  "порождать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "порождать",
+      "Pres3Sg": "порождает",
+      "PastMasc": "порождал",
+      "PastFem": "порождала",
+      "PastNeut": "порождало",
+      "PastPl": "порождали",
+      "PartShortMasc": "порождён",
+      "PartShortFem": "порождена",
+      "PartShortNeut": "порождено",
+      "PartShortPl": "порождены"
+    }
+  },
+  "превращать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "превращать",
+      "Pres3Sg": "превращает",
+      "PastMasc": "превращал",
+      "PastFem": "превращала",
+      "PastNeut": "превращало",
+      "PastPl": "превращали",
+      "PartShortMasc": "превращён",
+      "PartShortFem": "превращена",
+      "PartShortNeut": "превращено",
+      "PartShortPl": "превращены"
+    }
+  },
+  "противоречить": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "противоречить",
+      "Pres3Sg": "противоречит",
+      "PastMasc": "противоречил",
+      "PastFem": "противоречила",
+      "PastNeut": "противоречило",
+      "PastPl": "противоречили"
+    }
+  },
+  "различать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "различать",
+      "Pres3Sg": "различает",
+      "PastMasc": "различал",
+      "PastFem": "различала",
+      "PastNeut": "различало",
+      "PastPl": "различали"
+    }
+  },
+  "служить": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "служить",
+      "Pres3Sg": "служит",
+      "PastMasc": "служил",
+      "PastFem": "служила",
+      "PastNeut": "служило",
+      "PastPl": "служили"
+    }
+  },
+  "совпадать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "совпадать",
+      "Pres3Sg": "совпадает",
+      "PastMasc": "совпадал",
+      "PastFem": "совпадала",
+      "PastNeut": "совпадало",
+      "PastPl": "совпадали"
+    }
+  },
+  "соединять": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "соединять",
+      "Pres3Sg": "соединяет",
+      "PastMasc": "соединял",
+      "PastFem": "соединяла",
+      "PastNeut": "соединяло",
+      "PastPl": "соединяли",
+      "PartShortMasc": "соединён",
+      "PartShortFem": "соединена",
+      "PartShortNeut": "соединено",
+      "PartShortPl": "соединены"
+    }
+  },
+  "становиться": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "становиться",
+      "Pres3Sg": "становится",
+      "PastMasc": "становился",
+      "PastFem": "становилась",
+      "PastNeut": "становилось",
+      "PastPl": "становились"
+    }
+  },
+  "вести": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Pres3Sg": "ведёт",
+      "PastMasc": "вёл",
+      "PastFem": "вела",
+      "PastNeut": "вело",
+      "PastPl": "вели",
+      "PartShortMasc": "ведомый",
+      "PartShortFem": "ведома",
+      "PartShortNeut": "ведомо",
+      "PartShortPl": "ведомы"
+    }
+  },
+  "включать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "включать",
+      "Pres3Sg": "включает",
+      "PastMasc": "включал",
+      "PastFem": "включала",
+      "PastNeut": "включало",
+      "PastPl": "включали",
+      "PartShortMasc": "включён",
+      "PartShortFem": "включена",
+      "PartShortNeut": "включено",
+      "PartShortPl": "включены"
+    }
+  },
+  "влечь": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "влечь",
+      "Pres3Sg": "влечёт",
+      "PastMasc": "влёк",
+      "PastFem": "влекла",
+      "PastNeut": "влекло",
+      "PastPl": "влекли"
+    }
+  },
+  "выражать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "выражать",
+      "Pres3Sg": "выражает",
+      "PastMasc": "выражал",
+      "PastFem": "выражала",
+      "PastNeut": "выражало",
+      "PastPl": "выражали",
+      "PartShortMasc": "выражен",
+      "PartShortFem": "выражена",
+      "PartShortNeut": "выражено",
+      "PartShortPl": "выражены"
+    }
+  },
+  "делать": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "T",
+    "forms": {
+      "Inf": "делать",
+      "Pres3Sg": "делает",
+      "PastMasc": "делал",
+      "PastFem": "делала",
+      "PastNeut": "делало",
+      "PastPl": "делали"
+    }
+  },
+  "зависеть": {
+    "pos": "Verb",
+    "gender": null,
+    "animacy": null,
+    "aspect": "imperf",
+    "transitivity": "I",
+    "forms": {
+      "Inf": "зависеть",
+      "Pres3Sg": "зависит",
+      "PastMasc": "зависел",
+      "PastFem": "зависела",
+      "PastNeut": "зависело",
+      "PastPl": "зависели"
+    }
   }
 }

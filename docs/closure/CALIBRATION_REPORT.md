@@ -402,3 +402,20 @@ labels flip to 0/0 and the fallback path needs a guard)?
   stay unreachable by design; that gap needs real verb paradigms.
 - **Tests**: inflected-verb tagging, noun guard, short-prefix guard
   (unit 1584/1584).
+
+---
+
+# Verb paradigms v1 — morphology gap closed (data-only)
+
+- **Data**: 24 `relationLexicon` infinitives added to
+  `resources/morphology/paradigms.json` (`scripts/add_verb_paradigms.py`,
+  188 forms, 20000→20024 lemmas). No code change — the loader unions
+  every form automatically. One honest collision: «вести» (Inf)
+  already maps to noun «весть» — form skipped, other вести forms kept.
+- **Effect**: attested 0/24 → 11/24 on the 206 corpus surfaces;
+  remaining 13 orphans are genuinely absent from corpus surfaces
+  (not mapper gaps). Live: `acRelations` now carries true
+  lemmatizations («ограничивать» from «ограничена»).
+- **Residual**: short-prefix verbs («даёт» — now covered via давать
+  forms), unknown-verb backstop stays (stem fallback); full verb
+  morphology beyond the 24 remains open data work.
