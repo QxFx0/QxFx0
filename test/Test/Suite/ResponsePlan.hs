@@ -78,6 +78,8 @@ responsePlanTests =
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
   , TestLabel "old generic generative paragraph is blocked" testGenericParagraphBlocked
   , TestLabel "adjacent discourse markers are blocked" testRepeatedMarkersBlocked
+  , TestLabel "uncovered topic claim is framed as hypothesis" testUncoveredClaimIsHypothesis
+  , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
   ]
 
 testNoTopic :: Test
@@ -544,3 +546,53 @@ testPlanCorpus = TestCase $ do
           assertBool (label <> " must be admissible") (responsePlanIsAdmissible plan)
           assertBool (label <> " must retain typed propositions") (not (null (rspPropositions plan)))
           assertBool (label <> " must retain bounded derivation") (length (rspDerivation plan) <= 8)
+
+-- | Generative-fallback doctrine (operator decision 2026-09-17):
+-- a claim built over a topic outside 'definitionCorpus' is the
+-- system's own construction and must render as hypothesis, even
+-- when the selector map carries a generated predicate for it.
+testUncoveredClaimIsHypothesis :: Test
+testUncoveredClaimIsHypothesis = TestCase $ do
+  let gen = SemanticPredicate
+        RoleProperty
+        "кванторный туман это явление неопределённости"
+        "quantum fog is a phenomenon of indeterminacy"
+        "кванторный туман"
+        Nothing Nothing Nothing Nothing
+      selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "кванторный туман" [gen] }
+      frame = DefinitionFrame "кванторный туман" GeneralScope Known
+  case buildResponseSemanticPlan selector emptyField
+         "что такое кванторный туман?" Nothing frame
+         (IntentDefine "кванторный туман") of
+    Nothing -> assertFailure "uncovered define must still build a plan"
+    Just plan -> do
+      assertEqual "uncovered goal is hypothesis" GoalHypothesize (rspGoal plan)
+      case rspClaims plan of
+        (c : _) -> assertEqual "uncovered mode is hypothetical"
+          ClaimHypothetical (pcMode c)
+        [] -> assertFailure "uncovered plan must carry its claim"
+      assertBool "headline must be hypothesis, not definition"
+        ("Гипотеза:" `T.isPrefixOf` renderResponseSemanticPlan plan)
+
+-- | Covered topics keep canonical framing (doctrine boundary control).
+testCoveredClaimKeepsCanonicalMode :: Test
+testCoveredClaimKeepsCanonicalMode = TestCase $ do
+  let pred_ = SemanticPredicate
+        RoleProperty
+        "свобода предполагает возможность выбора"
+        "freedom presupposes choice"
+        "свобода"
+        Nothing Nothing Nothing Nothing
+      selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "свобода" [pred_] }
+      frame = DefinitionFrame "свобода" GeneralScope Known
+  case buildResponseSemanticPlan selector emptyField
+         "что такое свобода?" Nothing frame (IntentDefine "свобода") of
+    Nothing -> assertFailure "covered define must build a plan"
+    Just plan -> do
+      assertEqual "covered goal stays define" GoalDefine (rspGoal plan)
+      case rspClaims plan of
+        (c : _) -> assertEqual "covered mode stays known"
+          ClaimKnown (pcMode c)
+        [] -> assertFailure "covered plan must carry its claim"

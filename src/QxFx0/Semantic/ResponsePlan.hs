@@ -5,7 +5,9 @@ Module      : QxFx0.Semantic.ResponsePlan
 Description : Deterministic construction and local realization of grounded plans.
 
 The plan builder is intentionally local-first.  It may select only predicates
-already admitted by 'ContentSelector'; it never invents a factual predicate.
+already admitted by 'ContentSelector'; a claim whose topic lies outside
+'definitionCorpus' (generated construction) is framed as hypothesis
+('GoalHypothesize', 'ClaimHypothetical'), never as canonical definition.
 -}
 module QxFx0.Semantic.ResponsePlan
   ( buildGenerativeResponsePlan
@@ -26,6 +28,7 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.Content
   ( normalizeTopic
+  , isCoveredTopic
   , SemanticPredicate(..)
   )
 import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
@@ -119,6 +122,17 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
             primary:alternatives ->
                let
                  confidence = clamp01 (candidateConfidence primary)
+                 -- Generative-fallback doctrine (operator decision
+                 -- 2026-09-17): the selector map also carries generated
+                 -- (non-corpus) predicates, so map membership is NOT the
+                 -- corpus boundary.  A claim whose topic is outside
+                 -- 'definitionCorpus' is the system's own construction
+                 -- and must render as hypothesis ("Гипотеза:",
+                 -- ClaimHypothetical), never as canonical definition
+                 -- ("Определение:", ClaimKnown) — generation is a
+                 -- feature, false authority is not.
+                 topicCovered = isCoveredTopic topic
+                 planGoal = if topicCovered then goal else GoalHypothesize
                  primaryProposition = predicateProposition (candidatePredicate primary)
                  secondary = comparisonCounter goal primary alternatives
                  counterpoint = buildCounterpoint confidence (candidatePredicate primary) (map candidatePredicate alternatives)
@@ -133,7 +147,7 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                    ]
                  claim = PlannedClaim
                    { pcId = "claim-1"
-                   , pcMode = claimModeFor goal
+                   , pcMode = if topicCovered then claimModeFor goal else ClaimHypothetical
                    , pcText = renderSemanticProposition primaryProposition
                    , pcPredicateRefs = take 2 (map (cleanSentence . spRu . candidatePredicate) (primary:alternatives))
                    , pcEvidence = EvidenceSelectedPredicate
@@ -147,13 +161,17 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                           "used curated counterpredicate or distinct admitted predicate" []
                       | Just point <- [counterpoint]
                       ]
+                   <> [ PlanDerivation "claim-1" [] DeriveQualification
+                        "uncovered topic: generated predicate framed as hypothesis, not canonical definition" []
+                    | not topicCovered
+                    ]
                    <> [ PlanDerivation "next-move" [] (obligationRule obligation)
                           "continues the highest-priority unresolved dialogue obligation" []
                       | Just _ <- [obligation]
                       ]
               in ResponseSemanticPlan
                   { rspVersion = responsePlanVersion
-                  , rspGoal = goal
+                  , rspGoal = planGoal
                   , rspTopic = Just topic
                   , rspClaims = [claim]
                   , rspPropositions = propositions

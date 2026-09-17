@@ -13,7 +13,7 @@
   },
   "source": "synthetic_template_v1",
   "labels_rated": 40,
-  "train_eligible": 35,
+  "train_eligible": 40,
   "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels",
-  "disputed": 5
+  "disputed": 0
 }

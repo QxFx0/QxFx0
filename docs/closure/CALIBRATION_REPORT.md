@@ -314,3 +314,26 @@ Open question for the rater: is an authoritative-sounding answer
 with no corpus predicate acceptable (then F7 is a feature —
 generative fallback), or must uncovered topics abstain (then the 5
 labels flip to 0/0 and the fallback path needs a guard)?
+
+---
+
+# F7 resolution — honest-generation doctrine (2026-09-17)
+
+- **Operator decision**: generative fallback is a FEATURE (building
+  own meanings is the primary task); false authority is the bug.
+- **Root cause**: generated predicates are merged into
+  `csTopicPredicates`, so the map-membership coverage guard in
+  `buildGroundedPlan` passes for uncovered topics; the claim then
+  rendered as `ClaimKnown` / «Определение» with confidence 0.
+- **Fix** (`Semantic/ResponsePlan.hs`): the corpus boundary is
+  `isCoveredTopic` over `definitionCorpus`, not selector-map
+  membership. Uncovered-topic claims now carry `ClaimHypothetical`
+  + `GoalHypothesize` (headline «Гипотеза:») + a `DeriveQualification`
+  derivation entry. Covered topics byte-identical (`testCoveredClaimKeepsCanonicalMode`).
+- **Live check**: «что такое квантовая запутанность?» → «Гипотеза: …»;
+  «что такое свобода?» → «Тезис: …» (unchanged).
+- **Residual**: predicate-level provenance (generated predicate under
+  a covered topic) still renders canonical — needs a `spProvenance`
+  field (schema change, deferred).
+- **Tests**: `testUncoveredClaimIsHypothesis`,
+  `testCoveredClaimKeepsCanonicalMode` (unit 1564/1564).
