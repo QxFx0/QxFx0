@@ -1,6 +1,6 @@
 {
   "corpusVersion": 1,
-  "total": 1000,
+  "total": 1015,
   "strata": {
     "covered_definitional": 120,
     "covered_distinction": 120,
@@ -9,11 +9,11 @@
     "covered_practical": 120,
     "uncovered": 200,
     "challenge_marks": 150,
-    "safety_negative": 50
+    "safety_negative": 50,
+    "r5_negative": 15
   },
   "source": "synthetic_template_v1",
   "labels_rated": 40,
   "train_eligible": 40,
-  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels",
-  "disputed": 0
+  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels"
 }

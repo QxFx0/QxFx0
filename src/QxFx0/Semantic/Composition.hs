@@ -49,6 +49,7 @@ module QxFx0.Semantic.Composition
   , negationMarkers
   , compositionStopWords
   , relationLexiconVersion
+  , stemMatchesLexicon
     -- * Weights (hand-set v1, calibratable — group 3)
   , StructWeights(..)
   , defaultStructWeights
@@ -113,6 +114,31 @@ relationLexicon = S.fromList
 negationMarkers :: Set Text
 negationMarkers = S.fromList ["не", "ни", "нет", "без"]
 
+-- | Stem fallback for relation matching (v1, frozen rule).
+--
+-- The morphology resource is nouns-only (20000 + 38 paradigms, zero
+-- verbs), so the lemma map never produces verb infinitives:
+-- «требует»\/«ограничена» are unknown words, not relations.  Without
+-- a fallback, term-level relation tagging is dead (measured 0\/24
+-- lexicon verbs attested on the corpus) and only path verbs
+-- ('relTypeVerb') carry relation content.
+--
+-- Rule: a token unknown to the lemma map (i.e. NOT a known noun —
+-- «требование» stays a concept) counts as a relation verb when it
+-- shares a common prefix of length >= 4 with a lexicon infinitive (token itself >= 5 chars)
+-- («требует»\/«требовать», «ограничена»\/«ограничивать»).  Same
+-- tolerance discipline as 'inflectedWordMatch' (ResponsePlan.hs);
+-- short-prefix verbs («даёт»\/«давать») stay unreachable — that gap
+-- needs real verb paradigms, not a looser rule.
+stemMatchesLexicon :: Set Text -> Text -> Bool
+stemMatchesLexicon lemmaKeys token
+  | token `S.member` lemmaKeys = False
+  | otherwise = any (commonPrefixAtLeast5 token) (S.toList relationLexicon)
+  where
+    commonPrefixAtLeast5 a b =
+      T.length a >= 5
+        && length (takeWhile (uncurry (==)) (zip (T.unpack a) (T.unpack b))) >= 4
+
 -- | Closed v1 stopword list.  Deliberately separate from the Space.hs
 -- inline list (which also drops «не»\/«ни» and len<=3 tokens — exactly
 -- the channels this module reopens); the two lists serve different
@@ -138,16 +164,18 @@ parsePredicateTerm lemmaMap text =
       core = [ t | t <- toks
              , not (t `S.member` negationMarkers)
              , not (t `S.member` compositionStopWords) ]
-      concepts = [ t | t <- core, not (t `S.member` relationLexicon) ]
+      isRel t = t `S.member` relationLexicon
+                || stemMatchesLexicon (M.keysSet lemmaMap) t
+      concepts = [ t | t <- core, not (isRel t) ]
       headTok = case concepts of
                   (h : _) -> Just h
                   []      -> Nothing
       rels = S.fromList
         [ (r, obj)
         | (i, r) <- zip [0 :: Int ..] core
-        , r `S.member` relationLexicon
+        , isRel r
         , let following = [ c | c <- drop (i + 1) core
-                          , not (c `S.member` relationLexicon) ]
+                          , not (isRel c) ]
               obj = case following of
                       (c : _) -> c
                       []      -> case headTok of

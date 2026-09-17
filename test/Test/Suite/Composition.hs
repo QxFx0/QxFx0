@@ -96,4 +96,20 @@ compositionTests =
         (not (S.member "является" relationLexicon))
       assertBool "negation marker not a relation"
         (not (S.member "не" relationLexicon))
+  , TestLabel "stem fallback tags inflected verbs unknown to morphology" $ TestCase $ do
+      let t = parsePredicateTerm M.empty "свобода требует ответственности"
+      assertEqual "требует is a relation verb"
+        (S.singleton ("требует", "ответственности")) (ptRels t)
+      assertEqual "head unaffected" (Just "свобода") (ptHead t)
+
+  , TestLabel "known nouns never become relations via stem" $ TestCase $ do
+      let lm = M.singleton "требование" "требование"
+          t = parsePredicateTerm lm "требование свободы"
+      assertBool "no rels from a known noun" (S.null (ptRels t))
+      assertBool "noun stays a modifier or head"
+        (S.member "требование" (ptMods t) || ptHead t == Just "требование")
+
+  , TestLabel "short-prefix verbs stay unreachable" $ TestCase $ do
+      let t = parsePredicateTerm M.empty "труд даёт смысл"
+      assertBool "даёт is not forced into the lexicon" (S.null (ptRels t))
   ]

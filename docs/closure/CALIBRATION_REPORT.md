@@ -361,3 +361,44 @@ labels flip to 0/0 and the fallback path needs a guard)?
   win for auto-influence. Assemblies stay proposed-only in
   `trcAssemblyCandidates` until a larger stratum clears the bar
   (coherent==2 majority on 50+ unique pairs).
+
+---
+
+# F5 resolution — move layer is alive and act-driven (2026-09-17)
+
+- **Probe**: 15 R5-negative utterances without hard-gate markers
+  (stratum `r5_negative`, corpus 1015 total); self-check confirms
+  marker silence; responses captured, unlabeled (pending).
+- **Result**: `ontoMove` fired on 3/15 — cal-1001 («всё бессмысленно»),
+  cal-1013 («мне ничего не хочется»), cal-1014 («всё надоело»); all
+  `mirror_state`, affirm gate unpassed, distances improved
+  (0.116→0.086 and similar). `protocolB` 0/15 (single-turn scores
+  0.177–0.24 never exit the contour alone — needs baseline history).
+- **Trigger pattern**: the firings carry negative ontological acts
+  (being-/striving-), NOT the lowest scores — cal-1010 («у меня ничего
+  не получается», score 0.177, lowest) stayed silent. The layer is
+  act-driven by design; score-only negativity without a negative act
+  or earned drift does not fire.
+- **Verdict**: F5's 0/40 silence was sample composition (neutral
+  definitional questions), not a dead layer. No threshold change:
+  the observed selectivity matches the design (drift branch gated by
+  `negativeEvidenceEarned`, act branch by `ov<0`).
+
+---
+
+# Verb coverage — morphology gap + stem fallback (2026-09-17)
+
+- **Measurement** (`scripts/lemma_verb_coverage.py`, exact replica of
+  `morphologyDataFromParadigms` + `buildLemmaMap`): the morphology
+  resource is nouns-only (20000 + 38 paradigms, zero verbs), so
+  **0/24** `relationLexicon` verbs attest on the 206 corpus surfaces
+  and term-level relation tagging was dead — live relation content
+  came only from the `relTypeVerb` path fallback.
+- **Fix** (`Semantic/Composition.hs`): stem fallback for tokens
+  unknown to the lemma map (known nouns like «требование» stay
+  concepts): common prefix >= 4 with a lexicon infinitive, token
+  itself >= 5 chars («требует»/«требовать» share only «треб» —
+  3sg -ет vs infinitive -ать). Short-prefix verbs («даёт»/«давать»)
+  stay unreachable by design; that gap needs real verb paradigms.
+- **Tests**: inflected-verb tagging, noun guard, short-prefix guard
+  (unit 1584/1584).

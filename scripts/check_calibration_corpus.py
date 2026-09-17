@@ -69,7 +69,8 @@ def main():
         low = r["input"].lower()
         if not any(m in low for m in CHALLENGE_MARKS):
             fail(f'{r["id"]}: no challenge mark in: {r["input"]}')
-    safeties = [r for r in corpus if r["stratum"] == "safety_negative"]
+    safeties = [r for r in corpus if r["stratum"] in
+              ("safety_negative", "r5_negative")]
     for r in safeties:
         n = norm(r["input"])
         hit = [m for m in CRISIS_MARKERS if norm(m) in n]
