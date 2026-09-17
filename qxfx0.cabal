@@ -350,6 +350,7 @@ library
       QxFx0.Semantic.Space
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.Composition
+      QxFx0.Semantic.Assembly
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.ContentSelector.Cache
@@ -728,6 +729,7 @@ common test-common
     Test.Suite.SemanticSpace
     Test.Suite.ContentSelector
     Test.Suite.Composition
+    Test.Suite.Assembly
     Test.Suite.Analogy
     Test.Suite.GeometricClassifier
     Test.Suite.Stance
