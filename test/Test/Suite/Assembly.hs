@@ -215,4 +215,8 @@ graphAssemblyTests =
       assertEqual "math v4"
         "selector-math-v4-topic-field-activation-ontology-assembly"
         selectorMathVersion
+
+  , TestLabel "relation-type verb map is total and non-empty" $ TestCase $
+      assertBool "every RelationType maps to a non-empty verb"
+        (all (not . T.null . relTypeVerb) [minBound .. maxBound])
   ]

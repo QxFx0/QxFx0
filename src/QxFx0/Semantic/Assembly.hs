@@ -43,6 +43,8 @@ module QxFx0.Semantic.Assembly
   , assemblySourceOverlap
     -- * Graph wiring (PathFinder + gate, v4)
   , assembleViaGraph
+    -- * Relation-type verb map (frozen v1)
+  , relTypeVerb
     -- * Rating labels (schema reference)
   , assemblyRatingLabels
   ) where
@@ -55,6 +57,7 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import qualified Data.List as L
+import Data.Maybe (fromMaybe)
 import Data.Ord (comparing)
 
 import QxFx0.Semantic.Composition
@@ -75,6 +78,7 @@ import QxFx0.Types.Semantic.AtomGraph
   ( AtomId(..)
   , PathProof(..)
   , Relation(..)
+  , RelationType(..)
   )
 
 -- | A composed meaning: the term, its two sources, the bridge.
@@ -227,7 +231,7 @@ assembleViaGraph graph atomsA atomsB srcA@(topicA, surfaceA, termA) srcB@(topicB
                     , S.fromList
                         [ (v, o)
                         | e <- ppEdges proof
-                        , Just v <- [relVerbText e]
+                        , let v = fromMaybe (relTypeVerb (relType e)) (relVerbText e)
                         , let o = relObjectText e
                         , not (T.null v) && not (T.null o)
                         ]
@@ -261,3 +265,68 @@ assembleViaGraph graph atomsA atomsB srcA@(topicA, surfaceA, termA) srcB@(topicB
     pathReaches targets proof =
       any (\(AtomId t) -> t `S.member` targets || T.toLower t `S.member` targets)
           [ relTo e | e <- ppEdges proof ]
+
+-- ---------------------------------------------------------------------------
+-- Relation-type verb map (frozen v1)
+-- ---------------------------------------------------------------------------
+
+-- | Seed path edges leave 'relVerbText' empty (the @rel@ helper), so
+-- mediated assemblies would carry relations without verbs.  This total
+-- frozen map fills the gap ONLY inside assembly composition — seed
+-- data, verbalizers and GF paths are untouched (zero effect on
+-- existing surfaces).  Extension is a math-version change, same
+-- discipline as 'relationLexicon'.
+relTypeVerb :: RelationType -> Text
+relTypeVerb relType = case relType of
+  RelPresupposes    -> "предполагать"
+  RelLimitedBy      -> "ограничивать"
+  RelRequires       -> "требовать"
+  RelClaims         -> "утверждать"
+  RelVerifiedBy     -> "подтверждать"
+  RelSignals        -> "свидетельствовать"
+  RelTransformsInto -> "превращать"
+  RelExpresses      -> "выражать"
+  RelDiffersFrom    -> "отличать"
+  RelRelatedTo      -> "связывать"
+  RelDirectedAt     -> "направлять"
+  RelPreserves      -> "сохранять"
+  RelOrientsToward  -> "ориентировать"
+  RelPrescribes     -> "предписывать"
+  RelBuiltThrough   -> "строить"
+  RelDenotes        -> "обозначать"
+  RelStructures     -> "структурировать"
+  RelDetermines     -> "определять"
+  RelTransforms     -> "преобразовывать"
+  RelGives          -> "давать"
+  RelReveals        -> "раскрывать"
+  RelRecognizes     -> "признавать"
+  RelUnifies        -> "объединять"
+  RelConnects       -> "соединять"
+  RelPrecedes       -> "предшествовать"
+  RelDependsOn      -> "зависеть"
+  RelIncludes       -> "включать"
+  RelNecessaryFor   -> "требоваться"
+  RelEvokes         -> "вызывать"
+  RelMeans          -> "означать"
+  RelSays           -> "говорить"
+  RelNegates        -> "отрицать"
+  RelContrastsWith  -> "противопоставлять"
+  RelNotReducibleTo -> "не сводить"
+  RelIsNot          -> "не являться"
+  RelCapableOf      -> "мочь"
+  RelCreatedFrom    -> "создавать"
+  RelReliesOn       -> "опираться"
+  RelCanBe          -> "мочь быть"
+  RelDestroys       -> "разрушать"
+  RelPointsTo       -> "указывать"
+  RelMakes          -> "делать"
+  RelIsA            -> "являться"
+  RelReconstructs   -> "восстанавливать"
+  RelSupports       -> "поддерживать"
+  RelSets           -> "задавать"
+  RelNotJustCopies  -> "не копировать"
+  RelEnables        -> "позволять"
+  RelCauses         -> "причинять"
+  RelInfluences     -> "влиять"
+  RelPartOf         -> "входить"
+  RelOpposes        -> "противостоять"
