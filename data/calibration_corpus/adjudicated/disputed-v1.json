@@ -1,0 +1,10 @@
+{
+ "dispute": "rater accepted invented definitions on uncovered topics as rel=2/acc=1; system trace says uncovered_generic (no corpus predicate). Rater authority stands, but these 5 must not train predicate-fit until adjudicated.",
+ "ids": [
+  "cal-0601",
+  "cal-0641",
+  "cal-0681",
+  "cal-0721",
+  "cal-0761"
+ ]
+}

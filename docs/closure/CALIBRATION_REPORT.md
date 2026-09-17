@@ -274,3 +274,43 @@ template is the spec, the first pass is the baseline.
 Mechanical routing only; no human labels, no intervals. Next:
 rate the 40 (predicate_relevant on top-1), add R5-negative
 stratum, fix templates to instrumental case.
+
+---
+
+# Pass v1-rating — human labels + first fit decision (2026-09-17)
+
+- **labels**: 40/40 human-v1 (`rated_responses.json` → `corpus.jsonl`
+  labels, `rater: human-v1`); rater/assistant pre-rating agreement 28/40
+- **disputed**: 5 (`adjudicated/disputed-v1.json`, `labels.disputed:
+  true`, excluded from fit → `train_eligible: 35`)
+- **parameters moved**: none
+
+## Label-conditioned outcome
+
+| Content source | rel=2 | rel=1 | rel=0 |
+|---|---|---|---|
+| covered_exact (15) | 15 | 0 | 0 |
+| uncovered_generic, undisputed (11) | 0 | 0 | 11 |
+| None (4) | 0 | 2 | 2 |
+| uncovered_generic, disputed (5) | 5 | 0 | 0 |
+
+## Fit decision
+
+Top-1 relevance conditional on topic resolution is 15/15 (100%):
+when the topic resolves, `scorePred` never misses on this sample.
+The entire observed quality loss is upstream — topic extraction
+(F2 почему-forms, F3 контрпример-forms, F4 uninflected neighbours).
+Therefore coordinate ascent on group-3 weights is NOT the lever;
+the fit priority moves to topic-extraction coverage. Weights stay
+hand-set; no math bump.
+
+## Dispute note (F7)
+
+Rater accepted the 5 invented «квантовая запутанность» definitions
+as rel=2/acc=1 while the trace says `uncovered_generic` (no corpus
+predicate exists). Rater authority stands for the record, but these
+labels contradict the trace and must not train predicate-fit.
+Open question for the rater: is an authoritative-sounding answer
+with no corpus predicate acceptable (then F7 is a feature —
+generative fallback), or must uncovered topics abstain (then the 5
+labels flip to 0/0 and the fallback path needs a guard)?

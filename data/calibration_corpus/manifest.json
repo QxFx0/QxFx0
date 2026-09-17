@@ -12,7 +12,8 @@
     "safety_negative": 50
   },
   "source": "synthetic_template_v1",
-  "labels_rated": 0,
-  "train_eligible": 0,
-  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels"
+  "labels_rated": 40,
+  "train_eligible": 35,
+  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels",
+  "disputed": 5
 }
