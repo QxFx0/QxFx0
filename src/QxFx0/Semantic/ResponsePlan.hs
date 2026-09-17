@@ -29,6 +29,8 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Content
   ( normalizeTopic
   , isCoveredTopic
+  , lookupDefinitionContent
+  , dcPredicates
   , SemanticPredicate(..)
   )
 import QxFx0.Types.Semantic.Content (CanonicalPredicateRelation(..))
@@ -131,8 +133,14 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                  -- ClaimHypothetical), never as canonical definition
                  -- ("Определение:", ClaimKnown) — generation is a
                  -- feature, false authority is not.
-                 topicCovered = isCoveredTopic topic
-                 planGoal = if topicCovered then goal else GoalHypothesize
+                 -- Predicate-level boundary (2026-09-17, step 2): a
+                 -- generated predicate under a covered topic is still
+                 -- the system's own construction.  Provenance is
+                 -- computed against 'definitionCorpus' — no schema
+                 -- change, no stored flag to rot.
+                 primaryGenerated =
+                   not (isCorpusPredicate topic (candidatePredicate primary))
+                 planGoal = if primaryGenerated then GoalHypothesize else goal
                  primaryProposition = predicateProposition (candidatePredicate primary)
                  secondary = comparisonCounter goal primary alternatives
                  counterpoint = buildCounterpoint confidence (candidatePredicate primary) (map candidatePredicate alternatives)
@@ -147,7 +155,7 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                    ]
                  claim = PlannedClaim
                    { pcId = "claim-1"
-                   , pcMode = if topicCovered then claimModeFor goal else ClaimHypothetical
+                   , pcMode = if primaryGenerated then ClaimHypothetical else claimModeFor goal
                    , pcText = renderSemanticProposition primaryProposition
                    , pcPredicateRefs = take 2 (map (cleanSentence . spRu . candidatePredicate) (primary:alternatives))
                    , pcEvidence = EvidenceSelectedPredicate
@@ -163,7 +171,7 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                       ]
                    <> [ PlanDerivation "claim-1" [] DeriveQualification
                         "uncovered topic: generated predicate framed as hypothesis, not canonical definition" []
-                    | not topicCovered
+                    | primaryGenerated
                     ]
                    <> [ PlanDerivation "next-move" [] (obligationRule obligation)
                           "continues the highest-priority unresolved dialogue obligation" []
@@ -229,6 +237,17 @@ nonEmptyProposition text
 derivedProposition :: Text -> SemanticProposition
 derivedProposition text =
   PropositionPredicate "" (catalogedLeafText text) ""
+
+-- | Corpus provenance without stored flags: a predicate is
+-- corpus-backed iff its topic is covered AND its surface is one of
+-- the topic's cataloged predicate surfaces.  Everything else —
+-- uncovered topics and generated constructions under covered ones —
+-- is the system's own and must render as hypothesis.
+isCorpusPredicate :: Text -> SemanticPredicate -> Bool
+isCorpusPredicate topic predicate =
+  isCoveredTopic topic && case lookupDefinitionContent topic of
+    Nothing -> False
+    Just dc -> spRu predicate `elem` map spRu (dcPredicates dc)
 
 claimModeFor :: ResponseGoal -> ClaimMode
 claimModeFor goal = case goal of

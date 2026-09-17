@@ -80,6 +80,7 @@ responsePlanTests =
   , TestLabel "adjacent discourse markers are blocked" testRepeatedMarkersBlocked
   , TestLabel "uncovered topic claim is framed as hypothesis" testUncoveredClaimIsHypothesis
   , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
+  , TestLabel "generated predicate under covered topic is hypothesis" testGeneratedPredicateUnderCoveredTopicIsHypothesis
   ]
 
 testNoTopic :: Test
@@ -596,3 +597,28 @@ testCoveredClaimKeepsCanonicalMode = TestCase $ do
         (c : _) -> assertEqual "covered mode stays known"
           ClaimKnown (pcMode c)
         [] -> assertFailure "covered plan must carry its claim"
+
+-- | Step 2 (predicate-level provenance): a generated construction
+-- under a COVERED topic is still the system's own — corpus boundary
+-- is the predicate surface, not the topic.
+testGeneratedPredicateUnderCoveredTopicIsHypothesis :: Test
+testGeneratedPredicateUnderCoveredTopicIsHypothesis = TestCase $ do
+  let gen = SemanticPredicate
+        RoleProperty
+        "свобода это квантовая суперпозиция выбора"
+        "freedom is a quantum superposition of choice"
+        "свобода"
+        Nothing Nothing Nothing Nothing
+      selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "свобода" [gen] }
+      frame = DefinitionFrame "свобода" GeneralScope Known
+  case buildResponseSemanticPlan selector emptyField
+         "что такое свобода?" Nothing frame (IntentDefine "свобода") of
+    Nothing -> assertFailure "generated define must still build a plan"
+    Just plan -> do
+      assertEqual "generated goal is hypothesis"
+        GoalHypothesize (rspGoal plan)
+      case rspClaims plan of
+        (c : _) -> assertEqual "generated mode is hypothetical"
+          ClaimHypothetical (pcMode c)
+        [] -> assertFailure "generated plan must carry its claim"
