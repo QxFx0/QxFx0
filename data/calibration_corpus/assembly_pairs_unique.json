@@ -18,8 +18,9 @@
   "pathLen": 1,
   "pathScore": 0.05000000000000002,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 1,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -42,8 +43,9 @@
   "pathLen": 1,
   "pathScore": 0.05000000000000002,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -70,8 +72,9 @@
   "pathLen": 2,
   "pathScore": 0.5,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 1,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -98,8 +101,9 @@
   "pathLen": 2,
   "pathScore": 0.2,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -126,8 +130,9 @@
   "pathLen": 2,
   "pathScore": 0.45,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -154,8 +159,9 @@
   "pathLen": 2,
   "pathScore": 0.45,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -182,8 +188,9 @@
   "pathLen": 2,
   "pathScore": 0.35000000000000003,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -214,8 +221,9 @@
   "pathLen": 3,
   "pathScore": 0.3500000000000001,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 1,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -233,8 +241,9 @@
   "pathLen": 1,
   "pathScore": 0.30000000000000004,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 1,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -257,8 +266,9 @@
   "pathLen": 1,
   "pathScore": 0.19999999999999998,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -281,8 +291,9 @@
   "pathLen": 1,
   "pathScore": 0.19999999999999998,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -300,8 +311,9 @@
   "pathLen": 1,
   "pathScore": 0.1,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 0,
+   "assembly_grounded": 1,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -324,8 +336,9 @@
   "pathLen": 1,
   "pathScore": 0.1,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  },
@@ -352,8 +365,9 @@
   "pathLen": 2,
   "pathScore": 0.45,
   "labels": {
-   "assembly_coherent": null,
-   "assembly_grounded": null
+   "assembly_coherent": 2,
+   "assembly_grounded": 2,
+   "rater": "human-v1"
   },
   "provenance": "runtime-v4-assembly+human-pending"
  }

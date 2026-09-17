@@ -337,3 +337,27 @@ labels flip to 0/0 and the fallback path needs a guard)?
   field (schema change, deferred).
 - **Tests**: `testUncoveredClaimIsHypothesis`,
   `testCoveredClaimKeepsCanonicalMode` (unit 1564/1564).
+
+---
+
+# Assembly pass v1 — human labels, no selection influence (2026-09-17)
+
+- **labels**: 14 unique pairs human-v1 (33 harvested records inherit
+  by key); rater confirmed all assistant proposals (14/14)
+- **distribution**: coherent==2: 6/14, coherent>=1: 13/14,
+  grounded==2: 10/14; single incoherent: generic «человек» bridge
+  with empty relations (0/1)
+- **parameters moved**: none
+
+## Decisions
+
+- Rating discriminates as designed (decision 3 vindicated): the
+  generic-bridge assembly scored coherent 0 while path-honest ones
+  passed — no structural guillotine needed.
+- Junk-topic pairs (fragment topicB) scored coherent 1, not 0:
+  the rater judges the assembly, not the topic hygiene. Topic
+  hygiene stays a separate problem (coveredFirst ordering).
+- **No selection influence**: 6/14 full coherence is not a majority
+  win for auto-influence. Assemblies stay proposed-only in
+  `trcAssemblyCandidates` until a larger stratum clears the bar
+  (coherent==2 majority on 50+ unique pairs).
