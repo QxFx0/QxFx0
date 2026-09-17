@@ -280,4 +280,36 @@ endorsementTests =
       assertEqual "no query, no endorsement"
         entries
         (endorseComposition (testGraph Curated) endorseFixtureSelector "свобода" entries)
+
+  , TestLabel "verbalization cites grounds and marks construction" $ TestCase $ do
+      let a = ("свобода", "свобода требует ответственности",
+               term "свобода требует ответственности")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+      case assemblePair a b of
+        Nothing -> assertFailure "expected a bridge"
+        Just asm ->
+          assertEqual "explicit construction, not fluent prose"
+            "свобода — ответственность-связь: исключать произвол; требовать ответственность. Основания: свобода требует ответственности + ответственность исключает произвол"
+            (verbalizeAssembly asm)
+  , TestLabel "utterable assembly selects the top gated candidate" $ TestCase $ do
+      let predA = endorsePred "свобода" "свобода требует ответственности"
+          predB = endorsePred "ответственность" "ответственность исключает произвол"
+          cs = endorseFixtureSelector
+            { csTopicPredicates = M.fromList
+                [ ("свобода", [predA]), ("ответственность", [predB]) ] }
+      case utterableAssembly (testGraph Curated) cs "свобода"
+             [("свобода", "свобода требует ответственности"),
+              ("ответственность", "ответственность исключает произвол")] of
+        Nothing -> assertFailure "expected an utterable assembly"
+        Just asm -> assertBool "carries relations"
+          (not (S.null (ptRels (asmTerm asm))))
+
+  , TestLabel "utterable assembly is silent without a qualifying pair" $ TestCase $ do
+      let predA = endorsePred "свобода" "свобода требует ответственности"
+          cs = endorseFixtureSelector
+      assertEqual "single topic cannot assemble"
+        Nothing
+        (utterableAssembly (testGraph Curated) cs "свобода"
+          [("свобода", "свобода требует ответственности")])
   ]

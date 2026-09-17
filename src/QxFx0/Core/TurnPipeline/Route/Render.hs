@@ -26,7 +26,9 @@ import QxFx0.Safety.CrisisGuard (crisisResourcesRu, renderCrisisSurface)
 import QxFx0.User.Decompress (renderMoveLine)
 import QxFx0.Types.Semantic.MoveGraph (OntologicalMovePlan(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..), AtomSet(..), MeaningAtom(..))
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (fromMaybe, isJust, isNothing, maybeToList)
+import QxFx0.Semantic.Assembly (utterableAssembly, verbalizeAssembly)
+import QxFx0.Types.Semantic.ContentSelector (SelectorDiagnostic(..))
 import qualified Data.Map.Strict as Data.Map
 import qualified Data.Set as Set
 import QxFx0.Core.TurnPipeline.Types
@@ -279,6 +281,19 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
           mActiveQuestion
           semanticFrame
           semanticIntent
+      -- Assembly utterance (goal: the system's own assemblies surface).
+      -- The top R+L2-gated assembly over selected winners renders as an
+      -- explicit hypothesis construction appended to the plan text.
+      -- Proposed rarely (gate), marked always («Гипотеза:» + grounds),
+      -- traced via the generation attempt below and the emitted entry.
+      assemblyHypothesis =
+        let pairs = [ (sdCandidateTopic d, s)
+                    | d <- semanticSelectorDiagnostics
+                    , sdSelected d
+                    , Just s <- [sdPredicateSurface d] ]
+            queryTopic = fromMaybe bestTopic (mResponsePlan >>= rspTopic)
+        in fmap verbalizeAssembly
+             (utterableAssembly (ssRuntimeGraph ss) (ssContentSelector ss) queryTopic pairs)
       responsePlanText = case mResponsePlan of
         Just plan | null (responsePlanQualityIssues plan) -> renderResponseSemanticPlan plan
         Just plan -> renderResponseSemanticPlan plan
@@ -317,11 +332,14 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
          | semanticNonUnknown && semanticMorphReady && not semanticFirstAblated && not (T.null responsePlanText) =
              Just mkSemanticArtifact
         | otherwise = Nothing
+      hypothesisSuffix = case assemblyHypothesis of
+        Nothing  -> ""
+        Just hyp -> "\nГипотеза: " <> hyp
       mkSemanticArtifact = DialogueRenderArtifact
-         { draRenderedText = responsePlanText
+         { draRenderedText = responsePlanText <> hypothesisSuffix
         , draQuestionLike = False
         , draStylePrefixText = ""
-         , draTemplateBodyText = responsePlanText
+         , draTemplateBodyText = responsePlanText <> hypothesisSuffix
         , draClaimText = ""
         , draClaimAst = Nothing
         , draLinearizationLang = Just "semantic_intent"
@@ -340,8 +358,11 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             [ GenerationAttempt "semantic_intent" "ok"
             , GenerationAttempt "frame_builder" "ok"
             , GenerationAttempt "compositional_generator" "ok"
+            , GenerationAttempt "assembly_hypothesis"
+                (maybe "none" (const "uttered") assemblyHypothesis)
             ]
         , draEmittedPredicates = semanticEmittedPredicates
+             <> maybeToList (("Гипотеза: " <>) <$> assemblyHypothesis)
          , draSelectorDiagnostics = semanticSelectorDiagnostics
          , draActivationArtifact = mActivationArtifact
          , draResponsePlan = mResponsePlan
@@ -1320,8 +1341,8 @@ applyRuntimeGfResult gfLang renderStatic result =
           let baseArtifact = rsTemplateArtifact renderStatic
               updatedArtifact =
                 baseArtifact
-                  { draRenderedText = glrText gfResult
-                  , draTemplateBodyText = glrText gfResult
+                  { draRenderedText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
+                  , draTemplateBodyText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
                   , draLinearizationLang = Just (glrLanguage gfResult)
                   , draLinearizationOk = True
                   , draFallbackReason = glrFallbackReason gfResult
@@ -1362,8 +1383,8 @@ applyRuntimeGfResult gfLang renderStatic result =
           let baseArtifact = rsTemplateArtifact renderStatic
               updatedArtifact =
                 baseArtifact
-                  { draRenderedText = glrText gfResult
-                  , draTemplateBodyText = glrText gfResult
+                  { draRenderedText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
+                  , draTemplateBodyText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
                   , draLinearizationLang = Just (glrLanguage gfResult)
                   , draLinearizationOk = True
                   , draFallbackReason = glrFallbackReason gfResult
@@ -1397,15 +1418,15 @@ applyRuntimeGfResult gfLang renderStatic result =
                 , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
                 , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
                 , rsArtifactManifest = Just (glrArtifactManifest gfResult)
-                 , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
+                 , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult) <> hypothesisSuffixFrom baseArtifact
                  }
     TurnResLinearizeResponsePlan (Right gfResult)
       | not (T.null (T.strip (glrText gfResult))) ->
           let baseArtifact = rsTemplateArtifact renderStatic
               updatedArtifact =
                 baseArtifact
-                  { draRenderedText = glrText gfResult
-                  , draTemplateBodyText = glrText gfResult
+                  { draRenderedText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
+                  , draTemplateBodyText = glrText gfResult <> hypothesisSuffixFrom baseArtifact
                   , draLinearizationLang = Just (glrLanguage gfResult)
                   , draLinearizationOk = True
                   , draFallbackReason = glrFallbackReason gfResult
@@ -1424,7 +1445,7 @@ applyRuntimeGfResult gfLang renderStatic result =
                , rsResolvedAssemblyPath = Just (glrAssemblyPath gfResult)
                , rsResolvedAuthorityClass = Just (glrAuthorityClass gfResult)
                , rsArtifactManifest = Just (glrArtifactManifest gfResult)
-               , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult)
+               , rsRenderWithBg = rebuildRenderWithBg renderStatic (glrText gfResult) <> hypothesisSuffixFrom baseArtifact
                }
     TurnResLinearizeResponsePlan (Left err) ->
       let baseArtifact = rsTemplateArtifact renderStatic
@@ -1495,6 +1516,19 @@ detectInputGfLang input
     letters = T.filter isAlpha input
     hasLatin = T.any (\c -> ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')) letters
     hasCyrillic = T.any (\c -> ('а' <= c && c <= 'я') || ('А' <= c && c <= 'Я') || c == 'ё' || c == 'Ё') letters
+
+-- | Re-attach uttered assembly hypotheses after GF resolution.
+-- GF linearizes the admitted claim, which cannot carry a novel
+-- assembly (unmapped by design); without this the hypothesis
+-- fragment computed in the plan phase would vanish whenever GF wins.
+-- The fragment survives in the base artifact's emitted entries
+-- ("Гипотеза: ..."-prefixed), so recovery is exact, not heuristic.
+hypothesisSuffixFrom :: DialogueRenderArtifact -> Text
+hypothesisSuffixFrom baseArtifact =
+  case [ e | e <- draEmittedPredicates baseArtifact
+       , "Гипотеза:" `T.isPrefixOf` e ] of
+    [] -> ""
+    hs -> "\n" <> T.intercalate "\n" hs
 
 rebuildRenderWithBg :: RenderStatic -> Text -> Text
 rebuildRenderWithBg renderStatic claimText =

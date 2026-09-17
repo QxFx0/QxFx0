@@ -48,6 +48,10 @@ module QxFx0.Semantic.Assembly
     -- * Selection endorsement (selector math v5)
   , assemblyEndorsementBonus
   , endorseComposition
+    -- * Verbalization (v1, hypothesis-marked)
+  , verbalizeAssembly
+    -- * Utterance selection (render phase)
+  , utterableAssembly
     -- * Rating labels (schema reference)
   , assemblyRatingLabels
   ) where
@@ -391,3 +395,76 @@ endorseComposition graph cs queryTopic entries =
       [ e | e@(t, _p, _s, _w) <- entries, t == queryTopic ]
     gateAdmits proof term =
       not (S.null (ptRels term)) && length (ppEdges proof) <= 2
+
+-- ---------------------------------------------------------------------------
+-- Verbalization (v1, hypothesis-marked)
+-- ---------------------------------------------------------------------------
+
+-- | Render an assembly as an explicit construction.  Deliberately NOT
+-- fluent prose: verbs stay infinitive (no conjugation tables exist —
+-- morphology is nouns-only) and both source surfaces are cited as
+-- grounds.  Form: «{head} — {bridge}-связь: {verb} {obj}; …;
+-- основания: {surfA} + {surfB}».  Fluency is the realizer's future
+-- job; honesty (marked construction + cited grounds) is today's.
+-- Total, deterministic.  Empty relations render as head + bridge only.
+verbalizeAssembly :: Assembly -> Text
+verbalizeAssembly asm =
+  let (mHead, rels) = assemblyProposition asm
+      (surfA, surfB) = case asmSources asm of
+        [(_, a), (_, b)] -> (a, b)
+        ss               -> case (listToMaybe ss, listToMaybe (reverse ss)) of
+                              (Just (_, a), Just (_, b)) -> (a, b)
+                              _                          -> ("", "")
+      headPart = case mHead of
+                   Just h  -> h
+                   Nothing -> asmBridge asm
+      relPart = case rels of
+                  [] -> ""
+                  _  -> ": " <> T.intercalate "; " [ v <> " " <> o | (v, o) <- rels ]
+      bridgePart = " — " <> asmBridge asm <> "-связь"
+  in headPart <> bridgePart <> relPart
+       <> ". Основания: " <> surfA <> " + " <> surfB
+
+-- ---------------------------------------------------------------------------
+-- Utterance selection (render phase)
+-- ---------------------------------------------------------------------------
+
+-- | Top-1 utterable assembly over composed winners, R+L2-gated
+-- (composed relations non-empty, validated path at most 2 edges —
+-- the measured proxy of coherent==2 with zero incoherent admitted).
+-- Returns 'Nothing' when no pair qualifies: silence over invention.
+-- Pure, total, deterministic.  The caller renders the result through
+-- 'verbalizeAssembly' under the landed hypothesis framing.
+utterableAssembly
+  :: AtomGraph
+  -> ContentSelector
+  -> Text
+  -- ^ Query topic.
+  -> [(Text, Text)]
+  -- ^ Composed winners as (topic, surface) pairs.
+  -> Maybe Assembly
+utterableAssembly graph cs query pairs =
+  let lemmaMap = csLemmaMap cs
+      atomsOf t = M.findWithDefault S.empty t (csTopicAtoms cs)
+      byTopic = M.toList (M.fromListWith (++)
+        [ (t, [surf]) | (t, surf) <- pairs ])
+      querySurfs = take 2 (concatMap snd (filter ((== query) . fst) byTopic))
+      others = take 4
+        [ (t, take 2 surfs)
+        | (t, surfs) <- byTopic, t /= query ]
+      attempt (surfA, surfB, other) =
+        let termA = parsePredicateTerm lemmaMap surfA
+            termB = parsePredicateTerm lemmaMap surfB
+        in [ (asm, proof, score)
+           | (asm, proof, score) <- assembleViaGraph graph
+               (atomsOf query) (atomsOf other)
+               (query, surfA, termA) (other, surfB, termB)
+           , not (S.null (ptRels (asmTerm asm)))
+           , length (ppEdges proof) <= 2
+           ]
+      ranked = L.sortBy (comparing (\(_, proof, s) -> (length (ppEdges proof), negate s)))
+        [ r | surfA <- querySurfs, (other, surfsB) <- others
+        , surfB <- surfsB, r <- attempt (surfA, surfB, other) ]
+  in case ranked of
+       ((asm, _proof, _score) : _) -> Just asm
+       []                          -> Nothing
