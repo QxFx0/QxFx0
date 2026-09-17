@@ -45,6 +45,9 @@ module QxFx0.Semantic.Assembly
   , assembleViaGraph
     -- * Relation-type verb map (frozen v1)
   , relTypeVerb
+    -- * Selection endorsement (selector math v5)
+  , assemblyEndorsementBonus
+  , endorseComposition
     -- * Rating labels (schema reference)
   , assemblyRatingLabels
   ) where
@@ -57,12 +60,14 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import qualified Data.List as L
-import Data.Maybe (fromMaybe)
+import qualified Data.Map.Strict as M
+import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ord (comparing)
 
 import QxFx0.Semantic.Composition
   ( PredicateTerm(..)
   , jaccardBaseline
+  , parsePredicateTerm
   )
 import QxFx0.Semantic.Content.PathFinder
   ( AtomGraph
@@ -80,6 +85,8 @@ import QxFx0.Types.Semantic.AtomGraph
   , Relation(..)
   , RelationType(..)
   )
+import QxFx0.Types.Semantic.ContentSelector (ContentSelector(..))
+import QxFx0.Types.Semantic.Content (SemanticPredicate(..))
 
 -- | A composed meaning: the term, its two sources, the bridge.
 data Assembly = Assembly
@@ -330,3 +337,57 @@ relTypeVerb relType = case relType of
   RelInfluences     -> "влиять"
   RelPartOf         -> "входить"
   RelOpposes        -> "противостоять"
+
+-- ---------------------------------------------------------------------------
+-- Selection endorsement (selector math v5)
+-- ---------------------------------------------------------------------------
+
+-- | Hand-set v1 endorsement bonus (calibration group 3 밝기; pinned in
+-- @data\/calibration\/ranges.json@, codomain [0,1]).  An endorsed
+-- topic's composition weight grows by this flat bonus, applied
+-- max-once per topic — endorsement is a nudge, never a stacking
+-- campaign.  Changing the default requires a math-version bump.
+assemblyEndorsementBonus :: Double
+assemblyEndorsementBonus = 0.15
+
+-- | Boost composition weights for topics covered by a gate-passing
+-- assembly with the query topic.  Runtime proxy of the human
+-- coherent==2 verdict (calibration: R+L2 without coveredness —
+-- precision 0.61, recall 1.00, zero incoherent admitted on 35 pairs):
+-- the composed term carries non-empty relations AND the validated
+-- path is at most 2 edges.  Topics without a query entry pass
+-- through untouched.  Pure, total, deterministic.
+endorseComposition
+  :: AtomGraph
+  -> ContentSelector
+  -> Text
+  -- ^ Query topic.
+  -> [(Text, SemanticPredicate, Double, Double)]
+  -- ^ (topic, predicate, score, weight) per-topic winners.
+  -> [(Text, SemanticPredicate, Double, Double)]
+endorseComposition graph cs queryTopic entries =
+  case queryEntry of
+    Nothing -> entries
+    Just (qTopic, qPred, _qScore, _qWeight) ->
+      let qTerm = parsePredicateTerm (csLemmaMap cs) (spRu qPred)
+          qAtoms = atomsOf qTopic
+          endorsedTopics = S.fromList
+            [ t
+            | (t, pred_, _s, _w) <- entries
+            , t /= qTopic
+            , let term = parsePredicateTerm (csLemmaMap cs) (spRu pred_)
+            , (asm, proof, _score) <- assembleViaGraph graph
+                qAtoms (atomsOf t)
+                (qTopic, spRu qPred, qTerm) (t, spRu pred_, term)
+            , gateAdmits proof (asmTerm asm)
+            ]
+      in [ if t `S.member` endorsedTopics || t == qTopic && not (S.null endorsedTopics)
+             then (t, p, s, w + assemblyEndorsementBonus)
+             else (t, p, s, w)
+         | (t, p, s, w) <- entries ]
+  where
+    atomsOf t = M.findWithDefault S.empty t (csTopicAtoms cs)
+    queryEntry = listToMaybe
+      [ e | e@(t, _p, _s, _w) <- entries, t == queryTopic ]
+    gateAdmits proof term =
+      not (S.null (ptRels term)) && length (ppEdges proof) <= 2

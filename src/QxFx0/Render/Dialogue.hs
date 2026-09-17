@@ -545,7 +545,7 @@ appendSupplement base supplement =
 frameSupplement :: VerbalizationMode -> MorphologyData -> ContentSelector -> Field -> Text -> Maybe SemanticNetwork -> Bool -> Text
 frameSupplement mode morph cs field topic mNetwork isEn =
   let mArtifact = buildSelectorActivationArtifact cs field [topic] <$> mNetwork
-      (surface, _, _) = frameSupplementWithEmitted mode morph cs field builtinFieldHeuristics topic mArtifact isEn Set.empty
+      (surface, _, _) = frameSupplementWithEmitted mode morph cs field builtinFieldHeuristics topic mArtifact isEn Set.empty Nothing
   in surface
 
 -- | Internal version that accepts a set of already-emitted predicate surface
@@ -561,11 +561,14 @@ frameSupplementWithEmitted
   -> Maybe ActivationArtifact
   -> Bool
   -> Set.Set Text
+  -> Maybe AtomGraph
+  -- ^ 'Just' enables assembly endorsement (selector math v5);
+  -- 'Nothing' preserves legacy behavior byte-for-byte.
   -> (Text, [Text], [SelectorDiagnostic])
-frameSupplementWithEmitted mode morph cs field heuristics topic mArtifact isEn emittedSet =
+frameSupplementWithEmitted mode morph cs field heuristics topic mArtifact isEn emittedSet mGraph =
   case mArtifact of
     Just artifact | spreadingActivationActive ->
-      let (composed, diagnostics) = composeFromArtifactWithDiagnostics cs field heuristics topic artifact
+      let (composed, diagnostics) = composeFromArtifactWithDiagnostics cs field heuristics topic artifact mGraph
           filtered = filter (\p -> not (Set.member (spRu p) emittedSet)) composed
           renderedDiagnostics = map markPriorEmission diagnostics
       in if null filtered
@@ -2087,7 +2090,7 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
         isEn = isEnglishInput topic
         authorityText = renderFrameAuthority authority
         fallback = authorityText <> " " <> topicNom <> " — содержание не прошло проверку качества и не может быть представлено без проверки."
-        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmDefinition morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmDefinition morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
     in (appendSupplement fallback supplement, emitted, diagnostics)
 
   FT.DistinctionFrame left right criteria ->
@@ -2100,8 +2103,8 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
         base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
                <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
-        (leftSup, leftEmitted, leftDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mArtifact isEn (ssEmittedPredicates ss)
-        (rightSup, rightEmitted, rightDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mArtifact isEn (ssEmittedPredicates ss)
+        (leftSup, leftEmitted, leftDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
+        (rightSup, rightEmitted, rightDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
         supplement = T.intercalate ". " (filter (not . T.null) [leftSup, rightSup])
     in (appendSupplement base supplement, leftEmitted ++ rightEmitted, leftDiagnostics ++ rightDiagnostics)
 
@@ -2117,7 +2120,7 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
         firmFallback = "Возражение принято как проверка тезиса. "
                     <> safeBasis <> " не отменяет " <> safeTarget
                     <> ", но требует явно назвать критерий и границу утверждения."
-        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmChallenge morph cs field (selfFieldHeuristics (ssSelfState ss)) rawObj mArtifact isEn (ssEmittedPredicates ss)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmChallenge morph cs field (selfFieldHeuristics (ssSelfState ss)) rawObj mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
     in case strength of
          FT.Soft -> (appendSupplement softFallback supplement, emitted, diagnostics)
          FT.Firm -> (appendSupplement firmFallback supplement, emitted, diagnostics)
@@ -2141,7 +2144,7 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
     let topicNom = toNominative morph topic
         isEn = isEnglishInput topic
         fallback = "Когда я думаю о " <> topicNom <> ", я слышу в нём не только предмет, но и поле смыслов. Здесь можно идти через память, утрату, близость и способ удерживать форму жизни."
-        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmReflection morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss)
+        (supplement, emitted, diagnostics) = frameSupplementWithEmitted VmReflection morph cs field (selfFieldHeuristics (ssSelfState ss)) topic mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
     in (appendSupplement fallback supplement, emitted, diagnostics)
 
   FT.LearnFrame topic depth ->

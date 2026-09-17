@@ -42,6 +42,7 @@ frozen-on-release. Любое изменение требует bump `currentMat
 | synthesis Conjunction/Irreducible | shared ≥ 2 атома | `Semantic/Revision.hs` |
 | confidence decay / synthesis conf | ×0.9 / 0.5 / 0.3 | `Semantic/Revision.hs` |
 | `structScore` weights (SHADOW v1) | 0.5 / 0.3 / 0.15 / 0.05 | `Semantic/Composition.hs` (`defaultStructWeights`, ranges.json) |
+| `assemblyEndorsementBonus` (v5 influence) | 0.15, max-once | `Semantic/Assembly.hs` (ranges.json) |
 
 ## 4. Concept-v3 / user contour
 

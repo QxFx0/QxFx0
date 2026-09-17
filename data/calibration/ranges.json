@@ -172,6 +172,16 @@
       "source": "src/QxFx0/Semantic/Composition.hs",
       "default_value": 0.05,
       "rationale": "structScore weight (hand-set v1, calibration group 3); gated signal is the [0,1] structural match."
+    },
+    {
+      "name": "AssemblyEndorsement.assemblyEndorsementBonus",
+      "module": "QxFx0.Semantic.Assembly",
+      "field": "assemblyEndorsementBonus",
+      "lo": 0.0,
+      "hi": 1.0,
+      "source": "src/QxFx0/Semantic/Assembly.hs",
+      "default_value": 0.15,
+      "rationale": "composition weight bonus for gate-passing assemblies (hand-set v1, calibration group 3); max-once per topic."
     }
   ]
 }

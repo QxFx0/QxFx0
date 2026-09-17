@@ -34,6 +34,8 @@ import qualified Data.Vector as V
 
 import QxFx0.Semantic.Space (tokenizePredicate, SemanticSpace(..), FieldDimension(..), PredicateVector(..), computeFieldAffinity)
 import QxFx0.Semantic.Network (SemanticNetwork(..), activateTopicWithField, getActivatedAtoms, activateArtifact, ActivationArtifact(..), activationArtifactNetwork)
+import QxFx0.Semantic.Assembly (endorseComposition)
+import QxFx0.Types.Semantic.AtomGraph (AtomGraph)
 import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), lookupOntologyNode, lookupSiblings, lookupChildren, lookupCategory)
@@ -242,23 +244,31 @@ composeFromActivationWithDiagnostics
   -> FieldHeuristics
   -> Text
   -> SemanticNetwork
+  -> Maybe AtomGraph
   -> ([SemanticPredicate], [SelectorDiagnostic])
-composeFromActivationWithDiagnostics cs field heuristics topic network =
+composeFromActivationWithDiagnostics cs field heuristics topic network mGraph =
   let topicAtoms = M.findWithDefault S.empty topic (csTopicAtoms cs)
       activatedNetwork = activateTopicWithField field topicAtoms network
-  in composeFromActivationSnapshot cs field heuristics topic (snActivation activatedNetwork)
+  in composeFromActivationSnapshot cs field heuristics topic (snActivation activatedNetwork) mGraph
 
 -- | Shared composition core over an already-computed activation snapshot.
 -- Candidate topics overlap the activated atoms; the best predicate per topic
 -- is scored against a network view whose activation is the supplied map.
+-- The atom graph enables assembly endorsement (selector math v5):
+-- per-topic winners covered by a gate-passing assembly with the query
+-- topic receive 'assemblyEndorsementBonus' on their weight before the
+-- top-3 cut.  Selection-influence is rare, strict and trace-visible.
 composeFromActivationSnapshot
   :: ContentSelector
   -> Field
   -> FieldHeuristics
   -> Text
   -> Map Text Double
+  -> Maybe AtomGraph
+  -- ^ 'Nothing' preserves legacy behavior byte-for-byte (no
+  -- endorsement); 'Just' enables assembly endorsement.
   -> ([SemanticPredicate], [SelectorDiagnostic])
-composeFromActivationSnapshot cs field heuristics topic actMap =
+composeFromActivationSnapshot cs field heuristics topic actMap mGraph =
   let activatedAtoms = S.fromList
         [ a | (a, v) <- M.toList actMap, v > 0.05 ]
       overlapping =
@@ -289,7 +299,11 @@ composeFromActivationSnapshot cs field heuristics topic actMap =
                                 else 0.0
                  in (t, p, s, weight)
                ) perTopicPreds
-             top3 = take 3 (sortBy (comparing (Down . (\(_, _, _, w) -> w))) weighted)
+             endorsed = case mGraph of
+               Nothing    -> weighted
+               Just graph -> endorseComposition graph cs topic weighted
+             top3 = take 3 (sortBy (comparing (Down . (\(_, _, _, w) -> w))) endorsed)
+
              composition = map (\ (_, p, _, _) -> p) top3
              selectedKeys = [ (t, spRu p) | (t, p, _, _) <- top3 ]
              winnerDiagnostics = concat
@@ -375,9 +389,10 @@ composeFromArtifactWithDiagnostics
   -> FieldHeuristics
   -> Text
   -> ActivationArtifact
+  -> Maybe AtomGraph
   -> ([SemanticPredicate], [SelectorDiagnostic])
-composeFromArtifactWithDiagnostics cs field heuristics topic artifact =
-  composeFromActivationSnapshot cs field heuristics topic (aaActivation artifact)
+composeFromArtifactWithDiagnostics cs field heuristics topic artifact mGraph =
+  composeFromActivationSnapshot cs field heuristics topic (aaActivation artifact) mGraph
 
 -- | Collect related topics from the ontology, if one is configured.
 -- Returns siblings and children of the queried topic so that

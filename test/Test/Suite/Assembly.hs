@@ -16,6 +16,9 @@ import QxFx0.Semantic.Assembly
 import QxFx0.Semantic.Composition
 import QxFx0.Semantic.ContentSelector.Types (selectorMathVersion)
 import QxFx0.Types.Semantic.AtomGraph
+import QxFx0.Types.Semantic.ContentSelector (ContentSelector(..))
+import QxFx0.Types.Semantic.Content (PredicateRole(..), SemanticPredicate(..))
+import QxFx0.Semantic.Space.Types (emptySemanticSpace)
 import QxFx0.Semantic.Content.AtomStore (seedGraph)
 
 testLemmaMap :: M.Map T.Text T.Text
@@ -114,7 +117,7 @@ assemblyTests =
   , TestLabel "rating labels are the decided two" $ TestCase $
       assertEqual "coherent + grounded"
         ["assembly_coherent", "assembly_grounded"] assemblyRatingLabels
-  ] ++ graphAssemblyTests
+  ] ++ graphAssemblyTests ++ endorsementTests
 
 -- ---------------------------------------------------------------------------
 -- Graph wiring (selector math v4)
@@ -211,12 +214,70 @@ graphAssemblyTests =
                   (S.singleton "свобода") (S.singleton "ответственность") a b
       assertBool "real seed graph must yield at least one assembly" (not (null res))
 
-  , TestLabel "selector math version stamps the wiring regime" $ TestCase $
+  , TestLabel "selector math version stamps the endorsement regime" $ TestCase $
       assertEqual "math v4"
-        "selector-math-v4-topic-field-activation-ontology-assembly"
+        "selector-math-v5-topic-field-activation-ontology-assembly-endorsement"
         selectorMathVersion
 
   , TestLabel "relation-type verb map is total and non-empty" $ TestCase $
       assertBool "every RelationType maps to a non-empty verb"
         (all (not . T.null . relTypeVerb) [minBound .. maxBound])
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Selection endorsement (selector math v5)
+-- ---------------------------------------------------------------------------
+
+endorseFixtureSelector :: ContentSelector
+endorseFixtureSelector = ContentSelector
+  { csSpace = emptySemanticSpace
+  , csTopicAtoms = M.fromList
+      [ ("свобода", S.fromList ["свобода", "выбор"])
+      , ("ответственность", S.fromList ["ответственность"])
+      ]
+  , csTopicPredicates = M.empty
+  , csLemmaMap = M.fromList
+      [ ("требует", "требовать")
+      , ("ответственности", "ответственность")
+      ]
+  , csOntology = Nothing
+  }
+
+endorsePred :: T.Text -> T.Text -> SemanticPredicate
+endorsePred topic surface = SemanticPredicate
+  RoleProperty surface surface topic Nothing Nothing Nothing Nothing
+
+endorsementTests :: [Test]
+endorsementTests =
+  [ TestLabel "endorsement bonus value is pinned" $ TestCase $
+      assertEqual "hand-set v1" 0.15 assemblyEndorsementBonus
+
+  , TestLabel "gate-passing assembly boosts both topics" $ TestCase $ do
+      let entries =
+            [ ("свобода", endorsePred "свобода" "свобода требует ответственности", 0.5, 0.40)
+            , ("ответственность", endorsePred "ответственность" "ответственность исключает произвол", 0.5, 0.35)
+            ]
+          boosted = endorseComposition (testGraph Curated) endorseFixtureSelector "свобода" entries
+      case boosted of
+        [(t1, _, _, w1), (t2, _, _, w2)] -> do
+          assertEqual "query boosted" 0.55 w1
+          assertEqual "partner boosted" 0.50 w2
+          assertEqual "topics preserved" ["свобода", "ответственность"] [t1, t2]
+        _ -> assertFailure "expected two endorsed entries"
+
+  , TestLabel "raw-substrate graph endorses nothing" $ TestCase $ do
+      let entries =
+            [ ("свобода", endorsePred "свобода" "свобода требует ответственности", 0.5, 0.40)
+            , ("ответственность", endorsePred "ответственность" "ответственность исключает произвол", 0.5, 0.35)
+            ]
+      assertEqual "weights untouched"
+        entries
+        (endorseComposition (testGraph SubstrateExtractedRaw) endorseFixtureSelector "свобода" entries)
+
+  , TestLabel "missing query entry passes through" $ TestCase $ do
+      let entries =
+            [ ("ответственность", endorsePred "ответственность" "ответственность исключает произвол", 0.5, 0.35) ]
+      assertEqual "no query, no endorsement"
+        entries
+        (endorseComposition (testGraph Curated) endorseFixtureSelector "свобода" entries)
   ]

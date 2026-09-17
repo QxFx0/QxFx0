@@ -75,3 +75,23 @@ the admission authority — the composer never bypasses the gate).
   Follow-up: `withVerb` pass over seed edges (or a frozen
   RelationType→infinitive map, same discipline as relationLexicon).
   The trace shows the gap honestly (`acRelations: []`).
+
+## Endorsement influence (selector math v5, operator choice б+R+L2)
+
+- `endorseComposition` (Assembly.hs) runs inside
+  `composeFromActivationSnapshot` when an atom graph is supplied
+  (`Maybe AtomGraph`: `Nothing` = legacy byte-for-byte).
+- Rule: per-topic winners covered by a gate-passing assembly with the
+  query topic get `assemblyEndorsementBonus = 0.15` (hand-set v1,
+  ranges.json, max-once per topic) before the top-3 cut. Runtime proxy
+  of coherent==2: composed rels non-empty AND validated path ≤ 2
+  (measured prec 0.61 / rec 1.00, zero incoherent admitted on 35).
+- Production threading: `frameSupplementWithEmitted` takes the graph;
+  the 5 ss-sites pass `Just (ssRuntimeGraph ss)`, the exported wrapper
+  and tests pass `Nothing`. `selectorMathVersion` → v5.
+- Observability: influence is reconstructible offline (candidates in
+  `trcAssemblyCandidates` + selected flags + deterministic bonus),
+  not stamped per-decision — accepted, documented here instead.
+- No global math bump: the regime rule lists Conatus/Salience/
+  Essence/Field/CTS params; a selector-local bonus is covered by the
+  selector version tag.

@@ -292,7 +292,7 @@ contentSelectorTests =
             , snMaxHops = 3
             , snActivationLog = Seq.empty
             }
-          (_selected, diagnostics) = composeFromActivationWithDiagnostics cs emptyField builtinFieldHeuristics "тема" net
+          (_selected, diagnostics) = composeFromActivationWithDiagnostics cs emptyField builtinFieldHeuristics "тема" net Nothing
           topicDiagnostics = [d | d <- diagnostics, sdCandidateTopic d == "тема", sdPredicateSurface d == Nothing]
       assertEqual "the topic is in the corpus but has no activated route" 1 (length topicDiagnostics)
       assertEqual "diagnostic distinguishes activation exclusion from absence" "topic_not_activated_or_ontology_related" (sdReason (head topicDiagnostics))
