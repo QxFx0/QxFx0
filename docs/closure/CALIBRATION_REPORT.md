@@ -419,3 +419,26 @@ labels flip to 0/0 and the fallback path needs a guard)?
 - **Residual**: short-prefix verbs («даёт» — now covered via давать
   forms), unknown-verb backstop stays (stem fallback); full verb
   morphology beyond the 24 remains open data work.
+
+---
+
+# Assembly pass v2 — 35 unique rated, bar not cleared (2026-09-17)
+
+- **labels**: 35/35 unique human-v1 (75 harvested records inherit by
+  key); rater confirmed all 21 new proposals
+- **distribution**: coherent==2: 14/35 (40%), coherent>=1: 28/35,
+  grounded==2: 24/35
+- **parameters moved**: none
+
+## Decisions
+
+- **No selection influence**: 14/35 is not a coherent==2 majority,
+  and 35 < 50-pair bar. Assemblies stay proposed-only.
+- **Mechanical pre-gate adopted for the future influence switch**:
+  all 7 coherent==0 assemblies carry empty relations — an assembly
+  with no relations is ineligible for selection influence regardless
+  of rating. (Recorded rule, not yet code: implement with the switch.)
+- **Surface inconsistency noted**: stem-backstop relations keep raw
+  inflections («соединяют» vs lemma «соединять»). Future: normalize
+  backstop hits to infinitive via the verb table (verbs.json author
+ itative form) or mark them unlemmatized in the candidate.
