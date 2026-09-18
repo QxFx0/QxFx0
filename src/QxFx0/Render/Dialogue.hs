@@ -829,8 +829,20 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
               distText = case mDist of
                 Just dc -> ". " <> T.intercalate " " (map (if isEn then spEn else spRu) (filterAdmissiblePredicates (dcDifferentiators dc)))
                 Nothing -> ""
-              bodyText = if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> claimText <> distText
-                else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> claimText <> distText
+              -- F4 (2026-09-17): 55 of 120 covered topics have no GF
+              -- lexeme, and the linearizer then renders the default lexeme
+              -- («понятие и понятие», rated 0/0).  When either side falls
+              -- back, say so honestly instead of presenting the default
+              -- as content.  Covered topics keep the exact old surface.
+              lexemeFallback = snd (topicToGfLexemeDecision leftNom)
+                <|> snd (topicToGfLexemeDecision rightNom)
+              bodyText = case lexemeFallback of
+                Just _ ->
+                  if isEn then "I can distinguish " <> leftNom <> " from " <> rightNom <> ", but I have no ready grammatical frame for this pair. Name a criterion and I will compare along it."
+                  else "Различим " <> leftNom <> " и " <> rightNom <> ": готовой рамки в грамматике для этой пары у меня нет. Уточни критерий — и я сопоставлю по нему."
+                Nothing ->
+                  if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> claimText <> distText
+                  else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> claimText <> distText
           in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
         _ ->
           plain (if isEn then "Distinction requires an explicit frame of criteria. " <> rmpPrimaryClaim rmp
@@ -1187,9 +1199,14 @@ linearizeClaimAstRus rp ast renderStyle morph =
       let topicNom = lookupLemmaForm rp gfTopic Nom
       in Just ("Гипотеза: " <> topicNom <> " можно объяснить через локальную модель.")
     MoveDistinguish (MkNP gfLeft) (MkNP gfRight) ->
-      let leftAcc = lookupLemmaForm rp gfLeft Acc
-          rightAcc = lookupLemmaForm rp gfRight Acc
-      in Just ("Различим " <> leftAcc <> " и " <> rightAcc <> " в одной рамке критериев.")
+      -- F4 (2026-09-17): defaulted funIds ("ponyatie_N") mean the topic
+      -- has no GF lexeme — rendering them as content («понятие и
+      -- понятие», rated 0/0) is false authority.  Abstain honestly.
+      if gfLeft == defaultGfLexemeId || gfRight == defaultGfLexemeId
+        then Just "Различить эту пару честно не могу: одна из тем отсутствует в грамматике. Уточни критерий — и я сопоставлю по нему."
+        else let leftAcc = lookupLemmaForm rp gfLeft Acc
+                 rightAcc = lookupLemmaForm rp gfRight Acc
+             in Just ("Различим " <> leftAcc <> " и " <> rightAcc <> " в одной рамке критериев.")
     MoveActOnTopic ActAnswer    -> Just ("Поговорим об ответе.")
     MoveActOnTopic ActQuestion  -> Just ("Поговорим о вопросе.")
     MoveActOnTopic ActTopicTerm -> Just ("Поговорим о теме.")

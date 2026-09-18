@@ -177,8 +177,11 @@ classifyStructural rawText f
   | sfIsQuestion f && sfHasNextStepMark f = Just IntentNextStep
   -- Question + purpose marker → purpose
   | sfIsQuestion f && sfHasPurposeMark f = Just (IntentPurpose (extractTopicAfter rawText "для чего"))
-  -- Question + world cause marker → world cause
-  | sfIsQuestion f && sfHasWorldCauseMark f = Just (IntentWorldCause (extractTopicAfter rawText "почему"))
+  -- Question + world cause marker → world cause.
+  -- F2 (2026-09-17): the raw tail («свобода важно для человека?»)
+  -- is a clause, not a topic — trim it to the topic span so content
+  -- resolution sees «свобода», not the whole sentence.
+  | sfIsQuestion f && sfHasWorldCauseMark f = Just (IntentWorldCause (trimClauseTail (extractTopicAfter rawText "почему")))
   -- Question + deepen marker → deepen
   | sfIsQuestion f && sfHasDeepenMark f = Just (IntentDeepen (extractTopicAfter rawText "расскажи"))
   -- Question + generative marker → reflect
@@ -240,6 +243,21 @@ classifyTopicSpecific f
 -- | Extract topic after a marker phrase, wherever the marker occurs.
 -- E.g., extractTopicAfter "что такое свобода" "что такое" → "свобода"
 -- E.g., extractTopicAfter "объясни подробнее, что такое свобода" "что такое" → "свобода"
+-- | Trim a world-cause tail to its topic span: cut at the first
+-- clause boundary (evaluative predicate, purpose adjunct, question
+-- mark).  «свобода важно для человека?» becomes «свобода»;
+-- multiword topics before the boundary survive intact.
+trimClauseTail :: Text -> Text
+trimClauseTail text =
+  let lower = T.toLower text
+      stops = [" важно", " нужно", " для ", " потому", "?"]
+      cut = foldr (\stop best -> case T.breakOn stop lower of
+                     (before, after)
+                       | T.null after -> best
+                       | otherwise -> min best (T.length before))
+              (T.length lower) stops
+  in T.strip (T.take cut (T.strip text))
+
 extractTopicAfter :: Text -> Text -> Text
 extractTopicAfter rawText marker =
   let lower = T.toLower (T.strip rawText)

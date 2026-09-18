@@ -13,11 +13,12 @@ module Test.Suite.IntentClassifier
   ( intentClassifierTests
   ) where
 
-import Test.HUnit (Test(..), assertEqual, assertBool)
+import Test.HUnit (Test(..), assertEqual, assertBool, assertFailure)
 
 import Data.Text (Text)
 import qualified Data.Text as T
 
+import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
@@ -102,6 +103,24 @@ structuralTests = TestLabel "StructuralClassification" $ TestList
   , TestCase $ assertEqual "reflect" IntentReflect (classify "что думаешь")
 
   , TestCase $ assertEqual "operational" IntentOperational (classify "ты работаешь")
+
+  -- F2 (2026-09-17): world-cause tail must trim to the topic span,
+  -- not carry the whole clause into content resolution.
+  , TestCase $ case classify "почему свобода важно для человека?" of
+      IntentWorldCause topic -> assertEqual "why-topic" "свобода" topic
+      other -> assertFailure ("expected IntentWorldCause, got " ++ show other)
+
+  , TestCase $ case classify "почему осознанность выбора важно?" of
+      IntentWorldCause topic -> assertEqual "why multiword topic" "осознанность выбора" topic
+      other -> assertFailure ("expected IntentWorldCause, got " ++ show other)
+
+  -- F4 (2026-09-17): verb tails must not leak into distinction topics
+  -- (they pushed GF to the default lexeme: «понятие и понятие»).
+  -- Tested at the candidate level: the intent gate needs full
+  -- morphological features, but the tail-strip itself is pure.
+  , TestCase $ assertEqual "dist pair"
+      ["вкус", "гармония"]
+      (comparisonCandidates "чем вкус отличается от гармония?")
   ]
 
 -- ---------------------------------------------------------------------------

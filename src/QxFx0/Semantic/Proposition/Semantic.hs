@@ -539,8 +539,28 @@ comparisonCandidates rawText =
             , "как различить "
             , "отличить "
             , "различить "
+            , "чем "
+            , "как "
             ]
-      in stripKnownPrefix trimmed prefixes
+      in stripVerbTail (stripKnownPrefix trimmed prefixes)
+    -- F4 (2026-09-17): after prefix stripping the candidate may retain a
+    -- trailing distinction verb («вкус отличается», «вкус связано»).
+    -- Drop it so the topic — not the whole clause — reaches lookup and
+    -- the GF linearizer never falls back to the default lexeme.
+    stripVerbTail txt =
+      let tails =
+            [ " отличается"
+            , " отличаются"
+            , " связано"
+            , " связана"
+            , " связан"
+            , " связаны"
+            , " сводится"
+            , " сводятся"
+            ]
+      in case filter (`T.isSuffixOf` txt) tails of
+           (t : _) -> T.strip (T.dropEnd (T.length t) txt)
+           []      -> txt
     -- Handle "как X связан(а/о) с Y?" — the relation-pattern distinction.
     -- Matches any "связан..." inflection (связана / связан / связано / связаны).
     splitByRelated txt =
