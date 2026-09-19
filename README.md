@@ -144,7 +144,7 @@ src/QxFx0/
 | Suite | Tests | Status |
 |-------|-------|--------|
 | qxfx0-test-unit | 1595 | ✅ 0 failures |
-| qxfx0-test | 1306 | ✅ 0 failures |
+| qxfx0-test | 1307 | ✅ 0 failures |
 | qxfx0-test-property | 227 | ✅ 0 failures |
 | qxfx0-test-integration | 46 | ✅ 0 failures |
 | qxfx0-test-fast | 1816 | ✅ 0 failures |
