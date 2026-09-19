@@ -536,3 +536,19 @@ beyond 24 verbs.
 - **Tests**: 4 inflection guards in `DialogueSemanticSelection`
   (fast suite). Labels on the old garbage turns stand as historical
   ratings of recorded outputs.
+
+---
+
+# R5 labels complete 15/15 — move ⟺ unacceptable (2026-09-20)
+
+- All 15 `r5_negative` turns labeled. Final tally: `move_deserved=1`
+  on exactly the 4 unacceptable turns (1002, 1004, 1010, 1012),
+  `move_deserved=0` on all 11 acceptable ones — including the 3 turns
+  where a move actually fired.
+- Rater doctrine, unanimous on 15/15: **a move should fire if and only
+  if the turn degrades** (rescue semantics). Fired-on-good-turn moves
+  are noise; silent-on-bad-turn misses are the real failures.
+- Design consequence (open): the move gate should predict turn
+  degradation (morphology garbage, empty compose, abstain surfaces)
+  rather than user-state drift alone. Pre-registered probe required
+  before touching `moveDriftMargin`.
