@@ -95,3 +95,4 @@ Mirrored from AGENTS.md so they live in the execution coordinator, not only in t
 - Program doctrine belongs in `ROADMAP.md`.
 - Deferred architecture follow-ups stay in `ROADMAP.md` until a new bounded front is explicitly activated.
 - Run slow/runtime suites **sequentially** — concurrent instances are port/subprocess-heavy and corrupt results.
+- Slow suite needs `-M12G` for a full single-process run (verified 2026-09-19: 172/172 green; `-M6G`/`-M10G` die near the tail with 0 failures recorded — cumulative heap growth across groups, not a logic bug; per-group runs pass at any cap).
