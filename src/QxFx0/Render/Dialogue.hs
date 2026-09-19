@@ -36,6 +36,10 @@ module QxFx0.Render.Dialogue
   , semanticSupplement
   , frameSupplement
   , appendSupplement
+  -- Inflection guards (tested against morphological garbage)
+  , heuristicGenitive
+  , isVerbLikeTopic
+  , hasAdjectivalEnding
   ) where
 
 import Data.Text (Text)
@@ -1768,6 +1772,11 @@ heuristicGenitive :: Text -> Text
 heuristicGenitive word
   | T.null word = word
   | isVerbLikeTopic word = "действия"
+  -- 2026-09-19: already-inflected adjectives/pronouns/participles
+  -- («никакого», «синяя») must pass through: re-inflecting them
+  -- fabricates («никакога», «синии»). Same bug class as the verb
+  -- tails fixed in Proposition/Semantic.
+  | hasAdjectivalEnding word = word
   | "ия" `T.isSuffixOf` word = T.dropEnd 2 word <> "ии"
   | "ие" `T.isSuffixOf` word = T.dropEnd 2 word <> "ия"
   | "и" `T.isSuffixOf` word = word
@@ -1813,7 +1822,17 @@ isVerbLikeTopic :: Text -> Bool
 isVerbLikeTopic txt =
   let w = T.toLower (T.strip txt)
   in w `elem` ["есть", "быть", "жить", "живём", "живем"]
-      || any (`T.isSuffixOf` w) ["ть", "ти", "чь", "ем", "ём", "ешь", "ет", "ут", "ют", "ишь", "им", "ите", "ете"]
+      || any (`T.isSuffixOf` w) ["ть", "ти", "чь", "ем", "ём", "ешь", "ет", "ут", "ют", "ишь", "им", "ите", "ете", "тся", "ться", "ся", "сь"]
+
+-- | Adjectival/pronominal inflection endings: a word already carrying
+-- one of these is inflected — the genitive heuristic must not touch it.
+hasAdjectivalEnding :: Text -> Bool
+hasAdjectivalEnding word =
+  let w = T.toLower (T.strip word)
+  in any (`T.isSuffixOf` w)
+       ["ого", "его", "ое", "ее", "ая", "яя", "ую", "юю"
+       , "ым", "им", "ом", "ем", "их", "ых", "ой", "ей"
+       ]
 
 isLikelyAdjectiveLikeTopic :: Text -> Bool
 isLikelyAdjectiveLikeTopic raw =

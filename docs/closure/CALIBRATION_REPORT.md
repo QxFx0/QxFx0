@@ -518,3 +518,21 @@ beyond 24 verbs.
   construction, trace marks the provenance. Adjudication file stays
   as the record; no label flips.
 - Remaining rater debt: 12/15 R5 `response_acceptable` pending.
+
+---
+
+# Morphological garbage fix (2026-09-19, human-rated 0/1 turns)
+
+- **Instances**: «никакого» → «никакога», «получается» → «получаетси»
+  (both in `MoveStateBoundary` genitive rendering via
+  `heuristicGenitive`).
+- **Root causes**: (a) no guard for already-inflected
+  adjectives/pronouns — suffix rules re-inflected them; (b)
+  `isVerbLikeTopic` missed reflexive suffixes (ся/сь/тся/ться).
+- **Fix** (`Render/Dialogue.hs`): `hasAdjectivalEnding` passthrough
+  (ого/его/ое/ее/ая/яя/ую/юю/ым/им/ом/ем/их/ых/ой/ей) + reflexive
+  suffixes in `isVerbLikeTopic`. Live-verified: «никакого» stays,
+  «получается» → «действия» (existing verb policy).
+- **Tests**: 4 inflection guards in `DialogueSemanticSelection`
+  (fast suite). Labels on the old garbage turns stand as historical
+  ratings of recorded outputs.

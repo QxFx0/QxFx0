@@ -17,6 +17,9 @@ import QxFx0.Render.Dialogue
   , appendSupplement
   , semanticSupplement
   , frameSupplement
+  , heuristicGenitive
+  , isVerbLikeTopic
+  , hasAdjectivalEnding
   )
 import QxFx0.Semantic.SurfaceAccumulator (VerbalizationMode(..))
 import QxFx0.Semantic.Content.Base (mkPred, PredicateRole(..))
@@ -172,6 +175,10 @@ dialogueSemanticSelectionTests =
   , TestLabel "DefinitionFrame falls back to template when spreading activation yields no predicates" testDefinitionFrameSpreadingEmptyFallback
   , TestLabel "DistinctionFrame falls back to template when spreading activation yields no predicates" testDistinctionFrameSpreadingEmptyFallback
   , dialogueSemanticSelectionRegressionTests
+  , TestLabel "genitive keeps inflected pronoun intact" testGenitivePronounPassthrough
+  , TestLabel "genitive keeps inflected adjective intact" testGenitiveAdjectivePassthrough
+  , TestLabel "genitive maps reflexive verbs to action" testGenitiveReflexiveVerb
+  , TestLabel "genitive still inflects plain nouns" testGenitivePlainNoun
   ]
 
 testFormatSelectedPredicatesEmpty :: Test
@@ -521,3 +528,28 @@ dialogueSemanticSelectionRegressionTests = TestList $
   ++ [ TestLabel "ContentSelector is not mutated by generateFromFrame" testContentSelectorNoMutation
      , TestLabel "formatSelectedPredicates gates English and Russian surfaces" testLanguageGating
      ]
+
+-- | Morphological garbage guards (2026-09-19, human-rated 0/1 turns):
+-- heuristic re-inflection fabricated «никакога»/«получаетси».
+testGenitivePronounPassthrough :: Test
+testGenitivePronounPassthrough = TestCase $ do
+  assertEqual "already-inflected pronoun passes through"
+    "никакого" (heuristicGenitive "никакого")
+  assertBool "pronoun recognized as inflected"
+    (hasAdjectivalEnding "никакого")
+
+testGenitiveAdjectivePassthrough :: Test
+testGenitiveAdjectivePassthrough = TestCase $ do
+  assertEqual "already-inflected adjective passes through"
+    "синяя" (heuristicGenitive "синяя")
+
+testGenitiveReflexiveVerb :: Test
+testGenitiveReflexiveVerb = TestCase $ do
+  assertBool "reflexive verb detected" (isVerbLikeTopic "получается")
+  assertEqual "reflexive verb maps to action"
+    "действия" (heuristicGenitive "получается")
+
+testGenitivePlainNoun :: Test
+testGenitivePlainNoun = TestCase $ do
+  assertEqual "plain noun still inflects"
+    "свободы" (heuristicGenitive "свобода")
