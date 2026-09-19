@@ -25,11 +25,11 @@ Purpose: authoritative source for what to do next.
 
 ## Immediate next action
 
-1. **Decide the fate of the working tree.** `main` is **338 commits ahead of `origin/main`** (0 behind — clean fast-forward) with nothing published since `436d6a8` (2026-06-24), *plus* ~174 tracked files with real content changes and ~225 untracked paths on top of the last commit (`49440f8`, 2026-07-17). Two separate decisions: (a) publish/withhold the 338; (b) commit or reduce the uncommitted delta. Until (b) happens there is no reproducible state for any gate claim.
+1. **Decide the fate of the working tree.** `main` is **386 commits ahead of `origin/main`** (0 behind — clean fast-forward, clean tree) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
    - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
 2. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
 3. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-4. **Gate status is UNKNOWN as of this update.** No test suite was run when this board was refreshed on 2026-07-26. Do not cite any gate as green until re-run against the current tree.
+4. **Gate status is GREEN as of 2026-09-19** (all six suites re-verified on HEAD, sequential runs): unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172 (slow needs `-M12G` single-process). Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 

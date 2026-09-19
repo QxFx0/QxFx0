@@ -332,9 +332,15 @@ labels flip to 0/0 and the fallback path needs a guard)?
   derivation entry. Covered topics byte-identical (`testCoveredClaimKeepsCanonicalMode`).
 - **Live check**: «что такое квантовая запутанность?» → «Гипотеза: …»;
   «что такое свобода?» → «Тезис: …» (unchanged).
-- **Residual**: predicate-level provenance (generated predicate under
-  a covered topic) still renders canonical — needs a `spProvenance`
-  field (schema change, deferred).
+- **Residual (P2, 2026-09-19 review)**: a `spProvenance` schema field
+  was considered and REJECTED as disproportionate: admission of
+  generated predicates is already covered three ways (plan-level
+  `isCorpusPredicate` framing, `filterAdmissiblePredicates` gates on
+  template paths, `trcOverlayContentUsed/Ids` trace for overlays).
+  The remaining gap is marking completeness on template paths
+  (admitted-generated renders without a generated-marker), not
+  admission. Revisit only with a concrete false-authority instance
+  through a template path.
 - **Tests**: `testUncoveredClaimIsHypothesis`,
   `testCoveredClaimKeepsCanonicalMode` (unit 1564/1564).
 
@@ -462,3 +468,35 @@ labels flip to 0/0 and the fallback path needs a guard)?
   practical/challenge forms × current graph. More turns of the same
   kind are pointless; reaching 50+ needs wider helper caps (more
   others/surfaces per turn) or pair-space expansion, not reruns.
+
+---
+
+# Debt-closure pass (2026-09-19, skeptical audit)
+
+Skeptical audit 2026-09-19 confirmed real debt; this pass closes what
+is closable without new human data. Still OPEN (needs humans/external):
+M6-FELT/B2, production-trace corpus (Package 11 boxes), R5 labels
+(15 unlabeled), F7 rater question, substrate file, publish decision
+(386 unpushed), DATALOG-ROLE-001, SLICE-015, BD1, verb morphology
+beyond 24 verbs.
+
+## Closed in this pass
+
+- **Report-vs-code**: the "assemblies stay proposed-only" decision
+  below is SUPERSEDED — assembly endorsement is live in selection
+  (math v5, `assemblyEndorsementBonus = 0.15`, R+L2 proxy prec .61 /
+  rec 1.00, zero incoherent on 35 pairs). Selection influence remains
+  withheld for utterances pending the 50+ bar; endorsement (nudging
+  existing predicates) is the cleared middle ground.
+- **Stem-backstop surfaces**: CLOSED — `relLemmaOf` normalizes
+  stem-matched verbs to infinitive (unit-pinned); the "raw
+  inflection" note below described the pre-fix state.
+- **F2/F3/F4 extraction** (measured 2026-09-17): F2 fixed
+  (`trimClauseTail`, live-verified); F4 fixed twice (verb-tail strip
+  in candidates + honest abstain for GF-default-lexeme renders,
+  live-verified); F3 needs no fix (rater-approved). GF map gap
+  (55/120 topics without lexemes) recorded as data backlog.
+- **Slow heap**: full single-process run requires `-M12G`
+  (172/172 green; smaller caps die at the tail with 0 failures).
+- **Prototype/lemma skew**: `fieldDimensionPrototypes` normalized via
+  lemma map at space build (was raw inflections vs lemmatized atoms).

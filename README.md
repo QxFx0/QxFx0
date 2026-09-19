@@ -46,7 +46,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 - `Essence` — Σ-typed commitment, unconditionally active
 
 **Semantic Core**:
-- `AtomStore` — 48 RelationType, ~85 atoms, ~35 philosophical topics
+- `AtomStore` — 52 RelationType, 120 philosophical topics (definitionCorpus; verified 2026-09-19)
 - Typed edges with morphological reconstruction (6 Russian cases)
 - Dialectical structure: rationale / counter / synthesis per relation
 - `PathFinder` — Graph traversal with field-biased ranking
@@ -143,10 +143,14 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
+| qxfx0-test-unit | 1595 | ✅ 0 failures |
+| qxfx0-test | 1306 | ✅ 0 failures |
+| qxfx0-test-property | 227 | ✅ 0 failures |
+| qxfx0-test-integration | 46 | ✅ 0 failures |
 | qxfx0-test-fast | 1812 | ✅ 0 failures |
-| qxfx0-test-slow (state) | 36 | ✅ 0 failures |
-| qxfx0-test-slow (runtime) | 93 | 2 non-critical (state summary format) |
-| qxfx0-test-slow (http) | 22 | 1 (requires HTTP server) |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 93 / 45 / 23 / 11 (= 172) | ✅ 0 failures |
+
+Counts re-verified green on HEAD 2026-09-19 (sequential runs, `-M10G` for fast/test/integration/property, `-M12G` required for a full single-process slow run — smaller caps die near the tail with 0 failures recorded; per-group slow runs pass at any cap).
 
 The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1812 cases include ~23 full runtime session bootstraps (median ~9 s each, ~215 s total), measured locally at ~20 min wall-clock and ~3.1 GB max heap residency (2026-09-08, GHC 9.6.7). Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 

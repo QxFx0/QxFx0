@@ -25,7 +25,7 @@ module QxFx0.Semantic.SurfaceAccumulator
 import Data.List (sortOn)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (isJust, fromJust, listToMaybe)
+import Data.Maybe (isJust, listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -139,10 +139,9 @@ verbalizeSegment
   -> Text
 verbalizeSegment mode field md topic p =
   let base = resolveTopicForm md topic p
-      withRationale
-        | modeIncludesRationale mode && isJust (spRationale p)
-            = base <> " — " <> fromJust (spRationale p)
-        | otherwise = base
+      withRationale = case (modeIncludesRationale mode, spRationale p) of
+        (True, Just rationale) -> base <> " — " <> rationale
+        _                      -> base
   in applyStanceModulation field withRationale
 
 -- | Substitute the predicate's topic form into its Russian surface text,

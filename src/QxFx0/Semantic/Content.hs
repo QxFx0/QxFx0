@@ -40,8 +40,8 @@ differentiating predicate that is specific to the X/Y pair.
 
 == Coverage
 
-Covered seed topics: свобода, произвол, ответственность, истина, мнение,
-память, воспоминание, сознание, самосознание.
+Covered seed topics: the 120 keys of 'definitionCorpus' (see
+'coveredTopics', single source of truth — do not hand-list here).
 
 Uncovered topics fall through to the existing template path (Gate 5
 precondition may fail for them; that is acceptable per M4-001 DoD).
@@ -131,17 +131,13 @@ data DistinctionContent = DistinctionContent
 normalizeTopic :: Text -> Text
 normalizeTopic = T.toLower . T.strip
 
--- | The covered seed topics.
+-- | The covered seed topics: exactly the keys of 'definitionCorpus'.
+-- Single source of truth — a separate hand-list silently desyncs
+-- (it once covered only 30 of 120 topics while five live paths
+-- consumed it: analogy fallback, geometric classifier, anomaly gate,
+-- dialogue coverage, bootstrap explicit-topic set).
 coveredTopics :: [Text]
-coveredTopics =
-  [ "свобода", "произвол", "ответственность", "истина", "мнение"
-  , "память", "воспоминание", "сознание", "самосознание"
-  -- Phase D: expanded topics
-  , "вера", "красота", "долг", "доверие", "страх", "надежда"
-  , "справедливость", "время", "разум", "бытие", "история"
-  , "язык", "воля", "смерть", "одиночество", "любовь"
-  , "труд", "покой", "власть", "правда", "молчание"
-  ]
+coveredTopics = M.keys definitionCorpus
 
 -- | Check if a topic is in the covered seed corpus.
 isCoveredTopic :: Text -> Bool

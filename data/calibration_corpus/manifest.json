@@ -15,5 +15,7 @@
   "source": "synthetic_template_v1",
   "labels_rated": 40,
   "train_eligible": 40,
-  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels"
+  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels. 55 rated_responses (40 labeled incl. 5 adjudicated-resolved, 15 r5_negative pending labels).",
+  "rated_responses": 55,
+  "r5_unlabeled": 15
 }

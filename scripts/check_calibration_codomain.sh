@@ -109,11 +109,14 @@ for p in params:
 #   }
 # We strip trailing "-- ..." comments from each line, then
 # match "field = <number>" with an optional leading "{" or
-# "," (or no prefix, for record updates). The first field of
+# "," (or no prefix, for record updates) and an optional trailing
+# "}" (single-line record updates like
+# `phase9EssenceModulation { emConatusStructuralFloor = 7.0 }` —
+# without this the checker reads the compat binding, not production).
 # a record has a leading "{"; subsequent fields have a
 # leading ",". Record updates look like
 #   expr { field = value }.
-field_pat = re.compile(r"^\s*[,{]?\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*([+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)\s*$")
+field_pat = re.compile(r"^\s*[,{]?\s*([A-Za-z][A-Za-z0-9_]*)\s*=\s*([+-]?[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?)\s*\}?\s*$")
 comment_pat = re.compile(r"\s*--.*$")
 
 violations: list[str] = []

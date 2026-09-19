@@ -362,7 +362,7 @@ Full list contains 100 concepts; top 100 shown.
 > exist only in this document and are not surfaced by the runtime.
 > Treat 311/312 as curation-inventory numbers, not runtime coverage.
 
-- **ALL GAPS COVERED**: **311/311** concepts from relations graph now have curated predicates (100% coverage)
+- **ALL GAPS COVERED (curation inventory)**: **311/311** concepts from relations graph now have curated predicates (100% of the curation effort — NOT runtime coverage; only 120 are landed in `definitionCorpus`, see fact-check above)
 - Total curated topics: **312** (includes 1 extra: "благодарность" not in relations)
 - Original seed topics: **30**
 - Total curated in this effort: **263** concepts across 12 batches

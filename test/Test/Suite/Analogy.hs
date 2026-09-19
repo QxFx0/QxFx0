@@ -83,7 +83,10 @@ testFindNearestCoveredTopicThreshold = TestCase $ do
   assertBool "созерцание-сознание >= 0.3" (sim1 >= 0.3)
   assertEqual "созерцание -> сознание" (Just "сознание") result1
   assertBool "достоинство-долг < 0.3" (sim2 < 0.3)
-  assertEqual "достоинство -> Nothing" Nothing result2
+  -- «достоинство» is itself covered (definitionCorpus, 120 topics), so
+  -- nearest-covered resolves exactly; the old Nothing expectation dated
+  -- from the stale 30-entry coveredTopics list.
+  assertEqual "достоинство -> достоинство" (Just "достоинство") result2
 
 testAnalogicalResponseIntegration :: Test
 testAnalogicalResponseIntegration = TestCase $ do

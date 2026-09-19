@@ -273,13 +273,15 @@ convertToSemanticEdges relations =
       -- For each unique pair, find the best relation
       bestRelForPair (from, to) = case filter (\r -> trFrom r == from && trTo r == to) relations of
         [] -> Nothing
-        rs -> Just (maximumByConfidence rs)
+        rs -> maximumByConfidence rs
       sortedRelations = mapMaybe bestRelForPair uniquePairs
   in map (\r -> semanticEdge (trFrom r) (trTo r) (trWeight r) (fromIntegral (trConfidence r)) ExplicitEdge)
         sortedRelations
 
 -- | Pick the highest-confidence relation among those sharing a topic pair.
-maximumByConfidence :: [TopicRelation] -> TopicRelation
-maximumByConfidence [] = error "maximumByConfidence: empty list"
-maximumByConfidence (r:rs) =
-  maximumBy (\a b -> compare (trConfidence a) (trConfidence b)) (r:rs)
+-- Total: empty input is 'Nothing' (the pre-existing call site already
+-- guards, but the type now guarantees it).
+maximumByConfidence :: [TopicRelation] -> Maybe TopicRelation
+maximumByConfidence [] = Nothing
+maximumByConfidence rs =
+  Just (maximumBy (\a b -> compare (trConfidence a) (trConfidence b)) rs)

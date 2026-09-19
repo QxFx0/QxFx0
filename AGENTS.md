@@ -616,25 +616,21 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-09-08)
+## Test counts (updated 2026-09-19)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
-suites that run them). `qxfx0-test` and `qxfx0-test-integration` were
-re-verified green on 2026-08-23 after the audit-follow-up landing
-(1304 / 46, 0 errors / 0 failures each); `qxfx0-test-fast` re-verified
-green 2026-09-08 after the arch-gate fix landing (1812 cases,
-0 errors / 0 failures, ~20 min wall-clock locally, ~3.1 GB max heap
-residency, 23 session bootstraps at ~9 s median — the "sub-30s sanity
-gate" phrasing is retired; see execution board item 6):
+suites that run them), all re-verified green on HEAD 2026-09-19
+(sequential runs; `-M10G` for test/fast/integration/property/unit,
+`-M12G` required for a full single-process slow run):
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1304 |
+| qxfx0-test | 1306 |
 | qxfx0-test-fast | 1812 |
-| qxfx0-test-unit | 1491 |
+| qxfx0-test-unit | 1595 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
-| qxfx0-test-slow | see below |
+| qxfx0-test-slow | 172 (runtime 93 / state 45 / http 23 / lifecycle 11) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current

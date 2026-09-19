@@ -1,8 +1,12 @@
 # QxFx0 — единый реестр порогов (audit 2026-09-15)
 
 Status: **HAND-SET v1, НЕ КАЛИБРОВАНЫ**. Все константы ниже — ручные,
-frozen-on-release. Любое изменение требует bump `currentMathVersion`
-(`QxFx0.Types.RuntimeRegime`) + holdout-проверку. Калибровка заблокирована
+frozen-on-release. Правило bump: `currentMathVersion` — для пяти классов
+из `Types/RuntimeRegime.hs:17-22` (Conatus/Salience/Essence/Field/CTS);
+остальное (селектор, субстрат, сборка) версионируется локальными тегами
+(`selectorMathVersion` и т.п.) + записью в `MATH_CHANGE_PROTOCOL.md`.
+Любое изменение константы требует одного из двух — глобального или
+локального bump, на глаз ничего не меняется. Калибровка заблокирована
 отсутствием `data/calibration_corpus/` (N≥1k + ≥100 labelled) — см.
 `docs/closure/CALIBRATION_BACKLOG.md`.
 
