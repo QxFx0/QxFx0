@@ -725,6 +725,22 @@ if [ -f "$ANTI_ROT_REGISTRY" ]; then
   done < "$ANTI_ROT_REGISTRY"
 fi
 
+echo "  [22] Datalog must not import state-writing orchestrators (DATALOG-ROLE-001)..."
+for file in "$SRC/QxFx0/Bridge/Datalog/"*.hs; do
+  [ -e "$file" ] || continue
+  if rg -n '^import QxFx0\.(Core\.TurnPipeline\.Finalize|Core\.TurnPipeline\.Effects|Bridge\.StatePersistence|Runtime\.Session\.Bootstrap)\b' "$file" >/dev/null 2>&1; then
+    fail_violation "Datalog orchestrator import in $file (shadow-validator role: no live decision/persistence path)"
+  fi
+done
+
+echo "  [23] Datalog must not import TurnPipeline routing/finalization (DATALOG-ROLE-001)..."
+for file in "$SRC/QxFx0/Bridge/Datalog/"*.hs; do
+  [ -e "$file" ] || continue
+  if rg -n '^import QxFx0\.Core\.TurnPipeline\.' "$file" >/dev/null 2>&1; then
+    fail_violation "Datalog TurnPipeline import in $file (shadow-validator role: compare-only, never reroute)"
+  fi
+done
+
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"
   exit 1

@@ -2,7 +2,7 @@
 
 **Status:** authoritative role declaration
 **Front:** `DATALOG-ROLE-001` (see `ROADMAP.md` §"Post-SLICE-009 evidence/front sequence")
-**Enforced by:** `scripts/check_architecture.sh` rules `[23]` and `[25]`
+**Enforced by:** `scripts/check_architecture.sh` rules `[22]` (no state-writing orchestrator imports) and `[23]` (no `Core.TurnPipeline.*` imports) — added 2026-09-19; both pass on a clean Datalog import surface (Types/Internal/Resources only). (Earlier drafts cited `[23]`/`[25]` with line numbers; line refs rot, rule numbers are the stable contract.)
 **Program:** closes the `M2` requirement that Datalog hold one declared role
 
 ## Declared role
@@ -32,11 +32,11 @@ prose."
 Two architecture rules in `scripts/check_architecture.sh` enforce this role, and
 both name this document in their violation message:
 
-- **Rule `[23]`** (`scripts/check_architecture.sh:716`) — modules under
-  `src/QxFx0/Bridge/Datalog/` must not import state-writing orchestrators
+- **Rule `[22]`** (no state-writing orchestrator imports) — modules under
+  `src/QxFx0/Bridge/Datalog/` must not import
   (`Core.TurnPipeline.Finalize`, `Core.TurnPipeline.Effects`,
   `Bridge.StatePersistence`, `Runtime.Session.Bootstrap`).
-- **Rule `[25]`** (`scripts/check_architecture.sh:733`) — modules under
+- **Rule `[23]`** (no TurnPipeline routing/finalization) — modules under
   `src/QxFx0/Bridge/Datalog/` must not import any `Core.TurnPipeline.*`
   routing / finalization module.
 
