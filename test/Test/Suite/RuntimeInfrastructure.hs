@@ -11,7 +11,7 @@ import qualified Data.Sequence as Seq
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
-import Data.Aeson (Value(..), eitherDecodeStrict')
+import Data.Aeson (Value(..), eitherDecodeStrict', encode)
 import qualified Data.Aeson.KeyMap as KeyMap
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
@@ -34,7 +34,8 @@ import System.Exit (ExitCode(..))
 
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import Data.Text.Encoding (encodeUtf8)
+import qualified Data.ByteString.Lazy as BL
+import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.Map.Strict as M
 
 import QxFx0.Learning.KnowledgeTree
@@ -131,6 +132,7 @@ runtimeInfrastructureTests =
   , testStepRowPropagatesSqliteStepErrors
    , testRunTurnPersistsTurnQuality
   , testStateSummaryDoesNotInventPreActorFailure
+  , testStateSummaryShowsTypedPreActorFailure
   , testStateSummaryShowsRestartAuthorityStatus
    , testPersistedSystemStateSessionIdMatchesBootstrapId
   , testPersistedReplayTraceDeterministicAcrossFreshSessionsProperty
@@ -1985,6 +1987,66 @@ testStateSummaryDoesNotInventPreActorFailure = TestCase $ do
       ("external_action.pre_actor_failure.action: n/a" `T.isInfixOf` summary)
     assertBool "state summary must keep actor-clean learning status contour visible"
       ("replay_trace_load_status: loaded" `T.isInfixOf` summary)
+
+-- | SLICE-015 case 50: a persisted turn whose trace carries a typed
+-- pre-actor failure event must surface its kind/action in
+-- `stateSummaryLines`. Session-level turns cannot trigger one live
+-- (the external-action pipeline is flag-off by deliberate
+-- architecture: `legacyExternalLearningEnabled = False`), so the
+-- fixture replays a real turn's trace blob with a RoundTrip-verified
+-- event shape injected — testing exactly the UI reading path
+-- (`decodeNestedScalarField`), not JSON surgery for its own sake.
+testStateSummaryShowsTypedPreActorFailure :: Test
+testStateSummaryShowsTypedPreActorFailure = TestCase $ do
+  withRuntimeEnv "qxfx0_test_state_summary_pre_actor_typed.db" $ do
+    let sessionId = "test_state_summary_pre_actor_typed"
+    session0 <- Runtime.bootstrapSession True sessionId
+    let rt = Runtime.sessRuntime session0
+    (_session1, _output1) <- Runtime.runTurnInSession session0 "Что такое свобода?"
+    let injectEvent = Object $
+          KeyMap.fromList
+            [ ("pafeKind", String "PreActorTransportFailure")
+            , ("pafeActionKind", String "RequestDrivenExternalAction")
+            , ("pafeReason", String "transport_error_test")
+            ]
+    Runtime.withRuntimeDb rt $ \db -> do
+      mSel <- NSQL.prepare db "SELECT replay_trace_json FROM turn_quality WHERE session_id = ? ORDER BY turn DESC LIMIT 1"
+      selStmt <- case mSel of
+        Left err -> assertFailure ("Failed to prepare trace read: " <> T.unpack err) >> fail "unreachable"
+        Right s -> pure s
+      _ <- NSQL.bindText selStmt 1 sessionId
+      hasRow <- NSQL.stepRow selStmt
+      blob <- if hasRow then NSQL.columnText selStmt 0 else pure ""
+      NSQL.finalize selStmt
+      when (T.null blob) $ assertFailure "expected a persisted turn_quality row after the turn"
+      case eitherDecodeStrict' (encodeUtf8 blob) of
+        Left err -> assertFailure ("persisted trace should decode as JSON: " <> err)
+        Right (Object obj) -> do
+          -- The persisted blob is an envelope
+          -- {"replayTraceEnvelopeVersion": N, "trace": {...}}: the event
+          -- belongs INSIDE "trace" (top-level injection is silently
+          -- ignored by the reader — verified the hard way).
+          inner <- case KeyMap.lookup "trace" obj of
+            Just (Object o) -> pure o
+            _ -> assertFailure "persisted trace envelope must carry a trace object" >> fail "unreachable"
+          let patchedInner = KeyMap.insert "trcPreActorFailureEvent" injectEvent inner
+              patched = Object (KeyMap.insert "trace" (Object patchedInner) obj)
+              patchedBlob = decodeUtf8 (BL.toStrict (encode patched))
+          mUpd <- NSQL.prepare db "UPDATE turn_quality SET replay_trace_json = ? WHERE session_id = ?"
+          updStmt <- case mUpd of
+            Left err -> assertFailure ("Failed to prepare trace update: " <> T.unpack err) >> fail "unreachable"
+            Right s -> pure s
+          _ <- NSQL.bindText updStmt 1 patchedBlob
+          _ <- NSQL.bindText updStmt 2 sessionId
+          _ <- NSQL.step updStmt
+          NSQL.finalize updStmt
+        Right _ -> assertFailure "persisted trace should decode as a JSON object"
+    summaryLines <- Runtime.stateSummaryLines session0
+    let summary = T.unlines summaryLines
+    assertBool ("typed pre-actor failure kind must surface:\n" <> T.unpack summary)
+      ("external_action.pre_actor_failure.kind: PreActorTransportFailure" `T.isInfixOf` summary)
+    assertBool ("typed pre-actor failure action must surface:\n" <> T.unpack summary)
+      ("external_action.pre_actor_failure.action: RequestDrivenExternalAction" `T.isInfixOf` summary)
 
 testStateSummaryShowsRestartAuthorityStatus :: Test
 testStateSummaryShowsRestartAuthorityStatus = TestCase $ do
