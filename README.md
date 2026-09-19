@@ -147,7 +147,7 @@ src/QxFx0/
 | qxfx0-test | 1306 | ✅ 0 failures |
 | qxfx0-test-property | 227 | ✅ 0 failures |
 | qxfx0-test-integration | 46 | ✅ 0 failures |
-| qxfx0-test-fast | 1812 | ✅ 0 failures |
+| qxfx0-test-fast | 1816 | ✅ 0 failures |
 | qxfx0-test-slow (runtime/state/http/lifecycle) | 93 / 45 / 23 / 11 (= 172) | ✅ 0 failures |
 
 Counts re-verified green on HEAD 2026-09-19 (sequential runs, `-M10G` for fast/test/integration/property, `-M12G` required for a full single-process slow run — smaller caps die near the tail with 0 failures recorded; per-group slow runs pass at any cap).
