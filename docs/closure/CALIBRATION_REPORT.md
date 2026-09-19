@@ -552,3 +552,24 @@ beyond 24 verbs.
   degradation (morphology garbage, empty compose, abstain surfaces)
   rather than user-state drift alone. Pre-registered probe required
   before touching `moveDriftMargin`.
+
+---
+
+# GF lexeme gap closure (2026-09-20, data)
+
+- **Gap**: 55/120 covered topics without GF lexemes → `gf_default_lexeme`
+  (`ponyatie_N`) renders («понятие и понятие», rated 0/0).
+- **Fix**: `scripts/add_gf_lexemes.py` — 55 entries with full case forms
+  (declension by ending + `возвышенное` adjective override), funIds match
+  the TSV scheme; `scripts/add_gf_grammar_entries.py` — abstract + Rus +
+  Eng concretes (reviewed glosses); PGF recompiled (`compile_gf_grammar.sh`).
+- **Verified**: 3811 map entries, 0 dups, 0 covered topics unmapped;
+  fresh grammar contains new funs; live turn drops default lexeme,
+  morphology correct on fallbacks.
+- **Residual (next bounded task)**: RMP/frame intent divergence — for
+  «чем вкус отличается от гармония?» RMP says DistinctionQ (family
+  CMDistinguish) but frame intent is null, so the turn grounds instead
+  of distinguishing. Suspect: `SemanticIntent` classifier features vs
+  `PropositionType` path disagree; `extractContentNouns` POS dict
+  lacks вкус/гармония (guess-fallback covers, unverified live).
+  Needs runtime debugging of `classifyIntent` inputs, not more statics.
