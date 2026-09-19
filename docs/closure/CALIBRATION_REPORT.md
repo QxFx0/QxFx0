@@ -500,3 +500,21 @@ beyond 24 verbs.
   (172/172 green; smaller caps die at the tail with 0 failures).
 - **Prototype/lemma skew**: `fieldDimensionPrototypes` normalized via
   lemma map at space build (was raw inflections vs lemmatized atoms).
+
+---
+
+# R5/move verdict + F7 closure (2026-09-19, human-v1)
+
+- **Move verdict**: on all 3 fired moves (cal-1001/1013/1014,
+  `mirror_state`) the rater says acceptable response but move
+  undeserved (`move_deserved: 0`, 3/3). Direction: the move layer is
+  too loose, not too strict. No constant changed on n=3 — threshold
+  review triggered; tightening (`moveDriftMargin`, affirm-gate
+  requirement) needs a wider pre-registered probe first.
+- **F7 CLOSED**: rater confirms `hypothesize` — the implemented
+  behavior («Гипотеза: …» + grounds, live since `96ddc2e`) IS the
+  doctrine. The 5 disputed quantum labels (rel=2/acc=1 on
+  `uncovered_generic`) stand as consistent: rater judges the
+  construction, trace marks the provenance. Adjudication file stays
+  as the record; no label flips.
+- Remaining rater debt: 12/15 R5 `response_acceptable` pending.
