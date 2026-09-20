@@ -19,8 +19,8 @@
  "labels_rated": 40,
  "train_eligible": 40,
  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels. 55 rated_responses (40 labeled incl. 5 adjudicated-resolved, 15 r5_negative pending labels). Batch2: 45 relation-bearing (distinction/relation/challenge) assistant-pre ratings, human-agreed frame; train-eligibility pending human per-record confirmation.",
- "rated_responses": 115,
+ "rated_responses": 160,
  "r5_unlabeled": 0,
  "r5_labeled": 15,
- "labels_pre_rated": 45
+ "labels_pre_rated": 90
 }

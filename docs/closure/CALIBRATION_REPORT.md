@@ -684,3 +684,28 @@ beyond 24 verbs.
 - **Sensitivity**: delta identical under all four weight variants
   again — coordinate ascent still pointless; weights untouched.
 - **Parameters moved**: none. No cutover, no math bump.
+
+---
+
+# Batch3 holdout eval — bar NOT cleared, negative result (2026-09-21)
+
+- **Batch**: 45 records on fresh topics (24 already-labeled topics
+  excluded), same 3 strata; `rated_batch3.json` merged
+  (`rated_responses` 160, corpus 130 labeled, all `assistant-pre`).
+- **Result**: 55 covered rel=2, 47 mapped (8 F7-class exclusions).
+  struct top-1 26/47 (0.553) vs jaccard 28/47 (0.596),
+  delta −0.043 (gate +0.05); discordants 10 vs 12, McNemar p = 0.832.
+- **Verdict**: the pre-registered bar FAILS on all three prongs
+  (n=47 ✓ met, but delta<+0.05 and p=0.83). The dilution across
+  rounds (+0.545 → +0.214 → −0.043) confirms the diagnosis: on this
+  distribution the comparison is order-prior vs length-bias, and
+  neither scorer reasons — the production Field-conditioned pick
+  (scorePred + prototypes) is the only component that discriminates.
+- **Consequence**: NO cutover of `structScore` into selection.
+  The module stays SHADOW-ONLY. Its proven value is elsewhere
+  (unit-pinned structural discrimination: converse test) and it
+  remains the instrument for future relation-bearing-holdout work,
+  not a replacement for scorePred.
+- **Sensitivity**: delta flat across weight variants (flat-rel-mod
+  +0.021, still below gate) — weights stay hand-set, no math bump.
+- **Parameters moved**: none.
