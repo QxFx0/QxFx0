@@ -595,10 +595,10 @@ buildAssemblyCandidates ss ti ta =
             sel = [ s | d <- filter sdSelected diags
                       , normDiagTopic d == t
                       , Just s <- [sdPredicateSurface d] ]
-        in take 3 (nub (sel ++ pool))
+        in take 5 (nub (sel ++ pool))
       -- Prefer corpus-covered others over generated junk topics; the
       -- bridge still decides, this only orders attempts.
-      others = take 2 (nub
+      others = take 3 (nub
         [ t | d <- filter sdSelected diags
         , let t = normDiagTopic d
         , not (isBestTopic t) ])
@@ -617,7 +617,7 @@ buildAssemblyCandidates ss ti ta =
               atomsA (atomsOf other)
               (bestKey, surfA, termA) (other, surfB, termB)
         ]
-      ranked = take 3 (L.sortOn (\(_, proof, score, _) -> (length (ppEdges proof), negate score)) attempted)
+      ranked = take 5 (L.sortOn (\(_, proof, score, _) -> (length (ppEdges proof), negate score)) attempted)
   in [ AssemblyCandidate
          { acTopicA = bestKey
          , acTopicB = other
