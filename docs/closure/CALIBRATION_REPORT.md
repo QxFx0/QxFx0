@@ -731,3 +731,28 @@ beyond 24 verbs.
   −0.043, weights flat across variants) says training would fit
   noise: the objective, not the data, is the blocker. Eligibility
   unblocks future work; it does not recommend it.
+
+---
+
+# Grounds-junk filter — engagement-gated assemblies (2026-09-21)
+
+- **Defect** (from batch2/3 acc=0 turns): hypothesis tails citing
+  alien grounds — «программирование требует знания языков…»,
+  «весна это время года», «нарратив о себе…», «с речью…».
+  Mechanism: mediated assemblies pair the query surface with a
+  third topic reached via generic glue atoms («знание», «время»);
+  R+L2 gate passes (non-empty rels, path ≤2) because the path is
+  real but vacuous. A df-based glue filter was measured and
+  REJECTED: junk and clean bridges share the same df band
+  (знание:4 == бытие:4 == время:4) — no separating threshold.
+- **Fix** (`Semantic/Assembly.hs`, `Route/Render.hs`): `utterableAssembly`
+  takes the frame's engaged topics (`activationTopics`, already
+  computed upstream) and restricts other-topics to that set
+  (case/space-insensitive, `normalizeTopic`-identical, inlined to
+  avoid an import cycle). Selection-endorsement path untouched.
+- **Verification**: unit 1603/1603 (2 new tests: third-topic
+  suppression, normalization tolerance); fast 1817/1817;
+  integration 46/46; live: 4 junk-class turns re-render without
+  alien grounds, leads intact; engaged-pair path still utterable
+  (unit-pinned).
+- **Parameters moved**: none (filter, not weights).

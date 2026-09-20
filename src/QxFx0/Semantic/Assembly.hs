@@ -431,7 +431,12 @@ verbalizeAssembly asm =
 
 -- | Top-1 utterable assembly over composed winners, R+L2-gated
 -- (composed relations non-empty, validated path at most 2 edges —
--- the measured proxy of coherent==2 with zero incoherent admitted).
+-- the measured proxy of coherent==2 with zero incoherent admitted)
+-- AND engagement-gated: the other topic must belong to the frame's
+-- engaged set (activation topics).  Third-topic pairs reached only
+-- via generic glue atoms («знание», «время», «мир») render as
+-- alien grounds («программирование требует…», «весна это время
+-- года») — measured acc=0 on 7 calibration turns (batch2/3).
 -- Returns 'Nothing' when no pair qualifies: silence over invention.
 -- Pure, total, deterministic.  The caller renders the result through
 -- 'verbalizeAssembly' under the landed hypothesis framing.
@@ -440,18 +445,24 @@ utterableAssembly
   -> ContentSelector
   -> Text
   -- ^ Query topic.
+  -> [Text]
+  -- ^ Engaged topics (frame activation topics, query included).
+  -- Compared case- and space-insensitively (same normalization as
+  -- 'normalizeTopic', inlined to avoid an import cycle).
   -> [(Text, Text)]
   -- ^ Composed winners as (topic, surface) pairs.
   -> Maybe Assembly
-utterableAssembly graph cs query pairs =
+utterableAssembly graph cs query engaged pairs =
   let lemmaMap = csLemmaMap cs
       atomsOf t = M.findWithDefault S.empty t (csTopicAtoms cs)
+      norm = T.toLower . T.strip
+      allowed = S.fromList (map norm engaged)
       byTopic = M.toList (M.fromListWith (++)
         [ (t, [surf]) | (t, surf) <- pairs ])
       querySurfs = take 2 (concatMap snd (filter ((== query) . fst) byTopic))
       others = take 4
         [ (t, take 2 surfs)
-        | (t, surfs) <- byTopic, t /= query ]
+        | (t, surfs) <- byTopic, t /= query, norm t `S.member` allowed ]
       attempt (surfA, surfB, other) =
         let termA = parsePredicateTerm lemmaMap surfA
             termB = parsePredicateTerm lemmaMap surfB

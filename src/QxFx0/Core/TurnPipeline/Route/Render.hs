@@ -292,6 +292,9 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       -- explicit hypothesis construction appended to the plan text.
       -- Proposed rarely (gate), marked always («Гипотеза:» + grounds),
       -- traced via the generation attempt below and the emitted entry.
+      -- Engagement-gated: the other topic must belong to the frame's
+      -- activation topics — third-topic glue pairs (calibration acc=0)
+      -- stay silent instead of rendering alien grounds.
       assemblyHypothesis =
         let pairs = [ (sdCandidateTopic d, s)
                     | d <- semanticSelectorDiagnostics
@@ -299,7 +302,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                     , Just s <- [sdPredicateSurface d] ]
             queryTopic = fromMaybe bestTopic (mResponsePlan >>= rspTopic)
         in fmap verbalizeAssembly
-             (utterableAssembly (ssRuntimeGraph ss) (ssContentSelector ss) queryTopic pairs)
+             (utterableAssembly (ssRuntimeGraph ss) (ssContentSelector ss) queryTopic activationTopics pairs)
       responsePlanText = case mResponsePlan of
         Just plan | null (responsePlanQualityIssues plan) -> renderResponseSemanticPlan plan
         Just plan -> renderResponseSemanticPlan plan

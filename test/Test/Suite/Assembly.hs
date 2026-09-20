@@ -299,6 +299,7 @@ endorsementTests =
             { csTopicPredicates = M.fromList
                 [ ("свобода", [predA]), ("ответственность", [predB]) ] }
       case utterableAssembly (testGraph Curated) cs "свобода"
+             ["свобода", "ответственность"]
              [("свобода", "свобода требует ответственности"),
               ("ответственность", "ответственность исключает произвол")] of
         Nothing -> assertFailure "expected an utterable assembly"
@@ -311,5 +312,38 @@ endorsementTests =
       assertEqual "single topic cannot assemble"
         Nothing
         (utterableAssembly (testGraph Curated) cs "свобода"
+           ["свобода"]
           [("свобода", "свобода требует ответственности")])
+
+  , TestLabel "utterable assembly suppresses third-topic glue pairs" $ TestCase $ do
+      -- Same qualifying pair as above, but the frame engaged only the
+      -- query topic: the ответственность pairing (reachable via the
+      -- graph, utterable without the gate) must stay silent.
+      -- Calibration: batch2/3 acc=0 grounds («программирование…»,
+      -- «весна это время года»).
+      let predA = endorsePred "свобода" "свобода требует ответственности"
+          predB = endorsePred "ответственность" "ответственность исключает произвол"
+          cs = endorseFixtureSelector
+            { csTopicPredicates = M.fromList
+                [ ("свобода", [predA]), ("ответственность", [predB]) ] }
+      assertEqual "non-engaged other stays silent"
+        Nothing
+        (utterableAssembly (testGraph Curated) cs "свобода"
+           ["свобода"]
+           [("свобода", "свобода требует ответственности"),
+            ("ответственность", "ответственность исключает произвол")])
+
+  , TestLabel "utterable assembly tolerates case and space in engaged topics" $ TestCase $ do
+      let predA = endorsePred "свобода" "свобода требует ответственности"
+          predB = endorsePred "ответственность" "ответственность исключает произвол"
+          cs = endorseFixtureSelector
+            { csTopicPredicates = M.fromList
+                [ ("свобода", [predA]), ("ответственность", [predB]) ] }
+      case utterableAssembly (testGraph Curated) cs "свобода"
+             ["Свобода ", " Ответственность"]
+             [("свобода", "свобода требует ответственности"),
+              ("ответственность", "ответственность исключает произвол")] of
+        Nothing -> assertFailure "normalization must not kill engaged pairs"
+        Just asm -> assertBool "carries relations"
+          (not (S.null (ptRels (asmTerm asm))))
   ]
