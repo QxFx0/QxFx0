@@ -627,7 +627,7 @@ suites that run them), all re-verified green on HEAD 2026-09-19
 |---|---|
 | qxfx0-test | 1307 |
 | qxfx0-test-fast | 1817 |
-| qxfx0-test-unit | 1595 |
+| qxfx0-test-unit | 1597 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 172 (runtime 93 / state 45 / http 23 / lifecycle 11) |
