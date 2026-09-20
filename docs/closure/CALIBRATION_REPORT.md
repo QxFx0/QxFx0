@@ -609,3 +609,44 @@ beyond 24 verbs.
   Notably, multi-hop assemblies rate systematically worse — evidence
   for the no-cap decision (rating, not structure, judges), and against
   promoting them.
+
+---
+
+# structScore vs Jaccard holdout eval (2026-09-20, scripted)
+
+- **Tool**: `scripts/eval_structscore.py` (reusable). Lexicon sets parsed
+  from `Composition.hs`, lemma map from paradigms+exceptions (same
+  replica as `lemma_verb_coverage.py`); the port self-checks against
+  the Haskell unit vectors (identity 1.0, converse j=1.0/s<0.5, neg
+  cap) before evaluating. Candidates extracted from `Content.hs`
+  entry blocks (asserted 120 topics). Results:
+  `data/calibration_corpus/structscore_eval.json`.
+- **Eval set**: 40 records with predicate_relevant (corpus ⋈ rated by
+  id). Used-candidate mapping by response containment (covered_exact
+  renders the predicate near-verbatim; symmetric overlap collapses
+  under surface length — first run mapped WEAK everywhere, fixed).
+- **Headline**: on 11 mapped covered rel=2 records, struct top-1
+  10/11 (0.909) vs jaccard 4/11 (0.364), delta +0.545 (gate +0.05
+  passed numerically). Paired discordants 7 vs 1, McNemar exact
+  two-sided p = 0.070 — suggestive, NOT conclusive at n=11.
+- **Exclusions (4, explicit)**: cal-0121–0124 «любовь» render a
+  non-corpus predicate («глубокое чувство привязанности») yet rated
+  rel=2 — F7-class (rater judges construction, trace marks
+  provenance). Unmappable by construction; excluded, not failed.
+- **Honest decomposition**: «что такое X?» queries are head-only —
+  rel/mod channels empty — so structScore degenerates to head-tie +
+  candidate-order prior. The win is the ORDER PRIOR (production pick
+  == first-listed 10/11), not role structure. Sensitivity check
+  confirms: delta identical (+0.545) under all four weight variants
+  (default, head-heavy, flat, uniform) — coordinate ascent has a flat
+  objective here and stays untouched.
+- **Genuine struct loss**: cal-0481 «абсурд» (verbatim #1, production
+  Field-pick right): struct ties on head and falls back to order #0,
+  jaccard wins via length bias. Neither scorer reasons here; the
+  production Field-conditioned pick does.
+- **Parameters moved**: none. No cutover (n=11, p=0.07), no math bump.
+- **Pre-registered next**: the corpus cannot test structural
+  discrimination until relation-bearing queries («контрпример к X»,
+  «чем X отличается от Y») carry per-candidate relevance labels.
+  Holdout bar for cutover: 40+ mapped covered records with
+  relation-bearing queries, McNemar p < 0.05 AND delta >= +0.05.
