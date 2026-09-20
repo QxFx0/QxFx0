@@ -81,7 +81,11 @@ data RuntimeRegime = RuntimeRegime
 -- them with fitted values is an offline, governed bump of this
 -- version.
 currentMathVersion :: Int
-currentMathVersion = 3
+-- v4 (2026-09-20): move-layer tightening after the pre-registered
+-- move probe measured F1 = 0.00 as a degradation predictor
+-- ('moveDriftMargin' 0.10 -> 0.20; bare negative acts no longer fire
+-- without affirm-gate passage or earned drift).
+currentMathVersion = 4
 
 -- | Current CTS constitution version.
 -- Initial value 44 = CTS-44 (commitment promotion).

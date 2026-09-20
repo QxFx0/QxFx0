@@ -28,7 +28,7 @@ module Test.Suite.MoveGraph
 import Data.Aeson (eitherDecode, encode)
 import Data.Text (Text)
 import qualified Data.Text as T
-import Test.HUnit (Test (..), assertBool, assertEqual)
+import Test.HUnit (Test (..), assertBool, assertEqual, assertFailure)
 
 import QxFx0.Semantic.MoveGraph
   ( moveDriftMargin
@@ -64,18 +64,24 @@ moveGraphTests =
       assertEqual "calm philosophical turn must not fire the move layer"
         Nothing
         (planOntologicalMove calmState calmOnto Nothing calmScore)
-  , TestLabel "low resonance blocks the affirmation move (gate inside search)" $ TestCase $ do
-      let Just plan = planOntologicalMove struggleState struggleOnto Nothing 0.2
-      assertBool "gate must be closed at resonance 0.5"
-        (not (ompAffirmGatePassed plan))
-      assertBool "affirmation must not be chosen below the gate"
-        (ompMove plan /= MoveAffirmBeing)
-  , TestLabel "mirror/resonance ordering emerges from the search" $ TestCase $ do
-      let Just plan = planOntologicalMove struggleState struggleOnto Nothing 0.2
-      assertBool "at low resonance the search must lead with mirror or resonance"
-        (ompMove plan == MoveMirrorState || ompMove plan == MoveEstablishResonance)
-      assertBool "the chosen move must strictly improve predicted distance to S*"
-        (ompDistanceAfter plan < ompDistanceBefore plan)
+  , TestLabel "v4 probe: bare act without gate or drift does not fire" $ TestCase $
+      assertEqual "a negative act alone is noise, not a move"
+        Nothing
+        (planOntologicalMove struggleState struggleOnto Nothing 0.2)
+  , TestLabel "v4 probe: act with earned drift fires below the gate" $ TestCase $ do
+      let lowState = mkUserR5State 0.3 0.5 0.4 0.5 0.4
+          negOnto = OntologicalVector (-0.5) 0 0
+          lowScore = userConatusScore defaultUserConatusWeights lowState
+          baseline = lowScore + moveDriftMargin + 0.05
+      case planOntologicalMove lowState negOnto (Just baseline) lowScore of
+        Nothing -> assertFailure "earned act must fire the move layer"
+        Just plan -> do
+          assertBool "gate stays closed at resonance 0.3"
+            (not (ompAffirmGatePassed plan))
+          assertBool "below the gate the search leads with mirror or resonance"
+            (ompMove plan == MoveMirrorState || ompMove plan == MoveEstablishResonance)
+          assertBool "the chosen move must strictly improve predicted distance to S*"
+            (ompDistanceAfter plan < ompDistanceBefore plan)
   , TestLabel "above the gate the affirmation move can win" $ TestCase $ do
       let highResonance = struggleState { r5Resonance = 0.7 }
           Just plan = planOntologicalMove highResonance struggleOnto Nothing 0.2
@@ -85,10 +91,11 @@ moveGraphTests =
         MoveAffirmBeing
         (ompMove plan)
   , TestLabel "chosen move is at least as good as every admissible alternative" $ TestCase $ do
-      let Just plan = planOntologicalMove struggleState struggleOnto Nothing 0.2
+      let highResonance = struggleState { r5Resonance = 0.7 }
+          Just plan = planOntologicalMove highResonance struggleOnto Nothing 0.2
           target = viabilityTarget Nothing
-          admissible = filter (/= MoveAffirmBeing) allOntologicalMoves
-          predicted m = r5Distance (applyMoveEffect m struggleState) target
+          admissible = allOntologicalMoves
+          predicted m = r5Distance (applyMoveEffect m highResonance) target
       assertBool "chosen move is the best admissible by predicted distance"
         (all (\m -> predicted m >= ompDistanceAfter plan - 1e-12) admissible)
   , TestLabel "earned drift below the baseline fires without an ontological act" $ TestCase $ do
@@ -107,8 +114,9 @@ moveGraphTests =
           challengeState = encodeR5 challengeText ""
           challengeScore = userConatusScore defaultUserConatusWeights challengeState
           challengeOnto = classifyOntological challengeText
-      assertBool "fixture sanity: the score really drops by style"
-        (challengeScore < questionScore - moveDriftMargin)
+      assertBool "fixture sanity: the score drops by style, but below the v4 margin"
+        (challengeScore < questionScore
+         && not (challengeScore < questionScore - moveDriftMargin))
       assertEqual "a style-driven drop must not fire the move layer"
         Nothing
         (planOntologicalMove challengeState challengeOnto (Just questionScore) challengeScore)

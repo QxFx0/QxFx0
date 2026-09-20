@@ -55,7 +55,7 @@ frozen-on-release. Правило bump: `currentMathVersion` — для пяти
 | `vcAbsoluteFloor` / `vcPersonalMargin` | 0.05 / 0.25 | `Types/User/R5.hs` |
 | `negativeEvidenceEarned` | atm > 0.30 ∨ conf < 0.45 | `Types/User/R5.hs` |
 | `resonanceGateThreshold` | 0.55 | `Semantic/Ontological.hs` |
-| `moveDriftMargin` | 0.10 (< margin 0.25 — move раньше выхода) | `Semantic/MoveGraph.hs` |
+| `moveDriftMargin` | 0.20 (v4 tightening 2026-09-20; was 0.10) | `Semantic/MoveGraph.hs` |
 | residual anomaly | > 0.35 | `Observability/TraceAnalysis.hs` |
 | EMA / residual windows | 10 / 8 | `Types/User/R5.hs` |
 

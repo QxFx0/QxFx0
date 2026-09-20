@@ -25,6 +25,7 @@ will not catch it — but the calibration tests will.
 | 1 | 2026-05-18 | `emConatusStructuralFloor` corrected from 0.5 to 7.0 (codomain: `[~5, ~20+]` in production) | ADR-0012 §15.1 | `src/QxFx0/Self/Essence.hs` |
 | 2 | 2026-08-07 | A-slice: `ConatusComponents` gains `ccSelfDivergence`, self-consistency penalty as energy fraction, `SelfDivergenceTuning` (0.035/0.35/8) | A-slice A3 + `Test.Suite.SelfDivergence` | `src/QxFx0/Self/SelfDivergence.hs`, `src/QxFx0/Types/Self/SelfDivergence.hs` |
 | 3 | 2026-08-23 | Concept-v3: user-R5 encoder v1 (frozen), viability contour, move-graph effect matrix, `transitionUserR5` | concept-v3 regime + `Test.Suite.{CrisisGuard,UserR5,OntologicalAxis,MoveGraph}` | `src/QxFx0/User/R5.hs`, `src/QxFx0/Types/User/R5.hs`, `src/QxFx0/Semantic/MoveGraph.hs` |
+| 4 | 2026-09-20 | Move-layer tightening (pre-registered probe F1 = 0.00): `moveDriftMargin` 0.10 → 0.20, bare negative acts no longer fire without affirm-gate passage or earned drift | `docs/closure/MOVE_PROBE_PREREG.md` + human-v1 labels (30 turns) + `Test.Suite.MoveGraph` v4 pins | `src/QxFx0/Semantic/MoveGraph.hs`, `src/QxFx0/Types/RuntimeRegime.hs` |
 
 *Version 1 is the baseline — the correction that prompted this protocol.*
 

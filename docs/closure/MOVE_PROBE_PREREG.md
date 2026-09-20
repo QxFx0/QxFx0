@@ -33,3 +33,19 @@ turns). F1 ≈ 0.00 as a degradation predictor (no true positives).
 - Else: keep constants, record negative result.
 - No other constant moves regardless of outcome (no fitting to
   the probe).
+
+---
+
+## Outcome (2026-09-20): rule triggered, tightening applied
+
+- Measured on 30 rated turns: TP=0, FP=3, FN=6 → F1 = 0.00 < 0.50.
+- Applied exactly as pre-registered: `moveDriftMargin` 0.10 → 0.20;
+  bare negative acts no longer fire (affirm-gate passage or earned
+  drift required). `currentMathVersion` 3 → 4.
+- Known limit (stated upfront): tightening kills the 3 FPs but cannot
+  create TPs — recall needs a degradation-keyed mechanism (future
+  design, not this probe). Re-probe of the same 30 expected: TP=0,
+  FP=0, FN=6.
+- `Test.Suite.MoveGraph` rewritten to the v4 contract (bare-act and
+  best-alternative tests replaced; P0-2 pin re-anchored below the new
+  margin). unit 1597/1597, arch gate passed.

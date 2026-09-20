@@ -19,11 +19,12 @@ the corpus-backed content path (M4-SEMANTIC-CORE-003\/M6-FELT stay
 untouched).  It fires only under Protocol A when at least one holds:
 
 * the input carries a negative ontological act
-  ('ovStriving' < 0, 'ovBeing' < 0, or 'ovAffirmation' < 0) — there
-  is a vector to answer with a counter-vector; or
+  ('ovStriving' < 0, 'ovBeing' < 0, or 'ovAffirmation' < 0) AND the
+  state earns it — affirm-gate passage or earned drift below
+  baseline (v4: bare acts no longer fire — probe F1 was 0.00); or
 * the user's score has drifted below the personalized baseline by
-  more than 'moveDriftMargin' — the state is sliding toward the
-  contour edge.
+  more than 'moveDriftMargin' (= 0.20 since v4) with earned negative
+  evidence — the state is sliding toward the contour edge.
 
 == Target S* (v1)
 
@@ -61,9 +62,11 @@ import QxFx0.Types.User.R5
 
 -- | How far below the personalized baseline the score must drift
 -- before the move layer fires without a negative ontological act.
--- Hand-set v1 (frozen).
+-- 0.10 (v1) -> 0.20 (v4, 2026-09-20): pre-registered tightening after
+-- the move probe measured F1 = 0.00 as a degradation predictor
+-- (3 false-positive firings on good turns, 0 true positives).
 moveDriftMargin :: Double
-moveDriftMargin = 0.10
+moveDriftMargin = 0.20
 
 -- | The target state S* for the search: the /connected-calm/ centre
 -- of viability — resonance above the neutral midline (a connected
@@ -98,13 +101,26 @@ moveNeeded
   -> Double         -- ^ observed user Conatus score
   -> Bool
 moveNeeded userState onto mBaseline score
-  | ovStriving onto < 0 = True
-  | ovBeing onto < 0 = True
-  | ovAffirmation onto < 0 = True
+  -- 2026-09-20 (v4 tightening): a bare negative act no longer fires.
+  -- The probe showed act-driven firing produces only noise (3/3 fired
+  -- moves undeserved, 0 true positives): an act fires iff the state
+  -- itself earns it — affirm-gate passage (resonance holds, the
+  -- receiver can take the move) or earned drift below baseline.
+  | actNegative
+  , ontologicalMoveAdmissible userState = True
+  | actNegative
+  , Just baseline <- mBaseline
+  , negativeEvidenceEarned userState
+  , score < baseline - moveDriftMargin = True
   | Just baseline <- mBaseline
   , negativeEvidenceEarned userState
   , score < baseline - moveDriftMargin = True
   | otherwise = False
+  where
+    actNegative =
+         ovStriving onto < 0
+      || ovBeing onto < 0
+      || ovAffirmation onto < 0
 
 -- | Deterministic search for the ontological transition operator.
 -- Total: every (state, directedness, baseline, score) tuple yields
