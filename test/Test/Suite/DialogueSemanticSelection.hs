@@ -174,6 +174,7 @@ dialogueSemanticSelectionTests =
   , TestLabel "DistinctionFrame uses spreading-activation supplement for both sides" testDistinctionFrameSpreading
   , TestLabel "DefinitionFrame falls back to template when spreading activation yields no predicates" testDefinitionFrameSpreadingEmptyFallback
   , TestLabel "DistinctionFrame falls back to template when spreading activation yields no predicates" testDistinctionFrameSpreadingEmptyFallback
+  , TestLabel "DistinctionFrame names the missing link for covered topics" testDistinctionFrameNoLinkHonest
   , dialogueSemanticSelectionRegressionTests
   , TestLabel "genitive keeps inflected pronoun intact" testGenitivePronounPassthrough
   , TestLabel "genitive keeps inflected adjective intact" testGenitiveAdjectivePassthrough
@@ -553,3 +554,14 @@ testGenitivePlainNoun :: Test
 testGenitivePlainNoun = TestCase $ do
   assertEqual "plain noun still inflects"
     "свободы" (heuristicGenitive "свобода")
+
+-- | 2026-09-20: covered topics with no composition route and no
+-- distinction content must name the missing link, not render the
+-- hollow generic template (rated 0/0) or fall through to grounding.
+testDistinctionFrameNoLinkHonest :: Test
+testDistinctionFrameNoLinkHonest = TestCase $ do
+  let result = runFrameWithNetwork (FT.DistinctionFrame "вкус" "гармония" []) mkEmptySpreadingSelector testNetwork
+  assertBool "covered pair with no route names both topics"
+    ("вкус" `T.isInfixOf` result && "гармония" `T.isInfixOf` result)
+  assertBool "covered pair with no route states the missing link"
+    ("связки" `T.isInfixOf` result)

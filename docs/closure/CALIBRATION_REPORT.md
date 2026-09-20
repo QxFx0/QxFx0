@@ -573,3 +573,20 @@ beyond 24 verbs.
   `PropositionType` path disagree; `extractContentNouns` POS dict
   lacks вкус/гармония (guess-fallback covers, unverified live).
   Needs runtime debugging of `classifyIntent` inputs, not more statics.
+
+---
+
+# Gerund-suffix root cause + live distinction (2026-09-20)
+
+- **Debug path**: RMP/frame divergence on чем-distinction traced
+  through 6 layers (claimAst correct, surface wrong) to
+  `sfHasTwoConcepts = False` with complexity 0.2 — proven by
+  temporary dump tests (since converted to regression pins).
+- **Root cause**: single-letter `а`/`я` in `gerundSuffixes`
+  classified every OOV -а/-я noun as Gerund («гармония»).
+  Only one content noun survived → no DistinctionQ route.
+- **Fix**: drop `а`/`я` (past forms в/вши/ши stay); present gerunds
+  fall through to Noun — the safe direction for counting.
+- **Live**: «чем вкус отличается от гармония?» now renders both
+  corpus predicates composed under «Гипотеза:» (CMDistinguish,
+  covered_exact) instead of the ground template.

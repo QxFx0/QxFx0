@@ -114,11 +114,16 @@ participleSuffixes =
     "ный", "тый"              -- Past passive: прочитанный, сделанный
   ]
 
--- | Suffixes for Russian gerunds (деепричастия)
+-- | Suffixes for Russian gerunds (деепричастия).
+-- 2026-09-20: single-letter "а"/"я" REMOVED — they swallowed every
+-- OOV noun ending in -а/-я («гармония» classified Gerund, killing
+-- sfHasTwoConcepts and the whole DistinctionQ route for чем-forms).
+-- Present gerunds (читая-type) now fall through to Noun, which is the
+-- safe direction for content-noun counting; past forms (в/вши/ши)
+-- stay distinctive. Residual: nouns ending in bare -в (гнев, зов).
 gerundSuffixes :: [Text]
-gerundSuffixes = 
-  [ "а", "я",              -- Present: читая, любя
-    "в", "вши", "ши"        -- Past: прочитав, сделав, прочитавши, сделавши
+gerundSuffixes =
+  [ "в", "вши", "ши"        -- Past: прочитав, сделав, прочитавши, сделавши
   ]
 
 data POS = Noun | Verb | Adj | Adv | Pron | Prep | Conj | Part | Num | Participle | Gerund | UnknownPOS

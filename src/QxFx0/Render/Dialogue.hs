@@ -2136,8 +2136,20 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
           [] -> "в одной рамке критериев"
           cs -> "по критерию " <> T.intercalate ", " (map (toNominative morph) cs)
         mDistContent = lookupDistinctionContent leftNom rightNom
-        base = "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
-               <> renderDistinctionBody mDistContent leftNom rightNom morph
+        -- 2026-09-20: covered topics with no composition route and no
+        -- distinction content must not render the hollow generic
+        -- template (rated 0/0) nor fall through to an off-intent
+        -- grounding. Name both topics and say the link is missing.
+        noLinkKnown = T.null supplement
+                      && mDistContent == Nothing
+                      && isCoveredTopic left
+                      && isCoveredTopic right
+        base = if noLinkKnown
+               then if isEn
+                    then "I see " <> leftNom <> " and " <> rightNom <> " but hold no link between them yet. Name a criterion."
+                    else "Вижу " <> leftNom <> " и " <> rightNom <> ", но связки между ними пока нет. Уточни критерий."
+               else "Различим " <> leftNom <> " и " <> rightNom <> " " <> criteriaText <> ". "
+                    <> renderDistinctionBody mDistContent leftNom rightNom morph
         isEn = isEnglishInput left
         (leftSup, leftEmitted, leftDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) left mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))
         (rightSup, rightEmitted, rightDiagnostics) = frameSupplementWithEmitted VmDistinction morph cs field (selfFieldHeuristics (ssSelfState ss)) right mArtifact isEn (ssEmittedPredicates ss) (Just (ssRuntimeGraph ss))

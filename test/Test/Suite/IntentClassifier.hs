@@ -20,6 +20,7 @@ import qualified Data.Text as T
 
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
+import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
@@ -113,6 +114,9 @@ structuralTests = TestLabel "StructuralClassification" $ TestList
   , TestCase $ case classify "почему осознанность выбора важно?" of
       IntentWorldCause topic -> assertEqual "why multiword topic" "осознанность выбора" topic
       other -> assertFailure ("expected IntentWorldCause, got " ++ show other)
+
+  , TestLabel "-ия nouns are nouns, not gerunds" testIyaNounNotGerund
+  , TestLabel "chem-distinction classifies end to end" testChemDistinctionIntent
 
   -- F4 (2026-09-17): verb tails must not leak into distinction topics
   -- (they pushed GF to the default lexeme: «понятие и понятие»).
@@ -301,3 +305,24 @@ b3Gate5Tests = TestLabel "B3Gate5" $ TestList
               ("B3 Gate 5: " <> T.unpack utterance
                 <> " expected " <> T.unpack expected <> " but got " <> T.unpack shown)
               (expected `T.isPrefixOf` shown)
+
+-- 2026-09-20: single-letter gerund suffixes classified every -а/-я
+-- OOV noun as Gerund («гармония»), killing sfHasTwoConcepts and the
+-- whole DistinctionQ route for чем-forms. Past-tense suffixes stay.
+testIyaNounNotGerund :: Test
+testIyaNounNotGerund = TestCase $ do
+  let nouns = extractContentNouns "чем вкус отличается от гармония?"
+  assertBool "гармония must be a content noun" ("гармония" `elem` nouns)
+  assertBool "вкус must be a content noun" ("вкус" `elem` nouns)
+  assertEqual "past gerund still detected"
+    Gerund (mtPOS (analyzeMorph "прочитав"))
+
+-- End-to-end: чем-distinction reaches IntentDistinguish (was
+-- IntentUnknown before the gerund fix).
+testChemDistinctionIntent :: Test
+testChemDistinctionIntent = TestCase $
+  case classify "чем вкус отличается от гармония?" of
+    IntentDistinguish left right -> do
+      assertEqual "dist left" "вкус" left
+      assertEqual "dist right" "гармония" right
+    other -> assertFailure ("expected IntentDistinguish, got " ++ show other)
