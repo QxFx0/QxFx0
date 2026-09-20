@@ -590,3 +590,22 @@ beyond 24 verbs.
 - **Live**: «чем вкус отличается от гармония?» now renders both
   corpus predicates composed under «Гипотеза:» (CMDistinguish,
   covered_exact) instead of the ground template.
+
+---
+
+# Assembly bar superseded (2026-09-20, operator decision)
+
+- The "coherent==2 majority on 50+ pairs" bar is retired, not cleared:
+  coherent==2 held at 33–40% across three harvest rounds (6/14 →
+  14/35 → 15/46) — a property of the distribution, not of sample
+  size. More turns cannot move it.
+- Influence already exists in two bounded, gated, traced forms:
+  selection endorsement (+0.15, math v5) and hypothesis fragments
+  in the surface. Withholding further influence is therefore not
+  "no influence", it is scope discipline.
+- First-class assembly claims (leading content, not appendage) stay
+  closed under a new criterion: coherent==2 majority among len-1
+  direct assemblies (currently 11/26 = 42%; len2+ only 4/20).
+  Notably, multi-hop assemblies rate systematically worse — evidence
+  for the no-cap decision (rating, not structure, judges), and against
+  promoting them.
