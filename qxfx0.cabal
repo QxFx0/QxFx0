@@ -735,6 +735,7 @@ common test-common
     Test.Suite.GeometricClassifier
     Test.Suite.Stance
     Test.Suite.Revision
+    Test.Suite.Rescue
     Test.Suite.MorphologicalNormalization
     Test.Suite.Anomaly
     Test.Suite.PathFinder

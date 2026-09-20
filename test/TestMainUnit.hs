@@ -69,6 +69,7 @@ import Test.Suite.Assembly (assemblyTests)
 import Test.Suite.Analogy (analogyTests)
 import Test.Suite.GeometricClassifier (geometricClassifierTests)
 import Test.Suite.Revision (revisionTests)
+import Test.Suite.Rescue (rescueTests)
 import Test.Suite.Anomaly (anomalyTests)
 import Test.Suite.Stance (stanceTests)
 import Test.Suite.SemanticContentB3 (semanticContentB3Tests)
@@ -148,6 +149,7 @@ main = do
                      ++ geometricClassifierTests
                      ++ [anomalyTests]
                      ++ stanceTests
+                     ++ rescueTests
              ++ semanticContentB3Tests
               ++ semanticRepairB3Tests
               ++ b3MechanicalGateExecutionTests

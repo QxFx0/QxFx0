@@ -16,6 +16,11 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , buildTurnArtifacts
   , renderAnomalySurface
   , isTopicNoisyOrAmbiguous
+  , RescueReason(..)
+  , detectRescue
+  , renderRescueLine
+  , rescueTag
+  , claimAstTautology
   ) where
 
 import QxFx0.Types
@@ -29,6 +34,7 @@ import QxFx0.Types.Domain.Atoms (MorphologyData(..), AtomSet(..), MeaningAtom(..
 import Data.Maybe (fromMaybe, isJust, isNothing, maybeToList)
 import QxFx0.Semantic.Assembly (utterableAssembly, verbalizeAssembly)
 import QxFx0.Types.Semantic.ContentSelector (SelectorDiagnostic(..))
+import QxFx0.Types.ClaimAst (ClaimAst(..), GfNP(..), GfRelation(..))
 import qualified Data.Map.Strict as Data.Map
 import qualified Data.Set as Set
 import QxFx0.Core.TurnPipeline.Types
@@ -680,6 +686,86 @@ renderAnomalySurface cs field currentAtoms (SurfaceTemporal _current _historical
   "То, что я говорил ранее, противоречит тому, что я говорю сейчас. " <>
   "Мне нужно уточнить, что я имею в виду."
 
+-- | Degradation rescue (render phase, trailing repair).
+--
+-- Rater doctrine (unanimous, CALIBRATION_REPORT move ⟺ unacceptable):
+-- a move should fire iff the turn degrades.  The v4-tightened prepare
+-- move cannot see degradation (it runs before composition), so rescue
+-- is computed here, after composition, and renders as a trailing
+-- repair fragment — never disturbing the lead architecture.
+-- Fires only on clean turns (no crisis, no anomaly, no recovery,
+-- no prepare move) with a detected degradation:
+--
+-- * 'RescueTautology': claim proves X-is-X (e.g. «понятие является
+--   понятием») — self-proving surface.
+-- * 'RescueDefaultLexeme': GF fell back to the default lexeme.
+-- * 'RescueEmptyCompose': covered topic(s), attempted plan with
+--   claims, but composition selected nothing.
+--
+-- Honest abstain / hypothesis paths are NEVER rescue targets
+-- (rater-approved acceptable): fallback plans and uncovered topics
+-- are excluded by construction.
+data RescueReason
+  = RescueTautology
+  | RescueDefaultLexeme
+  | RescueEmptyCompose
+  deriving stock (Eq, Show)
+
+-- | Detect render-phase degradation. Total: 'Nothing' means proceed
+-- silently. Priority is specificity: tautology first.
+detectRescue :: TurnInput -> TurnPlan -> DialogueRenderArtifact -> Maybe RescueReason
+detectRescue ti tp artifact
+  | isJust (tpOntologicalMove tp) = Nothing
+  | isJust (tpCrisisSurface tp) = Nothing
+  | isJust (tpAnomalySurface tp) = Nothing
+  | claimTautology = Just RescueTautology
+  | defaultLexeme = Just RescueDefaultLexeme
+  | emptyCompose = Just RescueEmptyCompose
+  | otherwise = Nothing
+  -- NOTE: no exclusion for plans carrying a fallback reason. The
+  -- fallback flag describes the plan's intent, but the template path
+  -- can still render degraded content (tautology on an abstained
+  -- plan was observed live). The three detectors below are
+  -- content-positive: they fire only on actually rendered
+  -- degradation. Honest abstain/hypothesis surfaces match none of
+  -- them (no tautological claim, no default lexeme, and either no
+  -- claims or uncovered topics).
+  where
+    claimTautology = claimAstTautology (draClaimAst artifact)
+    defaultLexeme = "gf_default_lexeme" `elem` draDerivationTags artifact
+    emptyCompose =
+      let diags = draSelectorDiagnostics artifact
+          selected = filter sdSelected diags
+          attempted = case draResponsePlan artifact of
+            Just plan -> not (null (rspClaims plan))
+            Nothing   -> False
+      in null selected && attempted && isCoveredTopic (tiBestTopic ti)
+
+rescueTag :: RescueReason -> Text
+rescueTag RescueTautology    = "tautology"
+rescueTag RescueDefaultLexeme = "default_lexeme"
+rescueTag RescueEmptyCompose = "empty_compose"
+
+-- | A claim that proves X-is-X (same lexeme both sides, non-empty).
+-- Pure; pinned by unit tests (the «понятие является понятием» class).
+claimAstTautology :: Maybe ClaimAst -> Bool
+claimAstTautology claim = case claim of
+  Just (MoveDefine (MkNP a) RelIdentity (MkNP b)) ->
+    let norm = T.toLower . T.strip
+    in not (T.null (norm a)) && norm a == norm b
+  _ -> False
+
+-- | Render the rescue as a trailing repair fragment. The 'move_' verb
+-- disciplines the surface: the system re-takes the turn, it does not
+-- decorate the degraded one.
+renderRescueLine :: RescueReason -> Text
+renderRescueLine RescueTautology =
+  "Дай переформулирую: тавтология вместо тезиса — это сбой, не ответ."
+renderRescueLine RescueDefaultLexeme =
+  "Дай переформулирую: грамматике не хватило слов — уточни тему."
+renderRescueLine RescueEmptyCompose =
+  "Дай переформулирую: связка не собралась — уточни критерий."
+
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
 buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
   let contentSelector = ssContentSelector ss
@@ -711,12 +797,31 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       semanticFirstDisabled = rerSemanticFirstDisabled effectResults
       localRecoveryText = lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
+      templateArtifact0 = rsTemplateArtifact renderStatic
+      -- Rescue fires only with real morphology: minimal-morphology
+      -- fixtures own their fallback surfaces by design (pinned exact
+      -- text), and environmental degradation there is not content
+      -- degradation. Same rule as semantic-first readiness.
+      morphReady = not (Data.Map.null (mdNominative (ssMorphology ss)))
+      rescueFired = case (localRecoveryPlan, morphReady) of
+        -- A diagnosed recovery owns the turn (its repair content
+        -- renders); but a bare environmental 'RecoveryRuntimeDegraded'
+        -- mode flag is not a diagnosis — content degradation detected
+        -- alongside it still deserves rescue. (Without this carve-out,
+        -- rescue could never fire in degraded sessions, where the mode
+        -- plan is always present.)
+        (Just plan, _) | lrpCause plan /= RecoveryRuntimeDegraded -> Nothing
+        (_, False)  -> Nothing
+        _ -> detectRescue ti tp templateArtifact0
+      rescueSuffix = case rescueFired of
+        Nothing     -> ""
+        Just reason -> "\n" <> renderRescueLine reason
       preSafetyRendered =
         case (crisisText, anomalyText, localRecoveryText) of
           (Just crisis, _, _) -> crisis
           (Nothing, Just anom, _) -> anom
-          (Nothing, Nothing, Just fb) -> moveLeadText <> renderWithBg <> "\n" <> fb <> knowledgeFragment
-          (Nothing, Nothing, Nothing) -> moveLeadText <> renderWithBg <> knowledgeFragment
+          (Nothing, Nothing, Just fb) -> moveLeadText <> renderWithBg <> "\n" <> fb <> knowledgeFragment <> rescueSuffix
+          (Nothing, Nothing, Nothing) -> moveLeadText <> renderWithBg <> knowledgeFragment <> rescueSuffix
       preSafetySurface =
         Guard.GuardSurface
           { Guard.gsRenderedText = preSafetyRendered
@@ -804,6 +909,9 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       executedOutcome = safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assemblyPath artifactManifest
       derivationTags =
         draDerivationTags templateArtifact
+          <> case rescueFired of
+               Nothing     -> []
+               Just reason -> ["rescue=" <> T.pack (show reason)]
           <> [ "surface_provenance=" <> T.pack (show surfaceProv)
              , "contract_provenance=" <> T.pack (show contractProv)
              , "assembly_path=" <> T.pack (show assemblyPath)
@@ -852,6 +960,9 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
        , taExternalQuerySkipReason = rerExternalQuerySkipReason effectResults
         , taExternalActionDecisionTrace = rerExternalActionDecisionTrace effectResults
         , taGenerationTrace = draGenerationTrace (rsTemplateArtifact renderStatic)
+             <> case rescueFired of
+                  Nothing     -> []
+                  Just reason -> [GenerationAttempt "move_rescue" ("uttered:" <> rescueTag reason)]
         , taEmittedPredicates = draEmittedPredicates (rsTemplateArtifact renderStatic)
          , taSelectorDiagnostics = draSelectorDiagnostics (rsTemplateArtifact renderStatic)
          , taActivationArtifact = draActivationArtifact (rsTemplateArtifact renderStatic)
