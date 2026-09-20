@@ -650,3 +650,37 @@ beyond 24 verbs.
   «чем X отличается от Y») carry per-candidate relevance labels.
   Holdout bar for cutover: 40+ mapped covered records with
   relation-bearing queries, McNemar p < 0.05 AND delta >= +0.05.
+
+---
+
+# Batch2 holdout eval — 45 relation-bearing pre-ratings (2026-09-21)
+
+- **Batch**: 45 records (15 each distinction/relation/challenge),
+  topics alphabet-spread; responses captured live (`rated_batch2.json`,
+  merged into `rated_responses.json` → 115, backup `.bak-batch1`);
+  labels ingested to `corpus.jsonl` (85 labeled total).
+- **Provenance (honest)**: labels are `assistant-pre` — assistant
+  proposed per-record (rel 20×2 / 11×1 / 14×0, acc=0 on 8: 4 junk
+  tails + 4 contentless hold-stubs), human agreed the FRAME, not
+  each record. Train-eligibility NOT claimed; `train_eligible` stays
+  40 pending per-record human confirmation.
+- **Result** (`scripts/eval_structscore.py`, containment mapping):
+  35 covered rel=2, of which 28 mapped (7 F7-class exclusions: 4
+  любовь + добро/желание×2 + желание-relation — non-corpus
+  predicates at rel=2, unmappable by construction).
+  struct top-1 21/28 (0.750) vs jaccard 15/28 (0.536),
+  delta +0.214; discordants 10 vs 4, McNemar p = 0.180.
+- **Bar status**: NOT cleared (need 40+ mapped AND p<0.05 AND
+  delta>=+0.05: have 28, p=0.18). Delta diluted +0.545→+0.214 with
+  n — the order-prior effect washing out as relation-bearing
+  queries enter, exactly as the head-only decomposition predicted.
+- **New genuine struct losses** (production Field-pick beats both
+  scorers): действительность×2 (used#1, struct falls to order #0),
+  трагедия×2 (used#1 at ov=0.5, BOTH scorers miss — paraphrase
+  zone neither ranks first), смысл-relation/challenge (used#1,
+  struct order-fallback wrong). Pattern: whenever the approved pick
+  is NOT first-listed, struct's order prior fails and Field
+  conditioning (scorePred+prototypes) is the only thing that works.
+- **Sensitivity**: delta identical under all four weight variants
+  again — coordinate ascent still pointless; weights untouched.
+- **Parameters moved**: none. No cutover, no math bump.
