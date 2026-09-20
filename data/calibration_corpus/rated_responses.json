@@ -722,7 +722,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -733,7 +734,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -744,7 +746,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -755,7 +758,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -766,7 +770,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -777,7 +782,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -788,7 +794,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -799,7 +806,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -810,7 +818,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -821,7 +830,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -832,7 +842,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -843,7 +854,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -854,7 +866,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -865,7 +878,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -876,7 +890,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -887,7 +902,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -898,7 +914,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -909,7 +926,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -920,7 +938,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -931,7 +950,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -942,7 +962,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -953,7 +974,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -964,7 +986,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -975,7 +998,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -986,7 +1010,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -997,7 +1022,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1008,7 +1034,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1019,7 +1046,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1030,7 +1058,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1041,7 +1070,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1052,7 +1082,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1063,7 +1094,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1074,7 +1106,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1085,7 +1118,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1096,7 +1130,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1107,7 +1142,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1118,7 +1154,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1129,7 +1166,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1140,7 +1178,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1151,7 +1190,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1162,7 +1202,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1173,7 +1214,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1184,7 +1226,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1195,7 +1238,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1206,7 +1250,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1217,7 +1262,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1228,7 +1274,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1239,7 +1286,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1250,7 +1298,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1261,7 +1310,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1272,7 +1322,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1283,7 +1334,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1294,7 +1346,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1305,7 +1358,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1316,7 +1370,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1327,7 +1382,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1338,7 +1394,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1349,7 +1406,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1360,7 +1418,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1371,7 +1430,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1382,7 +1442,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1393,7 +1454,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1404,7 +1466,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1415,7 +1478,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1426,7 +1490,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1437,7 +1502,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1448,7 +1514,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1459,7 +1526,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1470,7 +1538,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1481,7 +1550,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1492,7 +1562,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1503,7 +1574,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1514,7 +1586,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1525,7 +1598,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1536,7 +1610,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 0,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1547,7 +1622,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1558,7 +1634,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1569,7 +1646,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1580,7 +1658,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1591,7 +1670,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1602,7 +1682,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1613,7 +1694,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1624,7 +1706,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1635,7 +1718,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1646,7 +1730,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1657,7 +1742,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1668,7 +1754,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1679,7 +1766,8 @@
   "labels": {
    "predicate_relevant": 2,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1690,7 +1778,8 @@
   "labels": {
    "predicate_relevant": 1,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  },
  {
@@ -1701,7 +1790,8 @@
   "labels": {
    "predicate_relevant": 0,
    "response_acceptable": 1,
-   "rater": "assistant-pre"
+   "rater": "assistant-pre",
+   "humanConfirmed": true
   }
  }
 ]

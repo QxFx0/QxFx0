@@ -709,3 +709,25 @@ beyond 24 verbs.
 - **Sensitivity**: delta flat across weight variants (flat-rel-mod
   +0.021, still below gate) — weights stay hand-set, no math bump.
 - **Parameters moved**: none.
+
+---
+
+# Operator decision — pre-ratings count as human-confirmed (2026-09-21)
+
+- **Decision**: the 90 batch2/batch3 `assistant-pre` labels count as
+  human-confirmed. `train_eligible` 40 → 125 (35 v1-undisputed + 90).
+  Labels keep `rater: assistant-pre` + `humanConfirmed: true`
+  (provenance honest: proposed per-record inline, agreed per batch).
+- **Deviation recorded**: CALIBRATION_CORPUS.md demands double-rating
+  20% + kappa for train-eligibility. This decision overrides it by
+  operator authority (precedent: assembly-bar supersession): every
+  record was presented inline WITH its proposed label and the batch
+  was accepted as a whole — confirmation-by-review, not
+  independent double-rating. Dispute class stays excluded (5
+  adjudicated v1); F7-unmappable records remain unusable for
+  predicate-fit regardless of eligibility flag.
+- **Consequence**: StructWeights coordinate ascent is now DATA-OPEN
+  (125 eligible). Not started — and the holdout verdict (delta
+  −0.043, weights flat across variants) says training would fit
+  noise: the objective, not the data, is the blocker. Eligibility
+  unblocks future work; it does not recommend it.

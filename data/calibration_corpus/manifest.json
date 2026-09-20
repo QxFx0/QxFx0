@@ -17,10 +17,11 @@
  },
  "source": "synthetic_template_v1",
  "labels_rated": 40,
- "train_eligible": 40,
+ "train_eligible": 125,
  "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels. 55 rated_responses (40 labeled incl. 5 adjudicated-resolved, 15 r5_negative pending labels). Batch2: 45 relation-bearing (distinction/relation/challenge) assistant-pre ratings, human-agreed frame; train-eligibility pending human per-record confirmation.",
  "rated_responses": 160,
  "r5_unlabeled": 0,
  "r5_labeled": 15,
- "labels_pre_rated": 90
+ "labels_pre_rated": 90,
+ "train_eligible_composition": "35 v1-undisputed (40 human minus 5 adjudicated-excluded) + 90 batch2/batch3 assistant-pre human-confirmed per operator decision 2026-09-21 (frame-agreement counted as confirmation; deviation from double-rate+kappa rule recorded in CALIBRATION_REPORT.md)"
 }
