@@ -13,6 +13,8 @@ import qualified Data.Text as T
 import QxFx0.Core.TurnPipeline.Route.Render
   ( RescueReason(..)
   , claimAstTautology
+  , emptyHoldFires
+  , mentionedCoveredTopics
   , renderRescueLine
   , rescueTag
   )
@@ -43,12 +45,44 @@ rescueTests =
         ("тему" `T.isInfixOf` renderRescueLine RescueDefaultLexeme)
       assertBool "compose line asks for criterion"
         ("критерий" `T.isInfixOf` renderRescueLine RescueEmptyCompose)
+      assertBool "hold line admits empty content"
+        ("содержания" `T.isInfixOf` renderRescueLine RescueEmptyHold)
       assertBool "no line decorates; all re-take"
         (all ("переформулирую" `T.isInfixOf`)
-          [renderRescueLine r | r <- [RescueTautology, RescueDefaultLexeme, RescueEmptyCompose]])
+          [renderRescueLine r | r <- [RescueTautology, RescueDefaultLexeme, RescueEmptyCompose, RescueEmptyHold]])
 
   , TestLabel "rescue tags are stable trace tokens" $ TestCase $ do
       assertEqual "tautology tag" "tautology" (rescueTag RescueTautology)
       assertEqual "lexeme tag" "default_lexeme" (rescueTag RescueDefaultLexeme)
       assertEqual "compose tag" "empty_compose" (rescueTag RescueEmptyCompose)
+      assertEqual "hold tag" "empty_hold" (rescueTag RescueEmptyHold)
+
+  , TestLabel "empty hold fires only on plan-less covered turns" $ TestCase $ do
+      assertBool "covered engaged topic, all empty"
+        (emptyHoldFires ["добро"] True True True True)
+      assertBool "bestTopic covered even when engaged is a verb"
+        (emptyHoldFires ["связано", "добро"] True True True True)
+      assertBool "uncovered never fires"
+        (not (emptyHoldFires ["связано"] True True True True))
+      assertBool "a carried plan (abstain included) never fires"
+        (not (emptyHoldFires ["добро"] False True True True))
+      assertBool "an emitted predicate never fires"
+        (not (emptyHoldFires ["добро"] True True False True))
+      assertBool "a rendered claim never fires"
+        (not (emptyHoldFires ["добро"] True False True True))
+      assertBool "a selection never fires"
+        (not (emptyHoldFires ["добро"] True True True False))
+
+  , TestLabel "mentioned topics name the held noun" $ TestCase $ do
+      assertEqual "stub hold names добро"
+        ["добро"]
+        (mentionedCoveredTopics "Держу добро как устойчивую опору для дальнейшего разбора.")
+      assertBool "punctuation does not break the match"
+        ("добро" `elem` mentionedCoveredTopics "Держу добро. Я удержу только устойчивую часть ответа.")
+      assertEqual "verb bestTopic is not a topic"
+        []
+        (mentionedCoveredTopics "Как связано?")
+      assertEqual "honest abstain names nothing covered"
+        []
+        (mentionedCoveredTopics "Я вижу тему, но в локальной модели нет достаточного основания для содержательного тезиса.")
   ]

@@ -638,7 +638,7 @@ runtime regression:
 |---|---|
 | qxfx0-test | 1307 |
 | qxfx0-test-fast | 1817 |
-| qxfx0-test-unit | 1603 |
+| qxfx0-test-unit | 1605 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (split drift +1 since the 172 split; groups all green) |

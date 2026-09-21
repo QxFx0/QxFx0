@@ -21,6 +21,8 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , renderRescueLine
   , rescueTag
   , claimAstTautology
+  , emptyHoldFires
+  , mentionedCoveredTopics
   ) where
 
 import QxFx0.Types
@@ -89,7 +91,7 @@ import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSe
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
-import QxFx0.Semantic.Content (SemanticPredicate(..))
+import QxFx0.Semantic.Content (SemanticPredicate(..), coveredTopics, normalizeTopic)
 import QxFx0.Semantic.ContentSelector (buildSelectorActivationArtifact)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Self.Field (Field(..))
@@ -192,6 +194,10 @@ data RenderEffectPlan = RenderEffectPlan
   , repExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
     -- ^ AS1-03: typed reason model for allow/deny/no-action on outbound actions.
   , repSemanticFirstDisabled :: !Bool
+  , repActivationTopics :: ![Text]
+    -- ^ Frame activation topics (engaged set) for render-phase gates
+    -- (assembly engagement, EmptyHold rescue). Threaded because
+    -- buildTurnArtifacts cannot see plan-time locals.
   }
 
 data RenderTimeline = RenderTimeline
@@ -550,6 +556,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repExternalActionDecision = mExternalActionDecision
       , repExternalActionDecisionTrace = mExternalActionDecisionTrace
       , repSemanticFirstDisabled = tpSemanticFirstDisabled tp
+      , repActivationTopics = activationTopics
         }
   where
     isRequestStrategy StrategyRequestCalibration = True
@@ -704,26 +711,37 @@ renderAnomalySurface cs field currentAtoms (SurfaceTemporal _current _historical
 -- * 'RescueDefaultLexeme': GF fell back to the default lexeme.
 -- * 'RescueEmptyCompose': covered topic(s), attempted plan with
 --   claims, but composition selected nothing.
+-- * 'RescueEmptyHold': an engaged-or-best topic is covered, but NO
+--   plan at all (no claims, no claim, no emitted predicates, nothing
+--   selected) — the contentless hold («Держу X как опору…») on a
+--   topic that HAS corpus predicates. Measured acc=0 on 4
+--   calibration turns. Coverage is checked over bestTopic PLUS the
+--   frame's engaged topics: bestTopic alone is focus-scored and can
+--   elect a verb, while the stub is about the engaged topic.
 --
 -- Honest abstain / hypothesis paths are NEVER rescue targets
--- (rater-approved acceptable): fallback plans and uncovered topics
--- are excluded by construction.
+-- (rater-approved acceptable): they always carry a plan (fallback
+-- plans included) and/or claims — the EmptyHold detector requires
+-- plan absence, so abstains are excluded by construction. Uncovered
+-- topics are excluded: silence there may be honesty, not failure.
 data RescueReason
   = RescueTautology
   | RescueDefaultLexeme
   | RescueEmptyCompose
+  | RescueEmptyHold
   deriving stock (Eq, Show)
 
 -- | Detect render-phase degradation. Total: 'Nothing' means proceed
--- silently. Priority is specificity: tautology first.
-detectRescue :: TurnInput -> TurnPlan -> DialogueRenderArtifact -> Maybe RescueReason
-detectRescue ti tp artifact
+-- silently. Priority is specificity: tautology first, hold last.
+detectRescue :: TurnInput -> TurnPlan -> [Text] -> DialogueRenderArtifact -> Maybe RescueReason
+detectRescue ti tp engaged artifact
   | isJust (tpOntologicalMove tp) = Nothing
   | isJust (tpCrisisSurface tp) = Nothing
   | isJust (tpAnomalySurface tp) = Nothing
   | claimTautology = Just RescueTautology
   | defaultLexeme = Just RescueDefaultLexeme
   | emptyCompose = Just RescueEmptyCompose
+  | emptyHold = Just RescueEmptyHold
   | otherwise = Nothing
   -- NOTE: no exclusion for plans carrying a fallback reason. The
   -- fallback flag describes the plan's intent, but the template path
@@ -743,11 +761,46 @@ detectRescue ti tp artifact
             Just plan -> not (null (rspClaims plan))
             Nothing   -> False
       in null selected && attempted && isCoveredTopic (tiBestTopic ti)
+    emptyHold = emptyHoldFires
+      (tiBestTopic ti : engaged)
+      (isNothing (draResponsePlan artifact))
+      (isNothing (draClaimAst artifact))
+      (null (draEmittedPredicates artifact))
+      (null (filter sdSelected (draSelectorDiagnostics artifact)))
+
+-- | Pure core of the EmptyHold detector (unit-pinned truth table):
+-- some engaged-or-best topic is covered (corpus predicates exist),
+-- yet the turn produced no plan, no claim, no emitted predicates and
+-- selected nothing. Abstains always carry a plan, so they never
+-- match. Topics (not a precomputed Bool) so the coverage check stays
+-- against the live corpus; 'tiBestTopic' alone is insufficient — it
+-- is focus-scored with a length bonus that can elect a verb
+-- («связано» beats «добро»/«зло»), while the stub is about the
+-- engaged topic.
+emptyHoldFires :: [Text] -> Bool -> Bool -> Bool -> Bool -> Bool
+emptyHoldFires topics planAbsent claimAbsent emittedEmpty selectedEmpty =
+  any isCoveredTopic topics && planAbsent && claimAbsent && emittedEmpty && selectedEmpty
+
+-- | Covered topics named (as whole tokens) in a rendered surface.
+-- Pure; unit-pinned. Feeds the EmptyHold coverage check: a
+-- contentless turn that still names a covered topic is the stub
+-- class — bestTopic can elect a verb through the focus length bonus
+-- («связано» beats «добро»/«зло»), while the hold names the engaged
+-- noun. (Root cause lives in focus scoring — extractor debt, not
+-- rescue scope.)
+mentionedCoveredTopics :: Text -> [Text]
+mentionedCoveredTopics surface =
+  let toks = Set.fromList
+        [ normalizeTopic (T.dropAround (not . isAlpha) w)
+        | w <- T.words surface
+        ]
+  in [ t | t <- coveredTopics, normalizeTopic t `Set.member` toks ]
 
 rescueTag :: RescueReason -> Text
 rescueTag RescueTautology    = "tautology"
 rescueTag RescueDefaultLexeme = "default_lexeme"
 rescueTag RescueEmptyCompose = "empty_compose"
+rescueTag RescueEmptyHold    = "empty_hold"
 
 -- | A claim that proves X-is-X (same lexeme both sides, non-empty).
 -- Pure; pinned by unit tests (the «понятие является понятием» class).
@@ -768,6 +821,8 @@ renderRescueLine RescueDefaultLexeme =
   "Дай переформулирую: грамматике не хватило слов — уточни тему."
 renderRescueLine RescueEmptyCompose =
   "Дай переформулирую: связка не собралась — уточни критерий."
+renderRescueLine RescueEmptyHold =
+  "Дай переформулирую: удержал рамку, но не дал содержания — спроси конкретнее."
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
 buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
@@ -815,7 +870,9 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         -- plan is always present.)
         (Just plan, _) | lrpCause plan /= RecoveryRuntimeDegraded -> Nothing
         (_, False)  -> Nothing
-        _ -> detectRescue ti tp templateArtifact0
+        _ -> detectRescue ti tp
+                 (repActivationTopics effectPlan ++ mentionedCoveredTopics renderWithBg)
+                 templateArtifact0
       rescueSuffix = case rescueFired of
         Nothing     -> ""
         Just reason -> "\n" <> renderRescueLine reason

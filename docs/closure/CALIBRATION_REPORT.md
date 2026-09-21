@@ -756,3 +756,30 @@ beyond 24 verbs.
   alien grounds, leads intact; engaged-pair path still utterable
   (unit-pinned).
 - **Parameters moved**: none (filter, not weights).
+
+---
+
+# EmptyHold rescue + verb-focus root cause (2026-09-21)
+
+- **Defect** (batch2/3 acc=0): contentless holds («Держу X как
+  опору…») on covered topics — no plan, no claim, nothing emitted,
+  nothing selected.
+- **Discriminator** (trace-verified): stubs carry NO plan
+  (`respPlan=null`); honest abstains always carry one (fallback
+  reason). The detector requires plan absence, so abstains are
+  excluded by construction; uncovered topics excluded (silence may
+  be honesty).
+- **Root cause found by instrumented trace** (temporary, removed):
+  `tiBestTopic` is focus-scored with a length bonus that elects a
+  verb on relation forms (`best="связано"` beats «добро»/«зло»);
+  frame activation for these frames is empty (`_ -> []` catch-all).
+  Coverage is therefore checked over bestTopic + frame activation
+  topics + covered topics named in the rendered surface
+  (`mentionedCoveredTopics`, unit-pinned; new `repActivationTopics`
+  plan field threads plan-time topics into artifacts). The verb-focus
+  election itself is extractor debt (F2/F3/F4 family) — rescue scope
+  ends at catching its render consequence.
+- **Verification**: unit 1605/1605 (truth table + mention tests);
+  fast 1817/1817; live 5/5 (both stub classes repaired, abstain and
+  clean turns silent, tautology keeps priority).
+- **Parameters moved**: none (filter, not weights).
