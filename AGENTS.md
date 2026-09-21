@@ -616,21 +616,32 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-09-19)
+## Test counts (updated 2026-09-21)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
-suites that run them), all re-verified green on HEAD 2026-09-19
-(sequential runs; `-M10G` for test/fast/integration/property/unit,
-`-M12G` required for a full single-process slow run):
+suites that run them). unit/fast/integration re-verified green on HEAD
+2026-09-21 (sequential runs; `-M10G` for fast, `-M6G` for unit/
+integration, `-M12G` for slow groups). Slow: 173 cases green BY GROUP
+(runtime+state 139 tried / 0 failures in-process, http 23/23 and
+lifecycle 11/11 standalone); full single-process slow run OOMs on the
+15 GB box (ROOT-CAUSED 2026-09-21): each http test spawns a sidecar
+worker at ~1.3 GB RSS on top of the near-cap 12 GB test heap; the
+whole job (binary + wrapper, no exit code, no summary) dies inside
+the http group — twice, at different points, never in runtime/state.
+Per-group runs are the supported discipline here. Cleanup after a
+killed run (SIGKILLed parents leak sidecars/workers):
+`pkill -9 -f http_runtime.py; pkill -9 -f "qxfx0-main --session-id"`.
+Standalone http group 23/23 green, so this is resources, not a
+runtime regression:
 
 | Suite | Cases |
 |---|---|
 | qxfx0-test | 1307 |
 | qxfx0-test-fast | 1817 |
-| qxfx0-test-unit | 1597 |
+| qxfx0-test-unit | 1603 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
-| qxfx0-test-slow | 172 (runtime 93 / state 45 / http 23 / lifecycle 11) |
+| qxfx0-test-slow | 173 (split drift +1 since the 172 split; groups all green) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
