@@ -143,6 +143,10 @@ decideProtocol Nothing Nothing =
 --
 -- Version 1.  Bump 'crVersion' whenever a line changes so replay
 -- sees which resource pack a Protocol B surface carried.
+-- Last re-verified 2026-09-21: 8-800-2000-122 confirmed live on the
+-- official site (telefon-doveria.ru page title, site active with
+-- 2026 content); 112 unchanged (federal single emergency number).
+-- No line changed, so 'crVersion' stays 1.
 crisisResourcesRu :: CrisisResources
 crisisResourcesRu = CrisisResources
   { crVersion = 1
