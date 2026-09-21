@@ -472,6 +472,12 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
     silently empty and only the explicit layer routes. Restoring the
     file (53K entries, external source) or documenting its origin is an
     open ops task.
+    **2026-09-21 update**: CLOSED — identical 44 MB copies found on
+    the same machine (`Grid_cod/QxFx1/` + 3 sibling dirs); installed
+    at root (gitignored, never committed): 53146 lines, 0 parse
+    errors. Substrate ACTIVE; full verification green with it
+    (see test-counts note). Provenance + regime notes:
+    `docs/operations/BRAIN_KB_PROVENANCE.md`.
   - **Integration**: `Bootstrap.hs` loads `brain_kb.jsonl`, builds substrate
     edges, merges into `SemanticNetwork` (explicit wins at same key).
   - **Data source**: `brain_kb.jsonl` (53K entries), filtered by
@@ -622,14 +628,15 @@ Per-suite HUnit case counts (QuickCheck properties included in the
 suites that run them). unit/fast/integration re-verified green on HEAD
 2026-09-21 (sequential runs; `-M10G` for fast, `-M6G` for unit/
 integration, `-M12G` for slow groups). Slow: 173 cases green BY GROUP
-(runtime+state 139 tried / 0 failures in-process, http 23/23 and
-lifecycle 11/11 standalone); full single-process slow run OOMs on the
-15 GB box (ROOT-CAUSED 2026-09-21): each http test spawns a sidecar
-worker at ~1.3 GB RSS on top of the near-cap 12 GB test heap; the
-whole job (binary + wrapper, no exit code, no summary) dies inside
-the http group — twice, at different points, never in runtime/state.
-Per-group runs are the supported discipline here. Cleanup after a
-killed run (SIGKILLed parents leak sidecars/workers):
+(runtime 94/state 45/http 23/lifecycle 11, all re-verified WITH
+substrate on HEAD 2026-09-21); state group requires `-M10G`
+(`-M8G` heap-exhausts, `-M12G` invites the box OOM-killer), other
+groups run `-M12G`. Substrate is ACTIVE since 2026-09-21
+(`brain_kb.jsonl`, 53146 entries, gitignored external): full
+single-process slow run stays unsupported (sidecar workers ~1.3 GB
+RSS each on top of a near-cap heap — ROOT-CAUSED OOM, per-group
+discipline stands). Cleanup after a killed run (SIGKILLed parents
+leak sidecars/workers):
 `pkill -9 -f http_runtime.py; pkill -9 -f "qxfx0-main --session-id"`.
 Standalone http group 23/23 green, so this is resources, not a
 runtime regression:
@@ -678,8 +685,9 @@ re-observe before treating as real).
   root — untracked and removed; `libHSqxfx0*.so` and `*.qxfx0.db` are
   gitignored now (`R5Verdict.csv`, `ShadowAlert.csv`, `src/**/*.hi|o`
   and the test DBs were already covered).
-- `brain_kb.jsonl` (substrate source, 53K entries) is NOT in the
-  repository — see the Substrate Network fact-check above.
+- `brain_kb.jsonl` (substrate source, 53K entries) restored locally
+  2026-09-21 (gitignored, never committed) — see the Substrate Network
+  note above.
 
 ## Pointers
 

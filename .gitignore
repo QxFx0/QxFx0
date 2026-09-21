@@ -114,3 +114,6 @@ libHSqxfx0*.so
 
 # Test-suite SQLite artifacts in the worktree root (native-sqlite nulls suite)
 *_test_*.db
+
+# Substrate source (external data, restored locally; never commit)
+brain_kb.jsonl

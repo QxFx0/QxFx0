@@ -15,6 +15,7 @@ import Data.Aeson.Types (parseMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Network.HTTP.Client (responseTimeout, responseTimeoutMicro)
 import Network.HTTP.Simple
   ( addRequestHeader
   , getResponseBody
@@ -753,10 +754,17 @@ postTurnRawBodyWithHeaders port headerMutators body = do
           ($)
           ( setRequestMethod "POST"
           $ setRequestBodyJSON body
+          -- Substrate-era cold workers bootstrap in ~20s (44MB brain_kb
+          -- parse + edge build; measured 26s -> 44s wall on a first
+          -- turn). The default client timeout trips on cold sessions,
+          -- so /turn posts carry an explicit 120s budget. This is
+          -- harness calibration, not runtime masking: no turn-latency
+          -- SLA exists in the runtime contract. Healthchecks keep the
+          -- default timeout.
           $ addRequestHeader "Content-Type" "application/json" req0
           )
           headerMutators
-  resp <- httpLBS req
+  resp <- httpLBS req { responseTimeout = responseTimeoutMicro (120 * 1000000) }
   let statusCode = getResponseStatusCode resp
   case eitherDecode (getResponseBody resp) of
     Left err -> assertFailure ("turn response is not valid JSON: " <> err) >> fail "unreachable"
