@@ -19,7 +19,10 @@ Label codomains: `predicate_relevant ∈ {0,1,2,null}`,
 `challenge_strength ∈ {"weak","strong",null}`,
 `response_acceptable ∈ {0,1,null}`, `crisis_expected ∈ {true,false}`.
 
-## Stratification (1000 records)
+## Stratification (1000 records seed; 1030 with probe strata since 2026-09-19)
+
+Seed table below; current counts in `data/calibration_corpus/manifest.json`
+(added `probe_uncovered`/`probe_oov`/`probe_r5` 5 each + `r5_negative` 15).
 
 | Stratum | N | Purpose |
 |---|---|---|
@@ -36,4 +39,7 @@ Label codomains: `predicate_relevant ∈ {0,1,2,null}`,
 
 A record becomes train-eligible only with human `labels` filled
 (double-rated on 20% + kappa; disputes to `adjudicated/`).
-`prelabel` never counts as a label.
+`prelabel` never counts as a label. (`assistant-pre` + human-confirmed
+batch ratings are NOT synthetic prelabels — they are proposed labels
+with batch confirmation; see CALIBRATION_REPORT.md operator decision
+2026-09-21. The terms look alike; the categories differ.)

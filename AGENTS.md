@@ -566,7 +566,7 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   inadmissible and mirror/resonance dominate on their own merits.
   The layer fires only under Protocol A, and only when the input
   carries a negative ontological act or the score drifts below the
-  personalized baseline by > `moveDriftMargin` (0.10). At render
+  personalized baseline by > `moveDriftMargin` (0.20 since v4 tightening 2026-09-20; was 0.10). At render
   the move LEADS the turn with its act line
   (`QxFx0.User.Decompress.renderMoveLine`), decompressed for the
   receiver: under high pressure (atmosphere > 0.6) only the first,
