@@ -26,7 +26,10 @@ jobs:
   ci-fast:
     name: CI Fast (lint + format + gf-compile)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # Same cold-index hazard as ci.yml (bare `cabal update` cost 55 min
+    # on 2026-09-22); packages/ cache entry covers it, timeout kept
+    # above the worst observed cold run.
+    timeout-minutes: 60
 
     steps:
       - name: Checkout
@@ -55,6 +58,7 @@ jobs:
         with:
           path: |
             ~/.cabal/store
+            ~/.cabal/packages
             dist-newstyle
           key: ${{ runner.os }}-cabal-${{ hashFiles('cabal.project.freeze', 'qxfx0.cabal', 'cabal.project.local') }}
           restore-keys: |
