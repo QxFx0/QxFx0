@@ -819,3 +819,23 @@ beyond 24 verbs.
   No constant touched, no math bump. EmptyHold already catches the
   render consequence (covered-topic holds repaired regardless of
   which verb the focus elected).
+
+---
+
+# Substrate selection re-baseline — base transfers intact (2026-09-22)
+
+- **Design**: three-point comparison on the stratified sample —
+  OLD baseline (old code, empty substrate, 40 turns) vs NEW-CODE
+  empty-substrate (60 turns) vs NEW-CODE with substrate (60 turns).
+  Reports: `baseline_report.json`, `baseline_report_nosubstrate.json`,
+  `baseline_report_substrate.json` (old file untouched).
+- **Result**: every improvement since the old baseline
+  (distinction 3→5 exact, relation 3→4, practical 0→5 exact) comes
+  from CODE fixes (F2/F4-class) — new-code empty ≡ new-code
+  substrate on ALL 12 strata, zero content-source difference.
+- **Verdict**: substrate does not shift top-level content routing on
+  this sample (it activates underneath on a minority of turns —
+  19/60 with nonzero edges used, hops ≤3 — multi-hop traversal
+  without top-1 displacement).
+  The 130-label calibration base transfers intact; no re-rating
+  required by the regime change.
