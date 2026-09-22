@@ -1925,7 +1925,7 @@ renderArtifactViaAssembly :: RuntimeParadigms -> SystemState -> InputProposition
                             -> ResponseMeaningPlan -> ResponseContentPlan
                             -> Text -> [IdentityClaimRef]
                             -> MorphologyData -> RenderStyle -> ParsedInput
-                            -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
+                            -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> ContentSelector -> DialogueRenderArtifact
 renderArtifactViaAssembly = renderArtifactViaAssemblyWithActiveQuestion Nothing
 
 -- | The route stage supplies the current dialogue question to preserve the
@@ -1934,10 +1934,8 @@ renderArtifactViaAssemblyWithActiveQuestion :: Maybe Text -> RuntimeParadigms ->
                                                -> ResponseMeaningPlan -> ResponseContentPlan
                                                -> Text -> [IdentityClaimRef]
                                                -> MorphologyData -> RenderStyle -> ParsedInput
-                                               -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> DialogueRenderArtifact
-renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field =
-   let contentSelector = ssContentSelector ss
-   in
+                                               -> Maybe ConsciousnessNarrative -> Maybe GeodesicPlan -> Field -> ContentSelector -> DialogueRenderArtifact
+renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss frame rmp rcp topic claims morph style parsedInput mnarr _mGeodesicPlan field contentSelector =
     -- For EN input, skip Russian-only assembly path and use template rendering directly.
     -- Template rendering now supports EN via structuredBody language detection.
       if isEnglishInput (ipfRawText frame)

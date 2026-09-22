@@ -152,6 +152,7 @@ assertAssemblyNotEmpty md prompt = do
           Nothing
           Nothing
           emptyField
+          emptyContentSelector
   assertBool ("assembly output must be non-empty for prompt: " <> T.unpack prompt)
     (not (T.null (T.strip (draRenderedText artifact))))
   assertBool ("assembly path must not end with gf_no_output for prompt: " <> T.unpack prompt)

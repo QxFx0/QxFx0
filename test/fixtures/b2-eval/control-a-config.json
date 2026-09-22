@@ -19,7 +19,7 @@
     },
     {
       "feature": "semantic_content_layer",
-      "mechanism": "Semantic.Content predicates not appended to surface (covered topics get template-only output)",
+      "mechanism": "Render sees a ContentSelector with empty topic predicates (tpContentDisabled): no corpus surface selected, composed, endorsed, or assembled at plan time; anomaly farthest-points gated the same way. Completed 2026-09-22 (B2-EXEC-002 found plan-time selection still emitting corpus text).",
       "env_var": "QXFX0_CONTROL_A_DISABLE_CONTENT=1"
     }
   ],

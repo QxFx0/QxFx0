@@ -302,6 +302,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
           , tpAnomalyTrace = fmap aTrace mAnomaly
           , tpAnomalyStateEffect = mDetectedAnomaly >>= daStateEffect
           , tpSemanticFirstDisabled = semanticFirstDisabled
+          , tpContentDisabled = False
           , tpCrisisSurface =
               case tiUserProtocol ti of
                 ProtocolB cause -> Just (CrisisSurface cause)
@@ -337,7 +338,8 @@ routeTurnPlan pio ss ti ts effectPlan effectResults = do
   ablation <- readControlAAblation pio
   let semanticFirstDisabled = caDisableSemanticFirst ablation || caDisableContent ablation
       detectedAnomaly = QxFx0.Core.TurnPipeline.Route.Anomaly.detectAnomaly ss ti
-  pure (buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) detectedAnomaly semanticFirstDisabled (caDisableRepair ablation) ss ti ts effectPlan effectResults)
+  pure ((buildRouteTurnPlan fmarMode (pipelineShadowPolicy pio) detectedAnomaly semanticFirstDisabled (caDisableRepair ablation) ss ti ts effectPlan effectResults)
+    { tpContentDisabled = caDisableContent ablation })
 
 -- | Read the B2 Control-A ablation set from the environment through the
 -- pipeline effect boundary. 'Nothing' / any value other than @"1"@ means

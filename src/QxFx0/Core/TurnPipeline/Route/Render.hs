@@ -274,17 +274,29 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       semanticIntent = semanticIntentForRender (ipfPropositionType (tiFrame ti)) semanticInput semanticTokens semanticMorph
       semanticFrame = buildFrame semanticIntent semanticInput
       activationTopics = semanticFrameActivationTopics semanticFrame
+      -- B2 full-content ablation (D1-rerun): under tpContentDisabled
+      -- the plan-time render sees a selector with NO topic predicates,
+      -- so no corpus surface can be selected, composed, endorsed, or
+      -- assembled. Pure local copy; shared state untouched. (Prior
+      -- behavior only skipped the resolved path while plan-time
+      -- selection still emitted corpus text — the EXEC-002 D1
+      -- confound.)
+      renderSelector =
+        let cs = ssContentSelector ss
+        in if tpContentDisabled tp
+           then cs { csTopicPredicates = Data.Map.empty }
+           else cs
       mActivationArtifact =
         if null activationTopics
           then Nothing
-          else Just (buildSelectorActivationArtifact (ssContentSelector ss) (tiField ti) activationTopics (ssSemanticNetwork ss))
+          else Just (buildSelectorActivationArtifact renderSelector (tiField ti) activationTopics (ssSemanticNetwork ss))
       (semanticText, semanticEmittedPredicates, semanticSelectorDiagnostics) =
-        generateFromFrameWithActivation (ssContentSelector ss) (tiField ti) mActivationArtifact (ssRuntimeGraph ss) ss semanticFrame semanticMorph
+        generateFromFrameWithActivation renderSelector (tiField ti) mActivationArtifact (ssRuntimeGraph ss) ss semanticFrame semanticMorph
       generativeRequest = ipfPropositionType (tiFrame ti) == GenerativePrompt || isGenerativeRequestText input
       mActiveQuestion = dtActiveQuestion (tiDialogueThread ti)
       mResponsePlan =
         buildResponseSemanticPlanWithActiveQuestion
-          (ssContentSelector ss)
+          renderSelector
           (tiField ti)
           input
           mActivationArtifact
@@ -306,7 +318,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                     , Just s <- [sdPredicateSurface d] ]
             queryTopic = fromMaybe bestTopic (mResponsePlan >>= rspTopic)
         in fmap verbalizeAssembly
-             (utterableAssembly (ssRuntimeGraph ss) (ssContentSelector ss) queryTopic activationTopics pairs)
+             (utterableAssembly (ssRuntimeGraph ss) renderSelector queryTopic activationTopics pairs)
       responsePlanText = case mResponsePlan of
         Just plan | null (responsePlanQualityIssues plan) -> renderResponseSemanticPlan plan
         Just plan -> renderResponseSemanticPlan plan
@@ -381,13 +393,13 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
          , draResponsePlan = mResponsePlan
          }
       viaAssembly = renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss (tiFrame ti) rmpAfterLegit rcpFinal
-                        bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti)
+                        bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti) renderSelector
       assemblyFallbackReason = fromMaybe "assembly_empty_fallback" (draFallbackReason viaAssembly)
       dialogueArtifact
         | Just semanticArtifact <- viaSemantic = semanticArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
-            (renderDialogueArtifactWithActiveQuestion mActiveQuestion (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) (ssContentSelector ss) mActivationArtifact)
+            (renderDialogueArtifactWithActiveQuestion mActiveQuestion (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) renderSelector mActivationArtifact)
               { draFallbackReason = Just assemblyFallbackReason }
       forceFinalized =
         if structuredSurface
@@ -823,7 +835,11 @@ renderRescueLine RescueEmptyHold =
 
 buildTurnArtifacts :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> RenderEffectPlan -> RenderEffectResults -> TurnArtifacts
 buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
-  let contentSelector = ssContentSelector ss
+  let contentSelector =
+        let cs = ssContentSelector ss
+        in if tpContentDisabled tp
+           then cs { csTopicPredicates = Data.Map.empty }
+           else cs
       field = tiField ti
       currentAtoms = Set.fromList $ map maText $ asAtoms $ tiAtomSet ti
       -- Concept v3 §2: the bounded Protocol B surface has priority

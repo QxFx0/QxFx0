@@ -317,6 +317,12 @@ data TurnPlan = TurnPlan
     -- ^ B2 Control-A ablation: when True, render pipeline skips semantic-first
     --   path and uses assembly/template fallback only. Set from env var
     --   QXFX0_CONTROL_A_DISABLE_SEMANTIC_FIRST in routeTurnPlan.
+  , tpContentDisabled :: !Bool
+    -- ^ B2 full-content ablation (D1-rerun): when True, render sees a
+    --   selector with no topic predicates, so no corpus surface can be
+    --   selected, composed, endorsed, or assembled. Set from
+    --   QXFX0_CONTROL_A_DISABLE_CONTENT in routeTurnPlan (record update,
+    --   keeping buildRouteTurnPlan's signature stable for tests).
   , tpCrisisSurface :: !(Maybe CrisisSurface)
     -- ^ Concept v3 §2: typed Protocol B payload when the crisis
     --   verdict fired this turn (hard lexical trigger or viability
