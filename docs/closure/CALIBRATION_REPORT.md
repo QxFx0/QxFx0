@@ -804,3 +804,18 @@ beyond 24 verbs.
 - **Why not now**: retuning focus scoring shifts routing globally;
   per the move-v4 precedent it needs measured trigger + full suite
   re-verification, not a drive-by constant edit.
+
+---
+
+# Verb-focus probe — executed, debt downgraded (2026-09-22)
+
+- **Run**: 50 fresh distinction/relation turns (shared state, live
+  runtime with substrate), `trcBestTopic` vs `trcDialogueFocus`
+  read from replay traces.
+- **Result**: uncovered-verb bestTopic with covered focus on 6/50
+  (12%): 5× «связано», 1× «отличается». Bar was >20% for a
+  focusScore retune.
+- **Verdict**: below bar — extractor debt downgraded to COSMETIC.
+  No constant touched, no math bump. EmptyHold already catches the
+  render consequence (covered-topic holds repaired regardless of
+  which verb the focus elected).
