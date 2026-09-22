@@ -9,7 +9,7 @@ QxFx0 is a research-grade conversational system that builds meaning through type
 Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
 - **Deterministic behavior** — Same input + state → same output, every time
-- **Typed semantic graphs** — 48 relation types, ~85 atoms, 6-case Russian morphology
+- **Typed semantic graphs** — 52 relation types, ~85 atoms, 6-case Russian morphology
 - **Dialectical structure** — Every answer carries thesis → rationale → counter → synthesis
 - **Commitment memory** — System remembers and defends its positions across turns
 - **Challenge detection** — Recognizes reductive definitions and confronts them
@@ -21,14 +21,17 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: 1812 fast-suite cases, 0 failures (2026-09-08). B3 mechanical gates 1-5 passing.
+**Tests**: 1817 fast-suite cases, 0 failures (2026-09-22, substrate era; full matrix below). B3 mechanical gates 1-5 passing.
 
 ### Verified Capabilities
 
 - **Single-turn**: "что такое свобода?" → dialectical answer from typed graph
 - **Multi-turn**: 3-turn session — define → confront ("Я удерживаю позицию...") → reflect
-- **Challenge detection**: "свобода это просто отсутствие ограничений" → CMConfront
+- **Challenge detection**: "свобода это просто отсутствие ограничений" → hypothesis + counter-grounds (no strawman confrontation)
 - **Commitment memory**: `ssSemanticCommitments` wired into render path
+- **Calibration corpus**: 1030 records across 11 strata, 130 human/operator-confirmed labels (`data/calibration_corpus/`)
+- **Render-phase rescue**: degraded turns (tautology, default lexeme, empty compose/hold) repaired with marked trailing lines instead of silent degradation
+- **Substrate layer**: 53K-entry associative graph routes spreading activation only — never surfaces in output
 - **SelfPlay**: `--selfplay [N]` — offline graph enrichment via LLM evaluation
 - **LLMDiscovery**: `--discover <concept>` — offline relation discovery
 - **Governed mode**: NixGuard with philosophical topic whitelist
@@ -59,7 +62,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 ### Prerequisites
 
 ```bash
-ghc >= 9.6.6
+ghc >= 9.6.7
 cabal >= 3.10
 python3 >= 3.9  # for build scripts
 ```
@@ -68,7 +71,7 @@ python3 >= 3.9  # for build scripts
 
 ```bash
 cabal build all
-cabal test qxfx0-test-fast  # 1812 cases; minutes-scale (see Testing below), ~3-4 GB heap
+cabal test qxfx0-test-fast  # 1817 cases; minutes-scale (see Testing below)
 ```
 
 ### Run
@@ -99,18 +102,13 @@ cabal run -v0 qxfx0-main -- --discover "солипсизм"
 
 ```
 > что такое свобода?
-Известно, что свобода предполагает возможность выбора. Потому что без выбора 
-действие не отличается от рефлекса. Но не любой выбор свободен: выбор под 
-принуждением не делает действие свободным. Именно поэтому свобода требует не 
-только возможности, но и осознанности выбора.
+Тезис: свобода предполагает возможность выбора. Контрпункт: не любой выбор свободен: выбор под принуждением, страхом или незнанием не делает действие свободным. Следствие: свобода требует осознанности — только выбор, понятый как свой, превращает возможность в свободу.
 
-> свобода это просто отсутствие ограничений
-Я удерживаю позицию: свобода предполагает возможность выбора. свобода ограничена 
-ответственностью. Я удерживаю позицию. свобода определяет отсутствие принуждения...
+> чем добро отличается от зло?
+Гипотеза: добро это категория этики обозначающая положительную моральную ценность (основание: добро это категория этики обозначающая положительную моральную ценность; зло это категория этики обозначающая отрицательную моральную ценность). Контрпроверка: зло это категория этики обозначающая отрицательную моральную ценность.
 
 > в чем разница между свободой и произволом?
-Различим свобода и произвол в одной рамке критериев. свобода и произвол различаются: 
-свобода действует внутри принятой рамки, произвол — вне её.
+Я вижу тему, но в локальной модели нет достаточного основания для содержательного тезиса. Могу предложить только явно отмеченную гипотезу после уточнения рамки. (Honest abstain: no corpus pair exists, so the system abstains instead of inventing.)
 ```
 
 ## Theoretical Foundation
@@ -136,23 +134,23 @@ src/QxFx0/
   Runtime/      — Engine, session, wiring, health
   Self/         — Formal phenomenology (Conatus, Adjunction, Field, Essence)
   Semantic/     — Meaning decomposition, atoms, network, content, generative pipeline
-  Types/        — Domain model (124 modules)
+  Types/        — Domain model (157 modules)
 ```
 
 ## Testing
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1597 | ✅ 0 failures |
-| qxfx0-test | 1307 | ✅ 0 failures |
+| qxfx0-test-unit | 1605 | ✅ 0 failures |
+| qxfx0-test | 1307 (core 1190 + runtime 94 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures |
 | qxfx0-test-property | 227 | ✅ 0 failures |
 | qxfx0-test-integration | 46 | ✅ 0 failures |
 | qxfx0-test-fast | 1817 | ✅ 0 failures |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 93 / 45 / 23 / 11 (= 172) | ✅ 0 failures |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 94 / 45 / 23 / 11 (= 173) | ✅ 0 failures |
 
-Counts re-verified green on HEAD 2026-09-19 (sequential runs, `-M10G` for fast/test/integration/property, `-M12G` required for a full single-process slow run — smaller caps die near the tail with 0 failures recorded; per-group slow runs pass at any cap).
+Counts re-verified green on HEAD 2026-09-22 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
 
-The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1812 cases include ~23 full runtime session bootstraps (median ~9 s each, ~215 s total), measured locally at ~20 min wall-clock and ~3.1 GB max heap residency (2026-09-08, GHC 9.6.7). Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
+The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1817 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20 min wall-clock. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 
 ## Audit History
 
