@@ -2839,7 +2839,7 @@ testWriteAgdaWitnessReportsActualOutcome :: Test
 testWriteAgdaWitnessReportsActualOutcome = TestCase $ do
   mBin <- findExecutable "qxfx0-main"
   case mBin of
-    Nothing -> pure ()
+    Nothing -> putStrLn "SKIP(test): qxfx0-main not on PATH, Agda witness outcome not exercised"
     Just bin -> do
       (exitCode, stdout, stderr) <- readProcessWithExitCode bin ["--write-agda-witness"] ""
       case exitCode of

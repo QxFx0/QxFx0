@@ -189,8 +189,6 @@ data RenderEffectPlan = RenderEffectPlan
   , repExternalQuerySkipReason :: !(Maybe Text)
     -- ^ WP3 dedup telemetry: reason why external query was skipped
     --   (already_known_morphology / already_known_tree).
-  , repExternalActionDecision :: !(Maybe ExternalActionDecision)
-    -- ^ AS1: shared pre-effect decision for request/exploratory outbound actions.
   , repExternalActionDecisionTrace :: !(Maybe ExternalActionDecisionTrace)
     -- ^ AS1-03: typed reason model for allow/deny/no-action on outbound actions.
   , repSemanticFirstDisabled :: !Bool
@@ -553,7 +551,6 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       , repExternalQueryRequest = mExternalQueryRequest
       , repExploratoryQueryRequest = mExploratoryQueryRequest
       , repExternalQuerySkipReason = externalQuerySkipReason
-      , repExternalActionDecision = mExternalActionDecision
       , repExternalActionDecisionTrace = mExternalActionDecisionTrace
       , repSemanticFirstDisabled = tpSemanticFirstDisabled tp
       , repActivationTopics = activationTopics

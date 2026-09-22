@@ -1030,7 +1030,7 @@ testGfRoundTripParseSmoke :: Test
 testGfRoundTripParseSmoke = TestCase $ do
   mGf <- findExecutable "gf"
   case mGf of
-    Nothing -> pure ()
+    Nothing -> putStrLn "SKIP(test): gf binary absent, GF round-trip smoke not exercised"
     Just _ -> do
       (compileExit, _, _compileErr) <- readProcessWithExitCode "bash" ["scripts/compile_gf_grammar.sh"] ""
       pgfExists <- doesFileExist "spec/gf/QxFx0Syntax.pgf"
@@ -1040,7 +1040,7 @@ testGfRoundTripAstLinearizeParse :: Test
 testGfRoundTripAstLinearizeParse = TestCase $ do
   mGf <- findExecutable "gf"
   case mGf of
-    Nothing -> pure ()
+    Nothing -> putStrLn "SKIP(test): gf binary absent, GF AST linearize/parse not exercised"
     Just _ -> do
       (compileExit, _, _compileErr) <- readProcessWithExitCode "bash" ["scripts/compile_gf_grammar.sh"] ""
       let pgfPath = "spec/gf/QxFx0Syntax.pgf"
@@ -1073,7 +1073,7 @@ testGfFallbackSurfaceParity :: Test
 testGfFallbackSurfaceParity = TestCase $ do
   mGf <- findExecutable "gf"
   case mGf of
-    Nothing -> pure ()
+    Nothing -> putStrLn "SKIP(test): gf binary absent, GF fallback surface parity not exercised"
     Just _ -> do
       (compileExit, _, _compileErr) <- readProcessWithExitCode "bash" ["scripts/compile_gf_grammar.sh"] ""
       let pgfPath = "spec/gf/QxFx0Syntax.pgf"
