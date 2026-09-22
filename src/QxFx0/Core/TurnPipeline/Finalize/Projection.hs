@@ -373,6 +373,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcDialogueFocus = dtCurrentFocus (tiDialogueThread ti)
           , trcDialogueFocusBefore = dtCurrentFocus (tiDialogueThread ti)
           , trcDialogueFocusAfter = dtCurrentFocus (ssDialogueThread nextSs)
+          , trcBestTopic = tiBestTopic ti
           , trcDialoguePhase = tiDialoguePhase ti
           , trcDialoguePhaseBefore = tiDialoguePhase ti
           , trcDialoguePhaseAfter = ssDialoguePhase nextSs

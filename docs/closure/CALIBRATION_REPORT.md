@@ -783,3 +783,24 @@ beyond 24 verbs.
   fast 1817/1817; live 5/5 (both stub classes repaired, abstain and
   clean turns silent, tautology keeps priority).
 - **Parameters moved**: none (filter, not weights).
+
+---
+
+# Verb-focus probe — pre-registration (2026-09-22, no behavior change)
+
+- **Instrumentation landed**: `trcBestTopic` on every replay trace
+  (Prepare-stage best topic; routing still reads dialogue focus).
+  Live proof: «как добро связано с зло?» records
+  `trcBestTopic=связано` against `trcDialogueFocus=добро` — the
+  focus length bonus electing a verb is now machine-observable
+  instead of inferred.
+- **Probe rule (pre-registered, not yet run)**: sample N≥45 live
+  relation-bearing turns, read `trcBestTopic` per turn; if the
+  uncovered-verb rate (bestTopic ∉ covered topics while dialogue
+  focus ∈ covered) exceeds 20%, retune `focusScore` length bonus
+  (cap or verb guard) behind a math-version bump, then re-verify
+  routing pins + rescue behavior. If ≤20%, the extractor debt is
+  downgraded to cosmetic.
+- **Why not now**: retuning focus scoring shifts routing globally;
+  per the move-v4 precedent it needs measured trigger + full suite
+  re-verification, not a drive-by constant edit.
