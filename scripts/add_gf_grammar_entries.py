@@ -10,6 +10,7 @@ grammar diverge). Appends:
 Then recompile via scripts/compile_gf_grammar.sh (separate step).
 Idempotent: skips funIds already present in each file.
 """
+import re
 import sys
 from pathlib import Path
 
@@ -30,6 +31,8 @@ ENG = {
     "желание": "desire", "чувство": "feeling", "искусство": "art",
     "вкус": "taste", "гармония": "harmony", "трагедия": "tragedy",
     "возвышенное": "the sublime", "гражданин": "citizen",
+    "состояние": "state", "грань": "border", "суть": "gist",
+    "тишина": "silence", "работа": "work",
     "общество": "society", "наука": "science",
     "эмпиризм": "empiricism", "рационализм": "rationalism",
     "общение": "communication", "сотрудничество": "cooperation",
@@ -45,26 +48,30 @@ ENG = {
 }
 
 MARK = "-- 2026-09-20 covered-topics gap closure (55 lexemes)."
+MARK2 = "-- 2026-09-24 live batch-1 (5 lexemes)."
 
 
 def load_new():
-    """Rows appended by add_gf_lexemes.py: funId -> (lemma, forms)."""
+    """Rows appended by add_gf_lexemes.py since the last grammar block:
+    funId -> (lemma, forms). Already-generated funIds are skipped."""
+    abs_text = open(ROOT / "spec/gf/QxFx0Lexicon.gf", encoding="utf-8").read()
+    have = set(re.findall(r"^\s*(\S+) : Lexeme ;", abs_text, re.M))
     rows = {}
     with open(TSV, encoding="utf-8") as f:
         next(f)
         for line in f:
             p = line.rstrip("\n").split("\t")
-            if len(p) == 8 and p[1] in ENG:
+            if len(p) == 8 and p[1] in ENG and p[0] not in have:
                 rows[p[0]] = (p[1], p[3], p[4], p[5], p[6], p[7])
     return rows
 
 
-def append_block(path, lines):
+def append_block(path, lines, mark):
     text = open(path, encoding="utf-8").read()
     assert text.rstrip().endswith("}"), path
-    assert MARK not in text, f"block already present in {path}"
+    assert MARK not in text or mark == MARK2, f"rerun guard: {path}"
     idx = text.rstrip().rfind("}")
-    new = (text[:idx].rstrip() + "\n" + MARK + "\n"
+    new = (text[:idx].rstrip() + "\n" + mark + "\n"
            + "\n".join("    " + ln for ln in lines) + "\n}\n")
     open(path, "w", encoding="utf-8").write(new)
 
@@ -75,7 +82,7 @@ def main():
                      set(r[0] for r in rows.values()) if t not in ENG]
     assert not missing_gloss, missing_gloss
     print(f"new lexemes: {len(rows)}")
-    assert len(rows) == 55, len(rows)
+    assert len(rows) == 5, len(rows)
     abs_lines = [f"{fid} : Lexeme ;" for fid in sorted(rows)]
     rus_lines = [
         f"{fid} = {{ nom = \"{nom}\" ; gen = \"{gen}\" ; "
@@ -84,9 +91,9 @@ def main():
     eng_lines = [
         f"{fid} = mkN \"{ENG[lem]}\" ;"
         for fid, (lem, *_rest) in sorted(rows.items())]
-    append_block(ROOT / "spec/gf/QxFx0Lexicon.gf", abs_lines)
-    append_block(ROOT / "spec/gf/QxFx0LexiconRus.gf", rus_lines)
-    append_block(ROOT / "spec/gf/QxFx0LexiconEng.gf", eng_lines)
+    append_block(ROOT / "spec/gf/QxFx0Lexicon.gf", abs_lines, MARK2)
+    append_block(ROOT / "spec/gf/QxFx0LexiconRus.gf", rus_lines, MARK2)
+    append_block(ROOT / "spec/gf/QxFx0LexiconEng.gf", eng_lines, MARK2)
     print("appended to abstract/Rus/Eng")
     return 0
 

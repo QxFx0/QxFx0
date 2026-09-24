@@ -34,6 +34,10 @@ OVERRIDES = {
     "возвышенное": ("vozvyishennoe_N", "возвышенное",
                      "возвышенного", "возвышенном",
                      "возвышенное", "возвышенным"),
+    # Hush-final masculines (дождь): -я/-е/-ём, not the regular -а/-е/-ом.
+    "дождь": ("dozhd_N", "дождь",
+              "дождя", "дожде",
+              "дождь", "дождём"),
 }
 
 HUSH = set("гкхжчшщц")
@@ -83,7 +87,7 @@ def covered_topics():
 
 def main():
     topics = covered_topics()
-    assert len(topics) == 120, len(topics)
+    assert len(topics) == 132, len(topics)
     existing_forms = set()
     existing_fun = set()
     with open(FUNMAP, encoding="utf-8") as f:

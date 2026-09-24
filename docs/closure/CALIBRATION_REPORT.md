@@ -839,3 +839,25 @@ beyond 24 verbs.
   without top-1 displacement).
   The 130-label calibration base transfers intact; no re-rating
   required by the regime change.
+
+---
+
+# Dictionary expansion batch-1 — 12 live-harvested topics (2026-09-24)
+
+- **Trigger**: live coverage only ~11% covered_exact; users ask
+  outside the 120-topic dictionary (дождь, космос, боль, тишина…).
+- **Method**: focus nouns harvested from 175 live turns (verbs and
+  meta-words excluded by rule); 2 predicates each in prop/rel style,
+  human-approved verbatim (all 12 accepted).
+- **Landing**: `definitionCorpus` 120→132 (`Content.hs`); GF lexemes:
+  7 already present, 5 appended (`add_gf_lexemes.py` + OVERRIDES
+  for hush-final дождь; pre-existing `dozhd_N` instrumental fixed
+  дождем→дождём); grammar abstract/Rus/Eng extended
+  (`add_gf_grammar_entries.py` made idempotent: skips generated
+  funIds, MARK2); PGF recompiled.
+- **Verification**: lib clean, unit 1605/1605, fast 1817/1817 (pins
+  held despite 12 new graph nodes). Live spots: тишина/боль
+  verbatim; дождь preferred a better overlay predicate
+  («атмосферные осадки») over the new one — selection working;
+  суть/сущность holds honestly (no pair content, as before).
+- **Parameters moved**: none (data only).

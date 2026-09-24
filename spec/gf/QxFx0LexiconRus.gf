@@ -3815,4 +3815,10 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     zhelanie_N = { nom = "желание" ; gen = "желания" ; prep = "желании" ; acc = "желание" ; ins = "желанием" } ;
     znak_N = { nom = "знак" ; gen = "знака" ; prep = "знаке" ; acc = "знак" ; ins = "знаком" } ;
     znanie_N = { nom = "знание" ; gen = "знания" ; prep = "знании" ; acc = "знание" ; ins = "знанием" } ;
+-- 2026-09-24 live batch-1 (5 lexemes).
+    gran_N = { nom = "грань" ; gen = "грани" ; prep = "грани" ; acc = "грань" ; ins = "гранью" } ;
+    rabota_N = { nom = "работа" ; gen = "работы" ; prep = "работе" ; acc = "работу" ; ins = "работой" } ;
+    sostoyanie_N = { nom = "состояние" ; gen = "состояния" ; prep = "состоянии" ; acc = "состояние" ; ins = "состоянием" } ;
+    sut_N = { nom = "суть" ; gen = "сути" ; prep = "сути" ; acc = "суть" ; ins = "сутью" } ;
+    tishina_N = { nom = "тишина" ; gen = "тишины" ; prep = "тишине" ; acc = "тишину" ; ins = "тишиной" } ;
 }

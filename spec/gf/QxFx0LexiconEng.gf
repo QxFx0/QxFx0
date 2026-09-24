@@ -3788,4 +3788,10 @@ concrete QxFx0LexiconEng of QxFx0Lexicon = open ParadigmsEng, CatEng, Structural
     zhelanie_N = mkN "desire" ;
     znak_N = mkN "sign" ;
     znanie_N = mkN "knowledge" ;
+-- 2026-09-24 live batch-1 (5 lexemes).
+    gran_N = mkN "border" ;
+    rabota_N = mkN "work" ;
+    sostoyanie_N = mkN "state" ;
+    sut_N = mkN "gist" ;
+    tishina_N = mkN "silence" ;
 }

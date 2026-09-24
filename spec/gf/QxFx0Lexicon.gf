@@ -3816,4 +3816,10 @@ abstract QxFx0Lexicon = {
     zhelanie_N : Lexeme ;
     znak_N : Lexeme ;
     znanie_N : Lexeme ;
+-- 2026-09-24 live batch-1 (5 lexemes).
+    gran_N : Lexeme ;
+    rabota_N : Lexeme ;
+    sostoyanie_N : Lexeme ;
+    sut_N : Lexeme ;
+    tishina_N : Lexeme ;
 }

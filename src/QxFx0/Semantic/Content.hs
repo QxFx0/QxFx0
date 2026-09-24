@@ -890,6 +890,80 @@ definitionCorpus = M.fromList
       , structure "настоящее есть единственная реальность"
                 "present is the only reality"
       ]
+  -- Live-dialogue expansion batch-1 (2026-09-24, human-approved):
+  -- topics harvested from live focus nouns outside coverage.
+  , entry "состояние"
+      [ prop "состояние описывает способ бытия субъекта"
+             "a state describes a subject's mode of being"
+      , rel "состояние изменяется через внимание и действие"
+            "a state changes through attention and action"
+      ]
+  , entry "логика"
+      [ prop "логика изучает формы правильного мышления"
+             "logic studies the forms of correct thinking"
+      , rel "логика требует последовательности посылок"
+            "logic requires consistency of premises"
+      ]
+  , entry "грань"
+      [ prop "грань отделяет одно от другого"
+             "a boundary separates one thing from another"
+      , rel "грань познаётся через переход"
+            "a boundary is known through crossing"
+      ]
+  , entry "контакт"
+      [ prop "контакт соединяет внутреннее и внешнее"
+             "contact connects the inner and the outer"
+      , rel "контакт требует открытости обеих сторон"
+            "contact requires openness of both sides"
+      ]
+  , entry "жизнь"
+      [ prop "жизнь есть процесс становления"
+             "life is a process of becoming"
+      , rel "жизнь проверяется выбором"
+            "life is tested by choice"
+      ]
+  , entry "суть"
+      [ prop "суть есть то без чего вещь перестаёт быть собой"
+             "the gist is that without which a thing ceases to be itself"
+      , rel "суть раскрывается через снятие случайного"
+            "the gist is revealed by removing the accidental"
+      ]
+  , entry "тишина"
+      [ prop "тишина есть пространство неслышимого"
+             "silence is the space of the unheard"
+      , rel "тишина делает слышимым внутреннее"
+            "silence makes the inner audible"
+      ]
+  , entry "причина"
+      [ prop "причина предшествует следствию и порождает его"
+             "a cause precedes and produces its effect"
+      , rel "причина ищется вопросом почему"
+            "a cause is sought by asking why"
+      ]
+  , entry "работа"
+      [ prop "работа превращает намерение в результат"
+             "work turns intention into result"
+      , rel "работа измеряется изменением"
+            "work is measured by change"
+      ]
+  , entry "дождь"
+      [ prop "дождь есть возвращение воды на землю"
+             "rain is water returning to earth"
+      , rel "дождь переживается как очищение"
+            "rain is experienced as cleansing"
+      ]
+  , entry "космос"
+      [ prop "космос есть порядок целого"
+             "cosmos is the order of the whole"
+      , rel "космос ставит человека перед масштабом"
+            "cosmos confronts man with scale"
+      ]
+  , entry "боль"
+      [ prop "боль сигнализирует о нарушении целостности"
+             "pain signals a breach of integrity"
+      , rel "боль требует внимания а не подавления"
+            "pain demands attention, not suppression"
+      ]
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))
