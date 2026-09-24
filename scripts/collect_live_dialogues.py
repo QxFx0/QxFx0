@@ -29,7 +29,10 @@ FIELDS = ["trcContentSource", "trcBestTopic", "trcDialogueFocus",
           "trcFinalFamily", "trcFamilyDivergenceOccurred",
           "trcSubstrateEdgesUsed", "trcSubstrateHops",
           "trcRecoveryCause", "trcRecoveryStrategy",
-          "trcDerivationTags", "trcGenerationTrace"]
+          "trcDerivationTags", "trcGenerationTrace",
+          "trcLegitimacyReason", "trcConatusGateFired",
+          "trcEmittedPredicates", "trcSelectorDiagnostics",
+          "trcResponsePlan"]
 
 BANNER = """\
 СБОР ЖИВЫХ ДИАЛОГОВ ДЛЯ КАЛИБРОВКИ QxFx0
