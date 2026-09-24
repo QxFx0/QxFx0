@@ -143,3 +143,16 @@ runtime: `Test.Suite.M6FeltBenchmark` stays **M6FeltProven** with the
 pinned contour (12 turns, ≥1 revision, ≥4 focuses, ≥1 repair) — no
 contour values changed, so the pinned minimums remain as recorded
 above. Full M6-FELT status still awaits the B2 human-eval leg.
+
+## 7. Overall status: PARTIAL (operator decision 2026-09-24)
+
+- Mechanical leg: PROVEN (bounded 12-turn benchmark, §5–6; green).
+- Human leg (B2): PARTIAL — EXEC-002 mixed (D3 6-0 System, D1 5-5
+  confounded), EXEC-003 D1 6-2 System vs fully-ablated control.
+  Single effective rater; no second rater available (stated
+  2026-09-24); no preset threshold. Formal "proven" requires both
+  and is therefore WITHHELD, not failed.
+- The "proven" label is downgraded from blocking-gate to
+  informational: no runtime decision depends on it. It reactivates
+  automatically if a second rater + threshold ever complete the
+  formalities — no code change needed.
