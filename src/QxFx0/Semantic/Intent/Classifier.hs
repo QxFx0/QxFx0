@@ -23,6 +23,7 @@ No live second semantic ruler. No statistical model. No embedding lookup.
 module QxFx0.Semantic.Intent.Classifier
   ( SemanticIntent(..)
   , classifyIntent
+  , canonicalTopic
   , intentToPropositionType
   , intentToFamily
   ) where

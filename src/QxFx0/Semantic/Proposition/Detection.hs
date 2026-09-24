@@ -72,6 +72,7 @@ detectPropositionType truthContractStatus rawText tokens = fromMaybe PlainAssert
   , detectSelfKnowledge truthContractStatus rawText tokens
   , detectPurposeFunction truthContractStatus rawText tokens
   , detectDialogueInvitation truthContractStatus rawText tokens
+  , detectBareNounDefinition rawText tokens
   , detectConceptKnowledge truthContractStatus rawText tokens
   , detectWorldCause truthContractStatus rawText tokens
   , detectLocationFormation truthContractStatus rawText tokens

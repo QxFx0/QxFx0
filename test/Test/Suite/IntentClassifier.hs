@@ -23,7 +23,9 @@ import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
+import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
+import QxFx0.Core.TurnPipeline.Route.Render (semanticIntentForRender)
 import QxFx0.Types (MorphologyData(..), CanonicalMoveFamily(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
 import qualified Data.Map.Strict as M
@@ -54,6 +56,7 @@ intentClassifierTests =
   , b3Gate5Tests
   , intentToFamilyTests
   , frameBuilderTests
+  , bareNounTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -326,3 +329,41 @@ testChemDistinctionIntent = TestCase $
       assertEqual "dist left" "вкус" left
       assertEqual "dist right" "гармония" right
     other -> assertFailure ("expected IntentDistinguish, got " ++ show other)
+
+-- ---------------------------------------------------------------------------
+-- Bare-noun definitional (D1-probe fix, pre-registered 2026-09-24)
+-- ---------------------------------------------------------------------------
+
+bareNounTests :: Test
+bareNounTests = TestLabel "BareNounDefinition" $ TestList
+  [ TestCase $ do
+      assertEqual "covered bare noun asks definition"
+        (Just ConceptKnowledgeQ)
+        (detectBareNounDefinition "свобода" ["свобода"])
+      assertEqual "punctuation stripped"
+        (Just ConceptKnowledgeQ)
+        (detectBareNounDefinition "дождь?" ["дождь?"])
+
+  , TestCase $ do
+      assertEqual "greeting is not a topic"
+        Nothing
+        (detectBareNounDefinition "привет" ["привет"])
+      assertEqual "uncovered noun stays out"
+        Nothing
+        (detectBareNounDefinition "блокчейн" ["блокчейн"])
+      assertEqual "multi-word never fires"
+        Nothing
+        (detectBareNounDefinition "свобода любовь" ["свобода", "любовь"])
+      assertEqual "empty never fires"
+        Nothing
+        (detectBareNounDefinition "" [])
+
+  , TestCase $ do
+      let morph = MorphologyData M.empty M.empty M.empty M.empty
+      assertEqual "single-token ConceptKnowledgeQ defines"
+        (IntentDefine "свобода")
+        (semanticIntentForRender ConceptKnowledgeQ "свобода" ["свобода"] morph)
+      assertEqual "multi-word falls through to the classifier"
+        (classifyIntent "что такое свобода?" ["что", "такое", "свобода?"] morph)
+        (semanticIntentForRender ConceptKnowledgeQ "что такое свобода?" ["что", "такое", "свобода?"] morph)
+  ]

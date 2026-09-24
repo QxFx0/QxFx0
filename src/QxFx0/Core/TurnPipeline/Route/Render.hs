@@ -16,6 +16,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , buildTurnArtifacts
   , renderAnomalySurface
   , isTopicNoisyOrAmbiguous
+  , semanticIntentForRender
   , RescueReason(..)
   , detectRescue
   , renderRescueLine
@@ -104,7 +105,7 @@ import QxFx0.Render.Dialogue
   , semanticFrameActivationTopics
   )
 import QxFx0.Semantic.Intent.Features (extractFeatures)
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, canonicalTopic)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
@@ -161,6 +162,13 @@ semanticIntentForRender propositionType input tokens morphology =
     ConfrontQ -> IntentChallenge
     MisunderstandingReport -> IntentRepair
     RepairSignal -> IntentRepair
+    -- Bare-noun definitional (D1-probe fix, pre-registered 2026-09-24):
+    -- a single token asking "what is X?" maps straight to IntentDefine.
+    -- Multi-word inputs fall through to the feature classifier, so
+    -- "что такое X?" behavior is byte-identical.
+    ConceptKnowledgeQ
+      | [w] <- filter (not . T.null) (map T.strip tokens) ->
+          IntentDefine (canonicalTopic morphology w)
     _ -> classifyIntent input tokens morphology
 
 data LocalRecoveryPlan = LocalRecoveryPlan
@@ -742,8 +750,8 @@ data RescueReason
 
 -- | Detect render-phase degradation. Total: 'Nothing' means proceed
 -- silently. Priority is specificity: tautology first, hold last.
-detectRescue :: TurnInput -> TurnPlan -> [Text] -> DialogueRenderArtifact -> Maybe RescueReason
-detectRescue ti tp engaged artifact
+detectRescue :: TurnInput -> TurnPlan -> [Text] -> [Text] -> DialogueRenderArtifact -> Maybe RescueReason
+detectRescue ti tp engaged mentioned artifact
   | isJust (tpOntologicalMove tp) = Nothing
   | isJust (tpCrisisSurface tp) = Nothing
   | isJust (tpAnomalySurface tp) = Nothing
@@ -771,24 +779,25 @@ detectRescue ti tp engaged artifact
             Nothing   -> False
       in null selected && attempted && isCoveredTopic (tiBestTopic ti)
     emptyHold = emptyHoldFires
-      (tiBestTopic ti : engaged)
+      (tiBestTopic ti : dtCurrentFocus (tiDialogueThread ti) : engaged)
+      mentioned
       (isNothing (draResponsePlan artifact))
       (isNothing (draClaimAst artifact))
       (null (draEmittedPredicates artifact))
       (null (filter sdSelected (draSelectorDiagnostics artifact)))
 
 -- | Pure core of the EmptyHold detector (unit-pinned truth table):
--- some engaged-or-best topic is covered (corpus predicates exist),
--- yet the turn produced no plan, no claim, no emitted predicates and
--- selected nothing. Abstains always carry a plan, so they never
--- match. Topics (not a precomputed Bool) so the coverage check stays
--- against the live corpus; 'tiBestTopic' alone is insufficient — it
--- is focus-scored with a length bonus that can elect a verb
--- («связано» beats «добро»/«зло»), while the stub is about the
--- engaged topic.
-emptyHoldFires :: [Text] -> Bool -> Bool -> Bool -> Bool -> Bool
-emptyHoldFires topics planAbsent claimAbsent emittedEmpty selectedEmpty =
-  any isCoveredTopic topics && planAbsent && claimAbsent && emittedEmpty && selectedEmpty
+-- some best/engaged/focus topic is covered (corpus predicates exist),
+-- the surface NAMES one of those same topics (not an incidental
+-- common noun like «время» in a greeting), yet the turn produced no
+-- plan, no claim, no emitted predicates and selected nothing.
+-- Abstains always carry a plan, so they never match.
+emptyHoldFires :: [Text] -> [Text] -> Bool -> Bool -> Bool -> Bool -> Bool
+emptyHoldFires topics mentioned planAbsent claimAbsent emittedEmpty selectedEmpty =
+  let norm = normalizeTopic
+  in any (isCoveredTopic . norm) topics
+     && any (`elem` map norm topics) (map norm mentioned)
+     && planAbsent && claimAbsent && emittedEmpty && selectedEmpty
 
 -- | Covered topics named (as whole tokens) in a rendered surface.
 -- Pure; unit-pinned. Feeds the EmptyHold coverage check: a
@@ -883,9 +892,8 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         -- plan is always present.)
         (Just plan, _) | lrpCause plan /= RecoveryRuntimeDegraded -> Nothing
         (_, False)  -> Nothing
-        _ -> detectRescue ti tp
-                 (repActivationTopics effectPlan ++ mentionedCoveredTopics renderWithBg)
-                 templateArtifact0
+        _ -> detectRescue ti tp (repActivationTopics effectPlan)
+                 (mentionedCoveredTopics renderWithBg) templateArtifact0
       rescueSuffix = case rescueFired of
         Nothing     -> ""
         Just reason -> "\n" <> renderRescueLine reason

@@ -861,3 +861,47 @@ beyond 24 verbs.
   («атмосферные осадки») over the new one — selection working;
   суть/сущность holds honestly (no pair content, as before).
 - **Parameters moved**: none (data only).
+
+---
+
+# Bare-noun routing — pre-registration (2026-09-24)
+
+- **Finding**: single-noun inputs with covered topics («свобода»,
+  «любовь», «дождь») classify as unstructured → GF-shim route →
+  semantic pipeline never engaged (diags=0). ~15–20 live turns affected.
+- **Rule (locked before implementation)**: single-token input (after
+  punct-strip) whose normalized form is a covered topic →
+  ConceptKnowledgeQ (new detector before detectConceptKnowledge;
+  greetings/identity/operational keep priority above it) AND
+  single-token ConceptKnowledgeQ → IntentDefine (canonicalTopic);
+  multi-word inputs fall through unchanged on both edits.
+- **Bar**: affected live turns render covered_exact; unit + fast +
+  core green with zero new failures; spot checks on 5 bare nouns.
+- **Out of scope**: inflected bare nouns («свободе») — lemma-less
+  detector covers nominative only; inflection is the separate 5%
+  upgrade. Multi-word behavior must be byte-identical (gated on
+  single-token).
+
+---
+
+# Bare-noun routing — landed, bar cleared (2026-09-25)
+
+- **Change**: single-token covered nouns route to definitional
+  handling — new `detectBareNounDefinition` detector (before
+  ConceptKnowledge, greetings/identity/operational keep priority),
+  `TagConceptKnowledge` route hint at 0.95 (survives admission vs
+  contemplative 0.88 max), single-token ConceptKnowledgeQ →
+  IntentDefine in `semanticIntentForRender` (multi-word fallthrough
+  byte-identical). Nominative only; inflected forms stay old path.
+- **Tracer find that shaped it**: frame-hint admission overrode the
+  detector (`TagContemplativeTopic` from single-or-short-input rule);
+  instruments removed after use, none remain in src/.
+- **Precision fix same landing**: EmptyHold requires the named topic
+  to intersect best/engaged/focus (greeting false positive via
+  incidental «время» closed; stubs still fire).
+- **Verification**: unit 1608 (3 old pins updated to the intended
+  behavior + new detector/intent/normalization tests), fast 1817,
+  core 1190 — zero new failures. Live: свобода/любовь/дождь/тишина
+  render covered_exact; привет silent; «что такое свобода?»
+  byte-identical.
+- **Parameters moved**: none (routing, not weights).

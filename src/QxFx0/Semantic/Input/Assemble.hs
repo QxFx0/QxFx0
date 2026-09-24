@@ -29,6 +29,7 @@ import QxFx0.Semantic.Input.Lexicon
   , isWorldNoun
   )
 import QxFx0.Semantic.Input.Model
+import QxFx0.Semantic.Content (isCoveredTopic)
 import QxFx0.Semantic.Input.Normalize (NormalizedInput(..), normalizeInput)
 import QxFx0.Semantic.Morphology
   ( Case(..)
@@ -313,6 +314,8 @@ inferRuleRouteHint normalized units
       mkHint RouteTypeDeepen TagContemplativeTopic "thought_about_topic_question" 0.88
   | isDefinitionalQuestion normalized units =
       mkHint RouteTypeDefine TagConceptKnowledge "concept_question_form" 0.87
+  | isBareCoveredNoun units =
+      mkHint RouteTypeDefine TagConceptKnowledge "bare_noun_definition" 0.95
   | isRelationComparisonQuestion normalized units =
       mkHint RouteTypeDistinguish TagComparisonRelation "relation_comparison_signal" 0.85
   | isPurposeFunctionQuestion normalized units =
@@ -848,6 +851,17 @@ shortDialogueProbe :: [Text] -> Bool
 shortDialogueProbe tokens =
   (tokens == ["поговорим"] || tokens == ["обсудим"] || hasPhrase tokens ["давай", "поговорим"])
     && length tokens <= 2
+
+-- | Bare covered noun (D1-probe fix, pre-registered 2026-09-24): a
+-- single content lemma naming a covered topic implicitly asks "what
+-- is X?". Nominative-leaning (lemma map); inflected forms stay on the
+-- old path. Score 0.95: exact-match precision justifies beating the
+-- contemplative max 0.88 through admission (displacement needs
+-- best > rule + 0.05).
+isBareCoveredNoun :: [WordMeaningUnit] -> Bool
+isBareCoveredNoun units = case contentLemmas units of
+  [w] -> isCoveredTopic w
+  _   -> False
 
 isDefinitionalQuestion :: NormalizedInput -> [WordMeaningUnit] -> Bool
 isDefinitionalQuestion normalized units =

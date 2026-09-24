@@ -460,7 +460,7 @@ turnPipelineProtocolTests =
      , testMustRouteDefineQuestionUsesDefine
      , testMustRouteDistinguishQuestionUsesDistinguish
      , testWorkEnableQuestionUsesOperationalStatusNotUserBoundary
-     , testContemplativeTopicRendersDeepenWithoutLexicalFallback
+     , testBareNounRendersDefinitionWithoutLexicalFallback
      , testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback
      , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
      , testRuntimeDegradedUsesVisibleLocalRecovery
@@ -1676,15 +1676,17 @@ testWorkEnableQuestionUsesOperationalStatusNotUserBoundary = TestCase $
     assertBool "work-enable question should not be CMDescribe after self-knowledge misroute"
       (tpFinalFamily tp /= CMDescribe)
 
-testContemplativeTopicRendersDeepenWithoutLexicalFallback :: Test
-testContemplativeTopicRendersDeepenWithoutLexicalFallback = TestCase $
-  withDeterministicEmbedding $
-    assertStructuredTurn
-      "тишина"
-      CMDeepen
-      [ "если держаться слова"
-      , "поле смыслов"
-      ]
+testBareNounRendersDefinitionWithoutLexicalFallback :: Test
+testBareNounRendersDefinitionWithoutLexicalFallback = TestCase $
+  withDeterministicEmbedding $ do
+    (_ss, _ti, _ts, tp, ta) <- buildRenderedFixture "тишина"
+    let rendered = taRendered ta
+    -- Routing: bare covered noun leaves the contemplative/shim path.
+    assertEqual "bare noun routes to CMDefine" CMDefine (tpFinalFamily tp)
+    assertEqual "decision aligned" CMDefine (tdFamily (taDecision ta))
+    -- No contemplative fallback surface and no default lexeme.
+    assertBool "no contemplative fallback" (not ("поле смыслов" `T.isInfixOf` T.toLower rendered))
+    assertBool "no default lexeme" (not ("понятие и понятие" `T.isInfixOf` T.toLower rendered))
 
 testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback :: Test
 testReflectiveAssertionRendersConceptTopicWithoutLexicalFallback = TestCase $

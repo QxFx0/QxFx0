@@ -20,6 +20,7 @@ module QxFx0.Semantic.Proposition.Detectors
   , detectSelfKnowledge
   , detectPurposeFunction
   , detectDialogueInvitation
+  , detectBareNounDefinition
   , detectConceptKnowledge
   , detectWorldCause
   , detectLocationFormation
@@ -81,6 +82,7 @@ module QxFx0.Semantic.Proposition.Detectors
 
 import QxFx0.Types
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
+import QxFx0.Semantic.Content (isCoveredTopic)
 import QxFx0.Semantic.Proposition.Semantic
 import QxFx0.Policy.ParserKeywords
 import QxFx0.Semantic.KeywordMatch
@@ -824,6 +826,23 @@ buildDialogueInvitationFromTriggers admittedTriggers
   | otherwise = Nothing
   where
     matched label = any (\trigger -> rptLabel trigger == label && rptMatched trigger) admittedTriggers
+
+-- | Bare-noun definitional (D1-probe fix, pre-registered 2026-09-24):
+-- a single token whose normalized form is a covered topic implicitly
+-- asks "what is X?". Nominative only (no lemma map at this layer —
+-- inflected forms stay on the old path). Positioned before
+-- 'detectConceptKnowledge' so contact/operational/self families keep
+-- priority above it; greetings and non-topics never match.
+detectBareNounDefinition :: Text -> [Text] -> Maybe PropositionType
+detectBareNounDefinition _rawText tokens =
+  case filter (not . T.null) (map clean tokens) of
+    [w] | isCoveredTopic w -> Just ConceptKnowledgeQ
+    _ -> Nothing
+  where
+    clean = T.dropAround (not . isAlphaNumSafe)
+    isAlphaNumSafe c = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+      || (c >= '0' && c <= '9') || (c >= 'а' && c <= 'я') || (c >= 'А' && c <= 'Я')
+      || c == 'ё' || c == 'Ё'
 
 detectConceptKnowledge :: TruthContractStatus -> Text -> [Text] -> Maybe PropositionType
 detectConceptKnowledge truthContractStatus rawText tokens =

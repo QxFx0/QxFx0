@@ -58,20 +58,22 @@ rescueTests =
       assertEqual "hold tag" "empty_hold" (rescueTag RescueEmptyHold)
 
   , TestLabel "empty hold fires only on plan-less covered turns" $ TestCase $ do
-      assertBool "covered engaged topic, all empty"
-        (emptyHoldFires ["добро"] True True True True)
-      assertBool "bestTopic covered even when engaged is a verb"
-        (emptyHoldFires ["связано", "добро"] True True True True)
+      assertBool "covered engaged topic named, all empty"
+        (emptyHoldFires ["добро"] ["добро"] True True True True)
+      assertBool "verb bestTopic salvaged by named focus"
+        (emptyHoldFires ["связано", "добро"] ["добро"] True True True True)
+      assertBool "incidental mention without engaged match stays silent"
+        (not (emptyHoldFires ["привет", "контакт"] ["время"] True True True True))
       assertBool "uncovered never fires"
-        (not (emptyHoldFires ["связано"] True True True True))
+        (not (emptyHoldFires ["связано"] ["связано"] True True True True))
       assertBool "a carried plan (abstain included) never fires"
-        (not (emptyHoldFires ["добро"] False True True True))
+        (not (emptyHoldFires ["добро"] ["добро"] False True True True))
       assertBool "an emitted predicate never fires"
-        (not (emptyHoldFires ["добро"] True True False True))
+        (not (emptyHoldFires ["добро"] ["добро"] True True False True))
       assertBool "a rendered claim never fires"
-        (not (emptyHoldFires ["добро"] True False True True))
+        (not (emptyHoldFires ["добро"] ["добро"] True False True True))
       assertBool "a selection never fires"
-        (not (emptyHoldFires ["добро"] True True True False))
+        (not (emptyHoldFires ["добро"] ["добро"] True True True False))
 
   , TestLabel "mentioned topics name the held noun" $ TestCase $ do
       assertEqual "stub hold names добро"

@@ -444,7 +444,7 @@ coreBehaviorTests =
     , testParsePropositionConceptKnowledgeSun
     , testParsePropositionSelfStateQuestion
     , testParsePropositionGenerativePromptThought
-    , testParsePropositionContemplativeTopicSilence
+    , testParsePropositionBareNounDefinesSilence
     , testParsePropositionConceptKnowledgeFreedomVariant
     , testParsePropositionSelfStateMindVariant
     , testParsePropositionGenerativePromptIdeaVariant
@@ -1017,7 +1017,7 @@ testClaimAstCoverageForOperationalAndMetaPrompts = TestCase $ do
         , ("В чём твоя логика?", SystemLogicQ)
         , ("Я не понимаю тебя", MisunderstandingReport)
         , ("Скажи интересную мысль", ReflectiveQ)
-        , ("Тишина", ContemplativeTopic)
+        , ("Тишина", ConceptKnowledgeQ)
         ]
   forM_ probes $ \(inputText, expectedType) -> do
     let frame = parseProposition inputText
@@ -2954,13 +2954,13 @@ testParsePropositionGenerativePromptThought = TestCase $ do
   assertEqual "Generative prompt should route to CMDescribe"
     CMDescribe (ipfCanonicalFamily frame)
 
-testParsePropositionContemplativeTopicSilence :: Test
-testParsePropositionContemplativeTopicSilence = TestCase $ do
+testParsePropositionBareNounDefinesSilence :: Test
+testParsePropositionBareNounDefinesSilence = TestCase $ do
   let frame = parseProposition "тишина"
-  assertEqual "Single contemplative topic should be ContemplativeTopic"
-    ContemplativeTopic (ipfPropositionType frame)
-  assertEqual "Contemplative topic should route to CMDeepen"
-    CMDeepen (ipfCanonicalFamily frame)
+  assertEqual "Bare covered noun should be ConceptKnowledgeQ"
+    ConceptKnowledgeQ (ipfPropositionType frame)
+  assertEqual "Bare covered noun should route to CMDefine"
+    CMDefine (ipfCanonicalFamily frame)
 
 testParsePropositionConceptKnowledgeFreedomVariant :: Test
 testParsePropositionConceptKnowledgeFreedomVariant = TestCase $ do
