@@ -57,6 +57,7 @@ intentClassifierTests =
   , intentToFamilyTests
   , frameBuilderTests
   , bareNounTests
+  , shortInputTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -366,4 +367,27 @@ bareNounTests = TestLabel "BareNounDefinition" $ TestList
       assertEqual "multi-word falls through to the classifier"
         (classifyIntent "что такое свобода?" ["что", "такое", "свобода?"] morph)
         (semanticIntentForRender ConceptKnowledgeQ "что такое свобода?" ["что", "такое", "свобода?"] morph)
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Short-input definitional (D1-probe fix-2, pre-registered 2026-09-25)
+-- ---------------------------------------------------------------------------
+
+shortInputTests :: Test
+shortInputTests = TestLabel "ShortCoveredHead" $ TestList
+  [ TestCase $ do
+      assertEqual "two-token covered head defines"
+        (IntentDefine "смысл")
+        (classify "смысл жизни")
+      assertEqual "three-token covered head defines"
+        (IntentDefine "свобода")
+        (classify "свобода как выбор")
+
+  , TestCase $ do
+      assertBool "greeting never defines"
+        (classify "привет" /= IntentDefine "привет")
+      assertBool "uncovered short never defines"
+        (classify "огонь или воздух?" /= IntentDefine "огонь")
+      assertBool "long input falls through"
+        (classify "свобода это главная ценность жизни" /= IntentDefine "свобода")
   ]

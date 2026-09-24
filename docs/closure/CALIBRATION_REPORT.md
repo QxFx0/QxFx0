@@ -905,3 +905,37 @@ beyond 24 verbs.
   render covered_exact; привет silent; «что такое свобода?»
   byte-identical.
 - **Parameters moved**: none (routing, not weights).
+
+---
+
+# Short-input definitional routing — pre-registration (2026-09-25)
+
+- **Finding**: multi-word shorts with covered head nouns («смысл
+  жизни», «свобода как выбор») never reach selection (diags=0);
+  only bare nouns were fixed. ~60 of 67 remaining misses.
+- **Rule (locked)**: at the END of `classifyFromFeatures` (after
+  topic-specific, before honest fallback): input ≤3 tokens AND
+  first content noun covered → `IntentDefine` (that noun). Fires
+  only where all four levels fell through — greetings, challenges,
+  comparisons, questions-with-markers keep priority by construction.
+  Nominative-leaning (no new morph threading; inflected heads stay
+  old path).
+- **Bar**: remiss covered_exact count grows with zero regressions
+  (input-to-input diff); unit + fast + core green, zero new
+  failures; live spots on 5 shorts.
+- **Out of scope**: inflected heads, >3 tokens, anything the upper
+  levels claim.
+
+---
+
+# Short-input definitional routing — landed, bar cleared (2026-09-25)
+
+- **Change** (pre-registered): end-of-chain rule in
+  `classifyFromFeatures` — ≤3 tokens + first content noun covered
+  → `IntentDefine`. Greetings/challenges/comparisons keep priority
+  (all above it); multi-word behavior untouched.
+- **Verification**: unit 1610 (+2 tests), fast 1817, zero new
+  failures. Live spots all correct (incl. uncovered «огонь или
+  воздух?» falling through by design). Remiss re-run: 11 fixed,
+  0 regressed (none→covered_exact on short covered heads).
+- **Parameters moved**: none (routing, not weights).

@@ -38,6 +38,7 @@ import Data.Aeson (ToJSON, FromJSON)
 
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns)
+import QxFx0.Semantic.Content (isCoveredTopic)
 import QxFx0.Types (CanonicalMoveFamily(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
@@ -119,6 +120,17 @@ normalizeIntentTopics morph intent = case intent of
     IntentDistinguish (canonicalTopic morph left) (canonicalTopic morph right)
   other -> other
 
+-- | Short covered head: ≤3-token input whose first content noun names
+-- a covered topic. Nominative-leaning (extractContentNouns lemmas).
+shortCoveredHead :: Text -> Maybe Text
+shortCoveredHead rawText =
+  let toks = T.words (T.strip rawText)
+  in if null toks || length toks > 3
+     then Nothing
+     else case extractContentNouns rawText of
+       (n : _) | isCoveredTopic n -> Just n
+       _ -> Nothing
+
 -- | Canonicalize a topic surface to its nominative lemma so topic-coverage
 -- lookups against the corpus (nominative keys) succeed regardless of the
 -- surface case form ("ответственности" / "ответственностью" →
@@ -150,8 +162,16 @@ classifyFromFeatures rawText features =
               case classifyTopicSpecific features of
                 Just intent -> intent
                 Nothing ->
-                  -- Level 5: honest fallback
-                  IntentUnknown rawText
+                  -- Level 5: short covered-head definitional (D1-probe
+                  -- fix-2, pre-registered 2026-09-25): ≤3 tokens, first
+                  -- content noun covered → implicit "what is X?".
+                  -- Fires only where Levels 1-4 fell through, so
+                  -- greetings/challenges/comparisons keep priority.
+                  case shortCoveredHead rawText of
+                    Just topic -> IntentDefine topic
+                    Nothing ->
+                      -- Level 6: honest fallback
+                      IntentUnknown rawText
 
 -- ---------------------------------------------------------------------------
 -- Compositional rules (NOT single-keyword triggers)
