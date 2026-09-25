@@ -986,3 +986,23 @@ beyond 24 verbs.
   1190 — zero new failures. Live spots exact (incl. preserved
   abstains on negation/uncovered). Remiss: 5 fixed, 0 regressed.
 - **Parameters moved**: none (routing, not weights).
+
+---
+
+# State-dependent misses — dissolved, no suppressor bug (2026-09-25)
+
+- **Question**: 32 live-miss/fresh-hit pairs — does dialogue history
+  suppress selection?
+- **Field deltas**: learning_need→degraded in 16/32; rest are harness
+  artifacts (fields absent in old captures), code-fix effects
+  (family flips from bare-noun routing), or legitimate guard blocks.
+- **Need-tracker audit** (`Learning/Need.hs`): windowed (10 turns),
+  unlatches on expiry — a miss-density tracker working as designed,
+  not a latch bug. Its surface appends honestly; it never replaces
+  rendered content.
+- **In-session verification** (6-turn session with history):
+  свобода/смысл жизни/зачем нужна свобода all render covered_exact
+  AFTER vague turns. Phases 1–2 fire with history present.
+- **Verdict**: no fix. The gap was old code + honest tracking.
+  (Side observation, pre-existing minor bug: hypothesis
+  back-reference points at the previous turn's question.)
