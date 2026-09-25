@@ -1069,6 +1069,39 @@ distinctionCorpus = M.fromList
       [ diff "одиночество переживается как лишение, уединение выбирается как потребность"
              "loneliness is experienced as deprivation, solitude is chosen as a need"
       ]
+  -- Live-dialogue distinction batch (2026-09-25, human-approved).
+  , dEntry "суть" "сущность"
+      [ diff "суть отвечает на вопрос в чём дело, сущность — на вопрос что это есть"
+             "gist answers what the matter is, essence — what the thing is"
+      ]
+  , dEntry "добро" "зло"
+      [ diff "добро утверждает ценность, зло её отрицает"
+             "good affirms value, evil denies it"
+      ]
+  , dEntry "боль" "страдание"
+      [ diff "боль — сигнал тела, страдание — состояние души"
+             "pain is a body signal, suffering is a state of the soul"
+      ]
+  , dEntry "жизнь" "смерть"
+      [ diff "жизнь есть становление, смерть — завершение"
+             "life is becoming, death is completion"
+      ]
+  , dEntry "тишина" "звук"
+      [ diff "тишина — отсутствие звука, звук — её нарушение"
+             "silence is the absence of sound, sound breaks it"
+      ]
+  , dEntry "справедливость" "месть"
+      [ diff "справедливость восстанавливает меру, месть причиняет боль в ответ"
+             "justice restores measure, revenge inflicts pain in return"
+      ]
+  , dEntry "любовь" "дружба"
+      [ diff "любовь не выбирает, дружба выбирает"
+             "love does not choose, friendship does"
+      ]
+  , dEntry "добро" "справедливость"
+      [ diff "добро шире справедливости: справедливость — мера должного, добро — избыток сверх меры"
+             "good is wider than justice: justice is the measure of the due, good is excess beyond measure"
+      ]
   ]
   where
     dEntry left right preds =

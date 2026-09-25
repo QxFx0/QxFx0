@@ -7071,6 +7071,11 @@ generatedLexemeEntries =
     ("границе", "граница", "noun", "prepositional"),
     ("границу", "граница", "noun", "accusative"),
     ("границей", "граница", "noun", "instrumental"),
+    ("грань", "грань", "noun", "nominative"),
+    ("грани", "грань", "noun", "genitive"),
+    ("грани", "грань", "noun", "prepositional"),
+    ("грань", "грань", "noun", "accusative"),
+    ("гранью", "грань", "noun", "instrumental"),
     ("граф", "граф", "noun", "nominative"),
     ("графа", "граф", "noun", "genitive"),
     ("графе", "граф", "noun", "prepositional"),
@@ -14961,6 +14966,11 @@ generatedLexemeEntries =
     ("рабе", "раб", "noun", "prepositional"),
     ("раба", "раб", "noun", "accusative"),
     ("рабой", "раб", "noun", "instrumental"),
+    ("работа", "работа", "noun", "nominative"),
+    ("работы", "работа", "noun", "genitive"),
+    ("работе", "работа", "noun", "prepositional"),
+    ("работу", "работа", "noun", "accusative"),
+    ("работой", "работа", "noun", "instrumental"),
     ("равнина", "равнина", "noun", "nominative"),
     ("равнины", "равнина", "noun", "genitive"),
     ("равнине", "равнина", "noun", "prepositional"),
@@ -16676,6 +16686,11 @@ generatedLexemeEntries =
     ("составе", "состав", "noun", "prepositional"),
     ("состав", "состав", "noun", "accusative"),
     ("составом", "состав", "noun", "instrumental"),
+    ("состояние", "состояние", "noun", "nominative"),
+    ("состояния", "состояние", "noun", "genitive"),
+    ("состоянии", "состояние", "noun", "prepositional"),
+    ("состояние", "состояние", "noun", "accusative"),
+    ("состоянием", "состояние", "noun", "instrumental"),
     ("состоятельность", "состоятельность", "noun", "nominative"),
     ("состоятельности", "состоятельность", "noun", "genitive"),
     ("состоятельности", "состоятельность", "noun", "prepositional"),
@@ -17191,6 +17206,11 @@ generatedLexemeEntries =
     ("сутках", "сутки", "noun", "prepositional"),
     ("сутки", "сутки", "noun", "accusative"),
     ("сутками", "сутки", "noun", "instrumental"),
+    ("суть", "суть", "noun", "nominative"),
+    ("сути", "суть", "noun", "genitive"),
+    ("сути", "суть", "noun", "prepositional"),
+    ("суть", "суть", "noun", "accusative"),
+    ("сутью", "суть", "noun", "instrumental"),
     ("существование", "существование", "noun", "nominative"),
     ("существования", "существование", "noun", "genitive"),
     ("существовании", "существование", "noun", "prepositional"),
@@ -17201,6 +17221,11 @@ generatedLexemeEntries =
     ("существовать", "существовать", "verb", "prepositional"),
     ("существовать", "существовать", "verb", "accusative"),
     ("существовать", "существовать", "verb", "instrumental"),
+    ("сущность", "сущность", "noun", "nominative"),
+    ("сущности", "сущность", "noun", "genitive"),
+    ("сущности", "сущность", "noun", "prepositional"),
+    ("сущность", "сущность", "noun", "accusative"),
+    ("сущностью", "сущность", "noun", "instrumental"),
     ("сфера", "сфера", "noun", "nominative"),
     ("сферы", "сфера", "noun", "genitive"),
     ("сфере", "сфера", "noun", "prepositional"),
@@ -17526,6 +17551,11 @@ generatedLexemeEntries =
     ("титуле", "титул", "noun", "prepositional"),
     ("титул", "титул", "noun", "accusative"),
     ("титулом", "титул", "noun", "instrumental"),
+    ("тишина", "тишина", "noun", "nominative"),
+    ("тишины", "тишина", "noun", "genitive"),
+    ("тишине", "тишина", "noun", "prepositional"),
+    ("тишину", "тишина", "noun", "accusative"),
+    ("тишиной", "тишина", "noun", "instrumental"),
     ("ткань", "ткань", "noun", "nominative"),
     ("ткани", "ткань", "noun", "genitive"),
     ("ткани", "ткань", "noun", "prepositional"),
@@ -43645,6 +43675,11 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "гранатом" , lfLemma = "гранат" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("грани",
+      [
+        LexemeForm { lfSurface = "грани" , lfLemma = "грань" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "грани" , lfLemma = "грань" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("гранит",
       [
         LexemeForm { lfSurface = "гранит" , lfLemma = "гранит" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -43695,14 +43730,12 @@ generatedCandidateForms =
       ]),
     ("грань",
       [
-        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "грань" , lfLemma = "грань" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("гранью",
       [
-        LexemeForm { lfSurface = "гранью" , lfLemma = "грань" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "гранью" , lfLemma = "грань" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("граф",
       [
@@ -70920,17 +70953,23 @@ generatedCandidateForms =
       ]),
     ("работа",
       [
-        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "работа" , lfLemma = "работа" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("работе",
+      [
+        LexemeForm { lfSurface = "работе" , lfLemma = "работа" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("работой",
       [
-        LexemeForm { lfSurface = "работой" , lfLemma = "работа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "работой" , lfLemma = "работа" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("работу",
       [
-        LexemeForm { lfSurface = "работу" , lfLemma = "работа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "работу" , lfLemma = "работа" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("работы",
+      [
+        LexemeForm { lfSurface = "работы" , lfLemma = "работа" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("равнина",
       [
@@ -76797,6 +76836,23 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "составом" , lfLemma = "состав" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("состояние",
+      [
+        LexemeForm { lfSurface = "состояние" , lfLemma = "состояние" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "состояние" , lfLemma = "состояние" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("состоянием",
+      [
+        LexemeForm { lfSurface = "состоянием" , lfLemma = "состояние" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("состоянии",
+      [
+        LexemeForm { lfSurface = "состоянии" , lfLemma = "состояние" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("состояния",
+      [
+        LexemeForm { lfSurface = "состояния" , lfLemma = "состояние" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("состоятельности",
       [
         LexemeForm { lfSurface = "состоятельности" , lfLemma = "состоятельность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -78656,6 +78712,11 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "сурдотехнику" , lfLemma = "сурдотехника" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("сути",
+      [
+        LexemeForm { lfSurface = "сути" , lfLemma = "суть" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "сути" , lfLemma = "суть" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("сутками",
       [
         LexemeForm { lfSurface = "сутками" , lfLemma = "сутки" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -78672,6 +78733,15 @@ generatedCandidateForms =
     ("суток",
       [
         LexemeForm { lfSurface = "суток" , lfLemma = "сутки" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("суть",
+      [
+        LexemeForm { lfSurface = "суть" , lfLemma = "суть" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "суть" , lfLemma = "суть" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("сутью",
+      [
+        LexemeForm { lfSurface = "сутью" , lfLemma = "суть" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("существование",
       [
@@ -78697,6 +78767,20 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "существовать" , lfLemma = "существовать" , lfPOS = "verb" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "существовать" , lfLemma = "существовать" , lfPOS = "verb" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 },
         LexemeForm { lfSurface = "существовать" , lfLemma = "существовать" , lfPOS = "verb" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.95 }
+      ]),
+    ("сущности",
+      [
+        LexemeForm { lfSurface = "сущности" , lfLemma = "сущность" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "сущности" , lfLemma = "сущность" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("сущность",
+      [
+        LexemeForm { lfSurface = "сущность" , lfLemma = "сущность" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "сущность" , lfLemma = "сущность" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("сущностью",
+      [
+        LexemeForm { lfSurface = "сущностью" , lfLemma = "сущность" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("сфера",
       [
@@ -79971,17 +80055,23 @@ generatedCandidateForms =
       ]),
     ("тишина",
       [
-        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
-        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "тишина" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("тишине",
+      [
+        LexemeForm { lfSurface = "тишине" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("тишиной",
       [
-        LexemeForm { lfSurface = "тишиной" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "тишиной" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("тишину",
       [
-        LexemeForm { lfSurface = "тишину" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+        LexemeForm { lfSurface = "тишину" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("тишины",
+      [
+        LexemeForm { lfSurface = "тишины" , lfLemma = "тишина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("ткани",
       [

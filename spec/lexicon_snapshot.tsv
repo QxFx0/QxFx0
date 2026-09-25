@@ -1409,6 +1409,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 гранат	noun	гранат	граната	гранате	гранат	гранатом	curated	curated	0.99
 гранит	noun	гранит	гранита	граните	гранит	гранитом	curated	curated	0.99
 граница	noun	граница	границы	границе	границу	границей	curated	curated	0.98
+грань	noun	грань	грани	грани	грань	гранью	curated	curated	0.99
 граф	noun	граф	графа	графе	граф	графом	curated	curated	0.99
 график	noun	график	графика	графике	график	графиком	curated	curated	0.99
 графоман	noun	графоман	графомана	графомане	графомана	графоманом	curated	curated	0.99
@@ -2986,6 +2987,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 пядь	noun	пядь	пяди	пяди	пядь	пядью	curated	curated	0.99
 пятивалентность	noun	пятивалентность	пятивалентности	пятивалентности	пятивалентность	пятивалентностью	curated	curated	0.99
 раб	noun	раб	раба	рабе	раба	рабой	curated	curated	0.99
+работа	noun	работа	работы	работе	работу	работой	curated	curated	0.99
 равнина	noun	равнина	равнины	равнине	равнину	равниной	curated	curated	0.99
 равновесие	noun	равновесие	равновесия	равновесии	равновесие	равновесием	curated	curated	0.99
 равнодоступность	noun	равнодоступность	равнодоступности	равнодоступности	равнодоступность	равнодоступностью	curated	curated	0.99
@@ -3329,6 +3331,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 сосед	noun	сосед	соседа	соседе	соседа	соседом	curated	curated	0.99
 сосна	noun	сосна	сосны	сосне	сосну	сосной	curated	curated	0.99
 состав	noun	состав	состава	составе	состав	составом	curated	curated	0.99
+состояние	noun	состояние	состояния	состоянии	состояние	состоянием	curated	curated	0.99
 состоятельность	noun	состоятельность	состоятельности	состоятельности	состоятельность	состоятельностью	curated	curated	0.99
 сосуд	noun	сосуд	сосуда	сосуде	сосуд	сосудом	curated	curated	0.99
 софа	noun	софа	софы	софе	софу	софой	curated	curated	0.99
@@ -3432,8 +3435,10 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 супруга	noun	супруга	супруги	супруге	супругу	супругой	curated	curated	0.99
 сурдотехника	noun	сурдотехника	сурдотехники	сурдотехнике	сурдотехнику	сурдотехникой	curated	curated	0.99
 сутки	noun	сутки	суток	сутках	сутки	сутками	curated	curated	0.99
+суть	noun	суть	сути	сути	суть	сутью	curated	curated	0.99
 существование	noun	существование	существования	существовании	существование	существованием	curated	curated	0.98
 существовать	verb	существовать	существовать	существовать	существовать	существовать	curated	curated	0.95
+сущность	noun	сущность	сущности	сущности	сущность	сущностью	curated	curated	0.99
 сфера	noun	сфера	сферы	сфере	сферу	сферой	curated	curated	0.99
 схема	noun	схема	схемы	схеме	схему	схемой	curated	curated	0.99
 сходимость	noun	сходимость	сходимости	сходимости	сходимость	сходимостью	curated	curated	0.99
@@ -3499,6 +3504,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 тигр	noun	тигр	тигра	тигре	тигра	тигром	curated	curated	0.99
 тираж	noun	тираж	тиража	тираже	тираж	тиражом	curated	curated	0.99
 титул	noun	титул	титула	титуле	титул	титулом	curated	curated	0.99
+тишина	noun	тишина	тишины	тишине	тишину	тишиной	curated	curated	0.99
 ткань	noun	ткань	ткани	ткани	ткань	тканью	curated	curated	0.99
 товар	noun	товар	товара	товаре	товар	товаром	curated	curated	0.99
 товарищ	noun	товарищ	товарища	товарище	товарища	товарищем	curated	curated	0.99
