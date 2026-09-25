@@ -1086,3 +1086,31 @@ beyond 24 verbs.
   cause in trace (2 turns); abstain+need keeps it (1 turn).
 - **Parameters moved**: none (render gate, not weights/thresholds —
   the 0.6 activation threshold itself untouched).
+
+---
+
+# Challenge placeholder — pre-registration (2026-09-25)
+
+- **Finding**: `extractTarget` bakes «исходный тезис» into
+  ChallengeFrame when nothing matches; the placeholder then travels
+  as a fake plan topic (TopicNotCovered on «исходный тезис»).
+- **Rule (locked)**: return empty on no-match; the render guard
+  (`Dialogue.hs:2160`, empty → «исходный тезис» for DISPLAY only)
+  already covers presentation. No other callers exist.
+- **Bar**: unit tests (matched/pattern/empty) + unit/fast green,
+  zero new failures; live spot (Мораль-challenge abstains without
+  fake topic in trace).
+
+---
+
+# Challenge placeholder removed — landed (2026-09-25)
+
+- **Defect**: `extractTarget` baked «исходный тезис» into
+  ChallengeFrame; the placeholder traveled as a fake plan topic.
+- **Fix** (pre-registered): empty on no-match; the display guard
+  (`Dialogue.hs`, empty → «исходный тезис») already covers
+  presentation. Single caller, no other consumers.
+- **Verification**: unit 1615 (+target tests), fast 1817 green.
+  Live Мораль-challenge: clean clarify request, plan
+  NoTopicProvided (no fake topic in trace).
+- **Parameters moved**: none.

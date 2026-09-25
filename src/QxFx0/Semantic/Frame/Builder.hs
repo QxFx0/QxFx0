@@ -9,6 +9,7 @@ semantic information for compositional text generation.
 -}
 module QxFx0.Semantic.Frame.Builder
   ( buildFrame
+  , extractTarget
   ) where
 
 import Data.Text (Text)
@@ -169,7 +170,10 @@ extractTarget rawText =
            then "границу между свободой и произволом"
          else if "мнение" `T.isInfixOf` lowered
            then "границу между истиной и мнением"
-         else "исходный тезис"
+         -- No placeholder: an empty target stays empty so downstream
+         -- never treats «исходный тезис» as a topic (pre-registered
+         -- 2026-09-25). Display guard in Dialogue.hs covers rendering.
+         else ""
 
 -- | Extract the basis of a challenge from raw text.
 -- E.g., "противоречит опыту" → "противоречит опыту"

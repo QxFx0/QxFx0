@@ -24,7 +24,7 @@ import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), Mo
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType, normalizeIntentTopics)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
-import QxFx0.Semantic.Frame.Builder (buildFrame)
+import QxFx0.Semantic.Frame.Builder (buildFrame, extractTarget)
 import QxFx0.Core.TurnPipeline.Route.Render (semanticIntentForRender)
 import QxFx0.Types (MorphologyData(..), CanonicalMoveFamily(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
@@ -59,6 +59,7 @@ intentClassifierTests =
   , bareNounTests
   , shortInputTests
   , canonicalTopicTests
+  , challengeTargetTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -410,4 +411,19 @@ canonicalTopicTests = TestLabel "PlanTopicCanonical" $ TestList
       assertEqual "nominative identity"
         (IntentGround "смысл")
         (normalizeIntentTopics testMorph (IntentGround "смысл"))
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Challenge target extraction (pre-registered 2026-09-25)
+-- ---------------------------------------------------------------------------
+
+challengeTargetTests :: Test
+challengeTargetTests = TestLabel "ChallengeTarget" $ TestList
+  [ TestCase $ do
+      assertBool "covered topic matched"
+        (not (T.null (extractTarget "Свобода — это иллюзия, докажи обратное")))
+  , TestCase $ do
+      assertEqual "no match stays empty, never a placeholder"
+        ""
+        (extractTarget "Мораль относительна, докажи обратное")
   ]
