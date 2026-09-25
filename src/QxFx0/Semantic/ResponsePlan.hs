@@ -106,12 +106,16 @@ buildResponseSemanticPlanWithActiveQuestion selector field rawInput mActivation 
       | otherwise = Nothing
 
 -- | Retry an uncovered single plan topic with its first covered
--- token. Total: Nothing when negated, topic-less, or nothing covered.
-refineUncoveredTopic :: Text -> Maybe Text
-refineUncoveredTopic surface =
-  let toks = [ t | w <- T.words (T.toLower surface)
-                 , let t = T.filter isAlphaNum w
-                 , not (T.null t) ]
+-- token, lemmatized through the selector map (pre-registered
+-- 2026-09-25, micro): inflected covered forms («смысле» → «смысл»)
+-- now match. Total: Nothing when negated, topic-less, or nothing
+-- covered (lemma map gaps behave exactly like before).
+refineUncoveredTopic :: M.Map Text Text -> Text -> Maybe Text
+refineUncoveredTopic lemmaMap surface =
+  let toks = [ M.findWithDefault t t lemmaMap
+             | w <- T.words (T.toLower surface)
+             , let t = T.filter isAlphaNum w
+             , not (T.null t) ]
   in if any (`elem` ["не", "ни", "нет", "без", "нельзя"]) toks
      then Nothing
      else listToMaybe [ t | t <- toks, isCoveredTopic t ]
@@ -139,7 +143,7 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
             -- surfaces («почему нет слов») and topic-less surfaces
             -- keep today's fallback. Multi-topic (distinction) plans
             -- untouched.
-            [t] -> case refineUncoveredTopic t of
+            [t] -> case refineUncoveredTopic (csLemmaMap selector) t of
               Just t2 | t2 /= t ->
                 buildGroundedPlan goal [t2] mActiveQuestion selector field mActivation
               _ -> fallbackPlan goal TopicNotCovered (Just topic)

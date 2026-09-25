@@ -631,21 +631,25 @@ testGeneratedPredicateUnderCoveredTopicIsHypothesis = TestCase $ do
 -- plan topics retry with the first covered token.
 testRefineUncoveredTopic :: Test
 testRefineUncoveredTopic = TestCase $ do
+  let lm = M.fromList [("смысле", "смысл"), ("свободе", "свобода")]
   assertEqual "clause retries to head noun"
     (Just "смысл")
-    (refineUncoveredTopic "в чём смысл моей жизни")
-  assertEqual "nominative identity"
+    (refineUncoveredTopic lm "в чём смысл моей жизни")
+  assertEqual "inflected form lemmatizes"
+    (Just "смысл")
+    (refineUncoveredTopic lm "поговорим о смысле жизни?")
+  assertEqual "nominative identity without map"
     (Just "свобода")
-    (refineUncoveredTopic "свобода")
+    (refineUncoveredTopic M.empty "свобода")
   assertEqual "negated existential stays Nothing"
     Nothing
-    (refineUncoveredTopic "почему нет слов")
+    (refineUncoveredTopic lm "почему нет слов")
   assertEqual "nothing covered stays Nothing"
     Nothing
-    (refineUncoveredTopic "ты молчишь")
+    (refineUncoveredTopic lm "ты молчишь")
   assertEqual "empty stays Nothing"
     Nothing
-    (refineUncoveredTopic "")
+    (refineUncoveredTopic lm "")
 
 
 -- | Back-reference guard (pre-registered 2026-09-25).

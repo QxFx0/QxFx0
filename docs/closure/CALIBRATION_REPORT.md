@@ -1114,3 +1114,31 @@ beyond 24 verbs.
   Live Мораль-challenge: clean clarify request, plan
   NoTopicProvided (no fake topic in trace).
 - **Parameters moved**: none.
+
+---
+
+# Lemma-aware plan retry — pre-registration (2026-09-25, micro)
+
+- **Finding**: 11 live turns carry inflected covered forms
+  (смысле→смысл, грани→грань, свободе→свобода); raw-token retry
+  misses them. Election untouched (wider blast radius, separate
+  project if ever).
+- **Rule (locked)**: `refineUncoveredTopic` takes the selector lemma
+  map and lemmatizes surface tokens before the covered check.
+  Nominative behavior byte-identical (lemma of nominative is
+  itself modulo map gaps).
+- **Bar**: unit tests (inflected/negated/empty) + unit/fast/core
+  green, zero new failures; live spots on 3 inflected inputs.
+
+---
+
+# Lemma-aware plan retry — landed (2026-09-26, micro)
+
+- **Change** (pre-registered): `refineUncoveredTopic` lemmatizes
+  surface tokens through the selector map (смысле→смысл); nominative
+  behavior identical. Election untouched.
+- **Verification**: unit 1613 (+inflected test), fast 1817 green.
+  Live: «в чём смысл моей жизни?» and «зачем жизни суть?» resolve
+  to covered topics with content; plan-less shapes stay out of
+  scope by design (verified: no plan exists to retry).
+- **Parameters moved**: none.
