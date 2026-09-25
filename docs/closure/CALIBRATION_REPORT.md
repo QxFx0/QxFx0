@@ -1142,3 +1142,19 @@ beyond 24 verbs.
   to covered topics with content; plan-less shapes stay out of
   scope by design (verified: no plan exists to retry).
 - **Parameters moved**: none.
+
+---
+
+# None-class decomposition — closed as correct (2026-09-26)
+
+- **Method**: all remiss turns with `trcContentSource=None`
+  (plan never built), classified by input.
+- **Result (32)**: ~28 legitimately contentless (meta/self-talk/
+  vague: greetings, «что ты хочешь?», «как ты думаешь?», «научи
+  меня…» — no content question asked). 4 borderline
+  («где твои грани?», «в чём твоя суть?», sense-forms) where a
+  definitional answer is plausible but each needs human judgment
+  about the question's sense.
+- **Decision**: no rule. Forcing content onto meta questions would
+  be a regression disguised as a fix (answers literally, misses
+  the point). The 4 borderline stay human-discretion cases.
