@@ -18,6 +18,7 @@ module QxFx0.Semantic.ResponsePlan
   , responsePlanQualityIssues
   , responsePlanTopic
   , refineUncoveredTopic
+  , topicMentioned
   , isGenerativeRequestText
   ) where
 
@@ -171,7 +172,7 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                  counterpoint = buildCounterpoint confidence (candidatePredicate primary) (map candidatePredicate alternatives)
                  counterProposition = derivedProposition <$> (pcText <$> counterpoint)
                  synthesisProposition = spSynthesis (candidatePredicate primary) >>= nonEmptyProposition
-                 obligation = deriveObligation mActiveQuestion goal primaryProposition counterProposition
+                 obligation = deriveObligation mActiveQuestion goal primaryProposition counterProposition topic
                  propositions = take 8 . concat $
                    [ [primaryProposition]
                    , maybe [] (pure . PropositionContrast primaryProposition) (secondary <|> counterProposition)
@@ -284,17 +285,33 @@ claimModeFor goal = case goal of
   GoalHypothesize -> ClaimHypothetical
   _ -> ClaimInterpretive
 
-deriveObligation :: Maybe Text -> ResponseGoal -> SemanticProposition -> Maybe SemanticProposition -> Maybe DialogueObligation
-deriveObligation mActiveQuestion goal proposition mCounter =
+deriveObligation :: Maybe Text -> ResponseGoal -> SemanticProposition -> Maybe SemanticProposition -> Text -> Maybe DialogueObligation
+deriveObligation mActiveQuestion goal proposition mCounter planTopic =
   case normalizeActiveQuestion =<< mActiveQuestion of
-    Just question -> Just (ObligationContinue question)
-    Nothing -> case mCounter of
+    -- Back-reference guard (pre-registered 2026-09-25): cite the open
+    -- question only when it concerns the current plan topic; a stale
+    -- thread question («контрпример к смелости» while answering
+    -- about любовь) falls back to the goal default.
+    Just question
+      | topicMentioned planTopic question -> Just (ObligationContinue question)
+      | otherwise -> goalDefault
+    Nothing -> goalDefault
+  where
+    goalDefault = case mCounter of
       Just counter -> Just (ObligationCheck counter)
       Nothing -> case goal of
         GoalCompare -> Just (ObligationContrast proposition)
         GoalChallenge -> Just (ObligationClarify "уточнить основание возражения")
         GoalClarify -> Just (ObligationClarify "уточнить рамку вопроса")
         _ -> Just (ObligationContinue "проверить тезис на контрпример")
+
+-- | Plan topic named (whole token, normalized) in the open question.
+topicMentioned :: Text -> Text -> Bool
+topicMentioned topic question =
+  let norm = T.toLower . T.strip
+      key = norm topic
+  in not (T.null key)
+     && key `elem` [ T.filter isAlphaNum w | w <- T.words (norm question) ]
 
 obligationRule :: Maybe DialogueObligation -> DerivationRule
 obligationRule obligation = case obligation of

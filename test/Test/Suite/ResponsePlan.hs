@@ -30,6 +30,7 @@ import QxFx0.Semantic.ResponsePlan
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   , refineUncoveredTopic
+  , topicMentioned
   )
 import QxFx0.Semantic.ResponsePlan.GF (responsePlanToGfExpr, semanticPropositionToGfExpr)
 import QxFx0.Lexicon.Generated.SemanticSlots
@@ -76,6 +77,7 @@ responsePlanTests =
      , TestLabel "cataloged argued question leaves preserve their exact question mark" testCatalogedQuestionLeafPreserved
   , TestLabel "invalid plan is rejected" testPlanAdmission
   , TestLabel "uncovered plan topic retries first covered token" testRefineUncoveredTopic
+  , TestLabel "back-reference cites only the current topic" testTopicMentioned
   , TestLabel "surface realizer cannot drop approved claim" testRealizerContract
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
   , TestLabel "old generic generative paragraph is blocked" testGenericParagraphBlocked
@@ -644,3 +646,16 @@ testRefineUncoveredTopic = TestCase $ do
   assertEqual "empty stays Nothing"
     Nothing
     (refineUncoveredTopic "")
+
+
+-- | Back-reference guard (pre-registered 2026-09-25).
+testTopicMentioned :: Test
+testTopicMentioned = TestCase $ do
+  assertBool "same topic cited"
+    (topicMentioned "свобода" "что такое свобода?")
+  assertBool "unrelated thread question refused"
+    (not (topicMentioned "любовь" "контрпример к смелости"))
+  assertBool "empty topic never cites"
+    (not (topicMentioned "" "что такое свобода?"))
+  assertBool "partial word is not a mention"
+    (not (topicMentioned "мысл" "в чём смысл жизни?"))

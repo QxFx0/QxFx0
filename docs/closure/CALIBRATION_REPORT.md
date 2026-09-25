@@ -1006,3 +1006,31 @@ beyond 24 verbs.
 - **Verdict**: no fix. The gap was old code + honest tracking.
   (Side observation, pre-existing minor bug: hypothesis
   back-reference points at the previous turn's question.)
+
+---
+
+# Next-move back-reference guard — pre-registration (2026-09-25)
+
+- **Finding**: «Следующий ход: вернуться к открытому вопросу: X»
+  cites the dialogue thread's active question unconditionally —
+  twice observed pointing at the PREVIOUS turn's unrelated question
+  (live-0201 смелость→любовь; hist «о чём ты молчишь?»→смысл).
+- **Rule (locked)**: cite the active question only if the current
+  plan topic occurs in it (normalized substring); else fall back to
+  the goal default («проверить тезис на контрпример»). Turns that
+  continue their own question keep the reference byte-identical.
+- **Bar**: unit tests (match/mismatch/empty) + live spots on both
+  cases; unit + fast green, zero new failures.
+
+---
+
+# Next-move back-reference guard — landed (2026-09-25)
+
+- **Defect**: «Следующий ход: вернуться к открытому вопросу: X»
+  cited the thread's stale question (live-0201 смелость→любовь).
+- **Fix** (pre-registered): cite only when the plan topic occurs in
+  the question (`topicMentioned`, whole-token); else goal default.
+- **Verification**: unit 1613 (+guard tests), fast 1817 green; live:
+  смелость→любовь now defaults, same-topic paths untouched by
+  construction (unit-pinned fallthrough).
+- **Parameters moved**: none.
