@@ -21,7 +21,7 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType, normalizeIntentTopics)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
@@ -58,6 +58,7 @@ intentClassifierTests =
   , frameBuilderTests
   , bareNounTests
   , shortInputTests
+  , canonicalTopicTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -390,4 +391,23 @@ shortInputTests = TestLabel "ShortCoveredHead" $ TestList
         (classify "огонь или воздух?" /= IntentDefine "огонь")
       assertBool "long input falls through"
         (classify "свобода это главная ценность жизни" /= IntentDefine "свобода")
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Plan-topic canonicalization (phase-2, pre-registered 2026-09-25)
+-- ---------------------------------------------------------------------------
+
+canonicalTopicTests :: Test
+canonicalTopicTests = TestLabel "PlanTopicCanonical" $ TestList
+  [ TestCase $ do
+      -- F2 span doctrine: multiword topics survive intact even when
+      -- only the tail noun is covered (first-noun reduction would
+      -- mangle «осознанность выбора» to «выбор» whenever the head
+      -- is unknown to morphology).
+      assertEqual "worldcause span preserved"
+        (IntentWorldCause "осознанность выбора")
+        (normalizeIntentTopics testMorph (IntentWorldCause "осознанность выбора"))
+      assertEqual "nominative identity"
+        (IntentGround "смысл")
+        (normalizeIntentTopics testMorph (IntentGround "смысл"))
   ]

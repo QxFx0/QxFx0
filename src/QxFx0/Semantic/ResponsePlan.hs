@@ -17,9 +17,11 @@ module QxFx0.Semantic.ResponsePlan
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   , responsePlanTopic
+  , refineUncoveredTopic
   , isGenerativeRequestText
   ) where
 
+import Data.Char (isAlphaNum)
 import Data.List (find, sortOn)
 import Data.Maybe (listToMaybe, mapMaybe, maybeToList)
 import qualified Data.Map.Strict as M
@@ -102,6 +104,17 @@ buildResponseSemanticPlanWithActiveQuestion selector field rawInput mActivation 
       | isClarifyRequestText rawInput = Just (GoalClarify, maybeToList (responsePlanTopic selector rawInput))
       | otherwise = Nothing
 
+-- | Retry an uncovered single plan topic with its first covered
+-- token. Total: Nothing when negated, topic-less, or nothing covered.
+refineUncoveredTopic :: Text -> Maybe Text
+refineUncoveredTopic surface =
+  let toks = [ t | w <- T.words (T.toLower surface)
+                 , let t = T.filter isAlphaNum w
+                 , not (T.null t) ]
+  in if any (`elem` ["не", "ни", "нет", "без", "нельзя"]) toks
+     then Nothing
+     else listToMaybe [ t | t <- toks, isCoveredTopic t ]
+
 -- | At most eight selector-derived candidates enter composition. The first
 -- admissible candidate is the thesis; its curated counter/synthesis fields may
 -- add a contrast or conditional proposition, never a free-form fact.
@@ -117,7 +130,19 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
   case topics of
     [] -> fallbackPlan GoalClarify NoTopicProvided Nothing
     topic:_
-      | any (`M.notMember` csTopicPredicates selector) topics -> fallbackPlan goal TopicNotCovered (Just topic)
+      | any (`M.notMember` csTopicPredicates selector) topics ->
+          case topics of
+            -- Phase-2 REDESIGN (pre-registered 2026-09-25): a
+            -- single uncovered topic retries with its first covered
+            -- token («в чём смысл моей жизни» → «смысл»). Negated
+            -- surfaces («почему нет слов») and topic-less surfaces
+            -- keep today's fallback. Multi-topic (distinction) plans
+            -- untouched.
+            [t] -> case refineUncoveredTopic t of
+              Just t2 | t2 /= t ->
+                buildGroundedPlan goal [t2] mActiveQuestion selector field mActivation
+              _ -> fallbackPlan goal TopicNotCovered (Just topic)
+            _ -> fallbackPlan goal TopicNotCovered (Just topic)
       | otherwise ->
           case candidates of
             [] -> fallbackPlan goal NoAdmissiblePredicate (Just topic)

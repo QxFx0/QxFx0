@@ -939,3 +939,50 @@ beyond 24 verbs.
   воздух?» falling through by design). Remiss re-run: 11 fixed,
   0 regressed (none→covered_exact on short covered heads).
 - **Parameters moved**: none (routing, not weights).
+
+---
+
+# Plan-topic canonicalization — pre-registration (2026-09-25, phase 2)
+
+- **Finding**: 15 TopicNotCovered plans carry whole clauses as
+  topics («в чём смысл моей жизни», «ты молчишь») — map membership
+  fails trivially. `normalizeIntentTopics` canonicalizes only
+  Define/Distinguish; Ground/Learn/Help/Purpose/WorldCause/Deepen
+  pass raw surfaces through.
+- **Rule (locked)**: extend the existing canonicalization to the six
+  topic-carrying intents (total function; unknown surfaces pass
+  through unchanged, so nominative inputs are byte-identical).
+- **Bar**: TopicNotCovered class shrinks on remiss re-run; unit +
+  fast + core green, zero new failures; spot checks.
+- **Out of scope**: ChallengeFrame `исходный тезис` placeholder
+  (separate target-extraction debt, recorded).
+
+---
+
+# Plan-topic retry — phase-2 REDESIGN (2026-09-25, supersedes reverted normalization)
+
+- **Why redesigned**: extending `normalizeIntentTopics` broke the F2
+  span doctrine («осознанность выбора» → «выбор» when the head is
+  unknown). Reverted same-day. Clause-topics are a plan-level
+  problem, fixed at plan level.
+- **Rule (locked)**: in `buildGroundedPlan`, single-topic
+  TopicNotCovered retries with the first covered token of the
+  surface — unless negated (не/ни/нет/без/нельзя) or no covered
+  token exists (then today's fallback, byte-identical).
+  Multi-topic (distinction) plans untouched.
+- **Bar**: TopicNotCovered class shrinks on remiss; unit + fast +
+  core green, zero new failures; live spots.
+
+---
+
+# Plan-topic retry — landed, bar cleared (2026-09-25)
+
+- **Change** (redesigned pre-reg after reverting a normalization
+  that broke F2 span doctrine): single-topic TopicNotCovered
+  retries with the first covered token («в чём смысл моей жизни»
+  → «смысл»); negated/exhausted surfaces and multi-topic plans
+  keep today's fallback byte-identical.
+- **Verification**: unit 1612 (+refine tests), fast 1817, core
+  1190 — zero new failures. Live spots exact (incl. preserved
+  abstains on negation/uncovered). Remiss: 5 fixed, 0 regressed.
+- **Parameters moved**: none (routing, not weights).

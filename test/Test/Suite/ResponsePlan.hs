@@ -29,6 +29,7 @@ import QxFx0.Semantic.ResponsePlan
   , isGenerativeRequestText
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
+  , refineUncoveredTopic
   )
 import QxFx0.Semantic.ResponsePlan.GF (responsePlanToGfExpr, semanticPropositionToGfExpr)
 import QxFx0.Lexicon.Generated.SemanticSlots
@@ -74,6 +75,7 @@ responsePlanTests =
      , TestLabel "GF catalog closes corpus smoke fallback surfaces" testCorpusSmokeFallbackSurfaceCoverage
      , TestLabel "cataloged argued question leaves preserve their exact question mark" testCatalogedQuestionLeafPreserved
   , TestLabel "invalid plan is rejected" testPlanAdmission
+  , TestLabel "uncovered plan topic retries first covered token" testRefineUncoveredTopic
   , TestLabel "surface realizer cannot drop approved claim" testRealizerContract
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
   , TestLabel "old generic generative paragraph is blocked" testGenericParagraphBlocked
@@ -622,3 +624,23 @@ testGeneratedPredicateUnderCoveredTopicIsHypothesis = TestCase $ do
         (c : _) -> assertEqual "generated mode is hypothetical"
           ClaimHypothetical (pcMode c)
         [] -> assertFailure "generated plan must carry its claim"
+
+-- | Phase-2 REDESIGN (pre-registered 2026-09-25): uncovered single
+-- plan topics retry with the first covered token.
+testRefineUncoveredTopic :: Test
+testRefineUncoveredTopic = TestCase $ do
+  assertEqual "clause retries to head noun"
+    (Just "смысл")
+    (refineUncoveredTopic "в чём смысл моей жизни")
+  assertEqual "nominative identity"
+    (Just "свобода")
+    (refineUncoveredTopic "свобода")
+  assertEqual "negated existential stays Nothing"
+    Nothing
+    (refineUncoveredTopic "почему нет слов")
+  assertEqual "nothing covered stays Nothing"
+    Nothing
+    (refineUncoveredTopic "ты молчишь")
+  assertEqual "empty stays Nothing"
+    Nothing
+    (refineUncoveredTopic "")

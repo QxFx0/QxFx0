@@ -24,6 +24,7 @@ module QxFx0.Semantic.Intent.Classifier
   ( SemanticIntent(..)
   , classifyIntent
   , canonicalTopic
+  , normalizeIntentTopics
   , intentToPropositionType
   , intentToFamily
   ) where
@@ -118,6 +119,12 @@ normalizeIntentTopics morph intent = case intent of
   IntentDefine topic -> IntentDefine (canonicalTopic morph topic)
   IntentDistinguish left right ->
     IntentDistinguish (canonicalTopic morph left) (canonicalTopic morph right)
+  -- Phase-2 REVERTED 2026-09-25: extending canonicalization to
+  -- Ground/Learn/Purpose/WorldCause/Deepen breaks the F2 span
+  -- doctrine (multiword topic spans like «осознанность выбора»
+  -- must survive intact; first-noun reduction mangles them when
+  -- the head is unknown to morphology). Clause-topics are a
+  -- frame-extraction problem, not a normalization problem.
   other -> other
 
 -- | Short covered head: ≤3-token input whose first content noun names
