@@ -1034,3 +1034,23 @@ beyond 24 verbs.
   смелость→любовь now defaults, same-topic paths untouched by
   construction (unit-pinned fallthrough).
 - **Parameters moved**: none.
+
+---
+
+# Lexicon pipeline doctrine — learned the hard way (2026-09-25)
+
+- `export_lexicon.py` OWNS all derived artifacts (funmap, .gf,
+  Agda, snapshot): SQL/paradigms → everything else. Hand-appends
+  via `add_gf_lexemes.py` ROT on the next export (proven: wiped 5
+  rows + reverted a fix mid-session through a concurrent write).
+- Rules going forward: new lexemes go into
+  `spec/sql/lexicon/seed_ru_curated.sql` (validated by load);
+  paradigms additions are surgical text inserts (never json
+  round-trip — formatting churn); Eng concrete stays hand-appended
+  (export does not generate it; dedupe against senior glosses);
+  NEVER run export concurrently with hand edits.
+- Collateral: `суть` paradigm added (20025 lemmas) — unblocked
+  суть/сущность distinction end to end (no rescue). `сущность` GF
+  lexeme added via SQL (pre-existing gap, not new).
+- Verified: unit 1613, fast 1817 green; live суть/сущность renders
+  both predicates, no rescue.

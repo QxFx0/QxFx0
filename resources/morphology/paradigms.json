@@ -79392,6 +79392,25 @@
       "LocPl": "странниках"
     }
   },
+  "суть": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "inan",
+    "forms": {
+      "NomSg": "суть",
+      "NomPl": "сути",
+      "GenSg": "сути",
+      "GenPl": "сутей",
+      "DatSg": "сути",
+      "DatPl": "сутям",
+      "AccSg": "суть",
+      "AccPl": "сути",
+      "InsSg": "сутью",
+      "InsPl": "сутями",
+      "LocSg": "сути",
+      "LocPl": "сутях"
+    }
+  },
   "суета": {
     "pos": "Noun",
     "gender": "femn",

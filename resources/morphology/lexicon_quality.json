@@ -3,12 +3,12 @@
     "p1_domain_seed_hit_count": 188,
     "p1_lemma_count": 3997,
     "p1_long_lemma_count": 0,
-    "p1_mostly_proper_count": 4,
+    "p1_mostly_proper_count": 0,
     "p1_patronymic_like_count": 0,
     "p1_technical_compound_count": 0,
     "p2_domain_seed_hit_count": 50,
     "p2_lemma_count": 17498,
-    "p2_mostly_proper_count": 10,
+    "p2_mostly_proper_count": 2,
     "p2_patronymic_like_count": 0
   },
   "auto_source_enabled": true,
@@ -16,25 +16,25 @@
   "case_surface_metrics": {
     "feminine_like_acc_eq_nom_count": 0,
     "feminine_like_acc_eq_nom_ratio": 0.0,
-    "feminine_like_noun_count": 962,
-    "noun_acc_eq_nom_count": 2483,
-    "noun_acc_eq_nom_ratio": 0.6628403630539241,
-    "noun_count": 3746,
+    "feminine_like_noun_count": 964,
+    "noun_acc_eq_nom_count": 2487,
+    "noun_acc_eq_nom_ratio": 0.6628464818763327,
+    "noun_count": 3752,
     "noun_ins_eq_nom_count": 0,
     "noun_ins_eq_nom_ratio": 0.0,
     "soft_sign_ins_eq_nom_count": 0,
     "soft_sign_ins_eq_nom_ratio": 0.0,
-    "soft_sign_noun_count": 1144
+    "soft_sign_noun_count": 1147
   },
   "collision_count": 2,
-  "complete_rows": 3756,
+  "complete_rows": 3762,
   "dangerous_collision_count": 0,
-  "dataset_sha256": "bb751b43081f85cde6cd243065f4cae7278f974126869370555e8675d029df29",
+  "dataset_sha256": "23951ae2071ac7cce23f8b2c7d0029d716f77600b46f7e67c0b9368c0c5d8977",
   "drift_check": {
     "auto_manifest_present": true,
     "schema_sha256": "f5899715476dc6af",
     "seed_brain_kb_reviewed_sha256": "0396a6aa2b2027bc",
-    "seed_sha256": "55d2d0a0d648fed0"
+    "seed_sha256": "bf9128057e9b7507"
   },
   "forms_by_surface": {
     "dangerous_collision_count": 0,
@@ -44,7 +44,7 @@
     "p1_lemma_count": 3991,
     "p2_form_count": 667902,
     "p2_lemma_count": 17496,
-    "surface_count": 440419
+    "surface_count": 440422
   },
   "generated_artifacts": [
     "resources/morphology/nominative.json",
@@ -65,7 +65,7 @@
   ],
   "harmless_collision_count": 0,
   "invalid_rows": 0,
-  "lemma_count": 3756,
+  "lemma_count": 3762,
   "score": 10.0,
   "sources": [
     "spec/sql/lexicon/schema.sql",

@@ -32,6 +32,7 @@ ENG = {
     "вкус": "taste", "гармония": "harmony", "трагедия": "tragedy",
     "возвышенное": "the sublime", "гражданин": "citizen",
     "состояние": "state", "грань": "border", "суть": "gist",
+    "сущность": "essence",
     "тишина": "silence", "работа": "work",
     "общество": "society", "наука": "science",
     "эмпиризм": "empiricism", "рационализм": "rationalism",
@@ -82,7 +83,9 @@ def main():
                      set(r[0] for r in rows.values()) if t not in ENG]
     assert not missing_gloss, missing_gloss
     print(f"new lexemes: {len(rows)}")
-    assert len(rows) == 5, len(rows)
+    if not rows:
+        print("steady state: nothing new")
+        return 0
     abs_lines = [f"{fid} : Lexeme ;" for fid in sorted(rows)]
     rus_lines = [
         f"{fid} = {{ nom = \"{nom}\" ; gen = \"{gen}\" ; "

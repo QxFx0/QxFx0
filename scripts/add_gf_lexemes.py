@@ -30,14 +30,14 @@ TR = str.maketrans({
 })
 
 # Adjective-declined (not noun patterns).
+# NOTE: hush-final masculines (дождь → дождем) keep undotted «е» by
+# repo convention (all hush masculines in the map do); do NOT add
+# ё-forms here — export_lexicon.py regenerates the map and would
+# silently revert them. See scripts/export_lexicon.py (SQL → GF).
 OVERRIDES = {
     "возвышенное": ("vozvyishennoe_N", "возвышенное",
                      "возвышенного", "возвышенном",
                      "возвышенное", "возвышенным"),
-    # Hush-final masculines (дождь): -я/-е/-ём, not the regular -а/-е/-ом.
-    "дождь": ("dozhd_N", "дождь",
-              "дождя", "дожде",
-              "дождь", "дождём"),
 }
 
 HUSH = set("гкхжчшщц")

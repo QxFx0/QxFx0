@@ -1420,6 +1420,7 @@ data Lemma : Set where
   granat_N : Lemma
   granit_N : Lemma
   granitsa_N : Lemma
+  gran_N : Lemma
   graf_N : Lemma
   grafik_N : Lemma
   grafoman_N : Lemma
@@ -2997,6 +2998,7 @@ data Lemma : Set where
   pyad_N : Lemma
   pyativalentnost_N : Lemma
   rab_N : Lemma
+  rabota_N : Lemma
   ravnina_N : Lemma
   ravnovesie_N : Lemma
   ravnodostupnost_N : Lemma
@@ -3340,6 +3342,7 @@ data Lemma : Set where
   sosed_N : Lemma
   sosna_N : Lemma
   sostav_N : Lemma
+  sostoyanie_N : Lemma
   sostoyatelnost_N : Lemma
   sosud_N : Lemma
   sofa_N : Lemma
@@ -3443,8 +3446,10 @@ data Lemma : Set where
   supruga_N : Lemma
   surdotehnika_N : Lemma
   sutki_N : Lemma
+  sut_N : Lemma
   sushchestvovanie_N : Lemma
   sushchestvovat_V : Lemma
+  sushchnost_N : Lemma
   sfera_N : Lemma
   shema_N : Lemma
   shodimost_N : Lemma
@@ -3510,6 +3515,7 @@ data Lemma : Set where
   tigr_N : Lemma
   tirazh_N : Lemma
   titul_N : Lemma
+  tishina_N : Lemma
   tkan_N : Lemma
   tovar_N : Lemma
   tovarishch_N : Lemma
@@ -5178,6 +5184,7 @@ lemmaNominative gramotej_N = "грамотей"
 lemmaNominative granat_N = "гранат"
 lemmaNominative granit_N = "гранит"
 lemmaNominative granitsa_N = "граница"
+lemmaNominative gran_N = "грань"
 lemmaNominative graf_N = "граф"
 lemmaNominative grafik_N = "график"
 lemmaNominative grafoman_N = "графоман"
@@ -6755,6 +6762,7 @@ lemmaNominative pezokeramika_N = "пьезокерамика"
 lemmaNominative pyad_N = "пядь"
 lemmaNominative pyativalentnost_N = "пятивалентность"
 lemmaNominative rab_N = "раб"
+lemmaNominative rabota_N = "работа"
 lemmaNominative ravnina_N = "равнина"
 lemmaNominative ravnovesie_N = "равновесие"
 lemmaNominative ravnodostupnost_N = "равнодоступность"
@@ -7098,6 +7106,7 @@ lemmaNominative soroka_N = "сорока"
 lemmaNominative sosed_N = "сосед"
 lemmaNominative sosna_N = "сосна"
 lemmaNominative sostav_N = "состав"
+lemmaNominative sostoyanie_N = "состояние"
 lemmaNominative sostoyatelnost_N = "состоятельность"
 lemmaNominative sosud_N = "сосуд"
 lemmaNominative sofa_N = "софа"
@@ -7201,8 +7210,10 @@ lemmaNominative suporosnost_N = "супоросность"
 lemmaNominative supruga_N = "супруга"
 lemmaNominative surdotehnika_N = "сурдотехника"
 lemmaNominative sutki_N = "сутки"
+lemmaNominative sut_N = "суть"
 lemmaNominative sushchestvovanie_N = "существование"
 lemmaNominative sushchestvovat_V = "существовать"
+lemmaNominative sushchnost_N = "сущность"
 lemmaNominative sfera_N = "сфера"
 lemmaNominative shema_N = "схема"
 lemmaNominative shodimost_N = "сходимость"
@@ -7268,6 +7279,7 @@ lemmaNominative tehnologiya_N = "технология"
 lemmaNominative tigr_N = "тигр"
 lemmaNominative tirazh_N = "тираж"
 lemmaNominative titul_N = "титул"
+lemmaNominative tishina_N = "тишина"
 lemmaNominative tkan_N = "ткань"
 lemmaNominative tovar_N = "товар"
 lemmaNominative tovarishch_N = "товарищ"
@@ -8936,6 +8948,7 @@ lemmaGenitive gramotej_N = "грамотея"
 lemmaGenitive granat_N = "граната"
 lemmaGenitive granit_N = "гранита"
 lemmaGenitive granitsa_N = "границы"
+lemmaGenitive gran_N = "грани"
 lemmaGenitive graf_N = "графа"
 lemmaGenitive grafik_N = "графика"
 lemmaGenitive grafoman_N = "графомана"
@@ -10513,6 +10526,7 @@ lemmaGenitive pezokeramika_N = "пьезокерамики"
 lemmaGenitive pyad_N = "пяди"
 lemmaGenitive pyativalentnost_N = "пятивалентности"
 lemmaGenitive rab_N = "раба"
+lemmaGenitive rabota_N = "работы"
 lemmaGenitive ravnina_N = "равнины"
 lemmaGenitive ravnovesie_N = "равновесия"
 lemmaGenitive ravnodostupnost_N = "равнодоступности"
@@ -10856,6 +10870,7 @@ lemmaGenitive soroka_N = "сороки"
 lemmaGenitive sosed_N = "соседа"
 lemmaGenitive sosna_N = "сосны"
 lemmaGenitive sostav_N = "состава"
+lemmaGenitive sostoyanie_N = "состояния"
 lemmaGenitive sostoyatelnost_N = "состоятельности"
 lemmaGenitive sosud_N = "сосуда"
 lemmaGenitive sofa_N = "софы"
@@ -10959,8 +10974,10 @@ lemmaGenitive suporosnost_N = "супоросности"
 lemmaGenitive supruga_N = "супруги"
 lemmaGenitive surdotehnika_N = "сурдотехники"
 lemmaGenitive sutki_N = "суток"
+lemmaGenitive sut_N = "сути"
 lemmaGenitive sushchestvovanie_N = "существования"
 lemmaGenitive sushchestvovat_V = "существовать"
+lemmaGenitive sushchnost_N = "сущности"
 lemmaGenitive sfera_N = "сферы"
 lemmaGenitive shema_N = "схемы"
 lemmaGenitive shodimost_N = "сходимости"
@@ -11026,6 +11043,7 @@ lemmaGenitive tehnologiya_N = "технологии"
 lemmaGenitive tigr_N = "тигра"
 lemmaGenitive tirazh_N = "тиража"
 lemmaGenitive titul_N = "титула"
+lemmaGenitive tishina_N = "тишины"
 lemmaGenitive tkan_N = "ткани"
 lemmaGenitive tovar_N = "товара"
 lemmaGenitive tovarishch_N = "товарища"
@@ -12694,6 +12712,7 @@ lemmaPrepositional gramotej_N = "грамотее"
 lemmaPrepositional granat_N = "гранате"
 lemmaPrepositional granit_N = "граните"
 lemmaPrepositional granitsa_N = "границе"
+lemmaPrepositional gran_N = "грани"
 lemmaPrepositional graf_N = "графе"
 lemmaPrepositional grafik_N = "графике"
 lemmaPrepositional grafoman_N = "графомане"
@@ -14271,6 +14290,7 @@ lemmaPrepositional pezokeramika_N = "пьезокерамике"
 lemmaPrepositional pyad_N = "пяди"
 lemmaPrepositional pyativalentnost_N = "пятивалентности"
 lemmaPrepositional rab_N = "рабе"
+lemmaPrepositional rabota_N = "работе"
 lemmaPrepositional ravnina_N = "равнине"
 lemmaPrepositional ravnovesie_N = "равновесии"
 lemmaPrepositional ravnodostupnost_N = "равнодоступности"
@@ -14614,6 +14634,7 @@ lemmaPrepositional soroka_N = "сороке"
 lemmaPrepositional sosed_N = "соседе"
 lemmaPrepositional sosna_N = "сосне"
 lemmaPrepositional sostav_N = "составе"
+lemmaPrepositional sostoyanie_N = "состоянии"
 lemmaPrepositional sostoyatelnost_N = "состоятельности"
 lemmaPrepositional sosud_N = "сосуде"
 lemmaPrepositional sofa_N = "софе"
@@ -14717,8 +14738,10 @@ lemmaPrepositional suporosnost_N = "супоросности"
 lemmaPrepositional supruga_N = "супруге"
 lemmaPrepositional surdotehnika_N = "сурдотехнике"
 lemmaPrepositional sutki_N = "сутках"
+lemmaPrepositional sut_N = "сути"
 lemmaPrepositional sushchestvovanie_N = "существовании"
 lemmaPrepositional sushchestvovat_V = "существовать"
+lemmaPrepositional sushchnost_N = "сущности"
 lemmaPrepositional sfera_N = "сфере"
 lemmaPrepositional shema_N = "схеме"
 lemmaPrepositional shodimost_N = "сходимости"
@@ -14784,6 +14807,7 @@ lemmaPrepositional tehnologiya_N = "технологии"
 lemmaPrepositional tigr_N = "тигре"
 lemmaPrepositional tirazh_N = "тираже"
 lemmaPrepositional titul_N = "титуле"
+lemmaPrepositional tishina_N = "тишине"
 lemmaPrepositional tkan_N = "ткани"
 lemmaPrepositional tovar_N = "товаре"
 lemmaPrepositional tovarishch_N = "товарище"
@@ -15042,8 +15066,8 @@ lemmaPrepositional yashchik_N = "ящике"
 lemmaPrepositional elka_Nv2 = "елке"
 
 lemmaCount : Nat
-lemmaCount = 3756
+lemmaCount = 3762
 
-lemmaCountExpected : lemmaCount ≡ 3756
+lemmaCountExpected : lemmaCount ≡ 3762
 lemmaCountExpected = refl
 
