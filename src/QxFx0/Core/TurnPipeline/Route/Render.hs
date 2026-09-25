@@ -875,7 +875,22 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       localRecoveryPlan = repLocalRecoveryPlan effectPlan
       -- B2 Control-A ablation: disable semantic-first path when flag is set
       semanticFirstDisabled = rerSemanticFirstDisabled effectResults
-      localRecoveryText = lrpSurface <$> localRecoveryPlan
+      -- Learning-need suppression (pre-registered 2026-09-25): a
+      -- RecoveryLearningNeed repair surface renders only when the
+      -- turn carries no content. On content turns the need stays in
+      -- the trace (cause/strategy/evidence) but doesn't tax the
+      -- surface — repair content ⟺ degraded turn. Abstains and holds
+      -- (empty claims, empty emitted) keep the surface.
+      contentRendered =
+        case draResponsePlan templateArtifact0 of
+          Just plan -> not (null (rspClaims plan))
+          Nothing -> False
+        || not (null (draEmittedPredicates templateArtifact0))
+      localRecoveryText =
+        case localRecoveryPlan of
+          Just plan
+            | lrpCause plan == RecoveryLearningNeed && contentRendered -> Nothing
+          _ -> lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       templateArtifact0 = rsTemplateArtifact renderStatic
       -- Rescue fires only with real morphology: minimal-morphology

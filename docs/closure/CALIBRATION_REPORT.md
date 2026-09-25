@@ -1054,3 +1054,35 @@ beyond 24 verbs.
   lexeme added via SQL (pre-existing gap, not new).
 - Verified: unit 1613, fast 1817 green; live суть/сущность renders
   both predicates, no rescue.
+
+---
+
+# Learning-need surface suppression — pre-registration (2026-09-25)
+
+- **Measurement**: learning_need fires on 93/202 live turns incl. 18
+  covered_exact — content-source split identical with/without need,
+  so the surface taxes good turns without signaling about them.
+- **Rule (locked)**: a RecoveryLearningNeed repair surface renders
+  only when the turn carries no content (empty plan claims AND empty
+  emitted predicates). Trace (cause/strategy/evidence) unchanged —
+  the need stays machine-visible. Abstains/holds keep the surface;
+  content turns drop it. Doctrine: repair content ⟺ degraded turn.
+- **Bar**: unit + fast + core green, zero new failures; live: 3
+  content+need turns lose the tail (trace keeps cause), 3
+  abstain+need turns keep it.
+
+---
+
+# Learning-need surface suppression — landed, bar cleared (2026-09-25)
+
+- **Measurement**: learning_need fired on 93/202 live turns with an
+  identical content-source split as non-need turns — pure verbosity
+  tax on good turns.
+- **Fix** (pre-registered): RecoveryLearningNeed repair surfaces
+  render only with no content (empty plan claims AND empty emitted);
+  trace cause/strategy/evidence untouched. Abstains/holds keep it.
+- **Verification**: unit 1613, fast 1817, core 1190 green, zero new
+  failures. Live 6-turn sessions: content+need drops the tail with
+  cause in trace (2 turns); abstain+need keeps it (1 turn).
+- **Parameters moved**: none (render gate, not weights/thresholds —
+  the 0.6 activation threshold itself untouched).
