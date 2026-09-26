@@ -1158,3 +1158,34 @@ beyond 24 verbs.
 - **Decision**: no rule. Forcing content onto meta questions would
   be a regression disguised as a fix (answers literally, misses
   the point). The 4 borderline stay human-discretion cases.
+
+---
+
+# Generative trigger broadening — pre-registration (2026-09-26, в1)
+
+- **Finding**: generative path fires only on imperative requests
+  («придумай/скажи X»); hypothesis-seeking forms («а что если»,
+  «представь, что», «пофантазируй о») fall through. Output stays
+  canned (MoveGenerativeThought) in both cases — this step changes
+  ROUTING only, not generation.
+- **Rule (locked)**: extend `isGenerativeRequestText` with
+  hypothesis-seeking markers; the render path is untouched.
+- **Bar**: unit tests (new forms fire, old forms unaffected,
+  non-requests stay out) + unit/fast green; live spots (2 new
+  forms route generative, 1 old form byte-identical).
+
+---
+
+# Generative trigger broadening — landed narrowed (2026-09-26, в1)
+
+- **Change** (pre-registered): hypothesis-seeking imperatives
+  (представь/пофантазируй/вообрази) route generative; render path
+  untouched.
+- **Caught live by the flagship pin**: first version also took
+  «а что если»/«а если», hijacking M6 turn 12 (a counterfactual
+  challenge) into GoalHypothesize — fast went red on
+  FeltGate5NonFallback. Narrowed same-day with a regression test
+  on the M6 input. Lesson re-learned: broadened triggers collide
+  with challenge markers; the pin exists for exactly this.
+- **Verification**: unit 1616, fast 1817 green; live spots route
+  with content, old imperative unchanged.

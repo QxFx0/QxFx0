@@ -446,7 +446,14 @@ isGenerativeRequestText rawInput =
       hasGenerationVerb = hasAny ["придумай", "сформулируй", "предложи"]
         || (hasAny ["скажи", "дай"] && hasAny ["мысль", "идею", "идея", "тезис", "фразу"])
       hasGenerationObject = hasAny ["мысль", "идею", "идея", "тезис", "тезиса", "фразу", "эксперимент"]
-  in hasGenerationVerb && hasGenerationObject
+      -- в1 (pre-registered 2026-09-26, narrowed same day): hypothesis-
+      -- seeking imperatives route generative too. "а что если"/"а если"
+      -- are DELIBERATELY excluded: they are challenge markers (M6 turn
+      -- 12 broke on it) — counterfactual challenge stays on the
+      -- semantic path. Render path untouched (still canned).
+      hasHypothesisMarker = hasAny ["представь, что", "представь что",
+                                    "представь себе", "пофантазируй", "вообрази"]
+  in (hasGenerationVerb && hasGenerationObject) || hasHypothesisMarker
 
 isClarifyRequestText :: Text -> Bool
 isClarifyRequestText rawInput =

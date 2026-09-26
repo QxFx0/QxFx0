@@ -78,6 +78,7 @@ responsePlanTests =
   , TestLabel "invalid plan is rejected" testPlanAdmission
   , TestLabel "uncovered plan topic retries first covered token" testRefineUncoveredTopic
   , TestLabel "back-reference cites only the current topic" testTopicMentioned
+  , TestLabel "generative trigger covers hypothesis-seeking" testGenerativeTriggerBroadened
   , TestLabel "surface realizer cannot drop approved claim" testRealizerContract
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
   , TestLabel "old generic generative paragraph is blocked" testGenericParagraphBlocked
@@ -663,3 +664,20 @@ testTopicMentioned = TestCase $ do
     (not (topicMentioned "" "что такое свобода?"))
   assertBool "partial word is not a mention"
     (not (topicMentioned "мысл" "в чём смысл жизни?"))
+
+
+-- | Generative trigger broadening (pre-registered 2026-09-26, v1).
+testGenerativeTriggerBroadened :: Test
+testGenerativeTriggerBroadened = TestCase $ do
+  assertBool "hypothesis-seeking fires"
+    (isGenerativeRequestText "представь, что гравитации нет")
+  assertBool "imagine fires"
+    (isGenerativeRequestText "пофантазируй о будущем")
+  assertBool "counterfactual challenge stays out"
+    (not (isGenerativeRequestText "а что если свобода — это иллюзия?"))
+  assertBool "old imperative still fires"
+    (isGenerativeRequestText "придумай мысль")
+  assertBool "plain question stays out"
+    (not (isGenerativeRequestText "что такое свобода?"))
+  assertBool "challenge stays out"
+    (not (isGenerativeRequestText "свобода — это иллюзия, докажи обратное"))
