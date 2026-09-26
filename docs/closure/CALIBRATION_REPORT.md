@@ -1189,3 +1189,13 @@ beyond 24 verbs.
   with challenge markers; the pin exists for exactly this.
 - **Verification**: unit 1616, fast 1817 green; live spots route
   with content, old imperative unchanged.
+
+---
+
+# Dictionary content batch-3 — 4 live-approved topics (2026-09-26)
+
+- усталость / вдохновение / ностальгия / гнев: props verbatim
+  from approved live turns, rels human-reviewed. Sources only
+  (Content.hs + SQL seed); export regenerated all derived
+  artifacts; Eng hand-deduped vs senior glosses.
+- Verified: unit 1616, fast 1817 green; live spots render content.

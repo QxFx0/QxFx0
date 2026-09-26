@@ -4351,6 +4351,11 @@ generatedLexemeEntries =
     ("вдове", "вдова", "noun", "prepositional"),
     ("вдову", "вдова", "noun", "accusative"),
     ("вдовой", "вдова", "noun", "instrumental"),
+    ("вдохновение", "вдохновение", "noun", "nominative"),
+    ("вдохновения", "вдохновение", "noun", "genitive"),
+    ("вдохновении", "вдохновение", "noun", "prepositional"),
+    ("вдохновение", "вдохновение", "noun", "accusative"),
+    ("вдохновением", "вдохновение", "noun", "instrumental"),
     ("веб", "веб", "noun", "nominative"),
     ("веба", "веб", "noun", "genitive"),
     ("вебе", "веб", "noun", "prepositional"),
@@ -12231,6 +12236,11 @@ generatedLexemeEntries =
     ("носке", "носок", "noun", "prepositional"),
     ("носок", "носок", "noun", "accusative"),
     ("носком", "носок", "noun", "instrumental"),
+    ("ностальгия", "ностальгия", "noun", "nominative"),
+    ("ностальгии", "ностальгия", "noun", "genitive"),
+    ("ностальгии", "ностальгия", "noun", "prepositional"),
+    ("ностальгию", "ностальгия", "noun", "accusative"),
+    ("ностальгией", "ностальгия", "noun", "instrumental"),
     ("ночлег", "ночлег", "noun", "nominative"),
     ("ночлега", "ночлег", "noun", "genitive"),
     ("ночлеге", "ночлег", "noun", "prepositional"),
@@ -17881,6 +17891,11 @@ generatedLexemeEntries =
     ("уставе", "устав", "noun", "prepositional"),
     ("устав", "устав", "noun", "accusative"),
     ("уставом", "устав", "noun", "instrumental"),
+    ("усталость", "усталость", "noun", "nominative"),
+    ("усталости", "усталость", "noun", "genitive"),
+    ("усталости", "усталость", "noun", "prepositional"),
+    ("усталость", "усталость", "noun", "accusative"),
+    ("усталостью", "усталость", "noun", "instrumental"),
     ("устойчивость", "устойчивость", "noun", "nominative"),
     ("устойчивости", "устойчивость", "noun", "genitive"),
     ("устойчивости", "устойчивость", "noun", "prepositional"),
@@ -34093,6 +34108,23 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
         LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 },
         LexemeForm { lfSurface = "вдох" , lfLemma = "вдох" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.865 }
+      ]),
+    ("вдохновение",
+      [
+        LexemeForm { lfSurface = "вдохновение" , lfLemma = "вдохновение" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "вдохновение" , lfLemma = "вдохновение" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("вдохновением",
+      [
+        LexemeForm { lfSurface = "вдохновением" , lfLemma = "вдохновение" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("вдохновении",
+      [
+        LexemeForm { lfSurface = "вдохновении" , lfLemma = "вдохновение" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("вдохновения",
+      [
+        LexemeForm { lfSurface = "вдохновения" , lfLemma = "вдохновение" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("вдохом",
       [
@@ -61771,6 +61803,23 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "носом" , lfLemma = "нос" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("ностальгией",
+      [
+        LexemeForm { lfSurface = "ностальгией" , lfLemma = "ностальгия" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("ностальгии",
+      [
+        LexemeForm { lfSurface = "ностальгии" , lfLemma = "ностальгия" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "ностальгии" , lfLemma = "ностальгия" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("ностальгию",
+      [
+        LexemeForm { lfSurface = "ностальгию" , lfLemma = "ностальгия" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("ностальгия",
+      [
+        LexemeForm { lfSurface = "ностальгия" , lfLemma = "ностальгия" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("нота",
       [
         LexemeForm { lfSurface = "нота" , lfLemma = "нота" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 },
@@ -81378,6 +81427,20 @@ generatedCandidateForms =
     ("уставом",
       [
         LexemeForm { lfSurface = "уставом" , lfLemma = "устав" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("усталости",
+      [
+        LexemeForm { lfSurface = "усталости" , lfLemma = "усталость" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "усталости" , lfLemma = "усталость" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("усталость",
+      [
+        LexemeForm { lfSurface = "усталость" , lfLemma = "усталость" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "усталость" , lfLemma = "усталость" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("усталостью",
+      [
+        LexemeForm { lfSurface = "усталостью" , lfLemma = "усталость" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("устами",
       [

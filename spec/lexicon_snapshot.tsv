@@ -865,6 +865,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 вгиб	noun	вгиб	вгиба	вгибе	вгиб	вгибом	curated	curated	0.99
 вдавленность	noun	вдавленность	вдавленности	вдавленности	вдавленность	вдавленностью	curated	curated	0.99
 вдова	noun	вдова	вдовы	вдове	вдову	вдовой	curated	curated	0.99
+вдохновение	noun	вдохновение	вдохновения	вдохновении	вдохновение	вдохновением	curated	curated	0.99
 веб	noun	веб	веба	вебе	веб	вебом	curated	curated	0.99
 веда	noun	веда	веды	веде	веду	ведой	curated	curated	0.99
 ведда	noun	ведда	ведды	ведде	ведду	веддой	curated	curated	0.99
@@ -2440,6 +2441,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 нормативность	noun	нормативность	нормативности	нормативности	нормативность	нормативностью	curated	curated	0.99
 нос	noun	нос	носа	носе	нос	носом	curated	curated	0.99
 носок	noun	носок	носка	носке	носок	носком	curated	curated	0.99
+ностальгия	noun	ностальгия	ностальгии	ностальгии	ностальгию	ностальгией	curated	curated	0.99
 ночлег	noun	ночлег	ночлега	ночлеге	ночлег	ночлегом	curated	curated	0.99
 ночь	noun	ночь	ночи	ночи	ночь	ночью	curated	curated	0.99
 ноябрь	noun	ноябрь	ноября	ноябре	ноябрь	ноябрем	curated	curated	0.99
@@ -3570,6 +3572,7 @@ lemma	pos	nominative	genitive	prepositional	accusative	instrumental	source	tier	
 успех	noun	успех	успеха	успехе	успех	успехом	curated	curated	0.99
 уста	noun	уста	уст	устах	усту	устами	curated	curated	0.99
 устав	noun	устав	устава	уставе	устав	уставом	curated	curated	0.99
+усталость	noun	усталость	усталости	усталости	усталость	усталостью	curated	curated	0.99
 устойчивость	noun	устойчивость	устойчивости	устойчивости	устойчивость	устойчивостью	curated	curated	0.99
 устройство	noun	устройство	устройства	устройстве	устройство	устройством	curated	curated	0.99
 утверждение	noun	утверждение	утверждения	утверждении	утверждение	утверждением	curated-p0-logic	curated	0.98

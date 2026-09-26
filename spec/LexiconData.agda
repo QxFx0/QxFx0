@@ -876,6 +876,7 @@ data Lemma : Set where
   vgib_N : Lemma
   vdavlennost_N : Lemma
   vdova_N : Lemma
+  vdohnovenie_N : Lemma
   veb_N : Lemma
   veda_N : Lemma
   vedda_N : Lemma
@@ -2451,6 +2452,7 @@ data Lemma : Set where
   normativnost_N : Lemma
   nos_N : Lemma
   nosok_N : Lemma
+  nostalgiya_N : Lemma
   nochleg_N : Lemma
   noch_N : Lemma
   noyabr_N : Lemma
@@ -3581,6 +3583,7 @@ data Lemma : Set where
   uspeh_N : Lemma
   usta_N : Lemma
   ustav_N : Lemma
+  ustalost_N : Lemma
   ustojchivost_N : Lemma
   ustrojstvo_N : Lemma
   utverzhdenie_N : Lemma
@@ -4640,6 +4643,7 @@ lemmaNominative vvoz_N = "ввоз"
 lemmaNominative vgib_N = "вгиб"
 lemmaNominative vdavlennost_N = "вдавленность"
 lemmaNominative vdova_N = "вдова"
+lemmaNominative vdohnovenie_N = "вдохновение"
 lemmaNominative veb_N = "веб"
 lemmaNominative veda_N = "веда"
 lemmaNominative vedda_N = "ведда"
@@ -6215,6 +6219,7 @@ lemmaNominative normalizatsiya_N = "нормализация"
 lemmaNominative normativnost_N = "нормативность"
 lemmaNominative nos_N = "нос"
 lemmaNominative nosok_N = "носок"
+lemmaNominative nostalgiya_N = "ностальгия"
 lemmaNominative nochleg_N = "ночлег"
 lemmaNominative noch_N = "ночь"
 lemmaNominative noyabr_N = "ноябрь"
@@ -7345,6 +7350,7 @@ lemmaNominative usluga_N = "услуга"
 lemmaNominative uspeh_N = "успех"
 lemmaNominative usta_N = "уста"
 lemmaNominative ustav_N = "устав"
+lemmaNominative ustalost_N = "усталость"
 lemmaNominative ustojchivost_N = "устойчивость"
 lemmaNominative ustrojstvo_N = "устройство"
 lemmaNominative utverzhdenie_N = "утверждение"
@@ -8404,6 +8410,7 @@ lemmaGenitive vvoz_N = "ввоза"
 lemmaGenitive vgib_N = "вгиба"
 lemmaGenitive vdavlennost_N = "вдавленности"
 lemmaGenitive vdova_N = "вдовы"
+lemmaGenitive vdohnovenie_N = "вдохновения"
 lemmaGenitive veb_N = "веба"
 lemmaGenitive veda_N = "веды"
 lemmaGenitive vedda_N = "ведды"
@@ -9979,6 +9986,7 @@ lemmaGenitive normalizatsiya_N = "нормализации"
 lemmaGenitive normativnost_N = "нормативности"
 lemmaGenitive nos_N = "носа"
 lemmaGenitive nosok_N = "носка"
+lemmaGenitive nostalgiya_N = "ностальгии"
 lemmaGenitive nochleg_N = "ночлега"
 lemmaGenitive noch_N = "ночи"
 lemmaGenitive noyabr_N = "ноября"
@@ -11109,6 +11117,7 @@ lemmaGenitive usluga_N = "услуги"
 lemmaGenitive uspeh_N = "успеха"
 lemmaGenitive usta_N = "уст"
 lemmaGenitive ustav_N = "устава"
+lemmaGenitive ustalost_N = "усталости"
 lemmaGenitive ustojchivost_N = "устойчивости"
 lemmaGenitive ustrojstvo_N = "устройства"
 lemmaGenitive utverzhdenie_N = "утверждения"
@@ -12168,6 +12177,7 @@ lemmaPrepositional vvoz_N = "ввозе"
 lemmaPrepositional vgib_N = "вгибе"
 lemmaPrepositional vdavlennost_N = "вдавленности"
 lemmaPrepositional vdova_N = "вдове"
+lemmaPrepositional vdohnovenie_N = "вдохновении"
 lemmaPrepositional veb_N = "вебе"
 lemmaPrepositional veda_N = "веде"
 lemmaPrepositional vedda_N = "ведде"
@@ -13743,6 +13753,7 @@ lemmaPrepositional normalizatsiya_N = "нормализации"
 lemmaPrepositional normativnost_N = "нормативности"
 lemmaPrepositional nos_N = "носе"
 lemmaPrepositional nosok_N = "носке"
+lemmaPrepositional nostalgiya_N = "ностальгии"
 lemmaPrepositional nochleg_N = "ночлеге"
 lemmaPrepositional noch_N = "ночи"
 lemmaPrepositional noyabr_N = "ноябре"
@@ -14873,6 +14884,7 @@ lemmaPrepositional usluga_N = "услуге"
 lemmaPrepositional uspeh_N = "успехе"
 lemmaPrepositional usta_N = "устах"
 lemmaPrepositional ustav_N = "уставе"
+lemmaPrepositional ustalost_N = "усталости"
 lemmaPrepositional ustojchivost_N = "устойчивости"
 lemmaPrepositional ustrojstvo_N = "устройстве"
 lemmaPrepositional utverzhdenie_N = "утверждении"
@@ -15066,8 +15078,8 @@ lemmaPrepositional yashchik_N = "ящике"
 lemmaPrepositional elka_Nv2 = "елке"
 
 lemmaCount : Nat
-lemmaCount = 3762
+lemmaCount = 3765
 
-lemmaCountExpected : lemmaCount ≡ 3762
+lemmaCountExpected : lemmaCount ≡ 3765
 lemmaCountExpected = refl
 

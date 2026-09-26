@@ -869,6 +869,7 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     vgib_N = { nom = "вгиб" ; gen = "вгиба" ; prep = "вгибе" ; acc = "вгиб" ; ins = "вгибом" } ;
     vdavlennost_N = { nom = "вдавленность" ; gen = "вдавленности" ; prep = "вдавленности" ; acc = "вдавленность" ; ins = "вдавленностью" } ;
     vdova_N = { nom = "вдова" ; gen = "вдовы" ; prep = "вдове" ; acc = "вдову" ; ins = "вдовой" } ;
+    vdohnovenie_N = { nom = "вдохновение" ; gen = "вдохновения" ; prep = "вдохновении" ; acc = "вдохновение" ; ins = "вдохновением" } ;
     veb_N = { nom = "веб" ; gen = "веба" ; prep = "вебе" ; acc = "веб" ; ins = "вебом" } ;
     veda_N = { nom = "веда" ; gen = "веды" ; prep = "веде" ; acc = "веду" ; ins = "ведой" } ;
     vedda_N = { nom = "ведда" ; gen = "ведды" ; prep = "ведде" ; acc = "ведду" ; ins = "веддой" } ;
@@ -2444,6 +2445,7 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     normativnost_N = { nom = "нормативность" ; gen = "нормативности" ; prep = "нормативности" ; acc = "нормативность" ; ins = "нормативностью" } ;
     nos_N = { nom = "нос" ; gen = "носа" ; prep = "носе" ; acc = "нос" ; ins = "носом" } ;
     nosok_N = { nom = "носок" ; gen = "носка" ; prep = "носке" ; acc = "носок" ; ins = "носком" } ;
+    nostalgiya_N = { nom = "ностальгия" ; gen = "ностальгии" ; prep = "ностальгии" ; acc = "ностальгию" ; ins = "ностальгией" } ;
     nochleg_N = { nom = "ночлег" ; gen = "ночлега" ; prep = "ночлеге" ; acc = "ночлег" ; ins = "ночлегом" } ;
     noch_N = { nom = "ночь" ; gen = "ночи" ; prep = "ночи" ; acc = "ночь" ; ins = "ночью" } ;
     noyabr_N = { nom = "ноябрь" ; gen = "ноября" ; prep = "ноябре" ; acc = "ноябрь" ; ins = "ноябрем" } ;
@@ -3574,6 +3576,7 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     uspeh_N = { nom = "успех" ; gen = "успеха" ; prep = "успехе" ; acc = "успех" ; ins = "успехом" } ;
     usta_N = { nom = "уста" ; gen = "уст" ; prep = "устах" ; acc = "усту" ; ins = "устами" } ;
     ustav_N = { nom = "устав" ; gen = "устава" ; prep = "уставе" ; acc = "устав" ; ins = "уставом" } ;
+    ustalost_N = { nom = "усталость" ; gen = "усталости" ; prep = "усталости" ; acc = "усталость" ; ins = "усталостью" } ;
     ustojchivost_N = { nom = "устойчивость" ; gen = "устойчивости" ; prep = "устойчивости" ; acc = "устойчивость" ; ins = "устойчивостью" } ;
     ustrojstvo_N = { nom = "устройство" ; gen = "устройства" ; prep = "устройстве" ; acc = "устройство" ; ins = "устройством" } ;
     utverzhdenie_N = { nom = "утверждение" ; gen = "утверждения" ; prep = "утверждении" ; acc = "утверждение" ; ins = "утверждением" } ;

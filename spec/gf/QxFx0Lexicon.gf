@@ -870,6 +870,7 @@ abstract QxFx0Lexicon = {
     vgib_N : Lexeme ;
     vdavlennost_N : Lexeme ;
     vdova_N : Lexeme ;
+    vdohnovenie_N : Lexeme ;
     veb_N : Lexeme ;
     veda_N : Lexeme ;
     vedda_N : Lexeme ;
@@ -2445,6 +2446,7 @@ abstract QxFx0Lexicon = {
     normativnost_N : Lexeme ;
     nos_N : Lexeme ;
     nosok_N : Lexeme ;
+    nostalgiya_N : Lexeme ;
     nochleg_N : Lexeme ;
     noch_N : Lexeme ;
     noyabr_N : Lexeme ;
@@ -3575,6 +3577,7 @@ abstract QxFx0Lexicon = {
     uspeh_N : Lexeme ;
     usta_N : Lexeme ;
     ustav_N : Lexeme ;
+    ustalost_N : Lexeme ;
     ustojchivost_N : Lexeme ;
     ustrojstvo_N : Lexeme ;
     utverzhdenie_N : Lexeme ;

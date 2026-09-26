@@ -3792,4 +3792,8 @@ concrete QxFx0LexiconEng of QxFx0Lexicon = open ParadigmsEng, CatEng, Structural
 -- (gran_N/rabota_N/sostoyanie_N keep their committed glosses above).
     sut_N = mkN "gist" ;
     tishina_N = mkN "silence" ;
+-- 2026-09-26 live batch-3 (only funIds without a senior gloss).
+    ustalost_N = mkN "fatigue" ;
+    vdohnovenie_N = mkN "inspiration" ;
+    nostalgiya_N = mkN "nostalgia" ;
 }

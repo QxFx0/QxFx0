@@ -964,6 +964,31 @@ definitionCorpus = M.fromList
       , rel "боль требует внимания а не подавления"
             "pain demands attention, not suppression"
       ]
+  -- Live-dialogue content batch-3 (2026-09-26, human-approved props).
+  , entry "усталость"
+      [ prop "усталость это состояние пониженной работоспособности"
+             "fatigue is a state of lowered capacity"
+      , rel "усталость требует восстановления"
+            "fatigue demands recovery"
+      ]
+  , entry "вдохновение"
+      [ prop "вдохновение стимулирует творчество"
+             "inspiration stimulates creativity"
+      , rel "вдохновение приходит незапланированно"
+            "inspiration arrives unplanned"
+      ]
+  , entry "ностальгия"
+      [ prop "ностальгия это тоска по прошлому"
+             "nostalgia is longing for the past"
+      , rel "ностальгия идеализирует утраченное"
+            "nostalgia idealizes what is lost"
+      ]
+  , entry "гнев"
+      [ prop "гнев это сильная эмоция негодования"
+             "anger is a strong emotion of indignation"
+      , rel "гнев требует паузы перед действием"
+            "anger demands a pause before acting"
+      ]
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))
