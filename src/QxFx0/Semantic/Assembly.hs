@@ -52,6 +52,8 @@ module QxFx0.Semantic.Assembly
   , verbalizeAssembly
     -- * Utterance selection (render phase)
   , utterableAssembly
+    -- * Generative thought (v2: topic-anchored composition)
+  , generateTopicThought
     -- * Rating labels (schema reference)
   , assemblyRatingLabels
   ) where
@@ -65,6 +67,7 @@ import GHC.Generics (Generic)
 
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
+import Data.Char (isAlpha)
 import Data.Maybe (fromMaybe, listToMaybe)
 import Data.Ord (comparing)
 
@@ -479,3 +482,100 @@ utterableAssembly graph cs query engaged pairs =
   in case ranked of
        ((asm, _proof, _score) : _) -> Just asm
        []                          -> Nothing
+
+-- ---------------------------------------------------------------------------
+-- Generative thought (v2, pre-registered 2026-09-27)
+-- ---------------------------------------------------------------------------
+
+-- | Topic-anchored composition for generative turns.  Where
+-- 'utterableAssembly' needs an engaged /other/ topic (single-topic
+-- turns stay silent by design — pinned above), a generative request
+-- still deserves one honest composition attempt before falling back
+-- to today's behavior (plan thesis, canned thought, abstain).
+-- Two footholds, both graph-mediated, both R+L2-gated (composed
+-- relations non-empty, validated path at most 2 edges — the measured
+-- proxy of coherent==2):
+--
+-- * same-topic: two DISTINCT selected surfaces of the query topic
+--   (allowed by the skeleton — only same-topic + equal-term is
+--   rejected).  Two corpus statements about one topic, honestly
+--   combined, rendered as hypothesis (non-corpus by construction).
+-- * input-term: a lemmatized input concept as the synthetic other
+--   side (head-only term, its own topic label), pulling the query
+--   thought toward what the researcher actually asked.
+--
+-- Top-1 by (path length, -score), bridge-text tiebreak for total
+-- determinism.  Returns 'Nothing' when no pair qualifies: silence
+-- over invention — the caller keeps today's behavior byte-for-byte.
+-- Pure, total, deterministic.
+generateTopicThought
+  :: AtomGraph
+  -> ContentSelector
+  -> Text
+  -- ^ Query topic.
+  -> Text
+  -- ^ Raw input text (input-term concepts).
+  -> [(Text, Text)]
+  -- ^ Selected winners as (topic, surface) pairs.
+  -> Maybe Assembly
+generateTopicThought graph cs query rawInput pairs =
+  case ranked of
+    ((asm, _proof, _score) : _) -> Just asm
+    [] -> Nothing
+  where
+    lemmaMap = csLemmaMap cs
+    atomsOf t = M.findWithDefault S.empty t (csTopicAtoms cs)
+    querySurfs = take 3 (L.nub [ s | (t, s) <- pairs, t == query ])
+    -- Same-topic: distinct surfaces only (identical surfaces would be
+    -- the rejected same-topic + equal-term shape, or a tautology).
+    sameTopic =
+      [ r
+      | (sA, sB) <- distinctPairs querySurfs
+      , let termA = parsePredicateTerm lemmaMap sA
+      , let termB = parsePredicateTerm lemmaMap sB
+      , r <- assembleViaGraph graph
+               (atomsOf query) (atomsOf query)
+               (query, sA, termA) (query, sB, termB)
+      , gated r
+      ]
+    -- Input-term: lemmatized content tokens as synthetic other side.
+    -- Bounded (4 concepts × first query surface) — same cost class as
+    -- the existing 'utterableAssembly' fan-out.
+    inputConcepts = take 4 (L.sort (L.nub
+      [ M.findWithDefault tok tok lemmaMap
+      | w <- T.words (T.toLower rawInput)
+      , let tok = T.filter isAlpha w
+      , T.length tok > 2
+      , M.findWithDefault tok tok lemmaMap /= T.toLower query
+      ]))
+    inputTerm =
+      [ r
+      | c <- inputConcepts
+      , sA <- take 1 querySurfs
+      , let termA = parsePredicateTerm lemmaMap sA
+      , let termB = PredicateTerm (Just c) S.empty S.empty False
+      , r <- assembleViaGraph graph
+               (atomsOf query) (M.findWithDefault (S.singleton c) c (csTopicAtoms cs))
+               (query, sA, termA) (c, c, termB)
+      , gated r
+      ]
+    gated (asm, proof, _score) =
+      not (S.null (ptRels (asmTerm asm))) && length (ppEdges proof) <= 2
+    -- Bridge informativeness (v2): a same-topic pair almost always
+    -- shares the query head, so the skeleton bridge is the topic
+    -- itself («свобода-связь» — vacuous but honest).  Prefer an
+    -- informative bridge when the graph offers one; the head-bridged
+    -- composition still ranks (a real union of two grounds), silence
+    -- stays the last resort.  Total order, deterministic.
+    qNorm = T.toLower (T.strip query)
+    ranked = L.sortBy (comparing (\(asm, proof, s) ->
+      ( if T.toLower (T.strip (asmBridge asm)) == qNorm
+          || T.toLower (asmBridge asm) == qNorm then 1 else 0 :: Int
+      , length (ppEdges proof), negate s, asmBridge asm)))
+      [ (asm, proof, s) | (asm, proof, s) <- sameTopic ++ inputTerm ]
+    distinctPairs xs =
+      [ (a, b)
+      | (i, a) <- zip [0 :: Int ..] xs
+      , (j, b) <- zip [0 :: Int ..] xs
+      , i < j
+      ]

@@ -117,7 +117,7 @@ assemblyTests =
   , TestLabel "rating labels are the decided two" $ TestCase $
       assertEqual "coherent + grounded"
         ["assembly_coherent", "assembly_grounded"] assemblyRatingLabels
-  ] ++ graphAssemblyTests ++ endorsementTests
+  ] ++ graphAssemblyTests ++ endorsementTests ++ generativeThoughtTests
 
 -- ---------------------------------------------------------------------------
 -- Graph wiring (selector math v4)
@@ -346,4 +346,119 @@ endorsementTests =
         Nothing -> assertFailure "normalization must not kill engaged pairs"
         Just asm -> assertBool "carries relations"
           (not (S.null (ptRels (asmTerm asm))))
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Generative thought v2 (pre-registered 2026-09-27)
+-- ---------------------------------------------------------------------------
+
+-- | Same two-edge shape as 'testGraph', plus свобода→выбор so a
+-- same-topic pair (two свобода surfaces) has a validated in-topic
+-- path to land on.
+testThoughtGraph :: RelationSource -> AtomGraph
+testThoughtGraph src = AtomGraph
+  [edge1, edge2]
+  (M.fromList [(AtomId "свобода", [edge1, edge2])])
+  "test-fixture-thought"
+  where
+    edge1 = Relation
+      { relFrom = AtomId "свобода"
+      , relTo = AtomId "ответственность"
+      , relType = RelRequires
+      , relObjectCase = CaseNominative
+      , relObjectText = "ответственность"
+      , relVerbText = Just "требовать"
+      , relRuOriginal = "свобода требует ответственности"
+      , relEnOriginal = "freedom requires responsibility"
+      , relSource = src
+      , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
+      }
+    edge2 = Relation
+      { relFrom = AtomId "свобода"
+      , relTo = AtomId "выбор"
+      , relType = RelRelatedTo
+      , relObjectCase = CaseNominative
+      , relObjectText = "выбор"
+      , relVerbText = Just "связывать"
+      , relRuOriginal = "свобода связана с выбором"
+      , relEnOriginal = "freedom is linked to choice"
+      , relSource = src
+      , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
+      }
+
+generativeThoughtTests :: [Test]
+generativeThoughtTests =
+  [ TestLabel "same-topic distinct surfaces compose" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [ ("свобода", "свобода требует ответственности")
+                  , ("свобода", "свобода держит выбор")
+                  ]
+      case generateTopicThought (testThoughtGraph Curated) cs "свобода"
+             "придумай тезис о свободе" pairs of
+        Nothing -> assertFailure "same-topic pair should compose"
+        Just asm -> do
+          assertBool "carries relations"
+            (not (S.null (ptRels (asmTerm asm))))
+          assertBool "verbalizes non-empty"
+            (not (T.null (T.strip (verbalizeAssembly asm))))
+
+  , TestLabel "single surface without input foothold stays silent" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [("свобода", "свобода требует ответственности")]
+      assertEqual "no pair, no input concept: today's behavior"
+        Nothing
+        (generateTopicThought (testThoughtGraph Curated) cs "свобода"
+           "ага" pairs)
+
+  , TestLabel "input concept pulls the thought toward the question" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [("свобода", "свобода держит выбор")]
+      case generateTopicThought (testThoughtGraph Curated) cs "свобода"
+             "придумай тезис о свободе через ответственность" pairs of
+        Nothing -> assertFailure "input-term path should compose"
+        Just asm -> assertBool "carries relations"
+          (not (S.null (ptRels (asmTerm asm))))
+
+  , TestLabel "raw-substrate graph composes nothing" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [ ("свобода", "свобода требует ответственности")
+                  , ("свобода", "свобода держит выбор")
+                  ]
+      assertEqual "G4 blocks SubstrateExtractedRaw"
+        Nothing
+        (generateTopicThought (testThoughtGraph SubstrateExtractedRaw) cs "свобода"
+           "придумай тезис о свободе через ответственность" pairs)
+
+  , TestLabel "topic without surfaces stays silent" $ TestCase $ do
+      let cs = endorseFixtureSelector
+      assertEqual "no foothold: today's behavior"
+        Nothing
+        (generateTopicThought (testThoughtGraph Curated) cs "абракадабра"
+           "придумай тезис об абракадабре" [])
+
+  , TestLabel "generative thought is deterministic" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [ ("свобода", "свобода требует ответственности")
+                  , ("свобода", "свобода держит выбор")
+                  ]
+          run = generateTopicThought (testThoughtGraph Curated) cs "свобода"
+                  "придумай тезис о свободе через ответственность" pairs
+      assertEqual "same inputs, same thought" run run
+
+  , TestLabel "informative bridge outranks the query-head bridge" $ TestCase $ do
+      let cs = endorseFixtureSelector
+          pairs = [ ("свобода", "свобода требует ответственности")
+                  , ("свобода", "свобода держит выбор")
+                  ]
+      case generateTopicThought (testThoughtGraph Curated) cs "свобода"
+             "придумай тезис о свободе" pairs of
+        Nothing -> assertFailure "expected a composition"
+        Just asm -> assertEqual "mediated bridge beats the vacuous head bridge"
+          "свобода\8594выбор" (asmBridge asm)
   ]

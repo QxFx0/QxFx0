@@ -1274,3 +1274,69 @@ beyond 24 verbs.
 - **Verification**: unit 1618, fast 1817, core 1190 green, zero new
   failures. No debug traces remain in src/.
 - **Parameters moved**: none. Commitment persistence stays v2.
+
+---
+
+# Generative composition v2 — pre-registration (2026-09-27)
+
+- **Investigation outcome**: runtime-composed novelty lives ONLY in
+  the assembly engine (graph paths → novel bridge constructions);
+  hypothesis/overlay content is curated (human promotion), and
+  MoveGenerativeThought is canned fixed text. Graph coverage BOUNDS
+  composability: truly-unknown topics have no foothold (no atoms,
+  no paths) — no honest mechanism composes ex nihilo. LLM-backed
+  generation is blocked (no key); curated overlays need review
+  labor, not code.
+- **Rule (locked)**: on generative turns, attempt a topic-anchored
+  mediated assembly (`generateTopicThought`: input-term concepts ×
+  engaged winners, graph-mediated, top-1) and render it as the
+  generative thought, hypothesis-marked. Uncovered-without-foothold
+  topics keep today's behavior (abstain/generic/template) — the
+  boundary is explicit, not a failure.
+- **Bar**: unit tests (assembly on fixtures incl. no-foothold
+  Nothing); unit/fast/core green zero new failures; live probe N≥8
+  generative turns rated (coherent majority on composed thoughts,
+  zero false-authority); control (non-generative) inputs
+  byte-identical.
+- **Out of scope**: LLM generation, overlay curation, persistence.
+
+---
+
+# Generative composition v2 — landed, probe passed (2026-09-27)
+
+- **Rule (locked in pre-reg above)**: on generative turns, attempt a
+  topic-anchored mediated assembly and render it as the generative
+  thought, hypothesis-marked. Uncovered-without-foothold topics keep
+  today's behavior.
+- **Implementation**: `generateTopicThought` (`Semantic/Assembly.hs`,
+  pure/total/deterministic) — same-topic distinct corpus surfaces,
+  then lemmatized input-concept extension (head-only synthetic other
+  side); R+L2 gate (non-empty rels, validated path ≤2); top-1 by
+  (informative-bridge, path length, −score, bridge). Wired in
+  `Route/Render.hs`, generative-only by construction
+  (`generativeRequest` gate — non-generative bytes untouched):
+  fires only when the cross-topic `assemblyHypothesis` stays silent,
+  renders through the identical «Гипотеза:» suffix; trace outcome
+  `uttered_generative` (list shape stable, `none` otherwise).
+- **Two probe-driven fixes**: (1) pairs come from the selector's
+  corpus surfaces for the query topic — frame diagnostics are empty
+  (nsel=0) on single-topic turns and the plan carries a single
+  thesis ref, so both give no pair; (2) informative-bridge ranking —
+  the skeleton otherwise returns the vacuous query-head bridge
+  («свобода-связь»).
+- **Probe N=9**: 3 fired (свобода свобода→выбор, смерть бытие→смерть,
+  смысл жизнь→смысл) — all hypothesis-marked with cited grounds;
+  6 silent (single-surface topics / no validated path) — the
+  explicit boundary, today's behavior kept. Operator-confirmed:
+  3/3 coherent, zero false-authority. Known warts (realizer
+  roughness, not authority): rel duplication, case/valency slips
+  («контрастирует с смерть», «противопоставлять со смертью»).
+- **Controls**: 3 non-generative inputs unchanged by construction
+  (gate + identical `none` path); crisis supremacy proven live
+  (112 + helpline render on «не хочу жить»).
+- **Verification**: unit 1625 (+7 new tests: same-topic, silence,
+  input-term, substrate-block, no-foothold, determinism, bridge
+  preference), fast 1817, core 1190 green, zero new failures.
+- **Out of scope** (unchanged): LLM generation, overlay curation,
+  persistence; canned `generativeThought`/`MoveGenerativeThought`
+  remain the ultimate no-foothold fallback.

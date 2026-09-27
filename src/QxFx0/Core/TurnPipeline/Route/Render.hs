@@ -35,7 +35,7 @@ import QxFx0.User.Decompress (renderMoveLine)
 import QxFx0.Types.Semantic.MoveGraph (OntologicalMovePlan(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..), AtomSet(..), MeaningAtom(..))
 import Data.Maybe (fromMaybe, isJust, isNothing, maybeToList)
-import QxFx0.Semantic.Assembly (utterableAssembly, verbalizeAssembly)
+import QxFx0.Semantic.Assembly (generateTopicThought, utterableAssembly, verbalizeAssembly)
 import QxFx0.Types.Semantic.ContentSelector (SelectorDiagnostic(..))
 import QxFx0.Types.ClaimAst (ClaimAst(..), GfNP(..), GfRelation(..))
 import qualified Data.Map.Strict as Data.Map
@@ -121,7 +121,7 @@ import QxFx0.Semantic.ResponsePlan
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   )
-import QxFx0.Types.Semantic.ResponsePlan (ResponseSemanticPlan(..), responsePlanTags)
+import QxFx0.Types.Semantic.ResponsePlan (PlannedClaim(..), ResponseSemanticPlan(..), responsePlanTags)
 import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
 import QxFx0.Legal.Adapter
   ( retrieveLegalFact
@@ -328,6 +328,35 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             queryTopic = fromMaybe bestTopic (mResponsePlan >>= rspTopic)
         in fmap verbalizeAssembly
              (utterableAssembly (ssRuntimeGraph ss) renderSelector queryTopic activationTopics pairs)
+      -- Generative composition v2 (pre-registered 2026-09-27): on
+      -- generative turns where the cross-topic assembly above stays
+      -- silent (single-topic turns have no engaged other — pinned),
+      -- attempt one topic-anchored composition (same-topic distinct
+      -- surfaces, then input-term extension) and render it through
+      -- the identical hypothesis suffix. Generative-only by
+      -- construction: non-generative inputs never reach
+      -- 'generateTopicThought', so their bytes are untouched.
+      -- No-foothold topics keep today's behavior (Nothing here).
+      generativeThought =
+        if not generativeRequest
+          then Nothing
+          else case assemblyHypothesis of
+            Just _ -> Nothing
+            Nothing ->
+              -- NOTE: pairs come from the selector's corpus surfaces
+              -- for the query topic, not the frame diagnostics: on
+              -- single-topic generative turns the frame selector
+              -- selects nothing (nsel=0, measured) and the plan
+              -- carries a single thesis ref — no pair to compose.
+              -- The topic's own corpus set (up to 3) is the honest
+              -- foothold: same-topic distinct surfaces only.
+              let gQuery = fromMaybe bestTopic (mResponsePlan >>= rspTopic)
+                  gPairs = [ (gQuery, spRu sp)
+                           | sp <- take 3 (Data.Map.findWithDefault [] gQuery
+                                             (csTopicPredicates renderSelector))
+                           ]
+              in fmap verbalizeAssembly
+                   (generateTopicThought (ssRuntimeGraph ss) renderSelector gQuery input gPairs)
       responsePlanText = case mResponsePlan of
         Just plan | null (responsePlanQualityIssues plan) -> renderResponseSemanticPlan plan
         Just plan -> renderResponseSemanticPlan plan
@@ -369,8 +398,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
              Just mkSemanticArtifact
         | otherwise = Nothing
       hypothesisSuffix = case assemblyHypothesis of
-        Nothing  -> ""
         Just hyp -> "\nГипотеза: " <> hyp
+        Nothing -> case generativeThought of
+          Just hyp -> "\nГипотеза: " <> hyp
+          Nothing  -> ""
       mkSemanticArtifact = DialogueRenderArtifact
          { draRenderedText = responsePlanText <> hypothesisSuffix
         , draQuestionLike = False
@@ -395,10 +426,15 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , GenerationAttempt "frame_builder" "ok"
             , GenerationAttempt "compositional_generator" "ok"
             , GenerationAttempt "assembly_hypothesis"
-                (maybe "none" (const "uttered") assemblyHypothesis)
+                (case assemblyHypothesis of
+                   Just _ -> "uttered"
+                   Nothing -> case generativeThought of
+                     Just _ -> "uttered_generative"
+                     Nothing -> "none")
             ]
         , draEmittedPredicates = semanticEmittedPredicates
              <> maybeToList (("Гипотеза: " <>) <$> assemblyHypothesis)
+             <> maybeToList (("Гипотеза: " <>) <$> generativeThought)
          , draSelectorDiagnostics = semanticSelectorDiagnostics
          , draActivationArtifact = mActivationArtifact
          , draResponsePlan = mResponsePlan
