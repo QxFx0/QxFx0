@@ -1121,6 +1121,11 @@ collectRawMisunderstandingTriggers rawText tokens =
   in [ RawPropositionTrigger "not_understand_ru"
          (T.isInfixOf "не понимаю" lowered
            && any (`elem` tokens) ["тебя", "тебе", "вас", "диалог", "разговор"])
+     -- F1 (pre-registered 2026-09-27): the user-side report
+     -- («ты меня не понял») had no trigger. Same shape as
+     -- not_understand_ru, same admission, same builder arm.
+     , RawPropositionTrigger "dont_understand_you_ru"
+         (any (`T.isInfixOf` lowered) ["ты не понял", "ты меня не понял", "ты не понимаешь"])
      , RawPropositionTrigger "contact_lost_ru"
          (T.isInfixOf "контакт потерян" lowered)
      , RawPropositionTrigger "apology_tokens"
@@ -1144,6 +1149,7 @@ collectRawMisunderstandingTriggers rawText tokens =
 buildMisunderstandingFromTriggers :: [RawPropositionTrigger] -> Maybe PropositionType
 buildMisunderstandingFromTriggers admittedTriggers
   | matched "not_understand_ru" = Just MisunderstandingReport
+  | matched "dont_understand_you_ru" = Just MisunderstandingReport
   | matched "contact_lost_ru" = Just MisunderstandingReport
   | matched "apology_tokens" = Just RepairSignal
   | matched "apology_phrase" = Just RepairSignal

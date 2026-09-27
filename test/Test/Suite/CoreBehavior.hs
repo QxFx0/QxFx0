@@ -436,6 +436,7 @@ coreBehaviorTests =
     , testParsePropositionAffectiveHelpQuestion
     , testParsePropositionComparisonPlausibilityTableChair
     , testParsePropositionMisunderstandingReport
+    , testParsePropositionUserSideMisunderstandingReport
     , testParsePropositionSelfKnowledgeConfidenceHigh
     , testParsePropositionSelfKnowledgeTargetsUser
     , testParsePropositionComparisonCapturesCandidates
@@ -2891,6 +2892,25 @@ testParsePropositionMisunderstandingReport = TestCase $ do
     MisunderstandingReport (ipfPropositionType frame)
   assertEqual "Misunderstanding family should be CMRepair"
     CMRepair (ipfCanonicalFamily frame)
+
+-- | F1 (pre-registered 2026-09-27): the user-side misunderstanding
+-- report («ты меня не понял») must reach MisunderstandingReport
+-- instead of falling through to self-reference. Negatives pin the
+-- boundary: capability/self questions keep their types, and the
+-- system-side report keeps working.
+testParsePropositionUserSideMisunderstandingReport :: Test
+testParsePropositionUserSideMisunderstandingReport = TestCase $ do
+  forM_ ["ты меня не понял, я про другое", "ты не понял мой вопрос", "ты не понимаешь, о чём я"] $ \input ->
+    let frame = parseProposition input
+    in do assertEqual ("user-side report should be MisunderstandingReport for " <> T.unpack input)
+            MisunderstandingReport (ipfPropositionType frame)
+          assertEqual ("user-side report family should be CMRepair for " <> T.unpack input)
+            CMRepair (ipfCanonicalFamily frame)
+  forM_ ["ты понимаешь время?", "что ты знаешь о себе?"] $ \input ->
+    assertBool ("capability/self question must not become MisunderstandingReport: " <> T.unpack input)
+      (ipfPropositionType (parseProposition input) /= MisunderstandingReport)
+  assertEqual "system-side report keeps working"
+    MisunderstandingReport (ipfPropositionType (parseProposition "я не понимаю тебя"))
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

@@ -1340,3 +1340,59 @@ beyond 24 verbs.
 - **Out of scope** (unchanged): LLM generation, overlay curation,
   persistence; canned `generativeThought`/`MoveGenerativeThought`
   remain the ultimate no-foothold fallback.
+
+---
+
+# F1 user-side misunderstanding trigger — pre-registration (2026-09-27)
+
+- **Finding**: «ты меня не понял, я про другое» → prepare yields
+  `PlainAssert` (no trigger covers the user-side report) → render
+  reverse-map hits the over-broad «я»-feature →
+  `IntentSelfReference` + self-knowledge template. The user gets
+  biography instead of repair.
+- **Rule (locked)**: add one raw trigger `dont_understand_you_ru`
+  («ты не понял» / «ты меня не понял» / «ты не понимаешь»,
+  lowered-substring, same shape as `not_understand_ru`) admitted
+  through the existing misunderstanding admission into the existing
+  `MisunderstandingReport` builder arm. No chain reorder, no
+  self-knowledge narrowing: none of the self-knowledge raw triggers
+  match the three forms (verified by inspection — «ты понимаешь
+  контекст» needs the full phrase), so prepare resolves to
+  `MisunderstandingReport` and render maps it to `IntentRepair`
+  via the existing explicit case. The over-broad «я»-feature is
+  left untouched (separate change with its own blast radius).
+- **Bar**: unit pins — the three forms → `MisunderstandingReport`
+  (+ `CMRepair`); negatives — «ты понимаешь время?» and «что ты
+  знаешь о себе?» stay NOT-misunderstanding, «я не понимаю тебя»
+  stays misunderstanding; live probe N≥3 user-side reports render
+  the repair surface («Я принимаю это как сигнал сбоя…»);
+  controls — one self-knowledge question + one plain «я»-utterance
+  byte-identical by construction (untouched paths); zero new
+  failures in unit/fast/core.
+- **Out of scope**: self-knowledge «я»-feature narrowing (F1b),
+  «ты не понимаешь контекст» capability/misunderstanding overlap
+  (self-knowledge keeps winning by chain order — defensible).
+
+---
+
+# F1 user-side misunderstanding trigger — landed (2026-09-27)
+
+- **Rule** (pre-registered above): `dont_understand_you_ru`
+  («ты не понял» / «ты меня не понял» / «ты не понимаешь») through
+  the existing admission into the existing `MisunderstandingReport`
+  arm. No chain reorder, no self-knowledge narrowing.
+- **Why prepare-only fixes it end-to-end**: no self-knowledge raw
+  trigger matches the three forms, so prepare resolves to
+  `MisunderstandingReport` and render maps it to `IntentRepair` via
+  the existing explicit case (the «я»-feature misfire needed a
+  `PlainAssert` to act on — it no longer gets one here).
+- **Probe**: 3/3 user-side reports → `CMRepair` + the production
+  repair surface (`structuredBody MisunderstandingReport` — «Вижу
+  сигнал перегруза…»; the «Я принимаю…» line cited in the pre-reg
+  is the move/fallback text, not the production surface —
+  corrected here). Controls «ты понимаешь время?» / «что ты знаешь
+  о себе?» unchanged (no trigger matches, by construction + live);
+  «я не понимаю тебя» unchanged.
+- **Verification**: unit 1626, fast 1818, core 1191 green, zero new
+  failures. New test pins 3 positives + 2 negatives + preserved
+  system-side report.
