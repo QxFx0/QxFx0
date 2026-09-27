@@ -45,9 +45,11 @@ A-slice self-divergence pattern (predict → witness → diff → bounded
 window) onto the user side: each turn the encoder observes the
 actual user state, it is compared against the deterministic
 prediction made on the previous turn, and the error feeds a bounded
-window.  The transition model itself is deliberately the identity
-(@v1@ persistence hypothesis); learning transitions offline is a
-later phase and must go through the learning-targets governance
+window.  The transition model is move-conditioned
+(@QxFx0.Types.Semantic.MoveGraph.transitionUserR5@: persistence
+without a move, the frozen v1 effect matrix with one); fitting its
+parameters offline is a later phase and must go through the
+learning-targets governance
 (@docs\/closure\/LEARNING_ALLOWED_TARGETS.md@).
 -}
 module QxFx0.Types.User.R5

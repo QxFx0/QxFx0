@@ -337,7 +337,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       -- construction: non-generative inputs never reach
       -- 'generateTopicThought', so their bytes are untouched.
       -- No-foothold topics keep today's behavior (Nothing here).
-      generativeThought =
+      generativeTopicThought =
         if not generativeRequest
           then Nothing
           else case assemblyHypothesis of
@@ -399,7 +399,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         | otherwise = Nothing
       hypothesisSuffix = case assemblyHypothesis of
         Just hyp -> "\nГипотеза: " <> hyp
-        Nothing -> case generativeThought of
+        Nothing -> case generativeTopicThought of
           Just hyp -> "\nГипотеза: " <> hyp
           Nothing  -> ""
       mkSemanticArtifact = DialogueRenderArtifact
@@ -428,13 +428,13 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , GenerationAttempt "assembly_hypothesis"
                 (case assemblyHypothesis of
                    Just _ -> "uttered"
-                   Nothing -> case generativeThought of
+                   Nothing -> case generativeTopicThought of
                      Just _ -> "uttered_generative"
                      Nothing -> "none")
             ]
         , draEmittedPredicates = semanticEmittedPredicates
              <> maybeToList (("Гипотеза: " <>) <$> assemblyHypothesis)
-             <> maybeToList (("Гипотеза: " <>) <$> generativeThought)
+             <> maybeToList (("Гипотеза: " <>) <$> generativeTopicThought)
          , draSelectorDiagnostics = semanticSelectorDiagnostics
          , draActivationArtifact = mActivationArtifact
          , draResponsePlan = mResponsePlan

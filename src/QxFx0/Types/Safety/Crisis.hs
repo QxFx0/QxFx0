@@ -31,7 +31,7 @@ Two independent causes can force 'ProtocolB':
 This module is the typed shape only: it contains no lexicon, no
 resources, and no pipeline wiring.  It is law-driven like Essence —
 there is deliberately /no/ feature flag that can disable the guard
-(ADR-0013 Rule 5: only @Bridge.ExternalLLM@ may be flag-gated).
+(ADR-0034 §3 Rule 5: only @Bridge.ExternalLLM@ may be flag-gated).
 -}
 module QxFx0.Types.Safety.Crisis
   ( -- * Categories and triggers

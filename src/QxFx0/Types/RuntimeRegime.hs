@@ -20,6 +20,8 @@ When any of the following changes, bump 'currentMathVersion':
 - Essence modulation parameters (@EssenceModulation@)
 - Field heuristic sourcing rules (@FieldHeuristics@)
 - CTS admission thresholds
+- User-regime constants (viability contour, move drift margin,
+  resonance gate, encoder/effect-matrix versions — v4 precedent)
 
 Schema-version changes (persistence shape) bump @currentSystemStateSchemaVersion@
 in @Types.State.System@, not @currentMathVersion@.
