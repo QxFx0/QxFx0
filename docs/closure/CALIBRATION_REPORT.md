@@ -1396,3 +1396,61 @@ beyond 24 verbs.
 - **Verification**: unit 1626, fast 1818, core 1191 green, zero new
   failures. New test pins 3 positives + 2 negatives + preserved
   system-side report.
+
+---
+
+# F2 stale-topic hold — pre-registration (2026-09-27)
+
+- **Mechanism (proven by fresh-vs-carried differential probe)**:
+  uncovered turn («всё бессмысленно…», best=бессмысленно) with a
+  carried covered topic (ответственность, T1) renders «Держу
+  ответственность…». Chain: route-hint AnchorSignal + carried
+  `rmpTopic` → `buildDialogAtoms` takes atoms topic from
+  `rmpTopic` (`nonEmptyOr (rmpTopic rmp) …`) → `resolveLegacyGf`
+  linearizes atoms via real PGF (`dialogAtomsToGfExpr` maps any
+  non-define intent to `MoveGround (MkNP <atoms-topic>)`) →
+  grammar renders the hold naming the stale topic
+  (`FromShim`/`russian_compatibility_shim` tags). Fresh session
+  (atoms topic = bestTopic, uncovered → lexeme lookup fails →
+  `Left`) falls through to the honest template path («Смысловая
+  точка: бессмысленно»). The move layer was correctly silent in
+  both (v4 rules).
+- **Rule (locked)**: in `buildDialogAtoms`, keep the RMP topic as
+  atoms topic ONLY if it is mentioned in the current raw input —
+  normalized whole-token match OR nominative-form match via
+  morphology (covers canonicalized «ответственность» vs input
+  «ответственности»); otherwise fall back to the frame's focus
+  entity (current-turn signal), then «тема» as today. Coherent
+  turns (topic mentioned or identical) are byte-identical by
+  construction; stale-carried topics fail closed into the
+  honest-uncovered path.
+- **Bar**: unit pins on `buildDialogAtoms` (mentioned-carried kept;
+  unmentioned-carried replaced by focus; empty-focus keeps «тема»);
+  live probe — carried session no longer names the stale topic,
+  fresh session byte-identical, one coherent multi-turn control
+  unchanged; zero new failures in unit/fast/core.
+- **Out of scope**: `dialogAtomsToGfExpr`'s else→MoveGround
+  collapse (separate mapping question); the AgreementAnchor
+  route-hint inference itself; F1b «я»-feature.
+
+---
+
+# F2 stale-topic hold — landed (2026-09-27)
+
+- **Rule** (pre-registered above): `buildDialogAtoms` keeps the RMP
+  topic as atoms topic only under the mention guard
+  (`topicMentionedHere`: whole-token `topicMentioned` OR
+  nominative-form match per token); otherwise the frame's focus
+  entity, then «тема».
+- **Probe**: carried session («ответственность» → «всё
+  бессмысленно…») no longer names the stale topic — renders
+  «Упор — бессмысленно» on the current topic. Fresh session
+  byte-identical to pre-fix («Смысловая точка: бессмысленно»).
+  Coherent multi-turn control («что такое ответственность и почему
+  она важна?») renders the full thesis unchanged.
+- **Verification**: unit 1627, fast 1819, core 1192 green, zero new
+  failures. New pins: nominative inflection counts, absent topic
+  excluded, stale-carried replaced by focus at atoms level,
+  mentioned-carried kept.
+- **Residual note**: `dialogAtomsToGfExpr`'s else→MoveGround
+  collapse stays as-is (separate mapping question, out of scope).

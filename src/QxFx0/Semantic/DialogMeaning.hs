@@ -8,11 +8,13 @@ SystemState) and produces structured DialogAtoms ready for assembly.
 module QxFx0.Semantic.DialogMeaning
   ( buildDialogAtoms
   , narrativeSlot
+  , topicMentionedHere
   ) where
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
+import Data.Char (isAlphaNum)
 import qualified Data.Text as T
 
 import QxFx0.Types.Consciousness (ConsciousnessNarrative(..))
@@ -22,13 +24,25 @@ import QxFx0.Semantic.Input.Parse (ParsedInput(..), ParsedToken(..))
 import QxFx0.Types hiding (AtomTag)
 import QxFx0.Types.SemanticConfig (SemanticConfig(..))
 import QxFx0.Types.TruthContract (capByTruthContract)
+import QxFx0.Lexicon.Inflection (toNominative)
+import QxFx0.Semantic.ResponsePlan (topicMentioned)
 
 buildDialogAtoms :: InputPropositionFrame -> ResponseMeaningPlan -> SystemState
                   -> MorphologyData -> ParsedInput -> Maybe ConsciousnessNarrative
                   -> DialogAtoms
 buildDialogAtoms frame rmp ss morph parsed mnarr =
   let raw = ipfRawText frame
-      topic = nonEmptyOr (rmpTopic rmp) (nonEmptyOr (ipfFocusEntity frame) "тема")
+      -- F2 (pre-registered 2026-09-27): the atoms topic feeds PGF
+      -- linearization that names it out-of-band («Держу X…»). A
+      -- carried RMP topic unmentioned in the current input
+      -- produced false grounding claims on uncovered turns;
+      -- fall back to the frame current-turn focus instead.
+      -- Mentioned-or-identical topics behave exactly as before.
+      topic =
+        let carried = rmpTopic rmp
+        in if not (T.null (T.strip carried)) && topicMentionedHere raw morph carried
+             then carried
+             else nonEmptyOr (ipfFocusEntity frame) "тема"
       turn = ssTurnCount ss + 1
       cappedEpistemic = capByTruthContract (rmpTruthContractStatus rmp) (rmpEpistemic rmp)
       slots = [ userIntentSlot frame
@@ -284,6 +298,17 @@ isFarewellLike :: InputPropositionFrame -> Bool
 isFarewellLike frame =
   any (`T.isInfixOf` T.toLower (ipfRawText frame))
     ["пока","прощай","до свидания","до встречи","увидимся"]
+
+-- | F2 mention guard: whole-token match ('topicMentioned',
+-- canonical) or nominative-form match per token (covers a
+-- canonicalized topic against inflected input: «ответственности»
+-- → «ответственность»).
+topicMentionedHere :: Text -> MorphologyData -> Text -> Bool
+topicMentionedHere raw morph topic =
+  topicMentioned topic raw
+  || any (\w -> toNominative morph w == key)
+         [ T.filter isAlphaNum w | w <- T.words (T.toLower raw) ]
+  where key = T.toLower (T.strip topic)
 
 nonEmptyOr :: Text -> Text -> Text
 nonEmptyOr preferred fallback

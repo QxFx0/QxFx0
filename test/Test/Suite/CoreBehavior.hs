@@ -44,6 +44,8 @@ import qualified QxFx0.Types.Thresholds as Thr
 import QxFx0.Types.Orbital (OrbitalPhase(..), EncounterMode(..), OrbitalMemory(..), emptyOrbitalMemory, omCurrentPhase, omAvgAttraction, omAvgRepulsion, omStableStreak, omCollapseStreak, DirectiveMoveBias(..))
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Proposition as Proposition
+import QxFx0.Semantic.DialogMeaning (buildDialogAtoms, topicMentionedHere)
+import QxFx0.Semantic.DialogAtom (daTopicNominative)
 import qualified QxFx0.Semantic.Morphology as Morph
 import qualified QxFx0.Core.Guard as Guard
 import qualified QxFx0.Core.Ego as Ego
@@ -437,6 +439,7 @@ coreBehaviorTests =
     , testParsePropositionComparisonPlausibilityTableChair
     , testParsePropositionMisunderstandingReport
     , testParsePropositionUserSideMisunderstandingReport
+    , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
     , testParsePropositionSelfKnowledgeTargetsUser
     , testParsePropositionComparisonCapturesCandidates
@@ -2911,6 +2914,27 @@ testParsePropositionUserSideMisunderstandingReport = TestCase $ do
       (ipfPropositionType (parseProposition input) /= MisunderstandingReport)
   assertEqual "system-side report keeps working"
     MisunderstandingReport (ipfPropositionType (parseProposition "я не понимаю тебя"))
+
+-- | F2 (pre-registered 2026-09-27): atoms must not carry a stale
+-- topic into PGF linearization. A carried RMP topic unmentioned in
+-- the current input falls back to the frame focus; a mentioned one
+-- is kept byte-identically.
+testDialogAtomsTopicMentionGuard :: Test
+testDialogAtomsTopicMentionGuard = TestCase $ do
+  let emptyMorph = MorphologyData Map.empty Map.empty Map.empty Map.empty
+      nomMorph = MorphologyData Map.empty Map.empty (Map.fromList [("ответственности", "ответственность")]) Map.empty
+  assertBool "inflected mention counts via nominative"
+    (topicMentionedHere "чем отличается от ответственности?" nomMorph "ответственность")
+  assertBool "absent topic does not count"
+    (not (topicMentionedHere "всё бессмысленно и пусто вокруг" emptyMorph "ответственность"))
+  let frame = (Proposition.parseProposition "всё бессмысленно и пусто вокруг") { ipfFocusEntity = "бессмысленно" }
+      rmp = (TurnPlanning.buildRMP (ipfCanonicalFamily frame) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True 0.5) { rmpTopic = "ответственность" }
+      da = buildDialogAtoms frame rmp emptySystemState emptyMorph (InputParse.emptyParsedInput "") Nothing
+  assertEqual "stale carried topic must not reach atoms" "бессмысленно" (daTopicNominative da)
+  let frame2 = Proposition.parseProposition "что такое ответственность?"
+      rmp2 = (TurnPlanning.buildRMP (ipfCanonicalFamily frame2) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame2 emptySenseVector (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True 0.5) { rmpTopic = "ответственность" }
+      da2 = buildDialogAtoms frame2 rmp2 emptySystemState emptyMorph (InputParse.emptyParsedInput "") Nothing
+  assertEqual "mentioned topic stays" "ответственность" (daTopicNominative da2)
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do
