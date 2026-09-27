@@ -20,11 +20,12 @@ module QxFx0.Semantic.ResponsePlan
   , refineUncoveredTopic
   , topicMentioned
   , isGenerativeRequestText
+  , isSpeculativeRequestText
   ) where
 
 import Data.Char (isAlphaNum)
 import Data.List (find, sortOn)
-import Data.Maybe (listToMaybe, mapMaybe, maybeToList)
+import Data.Maybe (fromMaybe, listToMaybe, mapMaybe, maybeToList)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -97,6 +98,26 @@ buildResponseSemanticPlanWithActiveQuestion
   -> Maybe ResponseSemanticPlan
 buildResponseSemanticPlanWithActiveQuestion selector field rawInput mActivation mActiveQuestion semanticFrame semanticIntent
   | isGenerativeRequestText rawInput = Just (buildGenerativeResponsePlanWithActiveQuestion selector field rawInput mActivation mActiveQuestion)
+  -- Speculative regime v1 (pre-registered 2026-09-26): on researcher
+  -- markers, a fallback plan retries once through the generative
+  -- path (hypothesis-marked by construction). Non-fallback plans are
+  -- untouched; a generative fallback is used as-is. NOTE: this branch
+  -- inlines the `otherwise` plan construction instead of calling
+  -- buildResponseSemanticPlan, which would recurse back here on the
+  -- same input.
+  | isSpeculativeRequestText rawInput =
+      let base = case planRequest semanticFrame semanticIntent <|> clarifyRequest of
+            Nothing -> Nothing
+            Just (goal, topics) -> Just (buildGroundedPlan goal topics mActiveQuestion selector field mActivation)
+      in Just (case base of
+           Just plan | isFallbackPlan plan || null (rspClaims plan) ->
+             buildGenerativeResponsePlanWithActiveQuestion selector field rawInput mActivation mActiveQuestion
+           -- No plan at all (unsupported intent shape): same generative
+           -- attempt — uncovered speculative turns live here. A
+           -- generative fallback inside is used as-is (terminates).
+           Nothing ->
+             buildGenerativeResponsePlanWithActiveQuestion selector field rawInput mActivation mActiveQuestion
+           other -> fromMaybe (fallbackPlan GoalClarify NoTopicProvided Nothing) other)
   | otherwise = case planRequest semanticFrame semanticIntent <|> clarifyRequest of
       Nothing -> Nothing
       Just (goal, topics) -> Just (buildGroundedPlan goal topics mActiveQuestion selector field mActivation)
@@ -119,6 +140,12 @@ refineUncoveredTopic lemmaMap surface =
   in if any (`elem` ["не", "ни", "нет", "без", "нельзя"]) toks
      then Nothing
      else listToMaybe [ t | t <- toks, isCoveredTopic t ]
+
+-- | A plan that carries a fallback reason (abstain/clarify/hold class).
+isFallbackPlan :: ResponseSemanticPlan -> Bool
+isFallbackPlan plan = case rspFallbackReason plan of
+  Just _  -> True
+  Nothing -> False
 
 -- | At most eight selector-derived candidates enter composition. The first
 -- admissible candidate is the thesis; its curated counter/synthesis fields may
@@ -439,6 +466,15 @@ responsePlanTopic selector rawInput =
 -- when proposition classification loses the route hint for an uncovered topic.
 -- This is deliberately not a general intent classifier: it only admits an
 -- explicit generation verb together with a thought/thesis object.
+-- | Speculative markers: explicit researcher-frame requests to
+-- reason freely. Per-turn, stateless. Session latch deferred.
+isSpeculativeRequestText :: Text -> Bool
+isSpeculativeRequestText rawInput =
+  let input = T.toLower (T.strip rawInput)
+      hasAny phrases = any (`T.isInfixOf` input) phrases
+  in hasAny ["давай порассуждаем", "пофантазируй всерьёз",
+             "порассуждай", "мысли вслух", "а если серьёзно"]
+
 isGenerativeRequestText :: Text -> Bool
 isGenerativeRequestText rawInput =
   let input = T.toLower (T.strip rawInput)

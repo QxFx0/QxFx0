@@ -31,6 +31,7 @@ import QxFx0.Semantic.ResponsePlan
   , responsePlanQualityIssues
   , refineUncoveredTopic
   , topicMentioned
+  , isSpeculativeRequestText
   )
 import QxFx0.Semantic.ResponsePlan.GF (responsePlanToGfExpr, semanticPropositionToGfExpr)
 import QxFx0.Lexicon.Generated.SemanticSlots
@@ -78,6 +79,8 @@ responsePlanTests =
   , TestLabel "invalid plan is rejected" testPlanAdmission
   , TestLabel "uncovered plan topic retries first covered token" testRefineUncoveredTopic
   , TestLabel "back-reference cites only the current topic" testTopicMentioned
+  , TestLabel "speculative trigger fires only on markers" testSpeculativeTrigger
+  , TestLabel "speculative reroute yields renderable claims" testSpeculativeRerouteProbe
   , TestLabel "generative trigger covers hypothesis-seeking" testGenerativeTriggerBroadened
   , TestLabel "surface realizer cannot drop approved claim" testRealizerContract
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
@@ -681,3 +684,30 @@ testGenerativeTriggerBroadened = TestCase $ do
     (not (isGenerativeRequestText "что такое свобода?"))
   assertBool "challenge stays out"
     (not (isGenerativeRequestText "свобода — это иллюзия, докажи обратное"))
+
+-- | Speculative trigger (pre-registered 2026-09-26, v1).
+testSpeculativeTrigger :: Test
+testSpeculativeTrigger = TestCase $ do
+  assertBool "researcher frame fires"
+    (isSpeculativeRequestText "давай порассуждаем о смысле?")
+  assertBool "plain question stays out"
+    (not (isSpeculativeRequestText "что такое свобода?"))
+  assertBool "crisis marker is not a speculative marker"
+    (not (isSpeculativeRequestText "не хочу жить"))
+
+-- | Speculative reroute (pre-registered 2026-09-26, v1): an
+-- uncovered plan shape under a researcher marker retries through the
+-- generative path and renders hypothesis content.
+testSpeculativeRerouteProbe :: Test
+testSpeculativeRerouteProbe = TestCase $ do
+  let selector = emptyContentSelector { csTopicPredicates = M.singleton "свобода" [head freedomPreds] }
+      frame = GroundFrame "абракадабра" Shallow
+      input = "давай порассуждаем о свободе?"
+      res = buildResponseSemanticPlanWithActiveQuestion selector emptyField input Nothing Nothing frame (IntentGround "свободе")
+  case res of
+    Nothing -> assertFailure "speculative must produce a plan"
+    Just plan -> do
+      assertBool "generative retry yields claims"
+        (not (null (rspClaims plan)))
+      assertBool "generative plan renders non-empty"
+        (not (T.null (T.strip (renderResponseSemanticPlan plan))))

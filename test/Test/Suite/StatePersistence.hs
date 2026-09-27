@@ -1371,6 +1371,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcDialogueFocusBefore = "fixture_focus"
     , trcDialogueFocusAfter = "fixture_focus"
     , trcBestTopic = "fixture_focus"
+    , trcSpeculative = False
     , trcDialoguePhase = Exploring
     , trcDialoguePhaseBefore = Exploring
     , trcDialoguePhaseAfter = Exploring

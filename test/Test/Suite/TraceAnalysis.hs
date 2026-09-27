@@ -150,6 +150,7 @@ minimalTrace = TurnReplayTrace
   , trcDialogueFocusBefore = "general"
   , trcDialogueFocusAfter = "general"
   , trcBestTopic = "general"
+  , trcSpeculative = False
   , trcDialoguePhase = Exploring
   , trcDialoguePhaseBefore = Exploring
   , trcDialoguePhaseAfter = Exploring

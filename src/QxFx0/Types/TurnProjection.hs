@@ -240,6 +240,7 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDialogueFocusBefore :: !Text
   , trcDialogueFocusAfter :: !Text
   , trcBestTopic :: !Text
+  , trcSpeculative :: !Bool
   -- ^ Prepare-stage best topic (focus-scored; may elect a verb on
   -- relation forms — see the EmptyHold audit note). Recorded for the
   -- verb-focus probe; routing reads dialogue focus, not this.
@@ -674,6 +675,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .: "trcDialogueFocusBefore"
       <*> o .: "trcDialogueFocusAfter"
       <*> o .:? "trcBestTopic" .!= ""
+      <*> o .:? "trcSpeculative" .!= False
       <*> o .: "trcDialoguePhase"
       <*> o .: "trcDialoguePhaseBefore"
       <*> o .: "trcDialoguePhaseAfter"

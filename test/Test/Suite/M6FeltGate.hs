@@ -281,6 +281,7 @@ passingTrace = TurnReplayTrace
   , trcDialogueFocusBefore = "general"
   , trcDialogueFocusAfter = "freedom"
   , trcBestTopic = "freedom"
+  , trcSpeculative = False
   , trcDialoguePhase = Exploring
   , trcDialoguePhaseBefore = Exploring
   , trcDialoguePhaseAfter = Exploring

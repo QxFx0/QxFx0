@@ -117,6 +117,7 @@ import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
 import QxFx0.Semantic.ResponsePlan
   ( buildResponseSemanticPlanWithActiveQuestion
   , isGenerativeRequestText
+  , isSpeculativeRequestText
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   )
@@ -332,7 +333,9 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         Just plan -> renderResponseSemanticPlan plan
         Nothing -> semanticText
       semanticNonUnknown = case semanticIntent of
-        IntentUnknown _ -> generativeRequest
+        -- Speculative turns carry a good generative plan (proven by
+        -- probe); the unknown-intent gate must not silence it.
+        IntentUnknown _ -> generativeRequest || isSpeculativeRequestText input
         _               -> True
       -- M4-SEMANTIC-CORE-003 Phase C: content source classification for trace.
       -- Classified from the response-plan topic (the topic the response

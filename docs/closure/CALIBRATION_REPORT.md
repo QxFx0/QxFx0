@@ -1252,3 +1252,25 @@ beyond 24 verbs.
   full bounded surface (112 + helpline). Protocol B supremacy over
   speculative mode proven live (pre-reg bar item closed).
 - unit 1617, fast 1817 green, zero new failures.
+
+---
+
+# Speculative regime v1 — landed, probe passed (2026-09-27)
+
+- **Trigger** (`isSpeculativeRequestText`): researcher markers,
+  per-turn, stateless. Crisis markers excluded by construction
+  (unit-pinned); Protocol B supremacy proven live.
+- **Effect A**: fallback AND empty plans retry once through the
+  generative path (hypothesis-marked); unknown-intent turns with a
+  good generative plan are no longer silenced at the viaSemantic
+  gate (the hold-behind-plan bug, found by probe).
+- **Effect B deferred to v1.1**: any gate loosening is untestable
+  on current fixtures or risks the 7 junk instances; precision
+  preserved over recall.
+- **Trace**: `trcSpeculative` every turn (JSON backward-compat).
+- **Probe N=10**: all render content (theses/hypotheses with
+  grounds); coherent per operator endorsement; zero
+  false-authority (corpus-backed or marked).
+- **Verification**: unit 1618, fast 1817, core 1190 green, zero new
+  failures. No debug traces remain in src/.
+- **Parameters moved**: none. Commitment persistence stays v2.

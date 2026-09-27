@@ -50,6 +50,7 @@ import QxFx0.Semantic.Content (isCoveredTopic, normalizeTopic)
 import QxFx0.Semantic.Content (isCoveredTopic)
 import QxFx0.Semantic.Embedding (embeddingQualityText)
 import QxFx0.Semantic.Proposition (parseProposition)
+import QxFx0.Semantic.ResponsePlan (isSpeculativeRequestText)
 import QxFx0.Semantic.Sense (rspChosenOperator, rspInputVector, rspPreservedAxes, svAnchor, unSemanticNodeId)
 import QxFx0.Self.Deliberation
   ( renderAgreement
@@ -374,6 +375,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcDialogueFocusBefore = dtCurrentFocus (tiDialogueThread ti)
           , trcDialogueFocusAfter = dtCurrentFocus (ssDialogueThread nextSs)
           , trcBestTopic = tiBestTopic ti
+          , trcSpeculative = isSpeculativeRequestText (ipfRawText (tiFrame ti))
           , trcDialoguePhase = tiDialoguePhase ti
           , trcDialoguePhaseBefore = tiDialoguePhase ti
           , trcDialoguePhaseAfter = ssDialoguePhase nextSs

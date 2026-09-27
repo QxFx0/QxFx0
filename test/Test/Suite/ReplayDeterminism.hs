@@ -133,6 +133,7 @@ minimalReplayTrace apiHealthy =
     , trcDialogueFocusBefore = "test"
     , trcDialogueFocusAfter = "test"
     , trcBestTopic = "test"
+    , trcSpeculative = False
     , trcDialoguePhase = Exploring
     , trcDialoguePhaseBefore = Exploring
     , trcDialoguePhaseAfter = Exploring
