@@ -939,7 +939,15 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       guardSafety = Guard.postRenderSafetyCheckSurface preSafetySurface (F.toList (ssHistory ss))
       templateArtifact = rsTemplateArtifact renderStatic
       qualityTopic = fromMaybe (tiBestTopic ti) (draResponsePlan templateArtifact >>= rspTopic)
-      (renderedSurface, finalizeSurfaceProv) = finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) qualityTopic
+      -- SAFETY (2026-09-26): crisis turns bypass finalize shaping
+      -- entirely. The content-quality gate (topic relevance) fires on
+      -- every crisis surface by construction (77 static tokens, zero
+      -- topic overlap), which silently replaced resources with the
+      -- recovery fallback live. The crisis text is static curated
+      -- content, so runtime shaping is inapplicable by design.
+      (renderedSurface, finalizeSurfaceProv) = case tpCrisisSurface tp of
+        Just _ -> (preSafetySurface, FromDB)
+        Nothing -> finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) qualityTopic
       surfaceProv = case finalizeSurfaceProv of
         FromRecovery -> FromRecovery
         _ -> draSurfaceProvenance templateArtifact

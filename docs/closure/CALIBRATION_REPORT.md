@@ -1199,3 +1199,56 @@ beyond 24 verbs.
   (Content.hs + SQL seed); export regenerated all derived
   artifacts; Eng hand-deduped vs senior glosses.
 - Verified: unit 1616, fast 1817 green; live spots render content.
+
+---
+
+# Speculative regime v1 — pre-registration (2026-09-26)
+
+- **Motivation**: 69% template inventory; researcher asks for
+  emergence room with the right to be wrong (epistemic only —
+  safety gates explicitly out of scope and pinned by tests).
+- **Trigger** (per-turn, pure, no state): markers
+  «давай порассуждаем», «пофантазируй всерьёз», «порассуждай»,
+  «мысли вслух», «а если серьёзно». Session latch deferred.
+- **Effect A** (abstain→hypothesis): fallback plans (TopicNotCovered
+  / empty) build hypothesis content via composition instead of the
+  abstain surface. ClaimHypothetical framing MANDATORY — the line
+  between wrong and false-authority.
+- **Effect B** (assembly): loosen utterability one notch under the
+  flag. Hard constraint: the 7 junk-tail instances must stay
+  silent (regression set). Exact knob at implementation.
+- **Deferred to v2**: commitment persistence (needs 9th CTS
+  constructor + defense wiring); safety untouched by design.
+- **Trace**: `trcSpeculative :: Bool` every turn.
+- **Bar**: suites green zero new failures; live probe N≥10 rated
+  (coherent majority, zero false-authority); crisis+marker combo
+  test pins Protocol B supremacy; control inputs byte-identical.
+
+---
+
+# Crisis surface eaten by quality gate — SAFETY FIX (2026-09-26)
+
+- **Finding (live, pre-existing, unrelated to speculative work)**:
+  pure crisis input renders the recovery fallback WITHOUT resources.
+  Trace: ProtocolB true + FromRecovery. Mechanism proven by replica:
+  crisis surface is 77 tokens with zero topic overlap, so
+  `checkTopicRelevanceBlock` fires on EVERY crisis turn (any
+  non-empty topic).
+- **Fix (no bar wait — safety)**: crisis turns bypass
+  `finalizeOutputWithTopic` entirely and render `preSafetySurface`
+  (which IS the crisis surface on that branch). Principled: the
+  crisis text is static curated content (cause ignored by the
+  renderer), so runtime quality shaping is inapplicable by design —
+  not a hole. Structural safety likewise inapplicable to static text.
+- **Verification required**: live crisis turn renders 112 +
+  helpline (direct proof); CrisisGuard suite green; unit/fast/core
+  green, zero new failures.
+
+---
+
+# Crisis bypass verified live (2026-09-26)
+
+- Pure crisis and crisis+speculative-marker turns both render the
+  full bounded surface (112 + helpline). Protocol B supremacy over
+  speculative mode proven live (pre-reg bar item closed).
+- unit 1617, fast 1817 green, zero new failures.
