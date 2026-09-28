@@ -649,14 +649,16 @@ runtime regression:
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1307 (core 1192 + runtime 94 + http 23; full single-process
+| qxfx0-test | 1307 (core 1193 + runtime 94 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1819 |
-| qxfx0-test-unit | 1627 |
+| qxfx0-test-fast | 1820 |
+| qxfx0-test-unit | 1640 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-09-28, post v1/v2/F1/F2) |
+per-group green 2026-09-28 on pre-F1b code; F1b/verbalizer/guard/IR/
+recovery-text landed after — unit/fast/core cover them, no suite
+pins the old recovery string) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
