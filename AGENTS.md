@@ -638,18 +638,25 @@ RSS each on top of a near-cap heap — ROOT-CAUSED OOM, per-group
 discipline stands). Cleanup after a killed run (SIGKILLed parents
 leak sidecars/workers):
 `pkill -9 -f http_runtime.py; pkill -9 -f "qxfx0-main --session-id"`.
+Trap (bitten 2026-09-28): the second pattern matches the cleanup
+shell's own command line when chained in one background job and
+SIGKILLs it mid-chain — write the pattern as `[q]xfx0-main
+--session-id` (regex still matches the workers, but the literal
+bracket text no longer matches your own shell) or clean up between
+separately launched groups.
 Standalone http group 23/23 green, so this is resources, not a
 runtime regression:
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1307 (core 1190 + runtime 94 + http 23; full single-process
+| qxfx0-test | 1307 (core 1192 + runtime 94 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1817 |
-| qxfx0-test-unit | 1616 |
+| qxfx0-test-fast | 1819 |
+| qxfx0-test-unit | 1627 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
-| qxfx0-test-slow | 173 (split drift +1 since the 172 split; groups all green) |
+| qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
+per-group green on HEAD 2026-09-28, post v1/v2/F1/F2) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
