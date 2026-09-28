@@ -23,6 +23,7 @@ No live second semantic ruler. No statistical model. No embedding lookup.
 module QxFx0.Semantic.Intent.Classifier
   ( SemanticIntent(..)
   , classifyIntent
+  , classifyIntentWithoutSelfReference
   , canonicalTopic
   , normalizeIntentTopics
   , intentToPropositionType
@@ -105,9 +106,19 @@ data SemanticIntent
 -- via compositional rules. The lexical items in feature extraction
 -- are /indicators/, not /triggers/.
 classifyIntent :: Text -> [Text] -> MorphologyData -> SemanticIntent
-classifyIntent rawText tokens morph =
+classifyIntent = classifyWith True
+
+-- | F1b (pre-registered 2026-09-28): same compositional chain with
+-- the bare-pronoun self-reference backstop disabled. The render
+-- reverse-map uses this for every prepare type except
+-- SelfKnowledgeQ, whose precise detector has already spoken.
+classifyIntentWithoutSelfReference :: Text -> [Text] -> MorphologyData -> SemanticIntent
+classifyIntentWithoutSelfReference = classifyWith False
+
+classifyWith :: Bool -> Text -> [Text] -> MorphologyData -> SemanticIntent
+classifyWith allowSelfRef rawText tokens morph =
   let features = extractFeatures rawText tokens morph
-  in normalizeIntentTopics morph (classifyFromFeatures rawText features)
+  in normalizeIntentTopics morph (classifyFromFeatures allowSelfRef rawText features)
 
 -- | Canonicalize intent topic surfaces to their nominative lemmas so that
 -- topic-coverage lookups against the corpus (nominative keys) succeed
@@ -151,8 +162,10 @@ canonicalTopic morph topic =
     [] -> fromMaybe topic (M.lookup (T.toLower (T.strip topic)) (mdNominative morph))
 
 -- | Core classification logic. Separated from extraction for testability.
-classifyFromFeatures :: Text -> SemanticFeatures -> SemanticIntent
-classifyFromFeatures rawText features =
+-- The Bool gates the L4 bare-pronoun self-reference backstop (F1b):
+-- True preserves the legacy chain byte-for-byte.
+classifyFromFeatures :: Bool -> Text -> SemanticFeatures -> SemanticIntent
+classifyFromFeatures allowSelfRef rawText features =
   -- Level 1: structural rules (question form + specific markers)
   case classifyStructural rawText features of
     Just intent -> intent
@@ -166,7 +179,7 @@ classifyFromFeatures rawText features =
             Just intent -> intent
             Nothing ->
               -- Level 4: topic-specific rules (purpose, cause, self)
-              case classifyTopicSpecific features of
+              case classifyTopicSpecific allowSelfRef features of
                 Just intent -> intent
                 Nothing ->
                   -- Level 5: short covered-head definitional (D1-probe
@@ -258,10 +271,13 @@ classifyDiscourse rawText f
 --
 -- These rules extract topics from the utterance and construct
 -- intent values with topic parameters.
-classifyTopicSpecific :: SemanticFeatures -> Maybe SemanticIntent
-classifyTopicSpecific f
-  -- Self reference → self reference (handled by features, no topic needed)
-  | sfHasSelfReference f = Just IntentSelfReference
+classifyTopicSpecific :: Bool -> SemanticFeatures -> Maybe SemanticIntent
+classifyTopicSpecific allowSelfRef f
+  -- Self reference → self reference (handled by features, no topic needed).
+  -- Gated (F1b): bare pronouns second-guessed prepare's precise
+  -- SelfKnowledgeQ detector and misfired on ordinary first-person
+  -- utterances («я думаю, что…»).
+  | allowSelfRef && sfHasSelfReference f = Just IntentSelfReference
   | otherwise = Nothing
 
 -- ---------------------------------------------------------------------------

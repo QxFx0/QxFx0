@@ -105,7 +105,7 @@ import QxFx0.Render.Dialogue
   , semanticFrameActivationTopics
   )
 import QxFx0.Semantic.Intent.Features (extractFeatures)
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, canonicalTopic)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, canonicalTopic)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
@@ -170,7 +170,15 @@ semanticIntentForRender propositionType input tokens morphology =
     ConceptKnowledgeQ
       | [w] <- filter (not . T.null) (map T.strip tokens) ->
           IntentDefine (canonicalTopic morphology w)
-    _ -> classifyIntent input tokens morphology
+    -- F1b (pre-registered 2026-09-28): the compositional backstop
+    -- re-derived selfhood from bare pronouns («я думаю, что…» →
+    -- biography) whenever prepare said anything but SelfKnowledgeQ.
+    -- Respect prepare's precise detector: only SelfKnowledgeQ keeps
+    -- the legacy chain (byte-identical); every other type classifies
+    -- without the self-reference backstop.
+    _ -> (if propositionType == SelfKnowledgeQ
+            then classifyIntent
+            else classifyIntentWithoutSelfReference) input tokens morphology
 
 data LocalRecoveryPlan = LocalRecoveryPlan
   { lrpCause :: !LocalRecoveryCause

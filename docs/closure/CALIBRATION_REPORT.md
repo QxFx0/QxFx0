@@ -1049,6 +1049,10 @@ beyond 24 verbs.
   round-trip — formatting churn); Eng concrete stays hand-appended
   (export does not generate it; dedupe against senior glosses);
   NEVER run export concurrently with hand edits.
+- Witness rule (bitten 2026-09-27, F0): any regen touching
+  `spec/*.agda` MUST end with `qxfx0-main --write-agda-witness`
+  (verify-then-record) — otherwise the recorded witness goes stale
+  and every strict bootstrap fails closed at the health gate.
 - Collateral: `суть` paradigm added (20025 lemmas) — unblocked
   суть/сущность distinction end to end (no rescue). `сущность` GF
   lexeme added via SQL (pre-existing gap, not new).
@@ -1454,3 +1458,74 @@ beyond 24 verbs.
   mentioned-carried kept.
 - **Residual note**: `dialogAtomsToGfExpr`'s else→MoveGround
   collapse stays as-is (separate mapping question, out of scope).
+
+---
+
+# F1b bare-pronoun self-reference backstop — pre-registration (2026-09-28)
+
+- **Measurement**: 4/4 ordinary first-person probes («я думаю, что
+  свобода важна», «я согласен с тобой», «мне кажется, время
+  летит», «я про другое») render the self-knowledge biography
+  template via render-side `IntentSelfReference` — even Q1, whose
+  turn knew bestTopic=свобода. The prepare-side SelfKnowledgeQ
+  detector is precise and unit-pinned; the render-side L4 backstop
+  (`sfHasSelfReference`: bare «я»/«мой»/«мне»/«сам»/«себя»/«лично»,
+  no topic needed) second-guesses it whenever prepare yields a
+  type that falls through `semanticIntentForRender` to
+  `classifyIntent`.
+- **Rule (locked)**: thread `allowSelfReference` (Bool, default
+  True = legacy) through `classifyIntent → classifyFromFeatures →
+  classifyTopicSpecific`; the L4 self-reference branch fires only
+  when allowed. `semanticIntentForRender` passes True ONLY for
+  prepare `SelfKnowledgeQ`, False for every other type — render
+  respects prepare's precise detector instead of re-deriving selfhood
+  from pronouns. `classifyIntent` signature unchanged (legacy entry
+  preserved for existing pins); render uses the new
+  `classifyIntentWithoutSelfReference`. Structured-type surfaces
+  (which key off the prepare type directly) are untouched by
+  construction; only plan/supplement paths for non-SelfKnowledgeQ
+  types change, and only on inputs containing bare self-pronouns.
+- **Bar**: unit pins — the 4 probes no longer yield
+  `IntentSelfReference` via the gated entry (legacy entry keeps
+  yielding it: backstop documented, not deleted); render-gate
+  pins via `semanticIntentForRender` (SelfKnowledgeQ+«кто я?» and
+  SelfKnowledgeQ+«расскажи о себе» == legacy output;
+  non-SelfKnowledgeQ+4 probes ≠ SelfReference); existing
+  `IntentClassifier` pins green untouched (legacy signature
+  preserved); live probe — Q1-class turns render topical
+  surfaces (no biography), genuine self-questions
+  (prepare SelfKnowledgeQ → legacy) keep biography, «что ты
+  знаешь о себе?» keeps a sane surface (its structured arm keys
+  off the prepare type, insulated from the intent gate);
+  crisis/speculative controls clean; zero new failures in
+  unit/fast/core.
+- **Out of scope**: exotic «я»-self-questions prepare misses
+  (accepted residual — «ты»-phrasings already had no backstop);
+  `dialogAtomsToGfExpr` else→MoveGround; AgreementAnchor inference.
+
+---
+
+# F1b bare-pronoun self-reference backstop — landed (2026-09-28)
+
+- **Rule** (pre-registered above): `allowSelfReference` threaded
+  through the compositional chain; render passes True only for
+  prepare `SelfKnowledgeQ`. `classifyIntent` signature preserved.
+- **Probe**: 4/4 ordinary first-person utterances fixed — topical
+  holds («Держу свободу…», «Упор — согласен», contemplative о
+  времени, «Смысловая точка: другое»), zero biographies.
+- **«кто я?» recovery surface proven pre-existing**: prepare yields
+  SelfKnowledgeQ (new unit pin), so the gate serves the legacy
+  chain and every downstream value is identical pre/post; the
+  GuardRecovery surface comes from `linearization_ok=False` on the
+  self-knowledge arm in degraded mode without PGF. Separate
+  observation, out of scope. «расскажи о себе» path likewise
+  untouched (SelfKnowledgeQ → legacy, unit-pinned at both levels).
+- **Controls**: crisis (Protocol B resources) + speculative
+  (thesis) clean live.
+- **Verification**: unit 1632, fast 1820, core 1193 green, zero new
+  failures. New pins: backstop documented on legacy, dropped on
+  gated, render-gate equality for SelfKnowledgeQ prepares,
+  prepare-level SelfKnowledgeQ pins for «кто я?»/«расскажи о себе».
+- **Doctrine (step 1 of the 1→2→3 plan)**: witness re-record rule
+  added to the lexicon pipeline doctrine («Lexicon pipeline
+  doctrine» section above).

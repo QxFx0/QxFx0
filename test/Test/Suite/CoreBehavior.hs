@@ -438,6 +438,7 @@ coreBehaviorTests =
     , testParsePropositionAffectiveHelpQuestion
     , testParsePropositionComparisonPlausibilityTableChair
     , testParsePropositionMisunderstandingReport
+    , testParsePropositionSelfKnowledgeWhoAmI
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -2935,6 +2936,15 @@ testDialogAtomsTopicMentionGuard = TestCase $ do
       rmp2 = (TurnPlanning.buildRMP (ipfCanonicalFamily frame2) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame2 emptySenseVector (ipfFocusEntity frame2) emptyEgoState emptyAtomTrace True 0.5) { rmpTopic = "ответственность" }
       da2 = buildDialogAtoms frame2 rmp2 emptySystemState emptyMorph (InputParse.emptyParsedInput "") Nothing
   assertEqual "mentioned topic stays" "ответственность" (daTopicNominative da2)
+
+-- | F1b companion: genuine self-questions must resolve at prepare
+-- (the render gate trusts exactly this detector).
+testParsePropositionSelfKnowledgeWhoAmI :: Test
+testParsePropositionSelfKnowledgeWhoAmI = TestCase $ do
+  assertEqual "who-am-I should be SelfKnowledgeQ"
+    SelfKnowledgeQ (ipfPropositionType (parseProposition "кто я?"))
+  assertEqual "tell-about-self should be SelfKnowledgeQ"
+    SelfKnowledgeQ (ipfPropositionType (parseProposition "расскажи о себе"))
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

@@ -14,6 +14,7 @@ module Test.Suite.IntentClassifier
   ) where
 
 import Test.HUnit (Test(..), assertEqual, assertBool, assertFailure)
+import Control.Monad (forM_)
 
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -21,7 +22,7 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, intentToFamily, intentToPropositionType, normalizeIntentTopics)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, intentToPropositionType, normalizeIntentTopics)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
 import QxFx0.Semantic.Frame.Builder (buildFrame, extractTarget)
@@ -60,6 +61,7 @@ intentClassifierTests =
   , shortInputTests
   , canonicalTopicTests
   , challengeTargetTests
+  , selfReferenceGateTests
   ]
 
 -- ---------------------------------------------------------------------------
@@ -427,3 +429,36 @@ challengeTargetTests = TestLabel "ChallengeTarget" $ TestList
         ""
         (extractTarget "Мораль относительна, докажи обратное")
   ]
+
+-- | F1b (pre-registered 2026-09-28): the bare-pronoun backstop must
+-- not claim ordinary first-person utterances. Legacy entry
+-- documents the backstop as-was; gated entry drops it; the render
+-- gate keeps legacy output exactly for SelfKnowledgeQ prepares.
+selfReferenceGateTests :: Test
+selfReferenceGateTests = TestLabel "SelfReferenceGate" $ TestList
+  [ TestCase $ do
+      -- Legacy backstop as-was (documents, does not bless).
+      forM_ ["я думаю, что свобода важна", "я согласен с тобой", "мне кажется, время летит", "я про другое"] $ \input ->
+        assertEqual ("legacy backstop fires on " <> T.unpack input)
+          IntentSelfReference (classify input)
+  , TestCase $ do
+      -- Gated entry drops the backstop on the same inputs.
+      forM_ ["я думаю, что свобода важна", "я согласен с тобой", "мне кажется, время летит", "я про другое"] $ \input ->
+        assertBool ("gated entry must not self-reference on " <> T.unpack input)
+          (classifyGated input /= IntentSelfReference)
+  , TestCase $ do
+      -- Render gate: SelfKnowledgeQ keeps legacy output byte-for-byte.
+      forM_ ["кто я?", "расскажи о себе"] $ \input ->
+        let toks = tokenize input
+        in assertEqual ("SelfKnowledgeQ keeps legacy on " <> T.unpack input)
+             (classify input)
+             (semanticIntentForRender SelfKnowledgeQ input toks testMorph)
+  , TestCase $ do
+      -- Render gate: other prepares lose the backstop.
+      forM_ ["я думаю, что свобода важна", "я про другое"] $ \input ->
+        let toks = tokenize input
+        in assertBool ("non-self prepare must not self-reference on " <> T.unpack input)
+             (semanticIntentForRender PlainAssert input toks testMorph /= IntentSelfReference)
+  ]
+  where
+    classifyGated text = classifyIntentWithoutSelfReference text (tokenize text) testMorph
