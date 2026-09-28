@@ -432,7 +432,22 @@ contentSelectorTests =
           result = composeFromActivation cs field builtinFieldHeuristics "topic1" network
       assertBool "should return predicates" (not (null result))
       assertBool "should return at most 3 predicates" (length result <= 3)
+  
+  , TestLabel "field dimension prototypes are frozen" $ TestCase $
+      -- OQ1 (2026-09-28): predicate ranking turns on overlap with
+      -- these 20 hand-written words. Any edit changes content
+      -- selection and must be a deliberate, math-versioned decision.
+      assertEqual "prototype word lists" frozenPrototypes fieldDimensionPrototypes
   ]
+  where
+    frozenPrototypes =
+      M.fromList
+        [ (FdResonance, ["связана", "связан", "зависит", "контекст", "related_to"])
+        , (FdAtmosphere, ["выражает", "обозначает", "сигнализирует", "вызывает"])
+        , (FdConfidence, ["претендует", "требует", "доказательства", "факт"])
+        , (FdConsolidation, ["субъекта", "действие", "ответственность", "последствий"])
+        , (FdCounterfactual, ["возможность", "независимо", "границу", "условиях"])
+        ]
 
 -- ---------------------------------------------------------------------------
 -- П3 totality property (2026-08-22 audit)

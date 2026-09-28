@@ -1716,3 +1716,44 @@ beyond 24 verbs.
   final code; property 227 + integration 46 + slow 173 green on
   pre-text code (the change is one string literal + reason
   threading; no suite pins the old string — verified by grep).
+
+---
+
+# OQ1 Field-vs-SemanticAuthority verdict (2026-09-29, read-only review)
+
+- **Charge (confirmed at mechanism level)**: predicate ranking
+  turns on cosine overlap with 20 hand-written prototype words
+  (`fieldDimensionPrototypes`, `Space/Types.hs` — incl. the
+  English straggler `related_to`). The landed «different Field
+  selects different predicates» example is near-tautological:
+  high-Confidence selects «истина претендует…» largely because
+  «претендует» is literally a FdConfidence prototype word. This
+  is lexical coincidence elevated to content selection, not
+  semantic grounding. Prototypes uncalibrated (Phase II tuning
+  deferred, acknowledged).
+- **Violation (NOT found)**: Field cannot resolve genuine
+  ambiguity, by construction: (1) pools are sense-pure by
+  curation — «воля» carries volition only, «язык» language only
+  (no freedom/outdoors/tongue competitors pooled); sense
+  competition lives at the TOPIC level, decided upstream by
+  intent/frames/morphology; (2) Field only ranks compatible
+  facets within one addressed topic (emphasis, e.g. истина:
+  correspondence-claim vs verification-method); (3) topic
+  injection impossible (topic fixed upstream of selection);
+  (4) fallback is corpus-order, Field-independent (nothing over
+  0.1 → first predicate, score 0.0); (5) downstream semantic
+  vetoes stand (GeneratedPredicateGate, endorsement, assembly
+  R+L2, quality gate, rescue); (6) per-candidate diagnostics make
+  every ranking reconstructable in trace.
+- **Verdict**: COMPLIANT with bounds. Field ranking is
+  PersonalityPolicy-grade emphasis modulation inside
+  SemanticAuthority-approved bounds — not a boundary violation.
+  Recorded as an explicit carve-out, not a refactor trigger.
+- **Shored up**: `fieldDimensionPrototypes` frozen by unit pin —
+  any edit is now a deliberate, test-visible, math-versioned
+  decision. Residuals: prototype curation debt (`related_to`,
+  4-word lists); no systematic sense-purity audit beyond
+  spot-checks (воля/язык/истина); offline prototype fitting
+  stays a calibration-phase item.
+- **Verification**: unit 1649 green (1 new pin). No behavior
+  change — review + pin only.
