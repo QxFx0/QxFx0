@@ -1529,3 +1529,58 @@ beyond 24 verbs.
 - **Doctrine (step 1 of the 1→2→3 plan)**: witness re-record rule
   added to the lexicon pipeline doctrine («Lexicon pipeline
   doctrine» section above).
+
+---
+
+# Verbalizer roughness (v2 surfaces) — pre-registration (2026-09-28)
+
+- **Measurement** (v2 probe): «предполагать возможность;
+  предполагать возможность выбора» (subsumed duplicate from term
+  union); «контрастирует с смерть» (finite curated edge verb via
+  `relVerbText` preference + caseless object). Both hypothesis-
+  marked and grounded — mannerisms, not authority failures.
+- **Rule (locked), two parts**:
+  - R1 subsumption: in composed terms, same verb with token-prefix
+    objects keeps only the longest («предполагать возможность»
+    subsumed by «предполагать возможность выбора»). Zero
+    information loss (shorter entailed by longer); maximal elements
+    always survive, so gates observing non-empty rels are safe.
+    Applies at composition (both direct and mediated constructors),
+    so all consumers (endorsement, overlap, verbalize) see clean
+    terms. Existing pins use distinct pairs — unaffected.
+  - R2 edge-verb infinitive: mediated edge contributions use the
+    curated `relVerbText` ONLY when it belongs to the frozen
+    `relationLexicon` (already infinitive); otherwise the frozen
+    `relTypeVerb` map infinitive. Module doctrine says verbs stay
+    infinitive — the preference for curated finite forms violated
+    it. Curated infinitive nuance preserved; only finite forms
+    normalize.
+- **Bar**: unit pins — subsumption (prefix collapses, distinct
+    kept, never empties); finite edge verb normalizes, infinitive
+    curated verb preserved; existing Assembly pins green
+    untouched; live re-probe of the 3 fired v2 turns — improved
+    surfaces, still coherent + grounded, zero false-authority;
+    zero new failures in unit/fast/core.
+- **Out of scope (documented residual)**: oblique-case government
+  («противопоставлять смерть» still caseless — needs verb valency
+  tables that do not exist); parser stop-word treatment of «с»;
+  citation-quoting reformats (rejected: reformats clean surfaces
+  for cosmetic gain).
+
+---
+
+# Verbalizer step v1 (R1/R2) — landed (2026-09-28)
+
+- **Rules** (pre-registered above): R1 subsumption at composition
+  (both constructors); R2 curated edge verbs kept only when in the
+  frozen lexicon, else map infinitive.
+- **Re-probe** (operator-confirmed 3/3 coherent, zero
+  false-authority): свобода — subsumed dup gone («предполагать
+  возможность выбора» only); смерть — «контрастирует с смерть» →
+  «противопоставлять смерть»; смысл — first pair normalized,
+  residual «противопоставлять со смертью» stands as documented
+  valency mannerism (needs valency tables; out of scope).
+- **Verification**: unit 1636, fast 1820, core 1193 green, zero new
+  failures. New pins: subsumption collapse/preserve/never-empty,
+  finite-verb normalization; all pre-existing Assembly pins green
+  untouched.

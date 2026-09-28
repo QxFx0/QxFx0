@@ -39,6 +39,7 @@ module QxFx0.Semantic.Assembly
     -- * Proposition view (lemma form, no prose)
   , assemblyProposition
   , assemblyConcepts
+  , subsumeRedundantRels
     -- * Diagnostics
   , assemblySourceOverlap
     -- * Graph wiring (PathFinder + gate, v4)
@@ -68,13 +69,14 @@ import GHC.Generics (Generic)
 import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import Data.Char (isAlpha)
-import Data.Maybe (fromMaybe, listToMaybe)
+import Data.Maybe (listToMaybe)
 import Data.Ord (comparing)
 
 import QxFx0.Semantic.Composition
   ( PredicateTerm(..)
   , jaccardBaseline
   , parsePredicateTerm
+  , relationLexicon
   )
 import QxFx0.Semantic.Content.PathFinder
   ( AtomGraph
@@ -143,7 +145,7 @@ assemblePair (topicA, surfaceA, termA) (topicB, surfaceB, termB)
             { ptHead = case ptHead termA of
                          Just h  -> Just h
                          Nothing -> ptHead termB
-            , ptRels = S.union (ptRels termA) (ptRels termB)
+            , ptRels = subsumeRedundantRels (S.union (ptRels termA) (ptRels termB))
             , ptMods = S.union (ptMods termA) (ptMods termB)
             , ptNeg  = ptNeg termA || ptNeg termB
             }
@@ -155,6 +157,27 @@ assemblePair (topicA, surfaceA, termA) (topicB, surfaceB, termB)
            }
   where
     shared = S.intersection (assemblyConcepts termA) (assemblyConcepts termB)
+
+-- | Drop subsumed duplicate relation pairs (v2 verbalizer step,
+-- pre-registered 2026-09-28): same verb with token-prefix objects
+-- keeps only the longest («предполагать возможность» is entailed by
+-- «предполагать возможность выбора»). Zero information loss;
+-- maximal elements always survive, so a non-empty set stays
+-- non-empty. Pure, total, deterministic.
+subsumeRedundantRels :: Set (Text, Text) -> Set (Text, Text)
+subsumeRedundantRels rels =
+  S.filter (not . subsumed) rels
+  where
+    subsumed (v, o) = any (strictlyExtends v o) (S.toList rels)
+    strictlyExtends v o (v2, o2) =
+      v == v2 && o /= o2 && isTokenPrefix o o2
+    -- Proper leading-word prefix («предполагать возможность» heads
+    -- «предполагать возможность выбора»). Set elements are unique,
+    -- so an equal object never compares against itself here.
+    isTokenPrefix short long =
+      case T.stripPrefix (short <> " ") long of
+        Just _  -> True
+        Nothing -> False
 
 -- | Structured proposition view: head-concept + relation pairs in lemma form.
 -- Not prose: inflection happens in the realizer phase.
@@ -239,17 +262,25 @@ assembleViaGraph graph atomsA atomsB srcA@(topicA, surfaceA, termA) srcB@(topicB
                 { ptHead = case ptHead termA of
                              Just h  -> Just h
                              Nothing -> ptHead termB
-                , ptRels = S.unions
+                , ptRels = subsumeRedundantRels (S.unions
                     [ ptRels termA
                     , ptRels termB
                     , S.fromList
                         [ (v, o)
                         | e <- ppEdges proof
-                        , let v = fromMaybe (relTypeVerb (relType e)) (relVerbText e)
+                        -- R2 (pre-registered 2026-09-28): curated
+                        -- edge verbs are kept only when already
+                        -- infinitive (in the frozen lexicon);
+                        -- finite forms («контрастирует») normalize
+                        -- to the frozen map infinitive. Doctrine:
+                        -- verbs stay infinitive.
+                        , let v = case relVerbText e of
+                                    Just w | w `S.member` relationLexicon -> w
+                                    _ -> relTypeVerb (relType e)
                         , let o = relObjectText e
                         , not (T.null v) && not (T.null o)
                         ]
-                    ]
+                    ])
                 , ptMods = S.union (ptMods termA) (ptMods termB)
                 , ptNeg  = ptNeg termA || ptNeg termB
                 }

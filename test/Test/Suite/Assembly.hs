@@ -117,7 +117,7 @@ assemblyTests =
   , TestLabel "rating labels are the decided two" $ TestCase $
       assertEqual "coherent + grounded"
         ["assembly_coherent", "assembly_grounded"] assemblyRatingLabels
-  ] ++ graphAssemblyTests ++ endorsementTests ++ generativeThoughtTests
+  ] ++ graphAssemblyTests ++ endorsementTests ++ generativeThoughtTests ++ verbalizerStepTests
 
 -- ---------------------------------------------------------------------------
 -- Graph wiring (selector math v4)
@@ -461,4 +461,70 @@ generativeThoughtTests =
         Nothing -> assertFailure "expected a composition"
         Just asm -> assertEqual "mediated bridge beats the vacuous head bridge"
           "свобода\8594выбор" (asmBridge asm)
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Verbalizer step v1 (pre-registered 2026-09-28): R1 subsumption + R2
+-- edge-verb infinitive.
+-- ---------------------------------------------------------------------------
+
+-- | Same shape as 'testThoughtGraph', but the edge carries a finite
+-- curated verb («контрастирует») under RelContrastsWith, whose
+-- frozen map infinitive is «противопоставлять».
+testFiniteVerbGraph :: AtomGraph
+testFiniteVerbGraph = AtomGraph
+  [edge]
+  (M.singleton (AtomId "свобода") [edge])
+  "test-fixture-finite-verb"
+  where
+    edge = Relation
+      { relFrom = AtomId "свобода"
+      , relTo = AtomId "ответственность"
+      , relType = RelContrastsWith
+      , relObjectCase = CaseNominative
+      , relObjectText = "ответственность"
+      , relVerbText = Just "контрастирует"
+      , relRuOriginal = "свобода контрастирует с ответственностью"
+      , relEnOriginal = "freedom contrasts with responsibility"
+      , relSource = Curated
+      , relTopic = "свобода"
+      , relRationale = Nothing
+      , relCounter = Nothing
+      , relSynthesis = Nothing
+      }
+
+verbalizerStepTests :: [Test]
+verbalizerStepTests =
+  [ TestLabel "subsumed duplicate rel collapses to the longest" $ TestCase $
+      assertEqual "shorter entailed pair drops"
+        (S.singleton ("предполагать", "возможность выбора"))
+        (subsumeRedundantRels (S.fromList
+          [ ("предполагать", "возможность")
+          , ("предполагать", "возможность выбора") ]))
+
+  , TestLabel "distinct rels survive subsumption" $ TestCase $
+      let rels = S.fromList [("требовать", "ответственность"), ("исключать", "произвол")]
+      in assertEqual "no shared verb-object subsumption" rels (subsumeRedundantRels rels)
+
+  , TestLabel "subsumption never empties" $ TestCase $
+      assertEqual "singleton stays"
+        (S.singleton ("требовать", "ответственность"))
+        (subsumeRedundantRels (S.singleton ("требовать", "ответственность")))
+
+  , TestLabel "finite curated edge verb normalizes to map infinitive" $ TestCase $ do
+      let a = ("свобода", "свобода держит выбор",
+               term "свобода держит выбор")
+          b = ("ответственность", "ответственность исключает произвол",
+               term "ответственность исключает произвол")
+      assertEqual "no shared concept, skeleton refuses"
+        Nothing (assemblePair a b)
+      case assembleViaGraph testFiniteVerbGraph
+             (S.singleton "свобода") (S.singleton "ответственность") a b of
+        [] -> assertFailure "validated mediated path expected"
+        ((asm, _proof, _score) : _) -> do
+          let rels = ptRels (asmTerm asm)
+          assertBool "frozen infinitive replaces finite form"
+            (S.member ("противопоставлять", "ответственность") rels)
+          assertBool "no finite verb survives composition"
+            (all ((/= "контрастирует") . fst) (S.toList rels))
   ]
