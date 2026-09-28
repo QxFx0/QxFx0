@@ -150,17 +150,38 @@ checkRepeatedDiscourseMarkers text
 -- Conservative: only blocks for outputs with 50+ tokens to avoid blocking
 -- valid medium-length responses where the topic is a common word (e.g. "дальше",
 -- "устал") that legitimately may not appear in the output.
+-- Person-deixis note (guard honesty fix, pre-registered 2026-09-28): both
+-- sides are canonicalized through 'personCanon' first, so a topic naming
+-- the self («себя») and a surface addressing the user («тебе», «твои»)
+-- legitimately overlap. Without this, long second-person surfaces about
+-- reflexive topics (e.g. the SftUser arm) were deterministically blocked
+-- while promising a retry that fails identically.
 checkTopicRelevanceBlock :: Text -> Text -> Maybe Text
 checkTopicRelevanceBlock rendered topic
   | T.null (T.strip topic) = Nothing
   | otherwise =
-      let outputTokens = tokenize rendered
-          topicTokens = filter (\t -> T.length t >= 3) (tokenize topic)
+      let outputTokens = map personCanon (tokenize rendered)
+          topicTokens = filter (\t -> T.length t >= 3) (map personCanon (tokenize topic))
           overlap = filter (\x -> x `elem` topicTokens) outputTokens
           tokenCount = length outputTokens
       in if tokenCount >= 50 && null overlap
             then Just ("\x41d\x43e\x43d\x443\x43b\x435\x432\x43e\x435 \x441\x43e\x432\x43f\x430\x434\x435\x43d\x438\x435 \x441 \x442\x435\x43c\x43e\x439: " <> T.toLower topic)
             else Nothing
+
+-- | Frozen v1 person-deixis equivalence for the relevance check:
+-- reflexive self-forms and second-person address forms canonicalize
+-- to one token. Tiny, closed, unit-pinned; extension is deliberate,
+-- not organic growth.
+personCanon :: Text -> Text
+personCanon t
+  | t `elem` personSelfUserForms = "person_self_user"
+  | otherwise = t
+  where
+    personSelfUserForms =
+      [ "себя", "собой", "собою", "себе"
+      , "тебя", "тебе", "тобой", "тобою"
+      , "твой", "твоя", "твоё", "твои"
+      ]
 
 -- | Check content word density for longer outputs.
 checkContentDensity :: [Text] -> Maybe Text

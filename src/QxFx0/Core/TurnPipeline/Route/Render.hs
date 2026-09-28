@@ -60,7 +60,7 @@ import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.BackgroundProcess (surfacingToFragment)
 import QxFx0.Core.Observability
 import QxFx0.Core.TruthContract (truthContractRebindRenderedText)
-import QxFx0.Core.TurnLegitimacy (finalizeOutput, finalizeOutputWithTopic)
+import QxFx0.Core.TurnLegitimacy (finalizeOutput, finalizeOutputWithTopic, finalizeOutputWithTopicReason)
 import QxFx0.Core.TurnPlanning (integrateIdentityClaims)
 import QxFx0.Core.TurnRender
   ( renderAnchorPrefix
@@ -992,9 +992,14 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       -- topic overlap), which silently replaced resources with the
       -- recovery fallback live. The crisis text is static curated
       -- content, so runtime shaping is inapplicable by design.
-      (renderedSurface, finalizeSurfaceProv) = case tpCrisisSurface tp of
-        Just _ -> (preSafetySurface, FromDB)
-        Nothing -> finalizeOutputWithTopic preSafetySurface (F.toList (ssHistory ss)) qualityTopic
+      -- G2 (guard honesty fix, pre-registered 2026-09-28): the
+      -- block reason feeds trace evidence only; the gate itself is
+      -- byte-identical.
+      (renderedSurface, finalizeSurfaceProv, finalizeBlockReason) = case tpCrisisSurface tp of
+        Just _ -> (preSafetySurface, FromDB, Nothing)
+        Nothing ->
+          let (surface, prov, reason) = finalizeOutputWithTopicReason preSafetySurface (F.toList (ssHistory ss)) qualityTopic
+           in (surface, prov, reason)
       surfaceProv = case finalizeSurfaceProv of
         FromRecovery -> FromRecovery
         _ -> draSurfaceProvenance templateArtifact
@@ -1008,7 +1013,7 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       (recoveryCause, localRecoveryStrategy, localRecoveryEvidence) =
         case surfaceProv of
           FromRecovery ->
-            (Just RecoveryRenderBlocked, Just StrategySafeRecovery, ["render_guard=blocked"])
+            (Just RecoveryRenderBlocked, Just StrategySafeRecovery, ["render_guard=blocked"] <> maybeToList finalizeBlockReason)
           _ ->
             case localRecoveryPlan of
               Just plan -> (Just (lrpCause plan), Just (lrpStrategy plan), lrpEvidence plan)

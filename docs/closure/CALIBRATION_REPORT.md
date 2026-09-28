@@ -1584,3 +1584,63 @@ beyond 24 verbs.
   failures. New pins: subsumption collapse/preserve/never-empty,
   finite-verb normalization; all pre-existing Assembly pins green
   untouched.
+
+---
+
+# Guard-recovery honesty: deterministic quality false-positive — pre-registration (2026-09-28)
+
+- **Mechanism (proven read-only + live, `trcPreSafetyRenderedRaw`)**:
+  «кто я?» → correct SftUser surface («О тебе я знаю…», second
+  person, 56 tokens) → `checkTopicRelevanceBlock` (≥50 tokens)
+  compares against topic «себя» → zero overlap (surface honestly
+  uses тебе/твои) → QualityBlock → recoverySurface promising
+  «продолжим через секунду». Retry is futile by construction
+  (pure function of topic+text) — the promise is false. The
+  specific reason («no overlap with topic») is DISCARDED: trace
+  keeps only `render_guard=blocked`.
+- **Rule (locked), two parts**:
+  - G1 person-aware overlap: canonicalize both token lists in
+    `checkTopicRelevanceBlock` through a frozen reflexive↔
+    second-person equivalence map (себя/собой/себе +
+    тебя/тебе/тобой/твой-формы → one person token). Deixis shift
+    between topic and surface is legitimate; all other checks
+    (density/saturation/filler/placeholders) still apply.
+    Frozen list, unit-pinned, no math-version impact (gate
+    threshold 50/counting unchanged).
+  - G2 trace the reason: `finalizeOutputWithTopic` additionally
+    returns the block reason (`Maybe Text`); route evidence
+    becomes `["render_guard=blocked", reason]` (reason absent →
+    today's shape). Zero behavior change — honesty only.
+- **Bar**: unit pins — себя-topic + тебе-surface (≥50 tokens)
+    passes; unrelated long text still blocked; all existing
+    quality/guard pins green; live — «кто я?» renders the SftUser
+    surface (no recovery), one genuinely-blocked control still
+    blocked (empty/placeholder probe), crisis + speculative
+    controls clean; zero new failures in unit/fast/core.
+- **Out of scope (follow-up)**: the recovery TEXT retry promise
+  («продолжим через секунду») — every current trigger is
+  deterministic, so the promise is structurally dubious, but
+  rewording needs its own design across all recovery causes;
+  structural checks untouched; `dialogAtomsToGfExpr` else-branch.
+
+---
+
+# Guard-recovery honesty (G1/G2) — landed (2026-09-28)
+
+- **Rules** (pre-registered above): G1 person-aware overlap in
+  `checkTopicRelevanceBlock` (frozen reflexive↔second-person map);
+  G2 block reason threaded into trace evidence
+  (`finalizeOutputWithTopicReason`, gate byte-identical).
+- **Probe**: «кто я?» renders the genuine SftUser surface (no
+  recovery); recovery cause stays `runtime_degraded` (environment).
+  Crisis + speculative controls clean.
+- **Verification**: unit 1639, fast 1820, core 1193 green, zero new
+  failures. New pins: person-deixis pass, unrelated-long still
+  blocked, reason traced with behavior equivalence.
+- **Residual**: the recovery TEXT retry promise («продолжим через
+  секунду») stands — rewording needs its own design; structural
+  checks untouched; `dialogAtomsToGfExpr` else-branch untouched.
+- **Process note**: a nested-`open(p,'w')` python edit truncated
+  `Route/Render.hs` to 0 bytes mid-landing; recovered via
+  `git checkout` + redo with the safe edit tool. Never nest a
+  same-path read inside a same-path write expression.

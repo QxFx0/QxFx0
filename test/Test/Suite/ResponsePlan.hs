@@ -20,7 +20,7 @@ import QxFx0.Core.Guard
   , evaluateContentQualityWithTopic
   , postRenderSafetyCheckSurface
   )
-import QxFx0.Core.TurnLegitimacy (finalizeOutputWithTopic)
+import QxFx0.Core.TurnLegitimacy (finalizeOutputWithTopic, finalizeOutputWithTopicReason)
 import QxFx0.Semantic.ResponsePlan
   ( buildGenerativeResponsePlan
   , buildGenerativeResponsePlanWithActiveQuestion
@@ -86,6 +86,9 @@ responsePlanTests =
   , TestLabel "surface realizer cannot add claim refs" testRealizerCannotAddClaim
   , TestLabel "old generic generative paragraph is blocked" testGenericParagraphBlocked
   , TestLabel "adjacent discourse markers are blocked" testRepeatedMarkersBlocked
+  , TestLabel "person-deixis overlap passes reflexive topics" testPersonDeixisOverlap
+  , TestLabel "unrelated long text still blocked on topic" testUnrelatedLongBlocked
+  , TestLabel "block reason is traced without changing behavior" testBlockReasonTraced
   , TestLabel "uncovered topic claim is framed as hypothesis" testUncoveredClaimIsHypothesis
   , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
   , TestLabel "generated predicate under covered topic is hypothesis" testGeneratedPredicateUnderCoveredTopicIsHypothesis
@@ -711,3 +714,65 @@ testSpeculativeRerouteProbe = TestCase $ do
         (not (null (rspClaims plan)))
       assertBool "generative plan renders non-empty"
         (not (T.null (T.strip (renderResponseSemanticPlan plan))))
+
+-- | G1 (pre-registered 2026-09-28): a long second-person surface
+-- about a reflexive topic passes — deixis shift is legitimate.
+-- 54 tokens, varied bigrams, content-dense.
+testPersonDeixisOverlap :: Test
+testPersonDeixisOverlap = TestCase $
+  assertEqual "second-person surface overlaps reflexive topic"
+    QualityPass
+    (evaluateContentQualityWithTopic "себя" secondPersonSurface)
+  where
+    secondPersonSurface = T.intercalate " "
+      [ "О тебе я знаю только то что проявлено в этой сессии"
+      , "у меня нет внешней биографии скрытых профилей"
+      , "или отдельной памяти о тебе вне текущего разговора"
+      , "я опираюсь лишь на твои реплики выбранные темы"
+      , "и уже установленные в диалоге рамки твои слова"
+      , "остаются здесь твои вопросы ведут дальше"
+      , "твои мысли видны здесь и сейчас"
+      ]
+
+-- | G1 negative: the same shape with an unrelated topic stays blocked.
+testUnrelatedLongBlocked :: Test
+testUnrelatedLongBlocked = TestCase $
+  case evaluateContentQualityWithTopic "квантор" secondPersonSurface of
+    QualityBlock _ -> pure ()
+    QualityPass -> assertFailure "unrelated long text must stay blocked"
+  where
+    secondPersonSurface = T.intercalate " "
+      [ "О тебе я знаю только то что проявлено в этой сессии"
+      , "у меня нет внешней биографии скрытых профилей"
+      , "или отдельной памяти о тебе вне текущего разговора"
+      , "я опираюсь лишь на твои реплики выбранные темы"
+      , "и уже установленные в диалоге рамки твои слова"
+      , "остаются здесь твои вопросы ведут дальше"
+      , "твои мысли видны здесь и сейчас"
+      ]
+
+-- | G2 (pre-registered 2026-09-28): the block reason reaches trace
+-- evidence while the gate stays byte-identical.
+testBlockReasonTraced :: Test
+testBlockReasonTraced = TestCase $ do
+  let mkSurface txt = GuardSurface
+        { gsRenderedText = txt
+        , gsSegments = [RenderSegment SegmentTemplate txt]
+        , gsQuestionLike = False
+        }
+      blocked = mkSurface "..."
+      passing = mkSurface "Тезис: свобода предполагает возможность выбора."
+      (s1, p1) = finalizeOutputWithTopic blocked [] "тема"
+      (s2, p2, r1) = finalizeOutputWithTopicReason blocked [] "тема"
+  assertEqual "reason variant keeps surface" (gsRenderedText s1) (gsRenderedText s2)
+  assertEqual "reason variant keeps provenance" p1 p2
+  assertEqual "blocked provenance" FromRecovery p1
+  case r1 of
+    Just _ -> pure ()
+    Nothing -> assertFailure "blocked turn must carry a reason"
+  let (s3, p3) = finalizeOutputWithTopic passing [] "свобода"
+      (s4, p4, r2) = finalizeOutputWithTopicReason passing [] "свобода"
+  assertEqual "passing variant keeps surface" (gsRenderedText s3) (gsRenderedText s4)
+  assertEqual "passing variant keeps provenance" p3 p4
+  assertEqual "passing provenance" FromDB p3
+  assertEqual "passing turn carries no reason" Nothing r2

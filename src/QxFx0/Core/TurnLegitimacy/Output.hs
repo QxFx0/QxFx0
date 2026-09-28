@@ -10,6 +10,7 @@
 module QxFx0.Core.TurnLegitimacy.Output
   ( finalizeOutput
   , finalizeOutputWithTopic
+  , finalizeOutputWithTopicReason
   , safeOutputText
   ) where
 
@@ -40,6 +41,15 @@ finalizeOutput preSafetySurface history =
 -- with the recovery surface.
 finalizeOutputWithTopic :: GuardSurface -> [Text] -> Text -> (GuardSurface, SurfaceProvenance)
 finalizeOutputWithTopic preSafetySurface history topic =
+  let (surface, provenance, _reason) = finalizeOutputWithTopicReason preSafetySurface history topic
+   in (surface, provenance)
+
+-- | G2 (guard honesty fix, pre-registered 2026-09-28): same gate,
+-- additionally reporting WHY it blocked. The reason feeds trace
+-- evidence only — behavior is byte-identical to
+-- 'finalizeOutputWithTopic'.
+finalizeOutputWithTopicReason :: GuardSurface -> [Text] -> Text -> (GuardSurface, SurfaceProvenance, Maybe Text)
+finalizeOutputWithTopicReason preSafetySurface history topic =
   let safetyStatus = postRenderSafetyCheckSurface preSafetySurface history
       renderedText = gsRenderedText preSafetySurface
       qualityVerdict = evaluateContentQualityWithTopic topic renderedText
@@ -52,7 +62,11 @@ finalizeOutputWithTopic preSafetySurface history topic =
       isBlocked = structuralBlocked || qualityBlocked
       renderedSurface = if isBlocked then recoverySurface else preSafetySurface
       surfaceProvenance = if isBlocked then FromRecovery else FromDB
-   in (renderedSurface, surfaceProvenance)
+      blockReason
+        | InvariantBlock reason <- safetyStatus = Just ("safety: " <> reason)
+        | QualityBlock reason <- qualityVerdict = Just ("quality: " <> reason)
+        | otherwise = Nothing
+   in (renderedSurface, surfaceProvenance, blockReason)
 
 
 safeOutputText :: GuardSurface -> GuardSurface -> SafetyStatus -> Text
