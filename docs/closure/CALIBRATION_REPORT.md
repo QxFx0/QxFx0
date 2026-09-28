@@ -1644,3 +1644,56 @@ beyond 24 verbs.
   `Route/Render.hs` to 0 bytes mid-landing; recovered via
   `git checkout` + redo with the safe edit tool. Never nest a
   same-path read inside a same-path write expression.
+
+---
+
+# Recovery-text honesty — pre-registration (2026-09-28)
+
+- **Finding**: every trigger reaching `recoverySurface` (structural
+  + quality finalize blocks, constitution blocks seen in B2
+  fixtures) is deterministic per (history, text, topic) — yet the
+  text promises transient reconfiguration + retry-after-a-second
+  («перенастраиваю ход мысли… продолжим через секунду?»). Retry of
+  identical input fails identically; the promise is structurally
+  false. B2 historical fixtures quoting the old string are records
+  and stay untouched; no unit test pins the string.
+- **Rule (locked)**: replace with «Извини, на эту реплику честного
+  ответа у меня не собралось — попробуешь сформулировать иначе?»
+  Owns the failure, no fake reconfiguration, no time promise,
+  invites reformulation (different input may take a different
+  path), no input echo, no authority. Voice-consistent with the
+  established «связка не собралась». Ends «?» consistent with
+  `gsQuestionLike=True` (loop observation only). 13 tokens —
+  passes its own gate (short-circuit thresholds) by construction,
+  unit-proven.
+- **Bar**: unit pins — exact string; the string itself passes
+  `evaluateContentQuality` + structural surface check (no
+  self-block); live — overlong input (>5000 chars, deterministic
+  length block) renders the new text; «кто я?» still renders its
+  genuine surface (no regression from G1); crisis control clean;
+  zero new failures in unit/fast/core.
+- **Out of scope**: per-cause differentiated surfaces (needs the
+  G2 reason plumbed into text selection — separate design);
+  structural/quality thresholds untouched.
+
+---
+
+# Stage-0 IR miniature — landed shadow-only (2026-09-28)
+
+- **What**: `QxFx0.Semantic.IR` (Term/Proposition/Interpretation,
+  total s-expr parser + pretty + structural validator with
+  closedness) + `data/semantic_ir/gold.jsonl` (100 hand-authored
+  rows: negation 30 / quantifier 30 / polysemy 25 / paraphrase 15,
+  pair groups byte-identical incl. the §2.3 anchor pair) +
+  `Test.Suite.SemanticIR` (validator, round-trip, full gold
+  validation incl. pair-IR equality).
+- **Status**: SHADOW ONLY — zero runtime callers, zero behavior
+  change. Validator discipline: non-empty Apply roles, no vacuous
+  quantification, top-level closedness. Two authoring bugs caught
+  by the pins themselves (bindings-list paren in the grammar;
+  17 unbalanced rows fixed).
+- **Verification**: unit 1648 green (8 new pins). No other suite
+  affected by construction (new module, no callers).
+- **Explicitly deferred**: Sense contracts, Atom↔IR bridge,
+  any selection/render/persistence wiring (each needs its own
+  pre-registered landing).

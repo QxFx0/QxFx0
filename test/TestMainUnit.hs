@@ -66,6 +66,7 @@ import Test.Suite.SemanticSpace (semanticSpaceTests)
 import Test.Suite.ContentSelector (contentSelectorTests)
 import Test.Suite.Composition (compositionTests)
 import Test.Suite.Assembly (assemblyTests)
+import Test.Suite.SemanticIR (semanticIRTests)
 import Test.Suite.Analogy (analogyTests)
 import Test.Suite.GeometricClassifier (geometricClassifierTests)
 import Test.Suite.Revision (revisionTests)
@@ -145,6 +146,7 @@ main = do
                     ++ contentSelectorTests
                      ++ compositionTests
                      ++ assemblyTests
+                     ++ semanticIRTests
                      ++ [analogyTests]
                      ++ geometricClassifierTests
                      ++ [anomalyTests]

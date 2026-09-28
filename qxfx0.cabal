@@ -352,6 +352,7 @@ library
       QxFx0.Semantic.Space.Types
       QxFx0.Semantic.Composition
       QxFx0.Semantic.Assembly
+      QxFx0.Semantic.IR
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.ContentSelector.Cache
@@ -781,6 +782,7 @@ common test-common
     Test.Suite.SemanticCommitmentCorpus
     Test.Suite.SubstrateCandidate
     Test.Suite.SemanticSlices
+    Test.Suite.SemanticIR
 
 test-suite qxfx0-test-unit
   import:        test-common
