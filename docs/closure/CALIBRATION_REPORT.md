@@ -1757,3 +1757,32 @@ beyond 24 verbs.
   stays a calibration-phase item.
 - **Verification**: unit 1649 green (1 new pin). No behavior
   change — review + pin only.
+
+---
+
+# F4 dead-code hygiene — landed minimal (2026-09-29)
+
+- **Reference audit first**: most of the F4 inventory is
+  load-bearing under other names — structScore/jaccard are live
+  measurement instruments (eval script + reports + pins);
+  `assemblePair` is the live direct-bridge constructor;
+  `composeFromActivation`/`composePredicates` are legacy API with
+  unit pins (also imported by OntologyContentSelector tests);
+  `buildAssemblyCandidates` is trace observability by design;
+  MoveGenerativeThought constructor/parsers/tags are live
+  plumbing (only canned surfaces are degenerate-fixture-only);
+  `Dialogue.generativeThought` + `fallbackStructuredText` serve
+  degenerate fixtures; the morph-variant path + backend shim are
+  the price of the live external bridge interface
+  (`Bridge/Morphology.hs`: HTTP service, env config) and frozen
+  reserve for Stage-2 syntax work — deleting the contextual
+  morph block (448–972) now would destroy material the concept
+  program explicitly needs. `toNominative`-empty-arg and
+  `extractFeatures`-`_morph` would change behavior to fix:
+  converted to findings (pre-reg material), untouched.
+- **Actually removed** (zero references, verified by grep):
+  unused `extractFeatures` import in `Route/Render.hs`;
+  `renderDialogueUtterance` (def + export, no callers anywhere
+  incl. scripts).
+- **Verification**: unit 1649, fast 1820, core 1193 green.
+  Behavior-neutral by construction (no reachable path touched).

@@ -104,7 +104,6 @@ import QxFx0.Render.Dialogue
   , generateFromFrameWithActivation
   , semanticFrameActivationTopics
   )
-import QxFx0.Semantic.Intent.Features (extractFeatures)
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, canonicalTopic)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)

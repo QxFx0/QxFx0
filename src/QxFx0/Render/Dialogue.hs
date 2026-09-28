@@ -16,7 +16,6 @@ module QxFx0.Render.Dialogue
   , hasStructuredDialogueSurface
   , renderDialogueArtifact
   , renderDialogueArtifactWithActiveQuestion
-  , renderDialogueUtterance
   , renderOperatorAwareDialogue
   , moveToText
   , isVapidTopic
@@ -289,10 +288,6 @@ linearizeClaimAstEn ast =
     MoveActOnTopic ActResult    -> Just "Let us discuss the result."
   where
     capitalize t = if T.null t then t else T.toUpper (T.take 1 t) <> T.drop 1 t
-
-renderDialogueUtterance :: ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> Text
-renderDialogueUtterance rmp rcp topic claims morph =
-  draRenderedText (renderDialogueArtifact emptyInputPropositionFrame rmp rcp topic claims morph emptyRuntimeParadigms emptyField emptyContentSelector Nothing)
 
 renderDialogueArtifact :: InputPropositionFrame -> ResponseMeaningPlan -> ResponseContentPlan -> Text -> [IdentityClaimRef] -> MorphologyData -> RuntimeParadigms -> Field -> ContentSelector -> Maybe ActivationArtifact -> DialogueRenderArtifact
 renderDialogueArtifact = renderDialogueArtifactWithActiveQuestion Nothing
