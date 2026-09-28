@@ -30,6 +30,10 @@ recoverySurface =
     }
 
 -- Single hardcoded safety string — circuit breaker, not template.
+-- Honesty fix (pre-registered 2026-09-28): every trigger reaching
+-- here is deterministic, so the text owns the failure and invites
+-- reformulation instead of promising transient reconfiguration and
+-- retry-after-a-second. Ends «?» consistent with gsQuestionLike.
 recoveryRenderedText :: Text
 recoveryRenderedText =
-  "Извини, я сейчас перенастраиваю ход мысли. Можем продолжить через секунду?"
+  "Извини, на эту реплику честного ответа у меня не собралось — попробуешь сформулировать иначе?"

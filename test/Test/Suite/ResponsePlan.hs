@@ -17,8 +17,10 @@ import QxFx0.Core.Guard
   , RenderSegment(..)
   , RenderSegmentKind(..)
   , SafetyStatus(..)
+  , evaluateContentQuality
   , evaluateContentQualityWithTopic
   , postRenderSafetyCheckSurface
+  , recoverySurface
   )
 import QxFx0.Core.TurnLegitimacy (finalizeOutputWithTopic, finalizeOutputWithTopicReason)
 import QxFx0.Semantic.ResponsePlan
@@ -89,6 +91,7 @@ responsePlanTests =
   , TestLabel "person-deixis overlap passes reflexive topics" testPersonDeixisOverlap
   , TestLabel "unrelated long text still blocked on topic" testUnrelatedLongBlocked
   , TestLabel "block reason is traced without changing behavior" testBlockReasonTraced
+  , TestLabel "recovery text owns failure honestly" testRecoveryTextHonest
   , TestLabel "uncovered topic claim is framed as hypothesis" testUncoveredClaimIsHypothesis
   , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
   , TestLabel "generated predicate under covered topic is hypothesis" testGeneratedPredicateUnderCoveredTopicIsHypothesis
@@ -776,3 +779,29 @@ testBlockReasonTraced = TestCase $ do
   assertEqual "passing variant keeps provenance" p3 p4
   assertEqual "passing provenance" FromDB p3
   assertEqual "passing turn carries no reason" Nothing r2
+
+-- | Recovery-text honesty (pre-registered 2026-09-28): the circuit
+-- breaker owns the failure and invites reformulation — no fake
+-- reconfiguration, no retry-after-a-second promise. It also passes
+-- its own gate (a self-blocking fallback would be a silent lie).
+testRecoveryTextHonest :: Test
+testRecoveryTextHonest = TestCase $ do
+  assertEqual "recovery owns failure, promises no retry"
+    "Извини, на эту реплику честного ответа у меня не собралось — попробуешь сформулировать иначе?"
+    (gsRenderedText recoverySurface)
+  assertEqual "recovery text passes its own quality gate"
+    QualityPass (evaluateContentQuality (gsRenderedText recoverySurface))
+  assertEqual "recovery text passes structural checks"
+    InvariantOK (postRenderSafetyCheckSurface recoverySurface [])
+  let blockedSurface = GuardSurface
+        { gsRenderedText = "..."
+        , gsSegments = [RenderSegment SegmentTemplate "..."]
+        , gsQuestionLike = False
+        }
+      (wiredSurface, wiredProv, _) =
+        finalizeOutputWithTopicReason blockedSurface [] "тема"
+  assertEqual "blocked turn wires the honest text"
+    (gsRenderedText recoverySurface)
+    (gsRenderedText wiredSurface)
+  assertEqual "blocked turn wires recovery provenance"
+    FromRecovery wiredProv

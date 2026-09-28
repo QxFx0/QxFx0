@@ -1697,3 +1697,22 @@ beyond 24 verbs.
 - **Explicitly deferred**: Sense contracts, Atom↔IR bridge,
   any selection/render/persistence wiring (each needs its own
   pre-registered landing).
+
+---
+
+# Recovery-text honesty — landed (2026-09-28)
+
+- **Rule** (pre-registered above): recovery text owns the failure
+  («Извини, на эту реплику честного ответа у меня не собралось —
+  попробуешь сформулировать иначе?»), no fake reconfiguration, no
+  retry promise. B2 historical fixtures quoting the old string are
+  records, untouched; no unit test pinned it.
+- **Probe**: overlong input degrades to a hold (length gate checks
+  rendered text, not input — honestly recorded); wiring proven at
+  unit level (blocked GuardSurface renders the new text with
+  recovery provenance); «кто я?» keeps its genuine surface;
+  crisis control clean.
+- **Verification**: unit 1640, fast 1820, core 1193 green on the
+  final code; property 227 + integration 46 + slow 173 green on
+  pre-text code (the change is one string literal + reason
+  threading; no suite pins the old string — verified by grep).
