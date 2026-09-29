@@ -1957,3 +1957,15 @@ beyond 24 verbs.
 - **Verification**: unit 1665 green. Python pre-check mirror
   caught 40+ authoring slips before the expensive suite run;
   Haskell pins are the authority.
+
+---
+
+# Stage-1 batch 6c cluster gold — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: +100 cluster rows (cl-201..300: entailment precedents
+  shaped to rs/rd rule patterns, 10 contradiction pairs for
+  conflict eval, presupposition cases, burden/topic chains) →
+  300 total.
+- **Status**: SHADOW ONLY — no runtime reads.
+- **Verification**: unit 1665 green. Pre-check mirror caught
+  all slips (trailing parens); Haskell pins authoritative.
