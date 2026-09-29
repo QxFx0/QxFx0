@@ -1930,3 +1930,16 @@ beyond 24 verbs.
   slips (incl. 2 compensating paren typos); 2 pin-shape fixes
   (system-opening revision probes legitimate; sc-06 gained its
   answer turn).
+
+---
+
+# Stage-1 batch 6a cluster gold — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: `cluster_freedom.jsonl` (100 utterances across the 9
+  cluster topics, same row schema as gold-100; equivalent pairs
+  share byte-identical IR, converse equations kept solo by
+  design) + validation pins (100 rows, pair-IR equality).
+- **Status**: SHADOW ONLY — no runtime reads.
+- **Verification**: unit 1665 green. Pins caught the systematic
+  trailing-paren authoring habit (programmatic trim + parser as
+  judge), 1 unbound variable, 1 pair-discipline violation.

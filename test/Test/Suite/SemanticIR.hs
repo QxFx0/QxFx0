@@ -84,7 +84,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -601,3 +601,24 @@ validateTurn sid turn = do
              assertEqual ("scenario validates in " <> T.unpack sid) Nothing (validateProposition prop)
              assertEqual ("scenario closed in " <> T.unpack sid) Nothing (validateClosedProposition prop))
     (turnInterpretations turn)
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 6a (ADR-0054): freedom-cluster gold. Same row schema as
+-- gold.jsonl; pair groups share byte-identical IR.
+-- ---------------------------------------------------------------------------
+
+clusterGoldTests :: [Test]
+clusterGoldTests =
+  [ TestLabel "cluster gold validates end to end" $ TestCase $ do
+      content <- BL.readFile "data/semantic_ir/cluster_freedom.jsonl"
+      let rows = [ r | line <- BL.split 10 content
+                     , not (BL.null line)
+                     , Just r <- [Aeson.decode line :: Maybe GoldRow] ]
+      assertEqual "100 cluster rows" 100 (length rows)
+      assertEqual "unique ids" 100 (length (foldr (\r acc -> if goldId r `elem` acc then acc else goldId r : acc) [] rows))
+      mapM_ validateRow rows
+      let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
+      assertBool "has pair groups" (not (M.null pairs))
+      mapM_ (\(p, sexprs) -> assertBool ("cluster pair shares IR: " <> T.unpack p)
+               (all (== head sexprs) sexprs)) (M.toList pairs)
+  ]
