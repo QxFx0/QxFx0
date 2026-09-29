@@ -13,6 +13,7 @@ module Test.Suite.SemanticIR
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import qualified Data.Text as T
 import Test.HUnit
 
@@ -81,7 +82,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests
+  ] ++ stage1Batch1Tests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -193,3 +194,105 @@ stage1Batch1Tests =
   ]
   where
     asSetOf xs f = foldr (\x acc -> if f x `elem` acc then acc else f x : acc) [] xs
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 2 (ADR-0054): rules + minimal pairs. Schema validation
+-- only — the evaluator is a later batch; no runtime reads these files.
+-- ---------------------------------------------------------------------------
+
+data RuleRow = RuleRow
+  { ruleId :: !T.Text
+  , ruleKind :: !T.Text
+  , rulePremises :: ![T.Text]
+  , ruleConclusion :: !T.Text
+  , ruleScope :: !T.Text
+  , ruleExceptions :: ![T.Text]
+  , rulePriority :: !(Maybe Int)
+  , ruleProvenance :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON RuleRow where
+  parseJSON = Aeson.withObject "RuleRow" $ \o -> RuleRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "kind"
+    <*> o Aeson..: "premises"
+    <*> o Aeson..: "conclusion"
+    <*> o Aeson..: "scope"
+    <*> o Aeson..: "exceptions"
+    <*> o Aeson..: "priority"
+    <*> o Aeson..: "provenance"
+
+data PairRow = PairRow
+  { pairId :: !T.Text
+  , pairRelation :: !T.Text
+  , pairSexprA :: !T.Text
+  , pairSexprB :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON PairRow where
+  parseJSON = Aeson.withObject "PairRow" $ \o -> PairRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "relation"
+    <*> o Aeson..: "sexpr_a"
+    <*> o Aeson..: "sexpr_b"
+
+parseSexprOrFail :: T.Text -> T.Text -> IO Proposition
+parseSexprOrFail ctx sexpr = case parseProposition sexpr of
+  Just p -> pure p
+  Nothing -> assertFailure ("must parse (" <> T.unpack ctx <> ")")
+
+stage1Batch2Tests :: [Test]
+stage1Batch2Tests =
+  [ TestLabel "rules schema holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/rules.jsonl" :: IO [RuleRow]
+      assertEqual "16 rules" 16 (length rows)
+      assertEqual "unique ids" 16 (length (foldr (\r acc -> if ruleId r `elem` acc then acc else ruleId r : acc) [] rows))
+      mapM_ validateRule rows
+  , TestLabel "minimal pairs schema holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/minimal_pairs.jsonl" :: IO [PairRow]
+      assertEqual "20 pairs" 20 (length rows)
+      mapM_ validatePair rows
+  ]
+
+validateRule :: RuleRow -> Assertion
+validateRule row = do
+  assertBool ("rule kind: " <> T.unpack (ruleId row))
+    (ruleKind row `elem` ["strict", "defeasible"])
+  assertBool ("premises non-empty: " <> T.unpack (ruleId row))
+    (not (null (rulePremises row)))
+  assertEqual ("human provenance: " <> T.unpack (ruleId row))
+    "human-authored stage-1 batch 2" (ruleProvenance row)
+  premiseProps <- mapM (parseSexprOrFail (ruleId row)) (rulePremises row)
+  conclusionProp <- parseSexprOrFail (ruleId row) (ruleConclusion row)
+  -- Variable discipline: a rule proves nothing about unbound variables.
+  let premVars = S.unions (map freeVariables premiseProps)
+  assertBool ("conclusion vars bound by premises: " <> T.unpack (ruleId row))
+    (freeVariables conclusionProp `S.isSubsetOf` premVars)
+  case ruleKind row of
+    "strict" -> do
+      assertEqual ("strict has no exceptions: " <> T.unpack (ruleId row))
+        [] (ruleExceptions row)
+      assertEqual ("strict has no priority: " <> T.unpack (ruleId row))
+        Nothing (rulePriority row)
+    _ -> do
+      assertBool ("defeasible carries exceptions: " <> T.unpack (ruleId row))
+        (not (null (ruleExceptions row)))
+      case rulePriority row of
+        Just n -> assertBool ("priority positive: " <> T.unpack (ruleId row)) (n >= 1)
+        Nothing -> assertFailure ("defeasible needs priority: " <> T.unpack (ruleId row))
+      mapM_ (parseSexprOrFail (ruleId row)) (ruleExceptions row)
+      pure ()
+
+validatePair :: PairRow -> Assertion
+validatePair row = do
+  assertBool ("pair relation: " <> T.unpack (pairId row))
+    (pairRelation row `elem` ["equivalent", "contrast", "scope-shift"])
+  pa <- parseSexprOrFail (pairId row <> "/a") (pairSexprA row)
+  pb <- parseSexprOrFail (pairId row <> "/b") (pairSexprB row)
+  mapM_ (\p -> assertEqual ("pair validates: " <> T.unpack (pairId row))
+             Nothing (validateProposition p)) [pa, pb]
+  mapM_ (\p -> assertEqual ("pair closed: " <> T.unpack (pairId row))
+             Nothing (validateClosedProposition p)) [pa, pb]
+  case pairRelation row of
+    "equivalent" -> assertEqual ("equivalent pair shares IR: " <> T.unpack (pairId row)) pa pb
+    _ -> assertBool ("non-equivalent pair differs: " <> T.unpack (pairId row)) (pa /= pb)

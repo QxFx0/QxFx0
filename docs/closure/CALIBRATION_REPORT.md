@@ -1844,3 +1844,18 @@ beyond 24 verbs.
   set, atom-XOR-justification, human provenance pinned).
 - **Status**: SHADOW ONLY — no runtime reads these files.
 - **Verification**: unit 1652 green (2 new pins + gold intact).
+
+---
+
+# Stage-1 batch 2 — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: `rules.jsonl` (8 strict + 8 defeasible with scope,
+  exceptions, priority; defeasible carries the concept's own
+  §6.2 coercion example) + `minimal_pairs.jsonl` (10 contrast +
+  6 scope-shift + 4 equivalent) + schema pins incl. variable
+  discipline (conclusion vars ⊆ premise vars) and pair-relation
+  mechanization (equivalent shares IR, others differ).
+- **Status**: SHADOW ONLY — no runtime reads these files.
+  Evaluator module is a later batch.
+- **Verification**: unit 1654 green (2 new pins). Pins caught 4
+  authoring slips (3 unbalanced sexprs, 1 missing key).
