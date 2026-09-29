@@ -84,7 +84,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -622,3 +622,195 @@ clusterGoldTests =
       mapM_ (\(p, sexprs) -> assertBool ("cluster pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
   ]
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 exit harness (ADR-0054 §2.5/§6): mechanical exit criteria over
+-- exit_tasks.jsonl. Thresholds preset here, not fitted after:
+-- strict entailment >= 0.80, defeasible >= 0.60, conflicts and
+-- presuppositions exact. v1 is green by construction (tasks authored
+-- with known answers); the gate's teeth are for future changes.
+-- ---------------------------------------------------------------------------
+
+data InlineStrictRule = InlineStrictRule
+  { isrPremises :: ![T.Text]
+  , isrConclusion :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON InlineStrictRule where
+  parseJSON = Aeson.withObject "InlineStrictRule" $ \o -> InlineStrictRule
+    <$> o Aeson..: "premises"
+    <*> o Aeson..: "conclusion"
+
+data InlineDefRule = InlineDefRule
+  { idrPremises :: ![T.Text]
+  , idrConclusion :: !T.Text
+  , idrExceptions :: ![T.Text]
+  , idrPriority :: !Int
+  , idrScope :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON InlineDefRule where
+  parseJSON = Aeson.withObject "InlineDefRule" $ \o -> InlineDefRule
+    <$> o Aeson..: "premises"
+    <*> o Aeson..: "conclusion"
+    <*> o Aeson..:? "exceptions" Aeson..!= []
+    <*> o Aeson..:? "priority" Aeson..!= 0
+    <*> o Aeson..:? "scope" Aeson..!= ""
+
+data ExitTaskRow = ExitTaskRow
+  { exitId :: !T.Text
+  , exitKind :: !T.Text
+  , exitFacts :: ![T.Text]
+  , exitRules :: ![InlineDefRule]
+  , exitRule :: !(Maybe InlineDefRule)
+  , exitScope :: !T.Text
+  , exitQuery :: !(Maybe T.Text)
+  , exitExpected :: !T.Text
+  , exitPresupps :: ![T.Text]
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ExitTaskRow where
+  parseJSON = Aeson.withObject "ExitTaskRow" $ \o -> ExitTaskRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "kind"
+    <*> o Aeson..:? "facts" Aeson..!= []
+    <*> o Aeson..:? "rules" Aeson..!= []
+    <*> o Aeson..:? "rule"
+    <*> o Aeson..:? "scope" Aeson..!= ""
+    <*> o Aeson..:? "query"
+    <*> o Aeson..: "expected"
+    <*> o Aeson..:? "presupps" Aeson..!= []
+
+data ExitStrictRow = ExitStrictRow
+  { esrId :: !T.Text
+  , esrFacts :: ![T.Text]
+  , esrRules :: ![InlineStrictRule]
+  , esrQuery :: !T.Text
+  , esrExpected :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ExitStrictRow where
+  parseJSON = Aeson.withObject "ExitStrictRow" $ \o -> ExitStrictRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..:? "facts" Aeson..!= []
+    <*> o Aeson..:? "rules" Aeson..!= []
+    <*> o Aeson..: "query"
+    <*> o Aeson..: "expected"
+
+toDefRule :: T.Text -> InlineDefRule -> IO DefeasibleRule
+toDefRule ctx r = DefeasibleRule ctx
+  <$> mapM (mustParseRow ctx) (idrPremises r)
+  <*> mustParseRow ctx (idrConclusion r)
+  <*> mapM (mustParseRow ctx) (idrExceptions r)
+  <*> pure (idrPriority r)
+  <*> pure (idrScope r)
+
+contradictory :: Proposition -> Proposition -> Bool
+contradictory (Not p) q = p == q
+contradictory p (Not q) = p == q
+contradictory _ _ = False
+
+exitHarnessTests :: [Test]
+exitHarnessTests =
+  [ TestLabel "exit tasks load with shape" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitTaskRow]
+      assertEqual "36 exit tasks" 36 (length rows)
+      assertEqual "12 strict" 12 (length [ r | r <- rows, exitKind r == "strict" ])
+      assertEqual "10 single defeasible" 10 (length [ r | r <- rows, exitKind r == "defeasible" ])
+      assertEqual "2 duels" 2 (length [ r | r <- rows, exitKind r == "defeasible-duel" ])
+      assertEqual "6 conflicts" 6 (length [ r | r <- rows, exitKind r == "conflict" ])
+      assertEqual "6 presuppositions" 6 (length [ r | r <- rows, exitKind r == "presupposition" ])
+
+  , TestLabel "strict entailment accuracy >= 0.80" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitStrictRow]
+      let strict = [ r | r <- rows ]
+      results <- mapM runStrictTask strict
+      let total = length results
+          correct = length (filter id results)
+      assertBool ("strict accuracy >= 0.80, got " <> show correct <> "/" <> show total)
+        (correct * 5 >= total * 4)
+
+  , TestLabel "defeasible accuracy >= 0.60" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitTaskRow]
+      results <- mapM runDefeasibleTask [ r | r <- rows, exitKind r `elem` ["defeasible", "defeasible-duel"] ]
+      let total = length results
+          correct = length (filter id results)
+      assertBool ("defeasible accuracy >= 0.60, got " <> show correct <> "/" <> show total)
+        (correct * 5 >= total * 3)
+
+  , TestLabel "conflicts exact" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitTaskRow]
+      mapM_ runConflictTask [ r | r <- rows, exitKind r == "conflict" ]
+
+  , TestLabel "presuppositions exact" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitTaskRow]
+      mapM_ runPresupTask [ r | r <- rows, exitKind r == "presupposition" ]
+  ]
+
+runStrictTask :: ExitStrictRow -> IO Bool
+runStrictTask row = do
+  facts <- mapM (mustParseRow (esrId row)) (esrFacts row)
+  rules <- mapM (\(i, r) -> toStrictRule' (esrId row) i r) (zip [0 :: Int ..] (esrRules row))
+  query <- mustParseRow (esrId row) (esrQuery row)
+  let (closed, _) = forwardChain 32 rules facts
+      entailed = query `elem` closed
+  case esrExpected row of
+    "entails" -> pure entailed
+    "not-entailed" -> pure (not entailed)
+    other -> assertFailure ("unknown strict expectation: " <> T.unpack other) >> pure False
+  where
+    toStrictRule' ctx i r = StrictRule (ctx <> "#s" <> T.pack (show i))
+      <$> mapM (mustParseRow ctx) (isrPremises r)
+      <*> mustParseRow ctx (isrConclusion r)
+
+runDefeasibleTask :: ExitTaskRow -> IO Bool
+runDefeasibleTask row = case exitKind row of
+  "defeasible" -> case exitRule row of
+    Nothing -> assertFailure ("defeasible needs rule: " <> T.unpack (exitId row)) >> pure False
+    Just inline -> do
+      rule <- toDefRule (exitId row) inline
+      facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
+      pure $ case (defeasibleFire (exitScope row) rule facts, exitExpected row) of
+        (Right _, "fires") -> True
+        (Left _, "blocked") -> True
+        _ -> False
+  "defeasible-duel" -> do
+    rules <- mapM (toDefRule (exitId row)) (exitRules row)
+    facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
+    case rules of
+      [r1, r2] -> pure (resolveDuel (exitScope row) r1 r2 facts == exitExpected row)
+      _ -> assertFailure ("duel needs two rules: " <> T.unpack (exitId row)) >> pure False
+  other -> assertFailure ("unknown defeasible kind: " <> T.unpack other) >> pure False
+
+-- | Duel resolution (pre-registered doctrine): both fire and contradict
+-- -> higher priority wins; tie -> both stand and the conflict is kept
+-- (paraconsistency, not silent suppression).
+resolveDuel :: T.Text -> DefeasibleRule -> DefeasibleRule -> [Proposition] -> T.Text
+resolveDuel scope r1 r2 facts =
+  case (defeasibleFire scope r1 facts, defeasibleFire scope r2 facts) of
+    (Right c1, Right c2)
+      | contradictory c1 c2 ->
+          if drPriority r1 > drPriority r2 then "higher-wins"
+          else if drPriority r2 > drPriority r1 then "higher-wins"
+          else "tie-kept"
+      | otherwise -> "both-stand"
+    _ -> "no-duel"
+
+runConflictTask :: ExitTaskRow -> IO ()
+runConflictTask row = do
+  facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
+  case (detectConflict facts, exitExpected row) of
+    (Just _, "conflict") -> pure ()
+    (Nothing, "none") -> pure ()
+    (got, want) -> assertFailure ("conflict mismatch on " <> T.unpack (exitId row)
+      <> ": got " <> show (fmap (const ()) got) <> " want " <> T.unpack want)
+
+runPresupTask :: ExitTaskRow -> IO ()
+runPresupTask row = do
+  facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
+  presupps <- mapM (mustParseRow (exitId row)) (exitPresupps row)
+  let held = [ ok | (_, ok) <- checkPresuppositions facts presupps ]
+  case exitExpected row of
+    "all-held" -> assertBool ("all presupposed on " <> T.unpack (exitId row)) (and held)
+    "missing" -> assertBool ("some missing on " <> T.unpack (exitId row)) (not (and held))
+    other -> assertFailure ("unknown presupposition expectation: " <> T.unpack other)

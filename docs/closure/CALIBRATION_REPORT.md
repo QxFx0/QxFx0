@@ -1995,3 +1995,20 @@ beyond 24 verbs.
 - **Verification**: unit 1665 green. Programmatic rebuilds for
   misnested And/Not/Exists shapes; pre-check mirror as first
   gate, Haskell pins authoritative.
+
+---
+
+# Stage-1 exit harness — landed (2026-09-29, ADR-0054 §2.5/§6)
+
+- **What**: `exit_tasks.jsonl` (36 tasks: 12 strict incl.
+  2 multi-step chains + 4 negatives, 10 single + 2 duels
+  defeasible, 6 conflicts, 6 presuppositions) + harness pins
+  with preset thresholds (strict ≥ 0.80, defeasible ≥ 0.60,
+  conflicts/presuppositions exact) incl. duel resolution
+  (higher-wins, tie-kept paraconsistent).
+- **Measured (v1)**: strict 12/12, defeasible 12/12, conflicts
+  6/6, presuppositions 6/6 — green by construction (tasks
+  authored with known answers); the gate's teeth are for future
+  rule/evaluator changes. Human leg (B2-style pairs) stays open
+  per ADR (rater unavailable).
+- **Verification**: unit 1670 green (5 new pins).
