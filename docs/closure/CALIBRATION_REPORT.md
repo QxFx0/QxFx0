@@ -1900,3 +1900,15 @@ beyond 24 verbs.
 - **Status**: SHADOW ONLY — no runtime callers. JSON trace
   scripts and scenarios/cluster-gold remain later batches.
 - **Verification**: unit 1662 green (8 new pins).
+
+---
+
+# Stage-1 batch 4 held-out split — landed (2026-09-29, ADR-0054 §2.4)
+
+- **What**: `scripts/split_semantic_ir.py` (id-hash 60/20/20,
+  `--check` mode) + frozen `splits.json` (63/16/21 + source
+  digest) + unit split-integrity pins. Rules stay unsplit by
+  design (model, not test data). Content-hash integrity lives
+  in `--check`; unit pins partition structure (no sha256 dep in
+  test-common by choice).
+- **Verification**: unit 1663 green (1 new pin).

@@ -12,6 +12,7 @@ module Test.Suite.SemanticIR
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
+import Data.List (sort)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -83,7 +84,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -478,3 +479,50 @@ toDefeasible r = DefeasibleRule (frId r)
   <*> mapM (mustParseRow (frId r)) (frExceptions r)
   <*> pure (case frPriority r of Just n -> n; Nothing -> 0)
   <*> pure (frScope r)
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 4 (ADR-0054 §2.4): frozen held-out split. Content-hash
+-- integrity lives in scripts/split_semantic_ir.py --check; unit pins
+-- the partition structure. Rules stay unsplit by design (model, not
+-- test data — recorded in the batch note).
+-- ---------------------------------------------------------------------------
+
+data SplitsFile = SplitsFile
+  { splitsSource :: !T.Text
+  , splitsDigest :: !T.Text
+  , splitsTrain :: ![T.Text]
+  , splitsDev :: ![T.Text]
+  , splitsTest :: ![T.Text]
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON SplitsFile where
+  parseJSON = Aeson.withObject "SplitsFile" $ \o -> do
+    splits <- o Aeson..: "splits"
+    SplitsFile <$> o Aeson..: "source"
+               <*> o Aeson..: "source_sha256"
+               <*> splits Aeson..: "train"
+               <*> splits Aeson..: "dev"
+               <*> splits Aeson..: "test"
+
+sortGold :: [T.Text] -> [T.Text]
+sortGold = sort
+
+splitIntegrityTests :: [Test]
+splitIntegrityTests =
+  [ TestLabel "frozen split partitions gold" $ TestCase $ do
+      goldRows <- readJsonlRows "data/semantic_ir/gold.jsonl" :: IO [GoldRow]
+      content <- BL.readFile "data/semantic_ir/splits.json"
+      case Aeson.decode content :: Maybe SplitsFile of
+        Nothing -> assertFailure "splits.json must decode"
+        Just splits -> do
+          let goldIds = [ goldId r | r <- goldRows ]
+              seen = splitsTrain splits ++ splitsDev splits ++ splitsTest splits
+          assertEqual "split source" "data/semantic_ir/gold.jsonl" (splitsSource splits)
+          assertBool "digest recorded" (not (T.null (splitsDigest splits)))
+          assertEqual "partition covers gold ids"
+            (sortGold goldIds) (sortGold seen)
+          assertEqual "split ids disjoint" (length seen) (length goldIds)
+          assertEqual "train size" 63 (length (splitsTrain splits))
+          assertEqual "dev size" 16 (length (splitsDev splits))
+          assertEqual "test size" 21 (length (splitsTest splits))
+  ]
