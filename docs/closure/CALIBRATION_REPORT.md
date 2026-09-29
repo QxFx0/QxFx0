@@ -1859,3 +1859,44 @@ beyond 24 verbs.
   Evaluator module is a later batch.
 - **Verification**: unit 1654 green (2 new pins). Pins caught 4
   authoring slips (3 unbalanced sexprs, 1 missing key).
+
+---
+
+# Stage-1 batch 3 evaluator — pre-registration (2026-09-29, ADR-0054)
+
+- **Design (locked)**: `QxFx0.Semantic.IREval`, pure/total/
+  deterministic, zero pipeline callers. Structural pattern
+  matching (pattern vars bind on first occurrence, must be
+  consistent after; Concept/Entity/Event match by equality;
+  binders match structurally with identical names — NO
+  alpha-equivalence in v1, documented limitation). Forward
+  chaining with fuel (32 steps) over strict rules; proof objects
+  (rule id + premise indices + substitution). Defeasible fires
+  iff premises match + no exception matches under the firing
+  substitution + scope equals query scope (or rule scope empty).
+  Priority: higher number wins contradictory defeasible
+  conclusions; strict always beats defeasible. Verdicts:
+  Entails | NotEntailed | DefeatedBy | Conflict, all JSON-
+  serializable (evaluation scripts are a later batch).
+- **Bar**: unit pins — binding consistency, shape mismatches,
+  binder strictness, fuel termination, exception blocking,
+  priority ordering, strict-beats-defeasible, presupposition and
+  conflict checks, end-to-end over `rules.jsonl` (loads, fires,
+  terminates); zero new failures (unit-only suite impact).
+- **Out of scope**: alpha-equivalence, backward chaining,
+  probabilistic weights, JSON trace scripts, any runtime reads.
+
+---
+
+# Stage-1 batch 3 evaluator — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: `QxFx0.Semantic.IREval` (structural matching with
+  first-occurrence binding, no alpha-equivalence v1; fuel-bounded
+  strict forward chaining with proof objects; defeasible firing
+  with exceptions/scope/priority, strict-beats-defeasible;
+  presupposition checks; conflict detection; JSON verdicts) +
+  evaluator pins incl. end-to-end over `rules.jsonl` (rs-05
+  derives, rd-02 fires clean and blocks on coercion).
+- **Status**: SHADOW ONLY — no runtime callers. JSON trace
+  scripts and scenarios/cluster-gold remain later batches.
+- **Verification**: unit 1662 green (8 new pins).

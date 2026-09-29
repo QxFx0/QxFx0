@@ -18,6 +18,7 @@ import qualified Data.Text as T
 import Test.HUnit
 
 import QxFx0.Semantic.IR
+import QxFx0.Semantic.IREval
 
 semanticIRTests :: [Test]
 semanticIRTests =
@@ -82,7 +83,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -296,3 +297,184 @@ validatePair row = do
   case pairRelation row of
     "equivalent" -> assertEqual ("equivalent pair shares IR: " <> T.unpack (pairId row)) pa pb
     _ -> assertBool ("non-equivalent pair differs: " <> T.unpack (pairId row)) (pa /= pb)
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 3 (ADR-0054): shadow evaluator pins. No runtime reads.
+-- ---------------------------------------------------------------------------
+
+evalTests :: [Test]
+evalTests =
+  [ TestLabel "variable binds consistently" $ TestCase $ do
+      let pat = Apply (PredicateId "chose")
+                  [ RoleBinding "agent" (Variable (VarId "?x")) ]
+          fact = Apply (PredicateId "chose")
+                   [ RoleBinding "agent" (Concept (ConceptId "he")) ]
+      assertEqual "binds on match"
+        (Just (Subst [(VarId "?x", Concept (ConceptId "he"))]))
+        (matchPattern pat fact)
+      let pat2 = And
+            [ Apply (PredicateId "chose") [RoleBinding "agent" (Variable (VarId "?x"))]
+            , Apply (PredicateId "refused") [RoleBinding "agent" (Variable (VarId "?x"))]
+            ]
+          factSame = And
+            [ Apply (PredicateId "chose") [RoleBinding "agent" (Concept (ConceptId "he"))]
+            , Apply (PredicateId "refused") [RoleBinding "agent" (Concept (ConceptId "he"))]
+            ]
+          factDiff = And
+            [ Apply (PredicateId "chose") [RoleBinding "agent" (Concept (ConceptId "he"))]
+            , Apply (PredicateId "refused") [RoleBinding "agent" (Concept (ConceptId "she"))]
+            ]
+      assertBool "consistent rebinding matches" (matchPattern pat2 factSame /= Nothing)
+      assertEqual "inconsistent rebinding fails" Nothing (matchPattern pat2 factDiff)
+
+  , TestLabel "shape mismatches fail" $ TestCase $ do
+      let base = Apply (PredicateId "limits")
+                   [ RoleBinding "agent" (Concept (ConceptId "coercion"))
+                   , RoleBinding "theme" (Concept (ConceptId "freedom")) ]
+          wrongPred = Apply (PredicateId "expands")
+                        [ RoleBinding "agent" (Concept (ConceptId "coercion"))
+                        , RoleBinding "theme" (Concept (ConceptId "freedom")) ]
+          wrongRole = Apply (PredicateId "limits")
+                        [ RoleBinding "patient" (Concept (ConceptId "coercion"))
+                        , RoleBinding "theme" (Concept (ConceptId "freedom")) ]
+          shortArity = Apply (PredicateId "limits")
+                         [ RoleBinding "agent" (Concept (ConceptId "coercion")) ]
+          wrongSort = Apply (PredicateId "limits")
+                        [ RoleBinding "agent" (Entity (EntityId "coercion"))
+                        , RoleBinding "theme" (Concept (ConceptId "freedom")) ]
+      mapM_ (\p -> assertEqual ("mismatch fails: " <> T.unpack (prettyProposition p))
+               Nothing (matchPattern p base))
+        [wrongPred, wrongRole, shortArity, wrongSort]
+
+  , TestLabel "binders match strictly" $ TestCase $ do
+      let body = Apply (PredicateId "person") [RoleBinding "theme" (Variable (VarId "?x"))]
+          forallX = Quantified Forall (VarId "?x") body
+          forallY = Quantified Forall (VarId "?y")
+                      (Apply (PredicateId "person") [RoleBinding "theme" (Variable (VarId "?y"))])
+          existsX = Quantified Exists (VarId "?x") body
+      assertBool "identical binders match" (matchPattern forallX forallX /= Nothing)
+      assertEqual "renamed binder fails (no alpha-equivalence in v1)" Nothing (matchPattern forallX forallY)
+      assertEqual "different quantifier fails" Nothing (matchPattern forallX existsX)
+
+  , TestLabel "forward chaining derives with proof" $ TestCase $ do
+      let factA = Apply (PredicateId "aware") [RoleBinding "theme" (Concept (ConceptId "agent-generic"))]
+          ruleB = StrictRule "r-b" [factA]
+                    (Apply (PredicateId "exists") [RoleBinding "theme" (Concept (ConceptId "responsibility"))])
+          ruleC = StrictRule "r-c"
+                    [Apply (PredicateId "exists") [RoleBinding "theme" (Concept (ConceptId "responsibility"))]]
+                    (Apply (PredicateId "acknowledged") [RoleBinding "theme" (Concept (ConceptId "responsibility"))])
+          (closed1, proof1) = forwardChain 32 [ruleB] [factA]
+      assertBool "one-step derivation" (Apply (PredicateId "exists") [RoleBinding "theme" (Concept (ConceptId "responsibility"))] `elem` closed1)
+      assertEqual "proof cites rule and premise" ["r-b"] [psRuleId s | s <- proof1]
+      let (closed2, proof2) = forwardChain 32 [ruleB, ruleC] [factA]
+      assertEqual "two-step chain length" 2 (length proof2)
+      assertEqual "chain order" ["r-b", "r-c"] [psRuleId s | s <- proof2]
+      let (closed0, proof0) = forwardChain 0 [ruleB, ruleC] [factA]
+      assertEqual "fuel zero derives nothing" ([factA], []) (closed0, proof0)
+
+  , TestLabel "defeasible respects exceptions and scope" $ TestCase $ do
+      let rule = DefeasibleRule "rd-t"
+            [Apply (PredicateId "promised") [RoleBinding "agent" (Variable (VarId "?x")), RoleBinding "theme" (Variable (VarId "?p"))]]
+            (Modal Obligatory (Apply (PredicateId "fulfilled") [RoleBinding "theme" (Variable (VarId "?p"))]))
+            [Apply (PredicateId "coerced") [RoleBinding "theme" (Variable (VarId "?p"))]]
+            2 ""
+          base = [Apply (PredicateId "promised")
+                    [ RoleBinding "agent" (Concept (ConceptId "he"))
+                    , RoleBinding "theme" (Concept (ConceptId "vow")) ]]
+      case defeasibleFire "" rule base of
+        Right concl -> assertEqual "instantiated conclusion"
+          (Modal Obligatory (Apply (PredicateId "fulfilled") [RoleBinding "theme" (Concept (ConceptId "vow"))])) concl
+        Left _ -> assertFailure "should fire without exception"
+      let baseExc = base ++ [Apply (PredicateId "coerced") [RoleBinding "theme" (Concept (ConceptId "vow"))]]
+      case defeasibleFire "" rule baseExc of
+        Left _ -> pure ()
+        Right _ -> assertFailure "exception must block"
+      let scoped = rule { drScope = "oaths" }
+      case defeasibleFire "other" scoped base of
+        Left _ -> pure ()
+        Right _ -> assertFailure "scope mismatch must block"
+      case defeasibleFire "oaths" scoped base of
+        Right _ -> pure ()
+        Left _ -> assertFailure "matching scope must fire"
+
+  , TestLabel "presuppositions and conflicts" $ TestCase $ do
+      let fact = Apply (PredicateId "person") [RoleBinding "theme" (Concept (ConceptId "he"))]
+          held = Apply (PredicateId "person") [RoleBinding "theme" (Variable (VarId "?x"))]
+          missing = Apply (PredicateId "immortal") [RoleBinding "theme" (Variable (VarId "?x"))]
+      assertEqual "held and missing flagged"
+        [(held, True), (missing, False)]
+        (checkPresuppositions [fact] [held, missing])
+      let p = Apply (PredicateId "free") [RoleBinding "theme" (Concept (ConceptId "he"))]
+      assertEqual "no conflict" Nothing (detectConflict [fact, p])
+      assertEqual "direct contradiction found"
+        (Just (Not p, p)) (detectConflict [fact, Not p, p])
+
+  , TestLabel "verdicts serialize to JSON" $ TestCase $ do
+      let step = ProofStep "rs-05" [0] (Subst [])
+                 (Not (Apply (PredicateId "exists") [RoleBinding "theme" (Concept (ConceptId "responsibility"))]))
+          verdict = Entails [step]
+      assertEqual "json round trip"
+        (Just verdict) (Aeson.decode (Aeson.encode verdict))
+
+  , TestLabel "rules file fires end to end" $ TestCase $ do
+      fileRules <- readJsonlRows "data/semantic_ir/rules.jsonl" :: IO [RuleFileRow]
+      strict <- mapM toStrict [ r | r <- fileRules, frKind r == "strict" ]
+      def <- mapM toDefeasible [ r | r <- fileRules, frKind r == "defeasible" ]
+      assertEqual "8 strict rules" 8 (length strict)
+      assertEqual "8 defeasible rules" 8 (length def)
+      -- rs-05: unawareness present, responsibility absent.
+      let kb = [Not (Apply (PredicateId "aware") [RoleBinding "theme" (Concept (ConceptId "agent-generic"))])]
+          (closed, proof) = forwardChain 32 strict kb
+          wanted = Not (Apply (PredicateId "exists") [RoleBinding "theme" (Concept (ConceptId "responsibility"))])
+      assertBool "rs-05 derives" (wanted `elem` closed)
+      assertBool "proof cites rs-05" ("rs-05" `elem` [psRuleId s | s <- proof])
+      -- rd-02 fires clean, blocked by the coercion exception.
+      let rd02 = head [ r | r <- def, drId r == "rd-02" ]
+          vow = Apply (PredicateId "promised")
+                  [ RoleBinding "agent" (Concept (ConceptId "he"))
+                  , RoleBinding "theme" (Concept (ConceptId "vow")) ]
+      case defeasibleFire "" rd02 [vow] of
+        Right _ -> pure ()
+        Left _ -> assertFailure "rd-02 should fire clean"
+      case defeasibleFire "" rd02 [vow, Apply (PredicateId "coerced") [RoleBinding "theme" (Concept (ConceptId "vow"))]] of
+        Left _ -> pure ()
+        Right _ -> assertFailure "rd-02 coercion exception must block"
+  ]
+
+data RuleFileRow = RuleFileRow
+  { frId :: !T.Text
+  , frKind :: !T.Text
+  , frPremises :: ![T.Text]
+  , frConclusion :: !T.Text
+  , frExceptions :: ![T.Text]
+  , frPriority :: !(Maybe Int)
+  , frScope :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON RuleFileRow where
+  parseJSON = Aeson.withObject "RuleFileRow" $ \o -> RuleFileRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "kind"
+    <*> o Aeson..: "premises"
+    <*> o Aeson..: "conclusion"
+    <*> o Aeson..: "exceptions"
+    <*> o Aeson..: "priority"
+    <*> o Aeson..: "scope"
+
+mustParseRow :: T.Text -> T.Text -> IO Proposition
+mustParseRow ctx sexpr = case parseProposition sexpr of
+  Just p -> pure p
+  Nothing -> assertFailure ("rule sexpr must parse (" <> T.unpack ctx <> ")")
+
+toStrict :: RuleFileRow -> IO StrictRule
+toStrict r = StrictRule (frId r)
+  <$> mapM (mustParseRow (frId r)) (frPremises r)
+  <*> mustParseRow (frId r) (frConclusion r)
+
+toDefeasible :: RuleFileRow -> IO DefeasibleRule
+toDefeasible r = DefeasibleRule (frId r)
+  <$> mapM (mustParseRow (frId r)) (frPremises r)
+  <*> mustParseRow (frId r) (frConclusion r)
+  <*> mapM (mustParseRow (frId r)) (frExceptions r)
+  <*> pure (case frPriority r of Just n -> n; Nothing -> 0)
+  <*> pure (frScope r)

@@ -70,6 +70,7 @@ module QxFx0.Semantic.IR
   ) where
 
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Set (Set)
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -78,29 +79,29 @@ import GHC.Generics (Generic)
 
 newtype EntityId = EntityId { unEntityId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 newtype ConceptId = ConceptId { unConceptId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 newtype PredicateId = PredicateId { unPredicateId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 newtype VarId = VarId { unVarId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 newtype EventId = EventId { unEventId :: Text }
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data Quantifier
   = Forall
   | Exists
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data Modality
   = Necessary
@@ -111,7 +112,7 @@ data Modality
   | Asserted
   | Hypothetical
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data Term
   = Entity EntityId
@@ -119,13 +120,13 @@ data Term
   | Variable VarId
   | Event EventId
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data RoleBinding = RoleBinding
   { rbRole :: !Text
   , rbTerm :: !Term
   } deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data Proposition
   = Apply PredicateId [RoleBinding]
@@ -138,7 +139,7 @@ data Proposition
   | AtTime Text Proposition
   | InScope Text Proposition
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 data SpeechAct
   = ActAssert
@@ -148,7 +149,7 @@ data SpeechAct
   | ActConcede
   | ActHypothesize
   deriving stock (Eq, Ord, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | One utterance may carry several interpretations; each is explicit,
 -- evidenced, and independently committable. The runtime does not read
@@ -160,7 +161,7 @@ data Interpretation = Interpretation
   , inEvidence :: ![Text]
   , inUnresolved :: ![Text]
   } deriving stock (Eq, Show, Generic)
-  deriving anyclass (NFData)
+  deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | All variables occurring free (unbound by an enclosing quantifier).
 freeVariables :: Proposition -> Set VarId

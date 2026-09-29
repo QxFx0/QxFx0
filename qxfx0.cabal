@@ -354,6 +354,7 @@ library
       QxFx0.Semantic.Composition
       QxFx0.Semantic.Assembly
       QxFx0.Semantic.IR
+      QxFx0.Semantic.IREval
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.ContentSelector.Cache
