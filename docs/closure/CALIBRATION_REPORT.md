@@ -1969,3 +1969,15 @@ beyond 24 verbs.
 - **Status**: SHADOW ONLY — no runtime reads.
 - **Verification**: unit 1665 green. Pre-check mirror caught
   all slips (trailing parens); Haskell pins authoritative.
+
+---
+
+# Stage-1 batch 6d cluster gold — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: +100 cluster rows (cl-301..400: defeasible instances
+  shaped to rd-rule fire/block patterns, scope-marked rows,
+  proverbs, deontic/temporal chains, trust/promise/oath
+  clusters) → 400 total.
+- **Status**: SHADOW ONLY — no runtime reads.
+- **Verification**: unit 1665 green. Programmatic rebuilds for
+  misnested rows; trailing-trim with nesting guard.
