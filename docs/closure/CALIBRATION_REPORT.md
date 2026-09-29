@@ -1943,3 +1943,17 @@ beyond 24 verbs.
 - **Verification**: unit 1665 green. Pins caught the systematic
   trailing-paren authoring habit (programmatic trim + parser as
   judge), 1 unbound variable, 1 pair-discipline violation.
+
+---
+
+# Stage-1 batch 6b cluster gold — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: +100 cluster rows (cl-101..200: modals, temporals,
+  conditionals, hypotheticals, coercion-boundary packet
+  request/persuasion/incentive/manipulation, deeper topic
+  coverage) → 200 total. Pair discipline enforced (3 solitary
+  converses nulled).
+- **Status**: SHADOW ONLY — no runtime reads.
+- **Verification**: unit 1665 green. Python pre-check mirror
+  caught 40+ authoring slips before the expensive suite run;
+  Haskell pins are the authority.
