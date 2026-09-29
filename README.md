@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: 1817 fast-suite cases, 0 failures (2026-09-22, substrate era; full matrix below). B3 mechanical gates 1-5 passing.
+**Tests**: 1821 fast-suite cases, 0 failures (2026-09-29, substrate era; full matrix below). B3 mechanical gates 1-5 passing. Unit 1671, core 1194, property 227, integration 46, slow 173 — all green.
 
 ### Verified Capabilities
 
@@ -29,8 +29,11 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 - **Multi-turn**: 3-turn session — define → confront ("Я удерживаю позицию...") → reflect
 - **Challenge detection**: "свобода это просто отсутствие ограничений" → hypothesis + counter-grounds (no strawman confrontation)
 - **Commitment memory**: `ssSemanticCommitments` wired into render path
-- **Calibration corpus**: 1030 records across 11 strata, 130 human/operator-confirmed labels (`data/calibration_corpus/`)
+- **Calibration corpus**: 1030 records across 11 strata + 237 live-dialogue turns, all operator-confirmed (`data/calibration_corpus/`); executable semantic-IR gold (100 parses), freedom-cluster gold (500), 30 IR-annotated scenarios, 24 primitives, 6+ sense contracts, 16 rules, 20 minimal pairs, 41-task exit harness — all shadow-only (`data/semantic_ir/`, ADR-0054)
 - **Render-phase rescue**: degraded turns (tautology, default lexeme, empty compose/hold) repaired with marked trailing lines instead of silent degradation
+- **Researcher regimes**: speculative markers route to hypothesis-marked generative plans; generative turns compose topic-anchored assemblies (same-topic/input-term, hypothesis-marked, R+L2-gated)
+- **Misunderstanding repair**: user-side reports («ты меня не понял») reach the repair surface; bare-pronoun self-reference backstop gated to genuine self-knowledge prepares
+- **Guard honesty**: person-aware topic-relevance overlap, traced block reasons, honest recovery text (no false retry promise)
 - **Substrate layer**: 53K-entry associative graph routes spreading activation only — never surfaces in output
 - **SelfPlay**: `--selfplay [N]` — offline graph enrichment via LLM evaluation
 - **LLMDiscovery**: `--discover <concept>` — offline relation discovery
@@ -49,13 +52,13 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 - `Essence` — Σ-typed commitment, unconditionally active
 
 **Semantic Core**:
-- `AtomStore` — 52 RelationType, 120 philosophical topics (definitionCorpus; verified 2026-09-19)
+- `AtomStore` — 52 RelationType, 136 philosophical topics (definitionCorpus)
 - Typed edges with morphological reconstruction (6 Russian cases)
 - Dialectical structure: rationale / counter / synthesis per relation
 - `PathFinder` — Graph traversal with field-biased ranking
 - `GeneratedPredicateGate` — 5 gates (specificity, non-tautology, provenance, source whitelist, non-substrate)
 
-**Orientation Pipeline**: PropositionParser → GraphEngagement → ContextualComposer → DialogueContext
+**Orientation Pipeline**: 23-detector proposition chain with admission gates → compositional intent reverse-map at render → `SemanticFrame` → response plan → `viaSemantic` hot path (template/assembly fallbacks preserved)
 
 ## Quick Start
 
@@ -71,7 +74,7 @@ python3 >= 3.9  # for build scripts
 
 ```bash
 cabal build all
-cabal test qxfx0-test-fast  # 1817 cases; minutes-scale (see Testing below)
+cabal test qxfx0-test-fast  # 1821 cases; minutes-scale (see Testing below)
 ```
 
 ### Run
@@ -141,20 +144,22 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1605 | ✅ 0 failures |
-| qxfx0-test | 1307 (core 1190 + runtime 94 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures |
+| qxfx0-test-unit | 1671 (incl. IR + Stage-1 pins) | ✅ 0 failures |
+| qxfx0-test | 1307 (core 1194 + runtime 94 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures |
 | qxfx0-test-property | 227 | ✅ 0 failures |
 | qxfx0-test-integration | 46 | ✅ 0 failures |
-| qxfx0-test-fast | 1817 | ✅ 0 failures |
+| qxfx0-test-fast | 1821 | ✅ 0 failures |
 | qxfx0-test-slow (runtime/state/http/lifecycle) | 94 / 45 / 23 / 11 (= 173) | ✅ 0 failures |
 
-Counts re-verified green on HEAD 2026-09-22 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
+Counts re-verified green on HEAD 2026-09-29 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
 
-The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1817 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20 min wall-clock. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
+The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1821 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20 min wall-clock. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 
 ## Audit History
 
 5 cycles of multi-agent orchestration debates (8-11 experts each) conducted via Agent2048 framework. All P0/P1 findings addressed. See git log for details.
+
+Full-system audit 2026-09-27 (`docs/closure/AUDIT_2026-09-27_FULL.md`): all levels verified working as a whole; found and repaired a stale Agda witness breaking strict bootstrap, a user-side misunderstanding gap, and a stale-topic hold. Concept review accepted with corrections; executable-semantics program governed by ADR-0054 (Stage-1 shadow artifacts in `data/semantic_ir/`).
 
 ## License
 
