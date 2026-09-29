@@ -1981,3 +1981,17 @@ beyond 24 verbs.
 - **Status**: SHADOW ONLY — no runtime reads.
 - **Verification**: unit 1665 green. Programmatic rebuilds for
   misnested rows; trailing-trim with nesting guard.
+
+---
+
+# Stage-1 batches 6d/6e cluster gold — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: +200 cluster rows (cl-301..500: defeasible
+  instances shaped to rd-rule patterns, scope-marked rows,
+  proverbs, deontic/temporal chains, modal/quantifier
+  matrices, tension pairs) → 500 total. Corpus complete per
+  the 300–500 budget.
+- **Status**: SHADOW ONLY — no runtime reads.
+- **Verification**: unit 1665 green. Programmatic rebuilds for
+  misnested And/Not/Exists shapes; pre-check mirror as first
+  gate, Haskell pins authoritative.

@@ -614,8 +614,8 @@ clusterGoldTests =
       let rows = [ r | line <- BL.split 10 content
                      , not (BL.null line)
                      , Just r <- [Aeson.decode line :: Maybe GoldRow] ]
-      assertEqual "400 cluster rows" 400 (length rows)
-      assertEqual "unique ids" 400 (length (foldr (\r acc -> if goldId r `elem` acc then acc else goldId r : acc) [] rows))
+      assertEqual "500 cluster rows" 500 (length rows)
+      assertEqual "unique ids" 500 (length (foldr (\r acc -> if goldId r `elem` acc then acc else goldId r : acc) [] rows))
       mapM_ validateRow rows
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       assertBool "has pair groups" (not (M.null pairs))
