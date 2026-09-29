@@ -81,7 +81,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ]
+  ] ++ stage1Batch1Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -112,3 +112,84 @@ validateRow row = do
         Nothing (validateClosedProposition prop)
       assertEqual ("gold round-trips: " <> T.unpack (goldId row))
         (Just prop) (parseProposition (prettyProposition prop))
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 1 (ADR-0054): primitives + freedom/will senses.
+-- Schema validation only — no runtime reads these files.
+-- ---------------------------------------------------------------------------
+
+data PrimitiveRow = PrimitiveRow
+  { primId :: !T.Text
+  , primKind :: !T.Text
+  , primAtom :: !(Maybe T.Text)
+  , primJustification :: !(Maybe T.Text)
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON PrimitiveRow where
+  parseJSON = Aeson.withObject "PrimitiveRow" $ \o -> PrimitiveRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "kind"
+    <*> o Aeson..: "atom"
+    <*> o Aeson..: "justification"
+
+data SenseRow = SenseRow
+  { senseId :: !T.Text
+  , senseConcept :: !T.Text
+  , senseLexicalizations :: ![T.Text]
+  , senseFrameRoles :: ![T.Text]
+  , senseExamples :: ![T.Text]
+  , senseCounterExamples :: ![T.Text]
+  , senseProvenance :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON SenseRow where
+  parseJSON = Aeson.withObject "SenseRow" $ \o -> SenseRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "concept"
+    <*> o Aeson..: "lexicalizations"
+    <*> o Aeson..: "frame_roles"
+    <*> o Aeson..: "examples"
+    <*> o Aeson..: "counter_examples"
+    <*> o Aeson..: "provenance"
+
+readJsonlRows :: (Aeson.FromJSON a) => FilePath -> IO [a]
+readJsonlRows path = do
+  content <- BL.readFile path
+  pure [ r | line <- BL.split 10 content
+           , not (BL.null line)
+           , Just r <- [Aeson.decode line] ]
+
+stage1Batch1Tests :: [Test]
+stage1Batch1Tests =
+  [ TestLabel "primitives schema holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/primitives.jsonl" :: IO [PrimitiveRow]
+      assertEqual "24 primitives" 24 (length rows)
+      assertEqual "unique ids" 24 (length (map primId rows `asSetOf` id))
+      let kinds = ["agent", "action", "object", "quality", "relation", "circumstance"]
+      mapM_ (\r -> assertBool ("closed kind: " <> T.unpack (primId r))
+               (primKind r `elem` kinds)) rows
+      mapM_ (\r -> case primAtom r of
+                Nothing -> assertBool ("null atom needs justification: " <> T.unpack (primId r))
+                             (maybe False (not . T.null . T.strip) (primJustification r))
+                Just _ -> assertEqual ("present atom needs no justification: " <> T.unpack (primId r))
+                             Nothing (primJustification r)) rows
+
+  , TestLabel "senses schema holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/senses.jsonl" :: IO [SenseRow]
+      assertEqual "6 senses in batch 1" 6 (length rows)
+      mapM_ (\r -> assertBool ("cluster concept: " <> T.unpack (senseId r))
+               (senseConcept r `elem` ["свобода", "воля"])) rows
+      mapM_ (\r -> do
+        assertBool ("lexicalizations: " <> T.unpack (senseId r))
+          (not (null (senseLexicalizations r)))
+        assertBool ("frame roles: " <> T.unpack (senseId r))
+          (not (null (senseFrameRoles r)))
+        assertBool ("examples: " <> T.unpack (senseId r))
+          (not (null (senseExamples r)))
+        assertBool ("counter-examples: " <> T.unpack (senseId r))
+          (not (null (senseCounterExamples r)))
+        assertEqual ("human provenance: " <> T.unpack (senseId r))
+          "human-authored stage-1 batch 1" (senseProvenance r)) rows
+  ]
+  where
+    asSetOf xs f = foldr (\x acc -> if f x `elem` acc then acc else f x : acc) [] xs

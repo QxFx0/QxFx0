@@ -1831,3 +1831,16 @@ beyond 24 verbs.
 - **Verification**: unit 1650, fast 1821, core 1194 green, zero
   new failures. New pins: real-map canonicalization,
   empty-morph fixture behavior, nominative passthrough.
+
+---
+
+# Stage-1 batch 1 — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: `primitives.jsonl` (24, 7 with `atom:null` +
+  per-item justifications — agent/alternative/coercion/promise/
+  ban/permission/goal have no corpus lemma, verified by scan) +
+  `senses.jsonl` (6: свобода ×3 per concept §3.1, воля ×3 with
+  liberty/outdoors split) + schema validation pins (closed kind
+  set, atom-XOR-justification, human provenance pinned).
+- **Status**: SHADOW ONLY — no runtime reads these files.
+- **Verification**: unit 1652 green (2 new pins + gold intact).

@@ -1,0 +1,24 @@
+{"id":"p-agent","label_ru":"агент","kind":"agent","atom":null,"justification":"structural role: bearer of action and choice; no corpus lemma, introduced as primitive"}
+{"id":"p-action","label_ru":"действие","kind":"action","atom":"действие","justification":null}
+{"id":"p-choice","label_ru":"выбор","kind":"action","atom":"выбор","justification":null}
+{"id":"p-alternative","label_ru":"альтернатива","kind":"object","atom":null,"justification":"load-bearing for agency-freedom (choice needs ≥2 alternatives); corpus says «возможность выбора» instead; introduced as primitive"}
+{"id":"p-limitation","label_ru":"ограничение","kind":"object","atom":"ограничение","justification":null}
+{"id":"p-coercion","label_ru":"принуждение","kind":"action","atom":null,"justification":"central to negative-freedom; corpus has «принуждением» only inside one freedom predicate surface, not as atom; introduced as primitive"}
+{"id":"p-threat","label_ru":"угроза","kind":"object","atom":"угроза","justification":null}
+{"id":"p-awareness","label_ru":"осознанность","kind":"quality","atom":"осознанность","justification":null}
+{"id":"p-responsibility","label_ru":"ответственность","kind":"object","atom":"ответственность","justification":null}
+{"id":"p-consequence","label_ru":"последствие","kind":"object","atom":"последствие","justification":null}
+{"id":"p-possibility","label_ru":"возможность","kind":"object","atom":"возможность","justification":null}
+{"id":"p-intention","label_ru":"намерение","kind":"object","atom":"намерение","justification":null}
+{"id":"p-cause","label_ru":"причина","kind":"relation","atom":"причина","justification":null}
+{"id":"p-condition","label_ru":"условие","kind":"circumstance","atom":"условие","justification":null}
+{"id":"p-goal","label_ru":"цель","kind":"object","atom":null,"justification":"teleological role for will-volition; corpus lacks the lemma; introduced as primitive"}
+{"id":"p-motive","label_ru":"мотив","kind":"object","atom":"мотив","justification":null}
+{"id":"p-obstacle","label_ru":"препятствие","kind":"object","atom":"препятствие","justification":null}
+{"id":"p-consent","label_ru":"согласие","kind":"action","atom":"согласие","justification":null}
+{"id":"p-refusal","label_ru":"отказ","kind":"action","atom":"отказ","justification":null}
+{"id":"p-promise","label_ru":"обещание","kind":"object","atom":null,"justification":"needed for coerced-promise boundary cases; no corpus lemma; introduced as primitive"}
+{"id":"p-ban","label_ru":"запрет","kind":"object","atom":null,"justification":"absence-of-ban figures in negation gold (neg-017); no corpus lemma; introduced as primitive"}
+{"id":"p-permission","label_ru":"разрешение","kind":"object","atom":null,"justification":"permission/right distinction needs the positive term; no corpus lemma; introduced as primitive"}
+{"id":"p-trust","label_ru":"доверие","kind":"object","atom":"доверие","justification":null}
+{"id":"p-ground","label_ru":"основание","kind":"object","atom":"основание","justification":null}
