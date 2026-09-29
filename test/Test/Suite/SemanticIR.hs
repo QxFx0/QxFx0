@@ -84,7 +84,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -526,3 +526,78 @@ splitIntegrityTests =
           assertEqual "dev size" 16 (length (splitsDev splits))
           assertEqual "test size" 21 (length (splitsTest splits))
   ]
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 5 (ADR-0054): 30 multi-turn scenarios. Schema validation
+-- only — scenario simulation is a later batch; no runtime reads.
+-- ---------------------------------------------------------------------------
+
+data ScenarioTurnRow = ScenarioTurnRow
+  { turnSpeaker :: !T.Text
+  , turnText :: !T.Text
+  , turnInterpretations :: ![T.Text]
+  , turnAct :: !T.Text
+  , turnUnresolved :: ![T.Text]
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ScenarioTurnRow where
+  parseJSON = Aeson.withObject "ScenarioTurnRow" $ \o -> ScenarioTurnRow
+    <$> o Aeson..: "speaker"
+    <*> o Aeson..: "text"
+    <*> o Aeson..: "interpretations"
+    <*> o Aeson..: "act"
+    <*> o Aeson..: "unresolved"
+
+data ScenarioRow = ScenarioRow
+  { scenarioId :: !T.Text
+  , scenarioTurns :: ![ScenarioTurnRow]
+  , scenarioProvenance :: !T.Text
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ScenarioRow where
+  parseJSON = Aeson.withObject "ScenarioRow" $ \o -> ScenarioRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "turns"
+    <*> o Aeson..: "provenance"
+
+scenarioActSet :: [T.Text]
+scenarioActSet =
+  ["Assert", "Challenge", "Concede", "Distinguish", "Clarify"
+  , "Revise", "AskDefine", "Abstain", "Hypothesize"]
+
+scenarioTests :: [Test]
+scenarioTests =
+  [ TestLabel "scenarios schema holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/scenarios.jsonl" :: IO [ScenarioRow]
+      assertEqual "30 scenarios" 30 (length rows)
+      assertEqual "unique ids" 30 (length (foldr (\r acc -> if scenarioId r `elem` acc then acc else scenarioId r : acc) [] rows))
+      mapM_ validateScenario rows
+  ]
+
+validateScenario :: ScenarioRow -> Assertion
+validateScenario row = do
+  assertEqual ("human provenance: " <> T.unpack (scenarioId row))
+    "human-authored stage-1 batch 5" (scenarioProvenance row)
+  assertBool ("at least two turns: " <> T.unpack (scenarioId row))
+    (length (scenarioTurns row) >= 2)
+  assertBool ("opens with user or system claim: " <> T.unpack (scenarioId row))
+    (turnSpeaker (head (scenarioTurns row)) `elem` ["user", "system"])
+  mapM_ (validateTurn (scenarioId row)) (scenarioTurns row)
+  mapM_ (\(prev, cur) -> assertBool ("alternation in " <> T.unpack (scenarioId row))
+           (turnSpeaker prev /= turnSpeaker cur))
+    (zip (scenarioTurns row) (drop 1 (scenarioTurns row)))
+
+validateTurn :: T.Text -> ScenarioTurnRow -> Assertion
+validateTurn sid turn = do
+  assertBool ("non-empty text in " <> T.unpack sid)
+    (not (T.null (T.strip (turnText turn))))
+  assertBool ("non-empty interpretations in " <> T.unpack sid)
+    (not (null (turnInterpretations turn)))
+  assertBool ("known act in " <> T.unpack sid)
+    (turnAct turn `elem` scenarioActSet)
+  mapM_ (\sexpr -> case parseProposition sexpr of
+           Nothing -> assertFailure ("scenario sexpr must parse in " <> T.unpack sid <> ": " <> T.unpack (T.take 60 sexpr))
+           Just prop -> do
+             assertEqual ("scenario validates in " <> T.unpack sid) Nothing (validateProposition prop)
+             assertEqual ("scenario closed in " <> T.unpack sid) Nothing (validateClosedProposition prop))
+    (turnInterpretations turn)

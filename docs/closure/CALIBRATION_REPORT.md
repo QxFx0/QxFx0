@@ -1912,3 +1912,21 @@ beyond 24 verbs.
   in `--check`; unit pins partition structure (no sha256 dep in
   test-common by choice).
 - **Verification**: unit 1663 green (1 new pin).
+
+---
+
+# Stage-1 batch 5 scenarios — landed shadow-only (2026-09-29, ADR-0054)
+
+- **What**: `scenarios.jsonl` (30 multi-turn dialogues, 71 turns:
+  paraphrase, contrast, negation-scope, polysemy, revision with
+  grounds, clarification with multi-interpretation turns,
+  counterexample weakening, concession, abstention, disagreement
+  localization, quantifier/temporal/deontic scopes). Schema pins:
+  30 rows, alternation, closed 9-act set, every interpretation
+  parses + validates + closes.
+- **Status**: SHADOW ONLY — scenario simulation is a later
+  batch; no runtime reads.
+- **Verification**: unit 1664 green. Pins caught 6 authoring
+  slips (incl. 2 compensating paren typos); 2 pin-shape fixes
+  (system-opening revision probes legitimate; sc-06 gained its
+  answer turn).
