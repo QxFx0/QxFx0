@@ -2012,3 +2012,47 @@ beyond 24 verbs.
   rule/evaluator changes. Human leg (B2-style pairs) stays open
   per ADR (rater unavailable).
 - **Verification**: unit 1670 green (5 new pins).
+
+---
+
+# Stage-1 batch 7 scenario expectations + first exit measurement — pre-registration (2026-09-29, ADR-0054)
+
+- **Design (locked)**: scenario rows gain `expectations`
+  (soundness leg only): `no-conflict` over all turns (revision ≠
+  structural contradiction, paraphrase ≠ contradiction) and
+  `not-entailed` spot queries (no hallucinated derivations on
+  dialogue KBs, file strict rules as the rule set). No `entails`
+  expectations on scenarios — audit of all 30 KBs found no
+  file-rule premise shapes present; asserting firings would
+  require fitting data to the evaluator. Positive derivation
+  stays covered by exit_tasks (+5 new strict rows here).
+- **Rule**: expectations assert 100% (soundness invariants, not
+  fitted accuracy). Triage on mismatch, in order: data typo (fix
+  data) → evaluator gap (record, adjust expectation ONLY with
+  documented reason) → genuine unsoundness (shadow-only fix with
+  pins, inside batch scope).
+- **Bar**: all scenario expectations hold; exit_tasks grow
+  36→41 with strict still ≥ 0.80 (17/17 authored green);
+  +5 strict rows mirror rs-01/rs-05/rs-07/rs-06/rs-03 on
+  concrete facts; unit green; report prints the measured
+  aggregate (no new threshold — informative per ADR).
+- **Out of scope**: human leg, JSON trace scripts, runtime
+  wiring, new rules (no rule changes in this batch).
+
+---
+
+# Stage-1 batch 7 scenario expectations + first exit measurement — landed (2026-09-29, ADR-0054)
+
+- **What**: `expectations` on all 30 scenarios (30 no-conflict +
+  10 not-entailed spot queries; no entails — audit found no
+  file-rule premise shapes in scenario KBs, asserting firings
+  would fit data to evaluator) + 5 strict exit rows mirroring
+  rs-01/rs-05/rs-07/rs-06/rs-03 on concrete facts + scenario
+  runner over ALL file strict rules.
+- **First measurement**: 40/40 scenario expectations hold
+  (revision ≠ structural contradiction; no hallucinated
+  derivations on dialogue KBs); strict 17/17, defeasible 12/12,
+  conflicts 6/6, presuppositions 6/6. Soundness leg complete;
+  thresholds (≥0.80/≥0.60) satisfied with margin. Human leg
+  stays open per ADR.
+- **Verification**: unit 1671 green (scenario runner + 5 tasks).

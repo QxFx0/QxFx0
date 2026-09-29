@@ -84,7 +84,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -714,8 +714,8 @@ exitHarnessTests :: [Test]
 exitHarnessTests =
   [ TestLabel "exit tasks load with shape" $ TestCase $ do
       rows <- readJsonlRows "data/semantic_ir/exit_tasks.jsonl" :: IO [ExitTaskRow]
-      assertEqual "36 exit tasks" 36 (length rows)
-      assertEqual "12 strict" 12 (length [ r | r <- rows, exitKind r == "strict" ])
+      assertEqual "41 exit tasks" 41 (length rows)
+      assertEqual "17 strict" 17 (length [ r | r <- rows, exitKind r == "strict" ])
       assertEqual "10 single defeasible" 10 (length [ r | r <- rows, exitKind r == "defeasible" ])
       assertEqual "2 duels" 2 (length [ r | r <- rows, exitKind r == "defeasible-duel" ])
       assertEqual "6 conflicts" 6 (length [ r | r <- rows, exitKind r == "conflict" ])
@@ -814,3 +814,88 @@ runPresupTask row = do
     "all-held" -> assertBool ("all presupposed on " <> T.unpack (exitId row)) (and held)
     "missing" -> assertBool ("some missing on " <> T.unpack (exitId row)) (not (and held))
     other -> assertFailure ("unknown presupposition expectation: " <> T.unpack other)
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 batch 7 (ADR-0054): scenario expectations (soundness leg) +
+-- exit-tasks growth. No thresholds here — soundness invariants assert
+-- 100%; accuracy thresholds live in the exit harness above.
+-- ---------------------------------------------------------------------------
+
+data ExpectTurns = AllTurns | TurnIndices [Int]
+  deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ExpectTurns where
+  parseJSON (Aeson.String "all") = pure AllTurns
+  parseJSON v = TurnIndices <$> Aeson.parseJSON v
+
+data ScenarioExpectation = ScenarioExpectation
+  { expKind :: !T.Text
+  , expTurns :: !ExpectTurns
+  , expQuery :: !(Maybe T.Text)
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ScenarioExpectation where
+  parseJSON = Aeson.withObject "ScenarioExpectation" $ \o -> ScenarioExpectation
+    <$> o Aeson..: "kind"
+    <*> o Aeson..: "turns"
+    <*> o Aeson..:? "query"
+
+scenarioExpectationTests :: [Test]
+scenarioExpectationTests =
+  [ TestLabel "scenario expectations hold" $ TestCase $ do
+      fileRules <- readJsonlRows "data/semantic_ir/rules.jsonl" :: IO [RuleFileRow]
+      strict <- mapM toStrictFileRule fileRules
+      content <- BL.readFile "data/semantic_ir/scenarios.jsonl"
+      let rows = [ r | line <- BL.split 10 content
+                     , not (BL.null line)
+                     , Just r <- [Aeson.decode line :: Maybe ScenarioRowEx] ]
+      assertEqual "30 scenarios with expectations" 30 (length rows)
+      results <- concat <$> mapM (runScenario strict) rows
+      assertEqual "40 expectations" 40 (length results)
+      mapM_ (\(sid, kind, holds) -> assertBool
+               ("expectation holds: " <> T.unpack sid <> "/" <> T.unpack kind) holds) results
+  ]
+
+data ScenarioRowEx = ScenarioRowEx
+  { scExId :: !T.Text
+  , scExTurns :: ![ScenarioTurnRow]
+  , scExExpectations :: ![ScenarioExpectation]
+  } deriving stock (Eq, Show)
+
+instance Aeson.FromJSON ScenarioRowEx where
+  parseJSON = Aeson.withObject "ScenarioRowEx" $ \o -> ScenarioRowEx
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "turns"
+    <*> o Aeson..: "expectations"
+
+toStrictFileRule :: RuleFileRow -> IO StrictRule
+toStrictFileRule r = StrictRule (frId r)
+  <$> mapM (mustParseRow (frId r)) (frPremises r)
+  <*> mustParseRow (frId r) (frConclusion r)
+
+runScenario :: [StrictRule] -> ScenarioRowEx -> IO [(T.Text, T.Text, Bool)]
+runScenario rules row = mapM (runExpectation rules row) (scExExpectations row)
+
+runExpectation :: [StrictRule] -> ScenarioRowEx -> ScenarioExpectation -> IO (T.Text, T.Text, Bool)
+runExpectation rules row exp = do
+  let selected = case expTurns exp of
+        AllTurns -> scExTurns row
+        TurnIndices idxs -> [ t | (i, t) <- zip [0 :: Int ..] (scExTurns row), i `elem` idxs ]
+  kb <- concat <$> mapM (parseTurn (scExId row)) selected
+  case expKind exp of
+    "no-conflict" -> pure (scExId row, expKind exp, detectConflict kb == Nothing)
+    "not-entailed" -> case expQuery exp of
+      Nothing -> assertFailure ("not-entailed needs query: " <> T.unpack (scExId row)) >> pure (scExId row, expKind exp, False)
+      Just q -> do
+        query <- mustParseRow (scExId row) q
+        let (closed, _) = forwardChain 32 rules kb
+        pure (scExId row, expKind exp, not (query `elem` closed))
+    "entails" -> case expQuery exp of
+      Nothing -> assertFailure ("entails needs query: " <> T.unpack (scExId row)) >> pure (scExId row, expKind exp, False)
+      Just q -> do
+        query <- mustParseRow (scExId row) q
+        let (closed, _) = forwardChain 32 rules kb
+        pure (scExId row, expKind exp, query `elem` closed)
+    other -> assertFailure ("unknown expectation kind: " <> T.unpack other) >> pure (scExId row, expKind exp, False)
+  where
+    parseTurn sid turn = mapM (mustParseRow sid) (turnInterpretations turn)
