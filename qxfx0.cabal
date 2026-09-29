@@ -162,6 +162,7 @@ library
     QxFx0.Learning.Signal
     QxFx0.Learning.DialogueDevelopment
     QxFx0.Semantic.Input.Model
+    QxFx0.Semantic.Input.Assemble
     QxFx0.Lexicon.Types
     QxFx0.Lexicon.Loader
     QxFx0.Lexicon.Generated
@@ -524,7 +525,6 @@ library
     QxFx0.Semantic.Input.GeneratedLexicon
     QxFx0.Semantic.Input.Lexicon
     QxFx0.Semantic.Input.Classify
-    QxFx0.Semantic.Input.Assemble
     QxFx0.Runtime.Engine
     QxFx0.Core.PipelineIO.Internal
     QxFx0.Core.PipelineIO.Operations

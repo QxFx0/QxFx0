@@ -9,7 +9,9 @@ module QxFx0.Semantic.Proposition.Parse
     parseProposition
   , parsePropositionWithTruthContract
   , parsePropositionWithFrame
+  , parsePropositionWithFrameWithMorphology
   , parsePropositionWithFrameAndTruthContract
+  , parsePropositionWithFrameAndTruthContractMorph
   , parsePropositionMorph
     -- * Helper functions
   , propositionTypeHintFromFrame
@@ -96,13 +98,27 @@ parsePropositionWithTruthContract truthContractStatus rawText =
   parsePropositionWithFrameAndTruthContract truthContractStatus rawText (buildUtteranceSemanticFrame rawText)
 
 -- | Parse proposition with pre-built semantic frame.
+-- Test-fixture behavior: empty morphology (heuristic nominative).
 parsePropositionWithFrame :: Text -> UtteranceSemanticFrame -> InputPropositionFrame
 parsePropositionWithFrame rawText semanticFrame =
   parsePropositionWithFrameAndTruthContract CanonicalSurfacePreserved rawText semanticFrame
 
+-- | Parse proposition with real morphology (production path).
+-- The nominative focus feeds turn focus selection, so inflected
+-- focuses canonicalize by data, not by heuristic guess.
+parsePropositionWithFrameWithMorphology :: MorphologyData -> Text -> UtteranceSemanticFrame -> InputPropositionFrame
+parsePropositionWithFrameWithMorphology morph rawText semanticFrame =
+  parsePropositionWithFrameAndTruthContractMorph morph CanonicalSurfacePreserved rawText semanticFrame
+
 -- | Parse proposition with truth contract and semantic frame.
+-- Empty-morphology behavior preserved for test fixtures.
 parsePropositionWithFrameAndTruthContract :: TruthContractStatus -> Text -> UtteranceSemanticFrame -> InputPropositionFrame
 parsePropositionWithFrameAndTruthContract truthContractStatus rawText semanticFrame =
+  parsePropositionWithFrameAndTruthContractMorph (MorphologyData M.empty M.empty M.empty M.empty) truthContractStatus rawText semanticFrame
+
+-- | Parse proposition with truth contract, morphology and frame.
+parsePropositionWithFrameAndTruthContractMorph :: MorphologyData -> TruthContractStatus -> Text -> UtteranceSemanticFrame -> InputPropositionFrame
+parsePropositionWithFrameAndTruthContractMorph morph truthContractStatus rawText semanticFrame =
   let tokens = tokenizeKeywordText rawText
       isQ = T.isSuffixOf "?" (T.strip rawText)
       detectedType = detectPropositionType truthContractStatus rawText tokens
@@ -112,7 +128,7 @@ parsePropositionWithFrameAndTruthContract truthContractStatus rawText semanticFr
         _            -> fromMaybe detectedType (propositionTypeHintFromFrame semanticFrame)
       family = propositionToFamily propType
       focus = fromMaybe (extractFocusEntity rawText) (specialFocusEntity propType)
-      focusNom = toNominative (MorphologyData M.empty M.empty M.empty M.empty) focus
+      focusNom = toNominative morph focus
       (semanticSubject, semanticTarget, semanticCandidates, semanticEvidence) =
         inferSemanticSlotsWithFrame rawText tokens propType semanticFrame
       force = forceForFamily family

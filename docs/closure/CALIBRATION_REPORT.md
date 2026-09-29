@@ -1786,3 +1786,48 @@ beyond 24 verbs.
   incl. scripts).
 - **Verification**: unit 1649, fast 1820, core 1193 green.
   Behavior-neutral by construction (no reachable path touched).
+
+---
+
+# Real morphology for focus nominative — pre-registration (2026-09-29)
+
+- **Finding (F4)**: `Parse.hs` computes `ipfFocusNominative` via
+  `toNominative` over a hardcoded EMPTY `MorphologyData` — the
+  heuristic guess always runs even though real paradigms
+  (20025+ lemmas) are loaded in `ssMorphology`. The nominative
+  feeds turn focus selection (`Effects.hs:458`: nominative first,
+  then raw focus, atom focus, last topic), stance kernel
+  (`Pulse.hs:243`), and corpus tooling. Inflected focuses
+  («ответственности») canonicalize by guess, not by data.
+- **Rule (locked)**: add `parsePropositionWithFrameAndTruthContractMorph`
+  (morphology first arg); existing entries delegate with empty
+  morphology (test-fixture behavior byte-identical, zero test
+  churn); production call site (`Effects.hs:559`) passes
+  `ssMorphology`. No other call sites change. Heuristic remains
+  the fallback inside `toNominative` for OOV.
+- **Bar**: unit pins — inflected focus + real nominative map →
+  correct nominative; empty-morph entry unchanged on the same
+  inputs; live probe N≥6 inflected definitional turns (topics
+  correct-or-better, none degraded to unknown/hold) + 3
+  nominative-form controls byte-identical by construction;
+  zero new failures in unit/fast/core.
+- **Out of scope**: `extractFeatures`-`_morph` (separate API
+  churn); RGL paradigms flag; lemma-map coverage expansion.
+
+---
+
+# Real-morphology focus nominative — landed (2026-09-29)
+
+- **Rule** (pre-registered above): `...WithMorphology` variants;
+  production passes `ssMorphology`; fixtures keep empty-morph
+  entries byte-identically.
+- **Probe**: inflected topics canonicalize live
+  («ответственности»→bestTopic `ответственность`,
+  «свободе»→`свобода`, «любви»→`любовь`); nominative controls
+  normal. Q4 adjectival wart («ответственным» → tautology)
+  proven pre-existing (form absent from morphology → identical
+  heuristic in both eras, bestTopic unchanged) — recorded as a
+  separate wart, out of scope.
+- **Verification**: unit 1650, fast 1821, core 1194 green, zero
+  new failures. New pins: real-map canonicalization,
+  empty-morph fixture behavior, nominative passthrough.

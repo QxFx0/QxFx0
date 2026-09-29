@@ -44,6 +44,7 @@ import qualified QxFx0.Types.Thresholds as Thr
 import QxFx0.Types.Orbital (OrbitalPhase(..), EncounterMode(..), OrbitalMemory(..), emptyOrbitalMemory, omCurrentPhase, omAvgAttraction, omAvgRepulsion, omStableStreak, omCollapseStreak, DirectiveMoveBias(..))
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Proposition as Proposition
+import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame)
 import QxFx0.Semantic.DialogMeaning (buildDialogAtoms, topicMentionedHere)
 import QxFx0.Semantic.DialogAtom (daTopicNominative)
 import qualified QxFx0.Semantic.Morphology as Morph
@@ -439,6 +440,7 @@ coreBehaviorTests =
     , testParsePropositionComparisonPlausibilityTableChair
     , testParsePropositionMisunderstandingReport
     , testParsePropositionSelfKnowledgeWhoAmI
+    , testFocusNominativeRealMorphology
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -2945,6 +2947,28 @@ testParsePropositionSelfKnowledgeWhoAmI = TestCase $ do
     SelfKnowledgeQ (ipfPropositionType (parseProposition "кто я?"))
   assertEqual "tell-about-self should be SelfKnowledgeQ"
     SelfKnowledgeQ (ipfPropositionType (parseProposition "расскажи о себе"))
+
+-- | Real-morphology focus nominative (pre-registered 2026-09-29):
+-- inflected focuses canonicalize by data, not by heuristic guess.
+-- The empty-morph entries keep fixture behavior byte-identically.
+testFocusNominativeRealMorphology :: Test
+testFocusNominativeRealMorphology = TestCase $ do
+  let nomMorph = MorphologyData Map.empty Map.empty (Map.fromList [("ответственности", "ответственность")]) Map.empty
+      frameHw = Proposition.parsePropositionWithFrameWithMorphology nomMorph
+                  "расскажи об ответственности"
+                  (buildUtteranceSemanticFrame "расскажи об ответственности")
+  assertEqual "real morphology canonicalizes inflected focus"
+    "ответственность" (ipfFocusNominative frameHw)
+  let frameEmpty = Proposition.parsePropositionWithFrame
+                     "расскажи об ответственности"
+                     (buildUtteranceSemanticFrame "расскажи об ответственности")
+  assertEqual "empty-morph entry keeps heuristic behavior"
+    "ответственности" (ipfFocusNominative frameEmpty)
+  let frameNom = Proposition.parsePropositionWithFrameWithMorphology nomMorph
+                   "что такое свобода?"
+                   (buildUtteranceSemanticFrame "что такое свобода?")
+  assertEqual "nominative focus passes through"
+    "свобода" (ipfFocusNominative frameNom)
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

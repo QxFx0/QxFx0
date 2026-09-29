@@ -22,7 +22,9 @@ module QxFx0.Semantic.Proposition
   , parseProposition
   , parsePropositionWithTruthContract
   , parsePropositionWithFrame
+  , parsePropositionWithFrameWithMorphology
   , parsePropositionWithFrameAndTruthContract
+  , parsePropositionWithFrameAndTruthContractMorph
   , parsePropositionMorph
     -- * Focus Extraction
   , extractFocusEntity
@@ -106,7 +108,9 @@ import QxFx0.Semantic.Proposition.Parse
   ( parseProposition
   , parsePropositionWithTruthContract
   , parsePropositionWithFrame
+  , parsePropositionWithFrameWithMorphology
   , parsePropositionWithFrameAndTruthContract
+  , parsePropositionWithFrameAndTruthContractMorph
   , parsePropositionMorph
   )
 
