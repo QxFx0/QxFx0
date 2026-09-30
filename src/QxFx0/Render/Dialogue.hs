@@ -47,6 +47,7 @@ import QxFx0.Types.State.SelfState (selfFieldHeuristics)
 import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
+  , resolveDeadjectivalTopic
   , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
   , ConceptCategory(..)
   , genericDefinitionPredicates, genericDistinctionPredicates
@@ -721,7 +722,13 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
                <> clText claim <> contentText) ast claim "en_GF_MVP"
         | otherwise ->
-            let topicRef = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
+            let topicRef0 = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
+                -- Q4 supplement (pre-registered 2026-09-30): the
+                -- uncovered adjectival subject resolves for SELECTION
+                -- only, so the thesis supplement renders. The claim
+                -- itself comes from the RMP AST (mkTopicNP-bridged);
+                -- covered topics pass through byte-identically.
+                topicRef = if isCoveredTopic topicRef0 then topicRef0 else fromMaybe topicRef0 (resolveDeadjectivalTopic topicRef0)
                 selectedPreds = selectPredicatesGated contentSelector field topicRef mActivatedArtifact
                 ast = claimAstOrFallback (MoveDefine (MkNP (resolveTopicLexeme (nonEmptyOr topicRef "понятии"))) RelIdentity (MkNP "ponyatie_N")) (rmpPrimaryClaimAst rmp)
                 claim = linearizeOrFallback ast renderStyle morph rp (rmpPrimaryClaim rmp)
