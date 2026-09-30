@@ -656,9 +656,9 @@ unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green 2026-09-28 on pre-F1b code; F1b/verbalizer/guard/IR/
-recovery-text landed after — unit/fast/core cover them, no suite
-pins the old recovery string) |
+per-group green on current HEAD 2026-09-30, incl. all Stage-1
+shadow landings; runtime needed unbuffered rerun + hangs past
+finish on teardown — counts final, exit mechanics flaky) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
