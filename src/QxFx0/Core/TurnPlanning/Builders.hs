@@ -21,6 +21,7 @@ import QxFx0.Core.TurnPlanning.Modulation
   )
 import QxFx0.Semantic.Proposition (PropositionType(..))
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
+import QxFx0.Semantic.Content (resolveDeadjectivalTopic)
 import QxFx0.Types
 import QxFx0.Types.State.Perspective (PerspectiveScope(..), renderPerspectiveScope)
 
@@ -302,11 +303,17 @@ claimAstFromFrame truthStatus frame fallback ego =
       LocationFormationQ ->
         Just (MoveGround topicNP)
 
+-- Q4 (pre-registered 2026-09-30): uncovered adjectival topics
+-- resolve to their covered nominal form before the default lexeme
+-- (paradigms are nouns-only). Covered topics hit the first lookup;
+-- unknown words fall through to ponyatie_N exactly as before.
 mkTopicNP :: Text -> GfNP
 mkTopicNP topic =
   MkNP $ case lookupTopicGfLexemeId topic of
     Just funId -> funId
-    Nothing -> "ponyatie_N"
+    Nothing -> case resolveDeadjectivalTopic topic >>= lookupTopicGfLexemeId of
+      Just funId -> funId
+      Nothing -> "ponyatie_N"
 
 buildComparisonAst :: InputPropositionFrame -> GfNP -> ClaimAst
 buildComparisonAst frame fallbackTopic =

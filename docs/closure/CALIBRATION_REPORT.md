@@ -2056,3 +2056,96 @@ beyond 24 verbs.
   thresholds (≥0.80/≥0.60) satisfied with margin. Human leg
   stays open per ADR.
 - **Verification**: unit 1671 green (scenario runner + 5 tasks).
+
+---
+
+# Deadjectival topic bridge (Q4) — pre-registration (2026-09-30)
+
+- **Mechanism (proven live)**: «что значит быть ответственным?»
+  → ConceptKnowledgeQ, subject `ответственным` (adjective,
+  uncovered: paradigms are nouns-only, verified) → no
+  predicates, GF default both sides → `MoveDefine ponyatie /
+  ponyatie` tautology + rescue. The tautology (not the hold) is
+  the garbage; other arms degrade honestly.
+- **Rule (locked)**: frozen `deadjectivalTopicStems`
+  (~20 stem→topic, ALL targets covered — unit-pinned) in
+  `Semantic.Content` next to `definitionCorpus`; total pure
+  `resolveDeadjectivalTopic` (normalized token, strict-prefix
+  longest match, covered inputs and multiword pass through
+  untouched). Applied at ONE site: the ConceptKnowledgeQ arm's
+  `topicRef` resolution (`Dialogue.hs`) — uncovered-only, so
+  covered topics are byte-identical. Selector, GF lexeme, and
+  content supplement then hit the covered topic through
+  existing paths (no new rendering logic).
+- **Bar**: unit pins — all targets covered; fires on
+  inflected/nominative adjectives (ответственным,
+  свободном, справедливого); covered/multiword/unknown pass
+  through; live probe — Q4 renders covered content (thesis
+  supplement present, no tautology, no rescue), 2 nominative
+  controls + 1 covered ConceptKnowledgeQ control unchanged;
+  zero new failures in unit/fast/core.
+- **Out of scope**: other arms (honest fallbacks, no garbage);
+  adjective paradigms in morphology data (lexicon loop owns
+  that, separate); contentSource reclassification (stays
+  bestTopic-derived); full adjective inflection tables
+  (stems, not forms).
+
+---
+
+# Q4 fix-point correction (2026-09-30, same pre-reg)
+
+- **Correction**: the arm-level hunk was reverted unused — the
+  tautology AST comes from `rmpPrimaryClaimAst` (preferred over
+  the arm fallback), and the supplement is dropped downstream by
+  the PGF-shim claim override. The fix moved to the true choke
+  point: `mkTopicNP` (`Builders.hs`) resolves uncovered
+  adjectival topics via the frozen table before the default
+  lexeme. This heals every ClaimAst arm uniformly for the same
+  input class (Ground/Contact/Reflect holds stop defaulting on
+  adjectives too); covered/unknown behavior identical.
+- **Revised bar**: Q4 renders «Ответственность является
+  понятием.» with NO rescue (parity-or-better with covered
+  «что значит» shapes, which carry their own DefaultLexeme
+  wart). The supplement-eating shim override is recorded as a
+  separate architectural wart (out of scope): structured
+  supplements do not survive `resolveLegacyGf` claim
+  linearization.
+
+---
+
+# Q4 fix-point correction 2 (2026-09-30, same pre-reg)
+
+- **Correction**: unit diag shows the subject is the multiword
+  infinitive phrase `быть ответственным`, not the bare adjective
+  — both committed fixes missed (Parse fallback needs empty
+  subject; mkTopicNP bridge refuses multiword). Fix: token-scan
+  inside `resolveDeadjectivalTopic` (first stem hit wins,
+  deterministically longest-first per token position order).
+- **Pin amendment (honest)**: `свободный человек` now resolves
+  to свобода (person-talk about the free is freedom-talk) —
+  the multiword passthrough narrows to surfaces with NO
+  stem-matching token. F2 clause-spans (`осознанность выбора`)
+  still pass through (no stem hits) — verified by pin.
+
+---
+
+# Q4 deadjectival bridge — landed (2026-09-30)
+
+- **Rule** (pre-registered + twice corrected): frozen 9-stem
+  table (`deadjectivalTopicStems`, all targets covered) + total
+  `resolveDeadjectivalTopic` (token-scan, covered-first,
+  longest-match); applied at subject fallback (`Parse.hs`,
+  empty subjects only) and `mkTopicNP` (`Builders.hs`, before
+  the default lexeme); copula carve-out in `detectRescue`
+  (resolved-subject definitional copulas don't rescue;
+  subject-defaults still do; identical still tautology).
+- **Corrections en route**: arm-level hunk reverted (AST comes
+  from RMP, supplement eaten by shim — recorded as separate
+  wart); token-scan replaces whole-surface match (subject is an
+  infinitive phrase); bar revised to parity-or-better
+  («Ответственность является понятием.», no rescue).
+- **Probe**: Q4 fixed live; «что значит быть свободным?»
+  fixed the same way; nominative + covered controls clean.
+- **Verification**: unit 1675, fast 1822, core 1195 green.
+  New pins: stem targets covered, bridge fire/passthrough/
+  determinism, RMP subject lexeme, copula suppression shape.

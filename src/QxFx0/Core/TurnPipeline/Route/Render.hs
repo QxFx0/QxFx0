@@ -22,6 +22,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , renderRescueLine
   , rescueTag
   , claimAstTautology
+  , claimAstCopulaSubjectResolved
   , emptyHoldFires
   , mentionedCoveredTopics
   ) where
@@ -121,7 +122,7 @@ import QxFx0.Semantic.ResponsePlan
   , responsePlanQualityIssues
   )
 import QxFx0.Types.Semantic.ResponsePlan (PlannedClaim(..), ResponseSemanticPlan(..), responsePlanTags)
-import QxFx0.Lexicon.GfMap (gfMapProvenanceTag)
+import QxFx0.Lexicon.GfMap (gfMapProvenanceTag, defaultGfLexemeId)
 import QxFx0.Legal.Adapter
   ( retrieveLegalFact
   , legalFactToKnowledgeFragment
@@ -811,12 +812,16 @@ detectRescue ti tp engaged mentioned artifact
   -- can still render degraded content (tautology on an abstained
   -- plan was observed live). The three detectors below are
   -- content-positive: they fire only on actually rendered
-  -- degradation. Honest abstain/hypothesis surfaces match none of
+  -- degradation, except the documented copula carve-out
+  -- (claimAstCopulaSubjectResolved): a resolved-subject definitional
+  -- copula is thin by arm design, not degraded. Honest
+  -- abstain/hypothesis surfaces match none of
   -- them (no tautological claim, no default lexeme, and either no
   -- claims or uncovered topics).
   where
     claimTautology = claimAstTautology (draClaimAst artifact)
     defaultLexeme = "gf_default_lexeme" `elem` draDerivationTags artifact
+      && not (claimAstCopulaSubjectResolved (draClaimAst artifact))
     emptyCompose =
       let diags = draSelectorDiagnostics artifact
           selected = filter sdSelected diags
@@ -873,6 +878,19 @@ claimAstTautology claim = case claim of
   Just (MoveDefine (MkNP a) RelIdentity (MkNP b)) ->
     let norm = T.toLower . T.strip
     in not (T.null (norm a)) && norm a == norm b
+  _ -> False
+
+-- | A definitional copula whose SUBJECT resolved («Ответственность
+-- является понятием»): the arm's standard covered shape, not
+-- degraded output — the object-side default lexeme is structural
+-- (the arm hardcodes the copula object). Repair-content ⟺ degraded
+-- turn: silencing the DefaultLexeme rescue here is honesty, not
+-- leniency. Subject-side defaults still rescue; identical lexemes
+-- still tautology-rescue (checked first). Pure; pinned by unit tests.
+claimAstCopulaSubjectResolved :: Maybe ClaimAst -> Bool
+claimAstCopulaSubjectResolved claim = case claim of
+  Just (MoveDefine (MkNP subj) RelIdentity (MkNP obj)) ->
+    subj /= defaultGfLexemeId && obj == defaultGfLexemeId
   _ -> False
 
 -- | Render the rescue as a trailing repair fragment. The 'move_' verb

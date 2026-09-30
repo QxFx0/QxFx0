@@ -66,6 +66,8 @@ module QxFx0.Semantic.Content
   , lookupDistinctionWithGeneric
   , isCoveredTopic
   , isCoveredPair
+  , deadjectivalTopicStems
+  , resolveDeadjectivalTopic
   , coveredTopics
   , classifyConceptCategory
   , categoryFromOntology
@@ -92,7 +94,9 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Maybe (isJust, fromMaybe)
+import Data.Maybe (isJust, fromMaybe, listToMaybe, mapMaybe)
+import Data.Char (isAlphaNum)
+import Data.List (sortOn)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -144,6 +148,47 @@ isCoveredTopic :: Text -> Bool
 isCoveredTopic = flip M.member definitionCorpus . normalizeTopic
 
 -- | Check if a topic pair is in the covered seed corpus (either direction).
+-- | Frozen deadjectival stems (Q4 fix, pre-registered 2026-09-30):
+-- adjective form -> covered nominal topic. Paradigms are
+-- nouns-only (verified), so deadjectival normalization cannot go
+-- through morphology. Every target is covered (unit-pinned).
+-- Deliberate exclusions (false friends / morphology-owned):
+-- выборн (выборный = electoral), смыслов (noun inflection),
+-- любим (любимец = person), осознанн (needs a corpus entry first).
+-- Adverbs hit too (свободно -> свобода): defensible, documented.
+deadjectivalTopicStems :: [(Text, Text)]
+deadjectivalTopicStems =
+  [ ("ответствен", "ответственность")
+  , ("справедлив", "справедливость")
+  , ("влюблён", "любовь")
+  , ("влюблен", "любовь")
+  , ("возможн", "возможность")
+  , ("свободн", "свобода")
+  , ("любовн", "любовь")
+  , ("истин", "истина")
+  , ("смерт", "смерть")
+  ]
+
+-- | Resolve an uncovered adjectival token to its covered nominal
+-- topic. Total: Nothing for covered inputs (exact match wins),
+-- multiword surfaces, and unknown words. Longest-stem-first for
+-- determinism.
+resolveDeadjectivalTopic :: Text -> Maybe Text
+resolveDeadjectivalTopic surface =
+  let toks = [ T.filter isAlphaNum w
+             | w <- T.words (T.toLower (T.strip surface))
+             , not (T.null w) ]
+  in if any isCoveredTopic toks
+       then Nothing
+       else listToMaybe (mapMaybe resolveToken toks)
+  where
+    resolveToken tok = listToMaybe
+      [ topic
+      | (stem, topic) <- sortOn (negate . T.length . fst) deadjectivalTopicStems
+      , stem `T.isPrefixOf` tok
+      , T.length tok > T.length stem
+      ]
+
 isCoveredPair :: Text -> Text -> Bool
 isCoveredPair a b =
   let (ka, kb) = (normalizeTopic a, normalizeTopic b)

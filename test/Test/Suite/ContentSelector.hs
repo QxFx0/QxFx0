@@ -4,6 +4,7 @@ module Test.Suite.ContentSelector (contentSelectorTests) where
 import qualified Data.Sequence as Seq
 
 import Test.HUnit
+import Control.Monad (forM_)
 import Control.DeepSeq (force)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
@@ -438,6 +439,33 @@ contentSelectorTests =
       -- these 20 hand-written words. Any edit changes content
       -- selection and must be a deliberate, math-versioned decision.
       assertEqual "prototype word lists" frozenPrototypes fieldDimensionPrototypes
+
+  , TestLabel "deadjectival targets are all covered" $ TestCase $
+      mapM_ (\(_, topic) -> assertBool ("covered target: " <> T.unpack topic)
+               (isCoveredTopic topic)) deadjectivalTopicStems
+
+  , TestLabel "deadjectival bridge fires on adjectives" $ TestCase $ do
+      forM_ [ ("ответственным", "ответственность")
+            , ("ответственный", "ответственность")
+            , ("свободном", "свобода")
+            , ("справедливого", "справедливость")
+            , ("истинный", "истина")
+            , ("влюблённый", "любовь")
+            , ("возможном", "возможность")
+            , ("смертный", "смерть")
+            ] $ \(input, expected) ->
+        assertEqual ("bridge: " <> T.unpack input)
+          (Just expected) (resolveDeadjectivalTopic input)
+      forM_ ["свобода", "ответственность", "квантор", "осознанность выбора", ""] $ \input ->
+        assertEqual ("passthrough: " <> T.unpack input)
+          Nothing (resolveDeadjectivalTopic input)
+      assertEqual "person-talk resolves to freedom"
+        (Just "свобода") (resolveDeadjectivalTopic "свободный человек")
+      assertEqual "infinitive phrase resolves"
+        (Just "ответственность") (resolveDeadjectivalTopic "быть ответственным")
+      assertEqual "deterministic"
+        (resolveDeadjectivalTopic "ответственным")
+        (resolveDeadjectivalTopic "ответственным")
   ]
   where
     frozenPrototypes =

@@ -441,6 +441,7 @@ coreBehaviorTests =
     , testParsePropositionMisunderstandingReport
     , testParsePropositionSelfKnowledgeWhoAmI
     , testFocusNominativeRealMorphology
+    , testDeadjectivalClaimAstTopic
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -2969,6 +2970,19 @@ testFocusNominativeRealMorphology = TestCase $ do
                    (buildUtteranceSemanticFrame "что такое свобода?")
   assertEqual "nominative focus passes through"
     "свобода" (ipfFocusNominative frameNom)
+
+-- | Q4 (pre-registered 2026-09-30, fix point Builders.mkTopicNP):
+-- an adjectival topic must resolve past the default lexeme in the
+-- RMP claim AST (previously MoveDefine ponyatie/ponyatie).
+testDeadjectivalClaimAstTopic :: Test
+testDeadjectivalClaimAstTopic = TestCase $ do
+  let frame = parseProposition "что значит быть ответственным?"
+      rmp = TurnPlanning.buildRMP (ipfCanonicalFamily frame) emptyDialogueCommitmentLedger Exploring emptyDialogueThread frame emptySenseVector (ipfFocusEntity frame) emptyEgoState emptyAtomTrace True 0.5
+  case rmpPrimaryClaimAst rmp of
+    Just (MoveDefine (MkNP subj) _ _) ->
+      assertBool ("adjectival subject must resolve past default lexeme, got " <> T.unpack subj)
+        (subj /= GfMap.defaultGfLexemeId)
+    other -> assertFailure ("expected MoveDefine claim ast, got " <> show other)
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

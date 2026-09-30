@@ -80,6 +80,7 @@ import QxFx0.Semantic.KeywordMatch
   , containsKeywordPhrase
   , containsAnyKeywordPhrase
   )
+import QxFx0.Semantic.Content (resolveDeadjectivalTopic)
 import QxFx0.Policy.ParserKeywords
   ( propositionNegationFragment
   , propositionSearchKeywords
@@ -144,7 +145,15 @@ parsePropositionWithFrameAndTruthContractMorph morph truthContractStatus rawText
     , ipfPropositionType = propType
     , ipfFocusEntity = focus
     , ipfFocusNominative = focusNom
-    , ipfSemanticSubject = semanticSubject
+    -- Q4 (pre-registered 2026-09-30): an empty subject falls back to
+    -- the bridged focus when the focus is an uncovered adjectival
+    -- form (paradigms are nouns-only). Covered/unknown focuses behave
+    -- exactly as before (bridge returns Nothing).
+    , ipfSemanticSubject =
+        if T.null (T.strip semanticSubject)
+          then fromMaybe semanticSubject (resolveDeadjectivalTopic focus)
+          else semanticSubject
+
     , ipfSemanticTarget = semanticFrameTargetFromText semanticTarget
     , ipfSemanticCandidates = semanticCandidates
     , ipfSemanticEvidence = semanticEvidence

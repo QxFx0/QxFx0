@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import QxFx0.Core.TurnPipeline.Route.Render
   ( RescueReason(..)
   , claimAstTautology
+  , claimAstCopulaSubjectResolved
   , emptyHoldFires
   , mentionedCoveredTopics
   , renderRescueLine
@@ -31,6 +32,18 @@ rescueTests =
   , TestLabel "tautology rejects distinct and empty sides" $ TestCase $ do
       assertBool "distinct terms are not tautology"
         (not (claimAstTautology (Just (MoveDefine (MkNP "свобода") RelIdentity (MkNP "ответственность")))))
+
+  , TestLabel "resolved-subject copula suppresses default-lexeme rescue" $ TestCase $ do
+      assertBool "real subject, default object"
+        (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "otvetstvennost_N") RelIdentity (MkNP "ponyatie_N"))))
+      assertBool "default subject still rescuable"
+        (not (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "ponyatie_N") RelIdentity (MkNP "ponyatie_N")))))
+      assertBool "identical real lexemes owned by tautology detector"
+        (not (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "svoboda_N") RelIdentity (MkNP "svoboda_N")))))
+      assertBool "non-definitional moves unaffected"
+        (not (claimAstCopulaSubjectResolved (Just MoveMisunderstanding)))
+      assertBool "absent claim unaffected"
+        (not (claimAstCopulaSubjectResolved Nothing))
       assertBool "empty sides are not tautology"
         (not (claimAstTautology (Just (MoveDefine (MkNP "") RelIdentity (MkNP "")))))
       assertBool "Nothing is not tautology"
