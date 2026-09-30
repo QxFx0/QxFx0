@@ -23,6 +23,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , rescueTag
   , claimAstTautology
   , claimAstCopulaSubjectResolved
+  , legacyOverrideAdmissible
   , emptyHoldFires
   , mentionedCoveredTopics
   ) where
@@ -1547,6 +1548,12 @@ shouldWarnMorphologyFallback pio = do
     TurnResReadEnv _ -> pure False
     _ -> pure False
 
+-- | Legacy GF override admissibility (R1): the atoms/claim
+-- linearization may only fill an empty base surface, never replace
+-- a rendered one. Pure; pinned by unit tests.
+legacyOverrideAdmissible :: DialogueRenderArtifact -> Bool
+legacyOverrideAdmissible artifact = T.null (T.strip (draRenderedText artifact))
+
 resolveRuntimeGfLinearization :: PipelineIO -> RenderStatic -> IO (Maybe RenderStatic)
 resolveRuntimeGfLinearization pio renderStatic = do
   runtimeEnabled <- shouldUseGfRuntime pio
@@ -1567,18 +1574,25 @@ resolveRuntimeGfLinearization pio renderStatic = do
              _ -> pure (Just (applyRuntimeGfResult gfLang renderStatic resultPlan))
          Nothing -> resolveLegacyGf gfLang mPgfPath artifact
   where
-    resolveLegacyGf gfLang mPgfPath artifact = do
-      let da = draDialogAtoms artifact
-      resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath gfLang da)
-      case resultDa of
-        TurnResLinearizeDialogAtoms (Right gfResult) | not (T.null (T.strip (glrText gfResult))) ->
-          pure (Just (applyRuntimeGfResult gfLang renderStatic resultDa))
-        _ ->
-          case draClaimAst artifact of
-            Nothing -> pure Nothing
-            Just claimAst -> do
-              result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath gfLang claimAst)
-              pure (Just (applyRuntimeGfResult gfLang renderStatic result))
+    resolveLegacyGf gfLang mPgfPath artifact
+      -- R1 (pre-registered 2026-09-30): fill-in, never replacement.
+      -- A non-empty honest surface (including structured bodies,
+      -- whose text was already linearized through the same Haskell
+      -- renderer) is never replaced by a bare claim/atoms
+      -- linearization; the override only fills empty bases.
+      | not (legacyOverrideAdmissible artifact) = pure Nothing
+      | otherwise = do
+          let da = draDialogAtoms artifact
+          resultDa <- resolveTurnEffect pio (TurnReqLinearizeDialogAtoms mPgfPath gfLang da)
+          case resultDa of
+            TurnResLinearizeDialogAtoms (Right gfResult) | not (T.null (T.strip (glrText gfResult))) ->
+              pure (Just (applyRuntimeGfResult gfLang renderStatic resultDa))
+            _ ->
+              case draClaimAst artifact of
+                Nothing -> pure Nothing
+                Just claimAst -> do
+                  result <- resolveTurnEffect pio (TurnReqLinearizeClaimAst mPgfPath gfLang claimAst)
+                  pure (Just (applyRuntimeGfResult gfLang renderStatic result))
 
 shouldUseGfRuntime :: PipelineIO -> IO Bool
 shouldUseGfRuntime pio = do

@@ -14,12 +14,16 @@ import QxFx0.Core.TurnPipeline.Route.Render
   ( RescueReason(..)
   , claimAstTautology
   , claimAstCopulaSubjectResolved
+  , legacyOverrideAdmissible
   , emptyHoldFires
   , mentionedCoveredTopics
   , renderRescueLine
   , rescueTag
   )
 import QxFx0.Types.ClaimAst (ClaimAst(..), GfNP(..), GfRelation(..))
+import QxFx0.Render.Dialogue (DialogueRenderArtifact(..))
+import QxFx0.Types.Observability (ContractProvenance(..), SurfaceProvenance(..))
+import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
 
 rescueTests :: [Test]
 rescueTests =
@@ -32,6 +36,12 @@ rescueTests =
   , TestLabel "tautology rejects distinct and empty sides" $ TestCase $ do
       assertBool "distinct terms are not tautology"
         (not (claimAstTautology (Just (MoveDefine (MkNP "свобода") RelIdentity (MkNP "ответственность")))))
+      assertBool "empty sides are not tautology"
+        (not (claimAstTautology (Just (MoveDefine (MkNP "") RelIdentity (MkNP "")))))
+      assertBool "Nothing is not tautology"
+        (not (claimAstTautology Nothing))
+      assertBool "non-define moves are not tautology"
+        (not (claimAstTautology (Just (MoveGround (MkNP "свобода")))))
 
   , TestLabel "resolved-subject copula suppresses default-lexeme rescue" $ TestCase $ do
       assertBool "real subject, default object"
@@ -44,12 +54,14 @@ rescueTests =
         (not (claimAstCopulaSubjectResolved (Just MoveMisunderstanding)))
       assertBool "absent claim unaffected"
         (not (claimAstCopulaSubjectResolved Nothing))
-      assertBool "empty sides are not tautology"
-        (not (claimAstTautology (Just (MoveDefine (MkNP "") RelIdentity (MkNP "")))))
-      assertBool "Nothing is not tautology"
-        (not (claimAstTautology Nothing))
-      assertBool "non-define moves are not tautology"
-        (not (claimAstTautology (Just (MoveGround (MkNP "свобода")))))
+
+  , TestLabel "legacy override admissible only on empty base" $ TestCase $ do
+      assertBool "blank base admits fill-in"
+        (legacyOverrideAdmissible (mkArtifact ""))
+      assertBool "whitespace base admits fill-in"
+        (legacyOverrideAdmissible (mkArtifact "   "))
+      assertBool "rendered base blocks replacement"
+        (not (legacyOverrideAdmissible (mkArtifact "Тезис: свобода предполагает выбор.")))
 
   , TestLabel "repair lines re-take the turn" $ TestCase $ do
       assertBool "tautology line names the failure"
@@ -101,3 +113,27 @@ rescueTests =
         []
         (mentionedCoveredTopics "Я вижу тему, но в локальной модели нет достаточного основания для содержательного тезиса.")
   ]
+
+-- | Minimal artifact fixture for gate-condition pins (R1): only the
+-- rendered text varies; everything else is inert.
+mkArtifact :: T.Text -> DialogueRenderArtifact
+mkArtifact body = DialogueRenderArtifact
+  { draRenderedText = body
+  , draQuestionLike = False
+  , draStylePrefixText = ""
+  , draTemplateBodyText = body
+  , draClaimText = ""
+  , draClaimAst = Nothing
+  , draLinearizationLang = Nothing
+  , draLinearizationOk = False
+  , draFallbackReason = Nothing
+  , draContractProvenance = FallbackRoute
+  , draSurfaceProvenance = FromFallback
+  , draDerivationTags = []
+  , draDialogAtoms = emptyDialogAtoms
+  , draGenerationTrace = []
+  , draEmittedPredicates = []
+  , draSelectorDiagnostics = []
+  , draActivationArtifact = Nothing
+  , draResponsePlan = Nothing
+  }

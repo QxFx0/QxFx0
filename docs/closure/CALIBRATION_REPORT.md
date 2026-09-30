@@ -2149,3 +2149,64 @@ beyond 24 verbs.
 - **Verification**: unit 1675, fast 1822, core 1195 green.
   New pins: stem targets covered, bridge fire/passthrough/
   determinism, RMP subject lexeme, copula suppression shape.
+
+---
+
+# Shim-override scoping (resolveLegacyGf) — pre-registration (2026-09-30)
+
+- **Measurement** (15-turn battery with provenance traces):
+  FromShim fires on 5/15. T5 (ConceptKnowledgeQ, no plan):
+  claim override strips the structured body (framing +
+  thesis supplement) to the bare claim — DESTRUCTIVE (the Q4
+  wart). T14 (atoms hold on current topic): benign. T12
+  (farewell): atoms hold on the FALLBACK topic «тема» —
+  contentless. T6/T11: questionable (possible supplement loss /
+  fallback-topic leak «по теме понятии»). The other 10 never
+  trigger (plan-canonical path with fail-closed fallback, or
+  nothing to linearize). Plan path (`PgfClaimRoute`,
+  AuthorityCanonical) is authoritative and untouched.
+- **Rule (locked), two parts**:
+  - R1 fill-in, never replacement: `resolveLegacyGf` returns an
+    override ONLY when base `draRenderedText` is blank. A
+    non-empty honest surface (including structured bodies, whose
+    text was already linearized through the same Haskell
+    renderer) is never replaced by a bare claim/atoms
+    linearization. Empty-base fill-in (the legitimate upgrade)
+    preserved.
+  - R2 fallback-topic refusal: `dialogAtomsToGfExpr` returns
+    `Left` for fallback topics («», «тема», «понятие»,
+    «понятии», frozen list) — no atoms linearization out of
+    nothing. Real topics byte-identical.
+- **Bar**: unit pins — non-empty base kept despite linearizable
+  claim; empty base still filled; fallback topics refused, real
+  topics pass; live — identical 15-turn battery re-run and
+  diffed: T5 gains its supplement, T12 loses its тема-hold,
+  T14 same-or-better, all others byte-identical (any other
+  delta triaged before landing); crisis/speculative controls;
+  zero new failures in unit/fast/core.
+- **Out of scope**: plan linearization path (canonical,
+  untouched); B2 ablation path (bypasses resolution already);
+  T11 «по теме понятии» if it lives in base template text
+  (separate wart, recorded here); EN-path symmetry noted
+  (same rule applies).
+
+---
+
+# Shim-override scoping (R1/R2) — landed (2026-09-30)
+
+- **Rules** (pre-registered above): R1 fill-in-never-replacement
+  (`legacyOverrideAdmissible` gate in `resolveLegacyGf`);
+  R2 fallback-topic refusal in `dialogAtomsToGfExpr`
+  («», «тема», «понятие», «понятии»).
+- **Battery diff** (identical 15-turn rerun): T5 gains its full
+  structured body (framing + claim + thesis supplement —
+  combined with the Q4 bridge); T6/T14/T15 regain base content
+  previously eaten (prefaces, tails, contemplative surface);
+  T12 loses its fallback-topic atoms hold; T1–T4/T7–T9/T13
+  byte-identical. Zero regressions — every delta is restored
+  base content or a fixed hold.
+- **Verification**: unit 1677, fast 1823, core 1195 green.
+  New pins: gate condition, fallback refusal (+ real-topic
+  control). Residuals: T11 «по теме понятии» lives in base
+  template text (separate wart); claim/thesis double period
+  (cosmetic micro-wart, follow-up).

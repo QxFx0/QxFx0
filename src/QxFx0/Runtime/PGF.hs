@@ -387,14 +387,22 @@ dialogAtomsToGfExpr :: DialogAtoms -> Either Text Text
 dialogAtomsToGfExpr da =
   let topicStr = daTopicNominative da
       intent = if hasTag TUserIntent da then headAtomValue TUserIntent da else ""
-  in case lookupTopicGfLexemeId buildGfLexemeMap topicStr of
-       Nothing -> Left ("unresolved_topic_lexeme:" <> topicStr)
-       Just gfTopic ->
-         if intent == "define"
-           then Right ("MoveDefine (MkNP " <> gfTopic <> ") RelIdentity (MkNP " <> gfTopic <> ")")
-           else if intent == "ground"
-             then Right ("MoveGround (MkNP " <> gfTopic <> ")")
-             else Right ("MoveGround (MkNP " <> gfTopic <> ")")
+  -- R2 (pre-registered 2026-09-30): no atoms linearization out of
+  -- nothing — fallback topics ("тема", "понятие", ...) produced
+  -- contentless holds naming the fallback itself (farewell-class
+  -- turns). Frozen list, unit-pinned.
+  in if topicStr `elem` fallbackAtomTopics
+       then Left ("fallback_topic_no_atoms:" <> topicStr)
+       else case lookupTopicGfLexemeId buildGfLexemeMap topicStr of
+              Nothing -> Left ("unresolved_topic_lexeme:" <> topicStr)
+              Just gfTopic ->
+                if intent == "define"
+                  then Right ("MoveDefine (MkNP " <> gfTopic <> ") RelIdentity (MkNP " <> gfTopic <> ")")
+                  else if intent == "ground"
+                    then Right ("MoveGround (MkNP " <> gfTopic <> ")")
+                    else Right ("MoveGround (MkNP " <> gfTopic <> ")")
+  where
+    fallbackAtomTopics = ["", "тема", "понятие", "понятии"]
 
 sanitizeLegacyLexemeId :: Text -> Text
 sanitizeLegacyLexemeId = LegacyGfMap.topicToGfLexemeId

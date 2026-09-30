@@ -14,6 +14,7 @@ module Test.Suite.PGFErrorHandling
   ) where
 
 import Test.HUnit
+import Control.Monad (forM_)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
@@ -28,6 +29,7 @@ pgfErrorHandlingTests =
   , TestLabel "PGFParseError - invalid topic" testPGFParseErrorExpr
   , TestLabel "Define dialog atoms preserve MoveDefine arity" testDefineDialogAtomsArity
   , TestLabel "Successful linearization" testSuccessfulLinearization
+  , TestLabel "Fallback atom topics refuse linearization" testFallbackTopicsRefused
   ]
 
 -- | Test PGFFileNotFound: call with non-existent file.
@@ -118,3 +120,28 @@ testSuccessfulLinearization = TestCase $ do
       assertBool "Result should have non-empty text" 
         (not . T.null . T.pack . show $ glr)
 
+
+-- | R2 (pre-registered 2026-09-30): atoms linearization refuses
+-- fallback topics ("", "тема", "понятие", "понятии") instead of
+-- rendering contentless holds naming the fallback itself. Real
+-- topics never take the fallback refusal path.
+testFallbackTopicsRefused :: Test
+testFallbackTopicsRefused = TestCase $ do
+  forM_ ["", "тема", "понятие", "понятии"] $ \topic ->
+    case dialogAtomsToGfExpr (mkAtoms topic "ground") of
+      Left err -> assertBool ("fallback refusal for " <> T.unpack topic)
+        ("fallback_topic" `T.isInfixOf` err)
+      Right _ -> assertFailure ("fallback topic must not linearize: " <> T.unpack topic)
+  case dialogAtomsToGfExpr (mkAtoms "воля" "ground") of
+    Left err -> assertBool "real topic never refused as fallback"
+      (not ("fallback_topic" `T.isInfixOf` err))
+    Right _ -> pure ()
+  where
+    mkAtoms topic intent = DialogAtoms
+      { daSlots = M.fromList
+          [ (TTopic, [plainSlot TTopic topic])
+          , (TUserIntent, [plainSlot TUserIntent intent])
+          ]
+      , daUserRaw = ""
+      , daTurn = 1
+      }
