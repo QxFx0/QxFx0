@@ -442,6 +442,7 @@ coreBehaviorTests =
     , testParsePropositionSelfKnowledgeWhoAmI
     , testFocusNominativeRealMorphology
     , testDeadjectivalClaimAstTopic
+    , testMoveContactDefaultTopic
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -2983,6 +2984,22 @@ testDeadjectivalClaimAstTopic = TestCase $ do
       assertBool ("adjectival subject must resolve past default lexeme, got " <> T.unpack subj)
         (subj /= GfMap.defaultGfLexemeId)
     other -> assertFailure ("expected MoveDefine claim ast, got " <> show other)
+
+-- | Micro-warts (pre-registered 2026-09-30): contact moves with the
+-- default lexeme render topic-less instead of naming fallback
+-- Latin/Cyrillic.
+testMoveContactDefaultTopic :: Test
+testMoveContactDefaultTopic = TestCase $ do
+  let morph = Morph.buildMorphologyData []
+  assertEqual "RU default topic drops the prepositional phrase"
+    (Just "Слышу запрос на контакт.")
+    (Dialogue.linearizeClaimAstRus emptyRuntimeParadigms (MoveContact (MkNP GfMap.defaultGfLexemeId)) StyleStandard morph)
+  assertEqual "EN default topic continues the dialogue"
+    (Just "I am here to continue the dialogue.")
+    (Dialogue.linearizeClaimAstEn (MoveContact (MkNP GfMap.defaultGfLexemeId)))
+  assertBool "real topics keep the phrase (RU)"
+    (Dialogue.linearizeClaimAstRus emptyRuntimeParadigms (MoveContact (MkNP "svoboda_N")) StyleStandard morph
+     /= Just "Слышу запрос на контакт.")
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

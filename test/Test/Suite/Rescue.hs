@@ -13,7 +13,7 @@ import qualified Data.Text as T
 import QxFx0.Core.TurnPipeline.Route.Render
   ( RescueReason(..)
   , claimAstTautology
-  , claimAstCopulaSubjectResolved
+  , claimAstDefaultLexemeExcused
   , legacyOverrideAdmissible
   , emptyHoldFires
   , mentionedCoveredTopics
@@ -45,15 +45,21 @@ rescueTests =
 
   , TestLabel "resolved-subject copula suppresses default-lexeme rescue" $ TestCase $ do
       assertBool "real subject, default object"
-        (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "otvetstvennost_N") RelIdentity (MkNP "ponyatie_N"))))
+        (claimAstDefaultLexemeExcused (Just (MoveDefine (MkNP "otvetstvennost_N") RelIdentity (MkNP "ponyatie_N"))))
       assertBool "default subject still rescuable"
-        (not (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "ponyatie_N") RelIdentity (MkNP "ponyatie_N")))))
+        (not (claimAstDefaultLexemeExcused (Just (MoveDefine (MkNP "ponyatie_N") RelIdentity (MkNP "ponyatie_N")))))
       assertBool "identical real lexemes owned by tautology detector"
-        (not (claimAstCopulaSubjectResolved (Just (MoveDefine (MkNP "svoboda_N") RelIdentity (MkNP "svoboda_N")))))
+        (not (claimAstDefaultLexemeExcused (Just (MoveDefine (MkNP "svoboda_N") RelIdentity (MkNP "svoboda_N")))))
       assertBool "non-definitional moves unaffected"
-        (not (claimAstCopulaSubjectResolved (Just MoveMisunderstanding)))
+        (not (claimAstDefaultLexemeExcused (Just MoveMisunderstanding)))
       assertBool "absent claim unaffected"
-        (not (claimAstCopulaSubjectResolved Nothing))
+        (not (claimAstDefaultLexemeExcused Nothing))
+
+  , TestLabel "default-topic contact excused from lexeme rescue" $ TestCase $ do
+      assertBool "default contact names nothing degraded"
+        (claimAstDefaultLexemeExcused (Just (MoveContact (MkNP "ponyatie_N"))))
+      assertBool "real-topic contact still rescuable"
+        (not (claimAstDefaultLexemeExcused (Just (MoveContact (MkNP "svoboda_N")))))
 
   , TestLabel "legacy override admissible only on empty base" $ TestCase $ do
       assertBool "blank base admits fill-in"

@@ -2210,3 +2210,63 @@ beyond 24 verbs.
   control). Residuals: T11 «по теме понятии» lives in base
   template text (separate wart); claim/thesis double period
   (cosmetic micro-wart, follow-up).
+
+---
+
+# Micro-warts (punctuation + contact fallback topic) — pre-registration (2026-09-30)
+
+- **W1 double period**: `clText claim` (ends «.») + `". "`-prefixed
+  supplements render «..» (observed Q4; same shape in EN
+  ConceptKnowledgeQ, EN/RU Distinction, challenge arms).
+  Fix: `appendSupplement` strips one leading sentence-breaker
+  (`.»/«!»/«?» + spaces) from the supplement — no-op for the
+  many bare-supplement callers — and the four arms route their
+  join through it instead of manual `<>`.
+- **W2 contact fallback topic**: `MoveContact` with the default
+  lexeme renders «по теме понятии» (RU, plus heuristic-truncated
+  Loc) / «discuss понятие» (EN). Fix: default-lexeme topic →
+  topic-less variants («Слышу запрос на контакт.» /
+  «I am here to continue the dialogue.» — established EN
+  phrasing, nothing invented).
+- **Bar**: unit pins — appendSupplement strips dotted prefixes,
+  bare behavior byte-identical (existing pins green); contact
+  arms topic-less on default, unchanged otherwise; live —
+  Q4 single period, «спасибо» without fallback-topic naming,
+  2 controls (covered ConceptKnowledgeQ + greeting);
+  zero new failures in unit/fast/core.
+- **Out of scope**: MoveGround/Reflect/Describe default-topic
+  naming (same class, unobserved live — follow-up wart);
+  paradigms data for опора/понятие (lexicon loop owns it).
+
+---
+
+# Micro-warts bar amendment (2026-09-30, same pre-reg)
+
+- **W2 extended**: the topic-less contact surface still carried
+  the `gf_default_lexeme` tag (AST unchanged), so the rescue
+  fired with a false premise («грамматике не хватило слов» —
+  grammar is fine; contact smalltalk never owed a topic).
+  `claimAstDefaultLexemeExcused` (renamed from the copula-only
+  helper) now also excuses default-topic `MoveContact`: repair
+  ⟺ degraded, and the turn renders fine. Real-topic contacts
+  unaffected.
+
+---
+
+# Micro-warts (punctuation + contact topic) — landed (2026-09-30)
+
+- **Rules** (pre-registered above + one amendment):
+  `appendSupplement` normalizes one leading sentence break
+  (bare callers byte-identical); ConceptKnowledgeQ EN/RU,
+  Distinction EN/RU, and challenge joins route through it;
+  default-lexeme `MoveContact` renders topic-less (RU/EN
+  established phrasings); amendment: default-topic contact
+  also excused from the DefaultLexeme rescue (false premise —
+  contact smalltalk owes no topic).
+- **Probe**: Q4 single period with full thesis; «спасибо»
+  without fallback naming and without rescue; nominative +
+  covered controls clean.
+- **Verification**: unit 1679, fast 1825, core 1196 green.
+  Residuals: MoveGround/Reflect/Describe default-topic naming
+  (same class, unobserved — follow-up); paradigms data for
+  опора/понятие (lexicon loop owns it).

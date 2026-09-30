@@ -22,7 +22,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , renderRescueLine
   , rescueTag
   , claimAstTautology
-  , claimAstCopulaSubjectResolved
+  , claimAstDefaultLexemeExcused
   , legacyOverrideAdmissible
   , emptyHoldFires
   , mentionedCoveredTopics
@@ -814,7 +814,7 @@ detectRescue ti tp engaged mentioned artifact
   -- plan was observed live). The three detectors below are
   -- content-positive: they fire only on actually rendered
   -- degradation, except the documented copula carve-out
-  -- (claimAstCopulaSubjectResolved): a resolved-subject definitional
+  -- (claimAstDefaultLexemeExcused): a resolved-subject definitional
   -- copula is thin by arm design, not degraded. Honest
   -- abstain/hypothesis surfaces match none of
   -- them (no tautological claim, no default lexeme, and either no
@@ -822,7 +822,7 @@ detectRescue ti tp engaged mentioned artifact
   where
     claimTautology = claimAstTautology (draClaimAst artifact)
     defaultLexeme = "gf_default_lexeme" `elem` draDerivationTags artifact
-      && not (claimAstCopulaSubjectResolved (draClaimAst artifact))
+      && not (claimAstDefaultLexemeExcused (draClaimAst artifact))
     emptyCompose =
       let diags = draSelectorDiagnostics artifact
           selected = filter sdSelected diags
@@ -888,10 +888,16 @@ claimAstTautology claim = case claim of
 -- turn: silencing the DefaultLexeme rescue here is honesty, not
 -- leniency. Subject-side defaults still rescue; identical lexemes
 -- still tautology-rescue (checked first). Pure; pinned by unit tests.
-claimAstCopulaSubjectResolved :: Maybe ClaimAst -> Bool
-claimAstCopulaSubjectResolved claim = case claim of
+-- A contact move on the default lexeme is likewise excused: the
+-- topic-less surface («Слышу запрос на контакт.») names nothing
+-- degraded, and the repair invitation («уточни тему») answers a
+-- question contact smalltalk never asked.
+claimAstDefaultLexemeExcused :: Maybe ClaimAst -> Bool
+claimAstDefaultLexemeExcused claim = case claim of
   Just (MoveDefine (MkNP subj) RelIdentity (MkNP obj)) ->
     subj /= defaultGfLexemeId && obj == defaultGfLexemeId
+  Just (MoveContact (MkNP topic)) ->
+    topic == defaultGfLexemeId
   _ -> False
 
 -- | Render the rescue as a trailing repair fragment. The 'move_' verb

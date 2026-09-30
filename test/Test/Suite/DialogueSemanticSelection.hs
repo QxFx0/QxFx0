@@ -141,6 +141,7 @@ dialogueSemanticSelectionTests =
   , TestLabel "formatSelectedPredicates returns Russian text joined by period" testFormatSelectedPredicatesRussian
   , TestLabel "appendSupplement identity on empty supplement" testAppendSupplementEmpty
   , TestLabel "appendSupplement appends both parts" testAppendSupplementNonEmpty
+  , TestLabel "appendSupplement normalizes dotted prefixes" testAppendSupplementDotted
   , TestLabel "GroundFrame shallow preserves template with empty selector" testGroundFrameEmpty
   , TestLabel "GroundFrame shallow enriches with selected predicate" testGroundFrameEnriched
   , TestLabel "GroundFrame detailed preserves template with empty selector" testGroundFrameDetailedEmpty
@@ -220,6 +221,18 @@ testAppendSupplementNonEmpty = TestCase $ do
       result = appendSupplement base supplement
   assertBool "result should contain the base text" (T.isInfixOf base result)
   assertBool "result should contain the supplement text" (T.isInfixOf supplement result)
+
+testAppendSupplementDotted :: Test
+testAppendSupplementDotted = TestCase $ do
+  assertEqual "dotted supplement joins with a single break"
+    "Тезис: свобода. свобода требует выбора"
+    (appendSupplement "Тезис: свобода." ". свобода требует выбора")
+  assertEqual "question and bang variants too"
+    "Верно? да"
+    (appendSupplement "Верно?" "? да")
+  assertEqual "empty base yields stripped supplement"
+    "X"
+    (appendSupplement "" ". X")
 
 testGroundFrameEmpty :: Test
 testGroundFrameEmpty = TestCase $ do

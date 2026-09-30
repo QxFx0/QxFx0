@@ -22,6 +22,7 @@ module QxFx0.Render.Dialogue
   , cleanTopic
   , stancePrefix
   , linearizeClaimAstRus
+  , linearizeClaimAstEn
   -- v2 assembly path
   , renderArtifactViaAssembly
   , renderArtifactViaAssemblyWithActiveQuestion
@@ -232,8 +233,11 @@ linearizeClaimAstEn ast =
           b = maybe "" glfNom (lookupGfLexemeForms gfB)
       in if T.null a || T.null b then Nothing else Just ("I distinguish " <> a <> " from " <> b <> ".")
     MoveContact (MkNP gfSubj) ->
-      let subj = maybe "" glfNom (lookupGfLexemeForms gfSubj)
-      in if T.null subj then Nothing else Just ("I am here to discuss " <> subj <> ".")
+      if gfSubj == defaultGfLexemeId
+        then Just "I am here to continue the dialogue."
+        else
+          let subj = maybe "" glfNom (lookupGfLexemeForms gfSubj)
+          in if T.null subj then Nothing else Just ("I am here to discuss " <> subj <> ".")
     MoveMisunderstanding ->
       Just "I accept this as a signal of misunderstanding. Let me clarify."
     MovePurpose (MkNP gfSubj) ->
@@ -527,15 +531,29 @@ semanticSupplementFromCorpus _lookupFn _getPreds cs field topic mArtifact isEn =
 
 -- | Append a non-empty supplement to a base text with appropriate punctuation.
 -- If the supplement is empty, the base text is returned unchanged.
+-- A supplement arriving with its own leading sentence break (". "-
+-- prefixed callers) is normalized to a single break (micro-wart fix,
+-- pre-registered 2026-09-30); bare supplements behave byte-identically.
 appendSupplement :: Text -> Text -> Text
 appendSupplement base supplement =
-  if T.null supplement
+  let clean = stripLeadingBreak supplement
+  in if T.null clean
     then base
     else if T.null base
-           then supplement
+           then clean
            else (if any (`T.isSuffixOf` base) [".", "!", "?"]
                    then base <> " "
-                   else base <> ". ") <> supplement
+                   else base <> ". ") <> clean
+
+-- | Strip one leading sentence-breaking mark (plus surrounding
+-- spaces) from a supplement, so dotted and bare callers compose
+-- through 'appendSupplement' without ".." artifacts.
+stripLeadingBreak :: Text -> Text
+stripLeadingBreak t = case T.stripStart t of
+  s | Just rest <- T.stripPrefix "." s -> T.stripStart rest
+    | Just rest <- T.stripPrefix "!" s -> T.stripStart rest
+    | Just rest <- T.stripPrefix "?" s -> T.stripStart rest
+    | otherwise -> s
 
 -- | Frame-specific supplement builder for ADR-0050 Phase 2.
 -- When a semantic network is available and the spreading-activation feature flag
@@ -720,7 +738,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                  [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
            in withClaimLang ("If we consider " <> conceptTopicReferenceEn frame
                <> ", I will provide a working definition and separate it from usage and the boundaries of knowledge. "
-               <> clText claim <> contentText) ast claim "en_GF_MVP"
+               <> appendSupplement (clText claim) contentText) ast claim "en_GF_MVP"
         | otherwise ->
             let topicRef0 = nonEmptyOr (ipfSemanticSubject frame) (nonEmptyOr (rmpTopic rmp) "понятии")
                 -- Q4 supplement (pre-registered 2026-09-30): the
@@ -737,7 +755,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                   [] -> ""  -- G-3 fix: removed unguarded lookupDefinitionContent fallback
             in withClaim ("Если говорить " <> aboutWithTopic (conceptTopicReference rp frame morph)
                 <> ", зафиксирую рабочее определение и отделю его от употребления и границ знания. "
-                <> clText claim <> contentText) ast claim
+                <> appendSupplement (clText claim) contentText) ast claim
     PurposeQ ->
       let topicRef = nonEmptyOr (T.strip (ipfSemanticSubject frame)) (nonEmptyOr (T.strip (rmpTopic rmp)) (if isEn then "object" else "объект"))
           topicNom = if isEn then topicRef else toNominative morph topicRef
@@ -847,8 +865,8 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
                   if isEn then "I can distinguish " <> leftNom <> " from " <> rightNom <> ", but I have no ready grammatical frame for this pair. Name a criterion and I will compare along it."
                   else "Различим " <> leftNom <> " и " <> rightNom <> ": готовой рамки в грамматике для этой пары у меня нет. Уточни критерий — и я сопоставлю по нему."
                 Nothing ->
-                  if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> claimText <> distText
-                  else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> claimText <> distText
+                  if isEn then "I distinguish " <> leftNom <> " from " <> rightNom <> " within one frame of criteria. " <> appendSupplement claimText distText
+                  else "Различим " <> leftNom <> " и " <> rightNom <> " в одной рамке критериев. " <> appendSupplement claimText distText
           in withClaimLang bodyText ast claim (if isEn then "en_GF_MVP" else "ru_GF_MVP")
         _ ->
           plain (if isEn then "Distinction requires an explicit frame of criteria. " <> rmpPrimaryClaim rmp
@@ -899,7 +917,7 @@ structuredBody propositionType frame rmp renderStyle morph rp field contentSelec
             Just (intro, cr) ->
               let gatedPreds = filterAdmissiblePredicates [crRelevantPredicate cr]
               in case gatedPreds of
-                (p:_) -> intro <> " " <> crRestate cr <> ". " <> renderPredicateArgued p
+                (p:_) -> appendSupplement (intro <> " " <> crRestate cr) (". " <> renderPredicateArgued p)
                 [] -> ""
             Nothing -> ""
           fallback = if challengeResponseText /= ""
@@ -1178,8 +1196,14 @@ linearizeClaimAstRus rp ast renderStyle morph =
         , "Беру " <> topicAcc <> " как опорный узел, чтобы не потерять связность следующего шага."
         ])
     MoveContact (MkNP gfTopic) ->
-      let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
-      in Just ("Слышу запрос на контакт по теме " <> topicPrep <> ".")
+      -- Micro-wart fix (pre-registered 2026-09-30): a default topic
+      -- lexeme is not a topic the user named — drop the prepositional
+      -- phrase instead of rendering fallback Latin/Cyrillic ("поняти").
+      if gfTopic == defaultGfLexemeId
+        then Just "Слышу запрос на контакт."
+        else
+          let topicPrep = lookupLemmaForm rp gfTopic Loc  -- Prepositional = Locative
+          in Just ("Слышу запрос на контакт по теме " <> topicPrep <> ".")
     MoveReflect (MkNP gfTopic) ->
       let topicAcc = lookupLemmaForm rp gfTopic Acc
       in Just ("Вы отразили " <> topicAcc <> ", и это требует прояснения смысла.")
