@@ -656,9 +656,9 @@ unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-01, incl. Q4/shim/micro-warts/
-fallback-guards; runtime long-test needs unbuffered output to judge
-progress; chains die post-runtime — relaunch state solo) |
+per-group green on current HEAD 2026-10-02, incl. fallback (a)+(b);
+chains die post-runtime — relaunch state solo; unbuffered output
+required to judge the long runtime test) |
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
