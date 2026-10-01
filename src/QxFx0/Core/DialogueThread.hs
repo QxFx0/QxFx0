@@ -46,7 +46,7 @@ deriveDialogueThread previous ledger dialogue frame =
       intentHypothesis = Just (renderSpeechAct (usfSpeechAct frame))
       acceptedTerms = take 8 . nub $ dtAcceptedTerms previous ++ map wmuLemma (usfWordUnits frame)
       openLoops = take 8 . nub $ unresolvedClaims ledger ++ if usfSpeechAct frame == ActAsk then [usfRawText frame] else []
-      clarifiedItems = if usfSpeechAct frame == ActAsk then dtClarifiedItems previous else take 8 . nub $ usfTopic frame : dtClarifiedItems previous
+      clarifiedItems = if usfSpeechAct frame == ActAsk then dtClarifiedItems previous else take 8 . nub $ filter (not . T.null) (usfTopic frame : dtClarifiedItems previous)
       unclarifiedItems = take 8 . nub $ openLoops ++ filter (not . T.null) [usfFocus frame]
       resistance = clamp01 (if usfPolarity frame == PolarityNegative then 0.65 else 0.25)
       topicConfidence = clamp01 (max (usfConfidence frame) (dtTopicConfidence previous * 0.8))

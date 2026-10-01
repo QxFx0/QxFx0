@@ -45,6 +45,7 @@ import QxFx0.Types.Orbital (OrbitalPhase(..), EncounterMode(..), OrbitalMemory(.
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Proposition as Proposition
 import QxFx0.Semantic.Input.Assemble (buildUtteranceSemanticFrame)
+import QxFx0.Semantic.Input.Model (usfTopic, usfFocus)
 import QxFx0.Semantic.DialogMeaning (buildDialogAtoms, topicMentionedHere)
 import QxFx0.Semantic.DialogAtom (daTopicNominative)
 import qualified QxFx0.Semantic.Morphology as Morph
@@ -444,6 +445,7 @@ coreBehaviorTests =
     , testDeadjectivalClaimAstTopic
     , testMoveContactDefaultTopic
     , testFallbackTopicMoves
+    , testEmptyTopicNoInvention
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -3017,6 +3019,25 @@ testFallbackTopicMoves = TestCase $ do
     (Dialogue.moveToText MoveReflectMirror "свобода" emptyRuntimeParadigms morph
      /= "Держу это как точку разбора.")
 
+-- | Source fix (b) (pre-registered 2026-10-01): no invented
+-- topic noun anywhere in the frame layer. Raw-token echoes ("ну")
+-- are honest; lemma-less inputs ("...") yield empties.
+testEmptyTopicNoInvention :: Test
+testEmptyTopicNoInvention = TestCase $ do
+  forM_ ["ну", "хм", "да"] $ \input ->
+    let frame = buildUtteranceSemanticFrame input
+    in do assertBool ("no invented noun for " <> T.unpack input)
+            (usfTopic frame /= "тема" && usfFocus frame /= "тема")
+  forM_ ["...", "???"] $ \input ->
+    let frame = buildUtteranceSemanticFrame input
+    in do assertEqual ("empty topic for " <> T.unpack input)
+            "" (usfTopic frame)
+          assertEqual ("empty focus for " <> T.unpack input)
+            "" (usfFocus frame)
+  let freedom = buildUtteranceSemanticFrame "что такое свобода?"
+  assertBool "real topics still resolve"
+    (not (T.null (usfTopic freedom)) || not (T.null (usfFocus freedom)))
+
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do
   let frame = parseProposition "кто ты?"
@@ -4335,3 +4356,4 @@ testPropositionToFamilyGenerativePromptIsDescribe = TestCase $
 testPropositionToFamilyContemplativeTopicIsDeepen :: Test
 testPropositionToFamilyContemplativeTopicIsDeepen = TestCase $
   assertEqual "ContemplativeTopic -> CMDeepen" CMDeepen (propositionToFamily ContemplativeTopic)
+

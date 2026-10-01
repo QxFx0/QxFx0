@@ -1213,14 +1213,14 @@ inferTopic normalized units routeHint =
       fromMaybe defaultTopic (requestedQualityTopic (niTokens normalized) <|> qualityDescriptorLemma units <|> preferredTopicLemma units)
     _ -> defaultTopic
   where
-    defaultTopic = fromMaybe "тема" (preferredTopicLemma units)
+    defaultTopic = fromMaybe "" (preferredTopicLemma units)
     purposeFallback
       | hasAny (niTokens normalized) ["ты", "тебя", "тебе", "тобой", "вы", "вас", "вам", "вами"] = "система"
       | otherwise = "объект"
 
 inferFocus :: [WordMeaningUnit] -> Text
 inferFocus units =
-  fromMaybe "тема" $
+  fromMaybe "" $
     listToMaybe (reverse (preferredTopicLemmas units))
 
 inferParticipants :: NormalizedInput -> (Maybe Text, Maybe Text)

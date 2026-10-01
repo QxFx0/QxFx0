@@ -2345,3 +2345,60 @@ beyond 24 verbs.
 - **Verification**: unit 1682, fast 1826, core 1197 green.
   New pins: fence membership, recovery helper, both moves
   (fallback vs real topic).
+
+---
+
+# Source fix (b): empty topic instead of invented "тема" — pre-registration (2026-10-01)
+
+- **Rule (locked)**: `inferFocus` + route-hint `defaultTopic`
+  (`Input/Assemble.hs`) return `""` instead of `"тема"`;
+  `DialogueThread` clarified-items cons filters nulls (no-op
+  today, hardening for the new reality). Everything else that
+  produced `"тема"` (atoms fallback, arm literals, assembly
+  NP) stays — separate literals, separate landings.
+- **Why safe (audited)**: no `== "тема"` branches exist;
+  frame-topic consumers use firstNonEmpty/null-checks
+  (DialogueThread focus/claim/userGoal, Parse subjectFromFrame,
+  Sense anchor); `moveToText` + recovery topicText already
+  guard `""` via the (a) fence; `buildDialogAtoms` skips null
+  topics; `mkTopicNP("")` keeps today's ponyatie default.
+  Purpose/system/object fallbacks stay (meaningful defaults).
+- **Bar**: unit pins — `inferFocus []`/`buildUtteranceSemanticFrame
+  "ну"` yield `""` (no invented noun); live — identical
+  12-turn battery re-run and diffed: «ну»/«хм»/«да» carry no
+  topic noun anywhere (trace `bestTopic` honest), raw echoes +
+  greeting + anomaly + contact paths unchanged-or-better,
+  every other delta triaged before landing; crisis +
+  speculative controls; zero new failures in unit/fast/core.
+- **Out of scope**: atoms/arm/assembly literal fallbacks;
+  purpose/system/object defaults; paradigms data.
+
+---
+
+# Source fix (b) bar amendment (2026-10-01, before landing)
+
+- **Battery finding**: contentless turns after contentless turns
+  inherit `ssLastTopic` («ну»→best `ага`) — legitimate discourse
+  continuity, not invention (the old code suppressed it with the
+  «тема» lie). Fresh contentless turns carry `bestTopic=""` and
+  render the topic-less hold («Держу это как точку разбора.»);
+  after real content they continue its topic («Смысловая точка:
+  свобода»). The (a) guards and (b) source fix compose as
+  designed. Bar amended accordingly (carried topics are honest).
+
+---
+
+# Source fix (b) — landed (2026-10-01)
+
+- **Rule** (pre-registered above + bar amendment): `inferFocus`
+  + route-hint `defaultTopic` + `fallbackFocusWord` return `""`;
+  clarified-items cons filters nulls. Real-token echoes
+  («ну» as frame topic) untouched — only invented nouns gone.
+- **Probe**: fresh contentless turns carry `bestTopic=""` with
+  the topic-less hold; after real content they continue its
+  topic (legitimate continuity); raw echoes, greeting, anomaly,
+  contact paths unchanged-or-better; every delta triaged.
+- **Verification**: unit 1683, fast 1827, core 1198 green.
+  The fallback-topic program (a)+(b) is complete: nothing in
+  the system invents topic nouns anymore (remaining literals
+  in atoms/arms/assembly are separate documented fallbacks).

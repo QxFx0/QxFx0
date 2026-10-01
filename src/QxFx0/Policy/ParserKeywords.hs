@@ -344,8 +344,11 @@ emotionCuriousKeywords = ["\1079\1083\1086\1089\1090\1100", "\1085\1077\1074\107
 emotionConfrontKeywords :: [Text]
 emotionConfrontKeywords = ["\1085\1077 \1089\1086\1075\1083\1072\1089\1077\1085", "\1086\1089\1087\1086\1088\1080\1074"]
 
+-- Source fix (b) (pre-registered 2026-10-01): no invented noun —
+-- a focusless turn carries no focus; downstream firstNonEmpty
+-- chains and empty-guards do the honest work.
 fallbackFocusWord :: Text
-fallbackFocusWord = "\1090\1077\1084\1072"
+fallbackFocusWord = ""
 
 vapidWords :: [Text]
 vapidWords =
