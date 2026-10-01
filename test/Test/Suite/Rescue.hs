@@ -15,6 +15,7 @@ import QxFx0.Core.TurnPipeline.Route.Render
   , claimAstTautology
   , claimAstDefaultLexemeExcused
   , legacyOverrideAdmissible
+  , recoveryTopicText
   , emptyHoldFires
   , mentionedCoveredTopics
   , renderRescueLine
@@ -101,6 +102,14 @@ rescueTests =
         (not (emptyHoldFires ["добро"] ["добро"] False True True True))
       assertBool "an emitted predicate never fires"
         (not (emptyHoldFires ["добро"] ["добро"] True True False True))
+
+  , TestLabel "recovery topic falls back on empty and invented topics" $ TestCase $ do
+      assertEqual "empty renders generic"
+        "этот вопрос" (recoveryTopicText "этот вопрос" "")
+      assertEqual "fallback renders generic"
+        "этот вопрос" (recoveryTopicText "этот вопрос" "тема")
+      assertEqual "real topic passes through"
+        "свобода" (recoveryTopicText "этот вопрос" "свобода")
       assertBool "a rendered claim never fires"
         (not (emptyHoldFires ["добро"] ["добро"] True False True True))
       assertBool "a selection never fires"

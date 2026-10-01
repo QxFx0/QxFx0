@@ -2270,3 +2270,78 @@ beyond 24 verbs.
   Residuals: MoveGround/Reflect/Describe default-topic naming
   (same class, unobserved — follow-up); paradigms data for
   опора/понятие (lexicon loop owns it).
+
+---
+
+# Fallback-topic class investigation (2026-10-01, read-only)
+
+- **Battery** (12 topic-less inputs): fixed already — спасибо/пока
+  (W2 topic-less contact); clean — привет, ага/давай (raw echo of
+  the only signal, honest per F2 doctrine), понятно (anomaly
+  refusal, separate behavior); WARTS — «ну»/«хм»/«да» render
+  «Смысловая точка: тема» (+ «Для темы тема» on «да»).
+- **Mechanism (complete chain)**: `inferFocus` /
+  route-hint topic inference (`Input/Assemble.hs:1216,1223`)
+  default to literal `"тема"` when no content noun exists →
+  frame topic → bestTopic → family RCP opening
+  `MoveReflectMirror` (`moveReflectMirrorPrefix` =
+  «Смысловая точка: », `RenderLexicon.hs:74`) and Deepen
+  templates interpolate it as content. The fallback noun is
+  born at parse and laundered as a topic downstream —
+  including into traces (`bestTopic=тема` is itself a lie:
+  the turn has NO topic).
+- **Out of scope (verdict: leave)**: raw echoes («ага»,
+  «давай», «ладно») name the genuine only-signal — truthful;
+  «понятно»-class anomaly refusal is separate behavior.
+- **Fix options**:
+  - (a) Surface guards: shared `isFallbackTopic` («», тема,
+    понятие, понятии, опора, concept + case forms?) with
+    topic-less variants at the 2–3 observed sites
+    (MoveReflectMirror, Deepen probe). Small blast radius;
+    leaves «тема» flowing in topics/traces.
+  - (b) Source fix: `inferFocus`/route-hint return `""`
+    instead of `"тема"`, letting existing empty-handling
+    (nonEmptyOr chains, EmptyHold rescue, abstains) work
+    honestly. Principled (no invented content; trace honest)
+    but requires auditing every topic interpolation for
+    empty-guards («Смысловая точка: .», «Для темы  …»).
+  - Recommended: (a) now as bounded wart removal, (b) as
+    follow-up with the interpolation audit. Shared frozen
+    fallback list in both.
+- **No code changed in this investigation.**
+
+---
+
+# Fallback-topic surface guards (a) — pre-registration (2026-10-01)
+
+- **Rule (locked)**: frozen `isFallbackTopic` in
+  `Semantic.Content` («», тема, понятие, опора, concept +
+  observed inflections: темы, теме, понятии, опоре) with
+  unit-pinned membership; `MoveReflectMirror` and the Deepen
+  probe render topic-less variants on fallback topics, byte-
+  identical otherwise. Source inferers keep returning «тема»
+  (change (b) stays a separate follow-up with its audit).
+- **Bar**: unit pins — list membership; both renderers
+  topic-less on fallbacks, unchanged on real topics; live —
+  «ну»/«хм»/«да» no longer name a fallback topic, raw echoes
+  («ага») and greeting/anomaly paths unchanged; zero new
+  failures in unit/fast/core.
+- **Out of scope**: source fix (b) with interpolation audit;
+  raw echoes; anomaly refusal; paradigms data.
+
+---
+
+# Fallback-topic surface guards (a) — landed (2026-10-01)
+
+- **Rule** (pre-registered above): frozen `isFallbackTopic`
+  («», тема/понятие/опора families + concept) with topic-less
+  variants in `MoveReflectMirror` («Держу это как точку
+  разбора.»), `MoveDeepenProbe` («Глубоко: о чём речь?») and
+  both recovery topic fallbacks («этот вопрос» /
+  «this question», via named `recoveryTopicText`).
+- **Battery diff** (identical 12-turn rerun): ну/хм/да fixed;
+  contact/greeting/raw-echo/anomaly/boundary paths
+  byte-identical. Zero regressions.
+- **Verification**: unit 1682, fast 1826, core 1197 green.
+  New pins: fence membership, recovery helper, both moves
+  (fallback vs real topic).

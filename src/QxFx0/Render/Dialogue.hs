@@ -48,7 +48,7 @@ import QxFx0.Types.State.SelfState (selfFieldHeuristics)
 import QxFx0.Semantic.Content
   ( lookupDefinitionContent, lookupDistinctionContent, isCoveredTopic
   , isCoveredPair, coveredTopics, SemanticPredicate(..)
-  , resolveDeadjectivalTopic
+  , resolveDeadjectivalTopic, isFallbackTopic
   , DefinitionContent(..), DistinctionContent(..), PredicateRole(..)
   , ConceptCategory(..)
   , genericDefinitionPredicates, genericDistinctionPredicates
@@ -1376,7 +1376,12 @@ moveToText move topic rp md = case move of
   MoveStateDefinition     -> moveStateDefinitionPrefix <> nom <> "."
   MoveShowContrast        -> moveShowContrastPrefix <> prep <> moveShowContrastPrepSuffix
   MoveStateBoundary       -> moveStateBoundaryPrefix <> gen <> "."
-  MoveReflectMirror       -> moveReflectMirrorPrefix <> nom <> "."
+  MoveReflectMirror ->
+      -- Fallback-topic guard (pre-registered 2026-10-01): never name
+      -- an invented topic as content; hold the utterance instead.
+      if isFallbackTopic topic
+        then "Держу это как точку разбора."
+        else moveReflectMirrorPrefix <> nom <> "."
   MoveReflectResonate     -> moveReflectResonatePrefix <> nom <> "?"
   MoveDescribeSketch      -> moveDescribeSketchPrefix <> nom <> "."
   MovePurposeTeleology    -> movePurposeTeleologyPrefix <> gen <> "."
@@ -1388,7 +1393,12 @@ moveToText move topic rp md = case move of
   MoveContactReach        -> moveContactReachPrefix <> opt <> "."
   MoveAnchorStabilize     -> moveAnchorStabilizePrefix <> opt <> "."
   MoveClarifyDisambiguate -> moveClarifyDisambiguatePrefix <> nom <> "?"
-  MoveDeepenProbe         -> moveDeepenProbePrefix <> nom <> "?"
+  MoveDeepenProbe ->
+      -- Fallback-topic guard (pre-registered 2026-10-01): interrogative
+      -- shape preserved, fake topic dropped.
+      if isFallbackTopic topic
+        then "Глубоко: о чём речь?"
+        else moveDeepenProbePrefix <> nom <> "?"
   MoveConfrontChallenge   -> moveConfrontChallengePrefix <> nom <> "."
   MoveNextStep            -> moveNextStepPrefix <> dashSeparator <> nom <> "?"
   where

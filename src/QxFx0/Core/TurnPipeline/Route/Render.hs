@@ -24,6 +24,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , claimAstTautology
   , claimAstDefaultLexemeExcused
   , legacyOverrideAdmissible
+  , recoveryTopicText
   , emptyHoldFires
   , mentionedCoveredTopics
   ) where
@@ -94,7 +95,7 @@ import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSe
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
-import QxFx0.Semantic.Content (SemanticPredicate(..), coveredTopics, normalizeTopic)
+import QxFx0.Semantic.Content (SemanticPredicate(..), coveredTopics, normalizeTopic, isFallbackTopic)
 import QxFx0.Semantic.ContentSelector (buildSelectorActivationArtifact)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Self.Field (Field(..))
@@ -1452,9 +1453,16 @@ renderLocalRecoverySurface gfLang cause strategy topic _evidence =
     then renderLocalRecoverySurfaceEn cause strategy topic
     else renderLocalRecoverySurfaceRu strategy topic
 
+-- | Recovery topic fallback (pre-registered 2026-10-01): empty
+-- and invented topics render as the generic question. Pure; pinned.
+recoveryTopicText :: Text -> Text -> Text
+recoveryTopicText fallback topic
+  | T.null topic || isFallbackTopic topic = fallback
+  | otherwise = topic
+
 renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceRu strategy topic =
-  let topicText = if T.null topic then "этот вопрос" else topic
+  let topicText = recoveryTopicText "этот вопрос" topic
    in case strategy of
         StrategyAskClarification ->
           "Уточни, тебе нужно определение, различение или пример по теме: " <> topicText <> "?"
@@ -1487,7 +1495,7 @@ renderLocalRecoverySurfaceRu strategy topic =
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn _cause strategy topic =
-  let topicText = if T.null topic then "this question" else topic
+  let topicText = recoveryTopicText "this question" topic
    in case strategy of
         StrategyAskClarification ->
           "Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."

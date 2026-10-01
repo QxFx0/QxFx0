@@ -466,6 +466,14 @@ contentSelectorTests =
       assertEqual "deterministic"
         (resolveDeadjectivalTopic "ответственным")
         (resolveDeadjectivalTopic "ответственным")
+
+  , TestLabel "fallback topics are fenced" $ TestCase $ do
+      forM_ ["", "тема", "темы", "теме", "понятие", "понятии", "понятием", "опора", "опоре", "concept"] $ \input ->
+        assertBool ("fenced: " <> T.unpack input)
+          (isFallbackTopic input)
+      forM_ ["свобода", "ответственность", "ага", "квантор", "свободный человек", "опорный"] $ \input ->
+        assertBool ("not fenced: " <> T.unpack input)
+          (not (isFallbackTopic input))
   ]
   where
     frozenPrototypes =

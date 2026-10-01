@@ -68,6 +68,7 @@ module QxFx0.Semantic.Content
   , isCoveredPair
   , deadjectivalTopicStems
   , resolveDeadjectivalTopic
+  , isFallbackTopic
   , coveredTopics
   , classifyConceptCategory
   , categoryFromOntology
@@ -188,6 +189,26 @@ resolveDeadjectivalTopic surface =
       , stem `T.isPrefixOf` tok
       , T.length tok > T.length stem
       ]
+
+-- | Fallback-topic guard (pre-registered 2026-10-01): topic strings
+-- invented by defaults, never uttered as content by the user:
+-- empty, тема/понятие/опора families (nominative + observed
+-- obliques), and the English fallback. Frozen list, unit-pinned.
+-- Surfaces must not name these as if they were the turn topic;
+-- renderers fall back to topic-less variants instead.
+isFallbackTopic :: Text -> Bool
+isFallbackTopic surface =
+  let tok = T.toLower (T.strip surface)
+  in tok `elem` fallbackTopicForms
+  where
+    fallbackTopicForms =
+      [ ""
+      , "тема", "темы", "теме", "темой"
+      , "понятие", "понятия", "понятии", "понятием"
+      , "опора", "опоры", "опоре", "опору"
+      , "concept"
+      ]
+
 
 isCoveredPair :: Text -> Text -> Bool
 isCoveredPair a b =

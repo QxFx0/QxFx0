@@ -443,6 +443,7 @@ coreBehaviorTests =
     , testFocusNominativeRealMorphology
     , testDeadjectivalClaimAstTopic
     , testMoveContactDefaultTopic
+    , testFallbackTopicMoves
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -3000,6 +3001,21 @@ testMoveContactDefaultTopic = TestCase $ do
   assertBool "real topics keep the phrase (RU)"
     (Dialogue.linearizeClaimAstRus emptyRuntimeParadigms (MoveContact (MkNP "svoboda_N")) StyleStandard morph
      /= Just "Слышу запрос на контакт.")
+
+-- | Fallback-topic guards (pre-registered 2026-10-01): content
+-- moves never name invented topics; real topics keep phrasing.
+testFallbackTopicMoves :: Test
+testFallbackTopicMoves = TestCase $ do
+  let morph = Morph.buildMorphologyData []
+  assertEqual "reflect on fallback holds the utterance"
+    "Держу это как точку разбора."
+    (Dialogue.moveToText MoveReflectMirror "тема" emptyRuntimeParadigms morph)
+  assertEqual "deepen on fallback asks openly"
+    "Глубоко: о чём речь?"
+    (Dialogue.moveToText MoveDeepenProbe "тема" emptyRuntimeParadigms morph)
+  assertBool "real topics keep phrasing"
+    (Dialogue.moveToText MoveReflectMirror "свобода" emptyRuntimeParadigms morph
+     /= "Держу это как точку разбора.")
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do
