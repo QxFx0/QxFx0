@@ -2402,3 +2402,61 @@ beyond 24 verbs.
   The fallback-topic program (a)+(b) is complete: nothing in
   the system invents topic nouns anymore (remaining literals
   in atoms/arms/assembly are separate documented fallbacks).
+
+---
+
+# Backchannel focus exclusion (ага/угу) — pre-registration (2026-10-02)
+
+- **Mechanism (proven live)**: acknowledgement backchannels of
+  length ≥ 3 pass `isFocusCandidate` (length ≥ 3, not a
+  stopword) and become `ipfFocusEntity` → turn `bestTopic`.
+  Fresh «ага»/«угу» render «Смысловая точка: ага/угу»; worse,
+  «ага» after real content DISPLACES the carried topic
+  (свобода → ага, harvest battery live-0238..0251 turn 3).
+  Short backchannels (ну/хм/да, length < 3) already yield ""
+  via the length gate — the class splits on an arbitrary
+  length threshold, not on semantics. Precedent: `Input/Parse.hs`
+  already lists ага/угу as standalone particles; the focus
+  layer never got the memo.
+- **Rule (locked)**: frozen «ага», «угу» join
+  `logicalFocusStopwords` (`Proposition/Focus.hs`) — the single
+  list `isFocusCandidate` consults, so the exclusion applies
+  uniformly (extractFocusEntity candidates + fallback words +
+  Semantic.hs first/lastNonVapid). Frame-layer raw echoes
+  (usfTopic/usfFocus) untouched — the signal layer stays
+  honest; only topic candidacy goes.
+- **Expected**: fresh «ага»/«угу» → `bestTopic=""` with the
+  topic-less hold (same as «ну»); after real content they
+  continue the carried topic (свобода) instead of displacing
+  it. Covered/unknown behavior byte-identical.
+- **Bar**: unit pins — `extractFocusEntity "ага"/"угу" == ""`,
+  `isFocusCandidate` rejects both, covered topics unaffected
+  (свобода still resolves); live — fresh ага/угу topic-less
+  hold with `bestTopic=""`, continuity battery
+  (свобода?→ну→ага→хм) keeps свобода throughout, greeting +
+  contact + definitional controls byte-identical; crisis +
+  speculative controls; zero new failures in unit/fast/core.
+- **Out of scope**: ладно/хорошо/давай/понятно (consent/agreement
+  class — real discourse function, separate landing);
+  «так»/«вот» (ambiguous adverb/content); paradigms data;
+  `isFallbackTopic` (ага stays not-fenced, per existing pin).
+
+---
+
+# Backchannel focus exclusion (ага/угу) — landed (2026-10-02)
+
+- **Rule** (pre-registered above): frozen «ага», «угу» in
+  `logicalFocusStopwords` (`Proposition/Focus.hs`) — the single
+  list `isFocusCandidate` consults. Frame-layer raw echoes
+  untouched.
+- **Probe**: fresh «ага»/«угу» → `bestTopic=""` with the
+  topic-less hold (same as «ну»); continuity battery
+  (свобода?→ну→ага→хм) keeps свобода throughout — the
+  displacement is gone. Greeting + contact + definitional
+  controls unchanged; crisis control (Protocol B, hard
+  trigger, resources v1) and speculative probe coherent.
+- **Verification**: unit 1684, fast 1828, core 1199 green.
+  New pin: `testBackchannelFocusExclusion` (rejection,
+  empty entity, covered-topic control).
+  Residuals: consent/agreement class (ладно/хорошо/давай/
+  понятно), «так»/«вот», paradigms data.

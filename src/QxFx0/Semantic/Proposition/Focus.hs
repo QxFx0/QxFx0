@@ -205,6 +205,13 @@ logicalFocusStopwords =
   , "думаешь", "думать", "есть", "такой", "такая", "такое", "зовут"
   , "тут", "здесь", "там"
   , "hence", "thus", "so", "consequently", "since"
+  -- Backchannel focus exclusion (pre-registered 2026-10-02):
+  -- bare acknowledgements are never topics. Fresh ага/угу yield
+  -- no focus (topic-less hold downstream); after real content
+  -- the carried topic continues instead of being displaced.
+  -- Consent/agreement markers (ладно/хорошо/давай/понятно) are
+  -- a separate class, out of scope.
+  , "ага", "угу"
   ]
 
 -- | Extract key phrases (words longer than 4 characters).

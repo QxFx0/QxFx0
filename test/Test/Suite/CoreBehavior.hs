@@ -446,6 +446,7 @@ coreBehaviorTests =
     , testMoveContactDefaultTopic
     , testFallbackTopicMoves
     , testEmptyTopicNoInvention
+    , testBackchannelFocusExclusion
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -3037,6 +3038,20 @@ testEmptyTopicNoInvention = TestCase $ do
   let freedom = buildUtteranceSemanticFrame "что такое свобода?"
   assertBool "real topics still resolve"
     (not (T.null (usfTopic freedom)) || not (T.null (usfFocus freedom)))
+
+-- | Backchannel focus exclusion (pre-registered 2026-10-02):
+-- bare acknowledgements are never focus candidates.
+testBackchannelFocusExclusion :: Test
+testBackchannelFocusExclusion = TestCase $ do
+  forM_ ["ага", "угу"] $ \input ->
+    do assertBool ("not a focus candidate: " <> T.unpack input)
+         (not (Proposition.isFocusCandidate input))
+       assertEqual ("no focus entity for " <> T.unpack input)
+         "" (Proposition.extractFocusEntity input)
+  assertBool "real topics still candidates"
+    (Proposition.isFocusCandidate "свобода")
+  assertEqual "real focus entity resolves"
+    "свобода" (Proposition.extractFocusEntity "что такое свобода?")
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do
