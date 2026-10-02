@@ -355,6 +355,7 @@ library
       QxFx0.Semantic.Assembly
       QxFx0.Semantic.IR
       QxFx0.Semantic.IREval
+      QxFx0.Semantic.IREval.Batch
       QxFx0.Semantic.ContentSelector
       QxFx0.Semantic.ContentSelector.Types
       QxFx0.Semantic.ContentSelector.Cache
@@ -615,6 +616,12 @@ executable qxfx0-main
     CLI.AutonomousSmoke
   hs-source-dirs: app
   build-depends: qxfx0, directory >=1.3 && <1.4, filepath >=1.4 && <1.5, process >=1.6 && <1.7, time >=1.11 && <1.13, unix >=2.7 && <2.9
+
+executable qxfx0-stage1-traces
+  import:        warnings, base-deps
+  main-is:       Stage1Traces.hs
+  hs-source-dirs: app
+  build-depends: qxfx0, directory >=1.3 && <1.4, filepath >=1.4 && <1.5
 
 common test-common
   import:        warnings, base-deps

@@ -20,6 +20,7 @@ import Test.HUnit
 
 import QxFx0.Semantic.IR
 import QxFx0.Semantic.IREval
+import QxFx0.Semantic.IREval.Batch
 
 semanticIRTests :: [Test]
 semanticIRTests =
@@ -155,12 +156,10 @@ instance Aeson.FromJSON SenseRow where
     <*> o Aeson..: "counter_examples"
     <*> o Aeson..: "provenance"
 
+-- | Lenient JSONL reader (implementation moved to
+-- 'QxFx0.Semantic.IREval.Batch'; behavior unchanged).
 readJsonlRows :: (Aeson.FromJSON a) => FilePath -> IO [a]
-readJsonlRows path = do
-  content <- BL.readFile path
-  pure [ r | line <- BL.split 10 content
-           , not (BL.null line)
-           , Just r <- [Aeson.decode line] ]
+readJsonlRows = readJsonlRowsLenient
 
 stage1Batch1Tests :: [Test]
 stage1Batch1Tests =
@@ -442,43 +441,17 @@ evalTests =
         Right _ -> assertFailure "rd-02 coercion exception must block"
   ]
 
-data RuleFileRow = RuleFileRow
-  { frId :: !T.Text
-  , frKind :: !T.Text
-  , frPremises :: ![T.Text]
-  , frConclusion :: !T.Text
-  , frExceptions :: ![T.Text]
-  , frPriority :: !(Maybe Int)
-  , frScope :: !T.Text
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON RuleFileRow where
-  parseJSON = Aeson.withObject "RuleFileRow" $ \o -> RuleFileRow
-    <$> o Aeson..: "id"
-    <*> o Aeson..: "kind"
-    <*> o Aeson..: "premises"
-    <*> o Aeson..: "conclusion"
-    <*> o Aeson..: "exceptions"
-    <*> o Aeson..: "priority"
-    <*> o Aeson..: "scope"
-
+-- | Row types and total builders moved to
+-- 'QxFx0.Semantic.IREval.Batch'; these wrappers preserve the
+-- assertion behavior the pins rely on.
 mustParseRow :: T.Text -> T.Text -> IO Proposition
-mustParseRow ctx sexpr = case parseProposition sexpr of
-  Just p -> pure p
-  Nothing -> assertFailure ("rule sexpr must parse (" <> T.unpack ctx <> ")")
+mustParseRow ctx sexpr = either assertFailure pure (parseRowEither ctx sexpr)
 
 toStrict :: RuleFileRow -> IO StrictRule
-toStrict r = StrictRule (frId r)
-  <$> mapM (mustParseRow (frId r)) (frPremises r)
-  <*> mustParseRow (frId r) (frConclusion r)
+toStrict r = either assertFailure pure (toStrictEither r)
 
 toDefeasible :: RuleFileRow -> IO DefeasibleRule
-toDefeasible r = DefeasibleRule (frId r)
-  <$> mapM (mustParseRow (frId r)) (frPremises r)
-  <*> mustParseRow (frId r) (frConclusion r)
-  <*> mapM (mustParseRow (frId r)) (frExceptions r)
-  <*> pure (case frPriority r of Just n -> n; Nothing -> 0)
-  <*> pure (frScope r)
+toDefeasible r = either assertFailure pure (toDefeasibleEither r)
 
 -- ---------------------------------------------------------------------------
 -- Stage-1 batch 4 (ADR-0054 §2.4): frozen held-out split. Content-hash
@@ -532,34 +505,7 @@ splitIntegrityTests =
 -- only — scenario simulation is a later batch; no runtime reads.
 -- ---------------------------------------------------------------------------
 
-data ScenarioTurnRow = ScenarioTurnRow
-  { turnSpeaker :: !T.Text
-  , turnText :: !T.Text
-  , turnInterpretations :: ![T.Text]
-  , turnAct :: !T.Text
-  , turnUnresolved :: ![T.Text]
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ScenarioTurnRow where
-  parseJSON = Aeson.withObject "ScenarioTurnRow" $ \o -> ScenarioTurnRow
-    <$> o Aeson..: "speaker"
-    <*> o Aeson..: "text"
-    <*> o Aeson..: "interpretations"
-    <*> o Aeson..: "act"
-    <*> o Aeson..: "unresolved"
-
-data ScenarioRow = ScenarioRow
-  { scenarioId :: !T.Text
-  , scenarioTurns :: ![ScenarioTurnRow]
-  , scenarioProvenance :: !T.Text
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ScenarioRow where
-  parseJSON = Aeson.withObject "ScenarioRow" $ \o -> ScenarioRow
-    <$> o Aeson..: "id"
-    <*> o Aeson..: "turns"
-    <*> o Aeson..: "provenance"
-
+-- | Scenario row types moved to 'QxFx0.Semantic.IREval.Batch'.
 scenarioActSet :: [T.Text]
 scenarioActSet =
   ["Assert", "Challenge", "Concede", "Distinguish", "Clarify"
@@ -631,84 +577,10 @@ clusterGoldTests =
 -- with known answers); the gate's teeth are for future changes.
 -- ---------------------------------------------------------------------------
 
-data InlineStrictRule = InlineStrictRule
-  { isrPremises :: ![T.Text]
-  , isrConclusion :: !T.Text
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON InlineStrictRule where
-  parseJSON = Aeson.withObject "InlineStrictRule" $ \o -> InlineStrictRule
-    <$> o Aeson..: "premises"
-    <*> o Aeson..: "conclusion"
-
-data InlineDefRule = InlineDefRule
-  { idrPremises :: ![T.Text]
-  , idrConclusion :: !T.Text
-  , idrExceptions :: ![T.Text]
-  , idrPriority :: !Int
-  , idrScope :: !T.Text
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON InlineDefRule where
-  parseJSON = Aeson.withObject "InlineDefRule" $ \o -> InlineDefRule
-    <$> o Aeson..: "premises"
-    <*> o Aeson..: "conclusion"
-    <*> o Aeson..:? "exceptions" Aeson..!= []
-    <*> o Aeson..:? "priority" Aeson..!= 0
-    <*> o Aeson..:? "scope" Aeson..!= ""
-
-data ExitTaskRow = ExitTaskRow
-  { exitId :: !T.Text
-  , exitKind :: !T.Text
-  , exitFacts :: ![T.Text]
-  , exitRules :: ![InlineDefRule]
-  , exitRule :: !(Maybe InlineDefRule)
-  , exitScope :: !T.Text
-  , exitQuery :: !(Maybe T.Text)
-  , exitExpected :: !T.Text
-  , exitPresupps :: ![T.Text]
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ExitTaskRow where
-  parseJSON = Aeson.withObject "ExitTaskRow" $ \o -> ExitTaskRow
-    <$> o Aeson..: "id"
-    <*> o Aeson..: "kind"
-    <*> o Aeson..:? "facts" Aeson..!= []
-    <*> o Aeson..:? "rules" Aeson..!= []
-    <*> o Aeson..:? "rule"
-    <*> o Aeson..:? "scope" Aeson..!= ""
-    <*> o Aeson..:? "query"
-    <*> o Aeson..: "expected"
-    <*> o Aeson..:? "presupps" Aeson..!= []
-
-data ExitStrictRow = ExitStrictRow
-  { esrId :: !T.Text
-  , esrFacts :: ![T.Text]
-  , esrRules :: ![InlineStrictRule]
-  , esrQuery :: !T.Text
-  , esrExpected :: !T.Text
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ExitStrictRow where
-  parseJSON = Aeson.withObject "ExitStrictRow" $ \o -> ExitStrictRow
-    <$> o Aeson..: "id"
-    <*> o Aeson..:? "facts" Aeson..!= []
-    <*> o Aeson..:? "rules" Aeson..!= []
-    <*> o Aeson..: "query"
-    <*> o Aeson..: "expected"
-
+-- | Exit row types, 'contradictory' and 'resolveDuel' moved to
+-- 'QxFx0.Semantic.IREval.Batch'; this wrapper preserves pins.
 toDefRule :: T.Text -> InlineDefRule -> IO DefeasibleRule
-toDefRule ctx r = DefeasibleRule ctx
-  <$> mapM (mustParseRow ctx) (idrPremises r)
-  <*> mustParseRow ctx (idrConclusion r)
-  <*> mapM (mustParseRow ctx) (idrExceptions r)
-  <*> pure (idrPriority r)
-  <*> pure (idrScope r)
-
-contradictory :: Proposition -> Proposition -> Bool
-contradictory (Not p) q = p == q
-contradictory p (Not q) = p == q
-contradictory _ _ = False
+toDefRule ctx r = either assertFailure pure (toDefRuleEither ctx r)
 
 exitHarnessTests :: [Test]
 exitHarnessTests =
@@ -748,72 +620,24 @@ exitHarnessTests =
   ]
 
 runStrictTask :: ExitStrictRow -> IO Bool
-runStrictTask row = do
-  facts <- mapM (mustParseRow (esrId row)) (esrFacts row)
-  rules <- mapM (\(i, r) -> toStrictRule' (esrId row) i r) (zip [0 :: Int ..] (esrRules row))
-  query <- mustParseRow (esrId row) (esrQuery row)
-  let (closed, _) = forwardChain 32 rules facts
-      entailed = query `elem` closed
-  case esrExpected row of
-    "entails" -> pure entailed
-    "not-entailed" -> pure (not entailed)
-    other -> assertFailure ("unknown strict expectation: " <> T.unpack other) >> pure False
-  where
-    toStrictRule' ctx i r = StrictRule (ctx <> "#s" <> T.pack (show i))
-      <$> mapM (mustParseRow ctx) (isrPremises r)
-      <*> mustParseRow ctx (isrConclusion r)
+runStrictTask row = case runStrictDetail row of
+  Left e -> assertFailure e >> pure False
+  Right outcome -> pure (soPass outcome)
 
 runDefeasibleTask :: ExitTaskRow -> IO Bool
-runDefeasibleTask row = case exitKind row of
-  "defeasible" -> case exitRule row of
-    Nothing -> assertFailure ("defeasible needs rule: " <> T.unpack (exitId row)) >> pure False
-    Just inline -> do
-      rule <- toDefRule (exitId row) inline
-      facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
-      pure $ case (defeasibleFire (exitScope row) rule facts, exitExpected row) of
-        (Right _, "fires") -> True
-        (Left _, "blocked") -> True
-        _ -> False
-  "defeasible-duel" -> do
-    rules <- mapM (toDefRule (exitId row)) (exitRules row)
-    facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
-    case rules of
-      [r1, r2] -> pure (resolveDuel (exitScope row) r1 r2 facts == exitExpected row)
-      _ -> assertFailure ("duel needs two rules: " <> T.unpack (exitId row)) >> pure False
-  other -> assertFailure ("unknown defeasible kind: " <> T.unpack other) >> pure False
-
--- | Duel resolution (pre-registered doctrine): both fire and contradict
--- -> higher priority wins; tie -> both stand and the conflict is kept
--- (paraconsistency, not silent suppression).
-resolveDuel :: T.Text -> DefeasibleRule -> DefeasibleRule -> [Proposition] -> T.Text
-resolveDuel scope r1 r2 facts =
-  case (defeasibleFire scope r1 facts, defeasibleFire scope r2 facts) of
-    (Right c1, Right c2)
-      | contradictory c1 c2 ->
-          if drPriority r1 > drPriority r2 then "higher-wins"
-          else if drPriority r2 > drPriority r1 then "higher-wins"
-          else "tie-kept"
-      | otherwise -> "both-stand"
-    _ -> "no-duel"
+runDefeasibleTask row = case runDefeasibleDetail row of
+  Left e -> assertFailure e >> pure False
+  Right outcome -> pure (dfoPass outcome)
 
 runConflictTask :: ExitTaskRow -> IO ()
-runConflictTask row = do
-  facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
-  case (detectConflict facts, exitExpected row) of
-    (Just _, "conflict") -> pure ()
-    (Nothing, "none") -> pure ()
-    (got, want) -> assertFailure ("conflict mismatch on " <> T.unpack (exitId row)
-      <> ": got " <> show (fmap (const ()) got) <> " want " <> T.unpack want)
+runConflictTask row = case runConflictDetail row of
+  Left e -> assertFailure e
+  Right outcome -> assertBool ("conflict holds on " <> T.unpack (exitId row)) (coPass outcome)
 
 runPresupTask :: ExitTaskRow -> IO ()
-runPresupTask row = do
-  facts <- mapM (mustParseRow (exitId row)) (exitFacts row)
-  presupps <- mapM (mustParseRow (exitId row)) (exitPresupps row)
-  let held = [ ok | (_, ok) <- checkPresuppositions facts presupps ]
-  case exitExpected row of
-    "all-held" -> assertBool ("all presupposed on " <> T.unpack (exitId row)) (and held)
-    "missing" -> assertBool ("some missing on " <> T.unpack (exitId row)) (not (and held))
-    other -> assertFailure ("unknown presupposition expectation: " <> T.unpack other)
+runPresupTask row = case runPresupDetail row of
+  Left e -> assertFailure e
+  Right outcome -> assertBool ("presupposition holds on " <> T.unpack (exitId row)) (poPass outcome)
 
 -- ---------------------------------------------------------------------------
 -- Stage-1 batch 7 (ADR-0054): scenario expectations (soundness leg) +
@@ -821,24 +645,7 @@ runPresupTask row = do
 -- 100%; accuracy thresholds live in the exit harness above.
 -- ---------------------------------------------------------------------------
 
-data ExpectTurns = AllTurns | TurnIndices [Int]
-  deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ExpectTurns where
-  parseJSON (Aeson.String "all") = pure AllTurns
-  parseJSON v = TurnIndices <$> Aeson.parseJSON v
-
-data ScenarioExpectation = ScenarioExpectation
-  { expKind :: !T.Text
-  , expTurns :: !ExpectTurns
-  , expQuery :: !(Maybe T.Text)
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ScenarioExpectation where
-  parseJSON = Aeson.withObject "ScenarioExpectation" $ \o -> ScenarioExpectation
-    <$> o Aeson..: "kind"
-    <*> o Aeson..: "turns"
-    <*> o Aeson..:? "query"
+-- | Scenario expectation types moved to 'QxFx0.Semantic.IREval.Batch'.
 
 scenarioExpectationTests :: [Test]
 scenarioExpectationTests =
@@ -856,46 +663,11 @@ scenarioExpectationTests =
                ("expectation holds: " <> T.unpack sid <> "/" <> T.unpack kind) holds) results
   ]
 
-data ScenarioRowEx = ScenarioRowEx
-  { scExId :: !T.Text
-  , scExTurns :: ![ScenarioTurnRow]
-  , scExExpectations :: ![ScenarioExpectation]
-  } deriving stock (Eq, Show)
-
-instance Aeson.FromJSON ScenarioRowEx where
-  parseJSON = Aeson.withObject "ScenarioRowEx" $ \o -> ScenarioRowEx
-    <$> o Aeson..: "id"
-    <*> o Aeson..: "turns"
-    <*> o Aeson..: "expectations"
-
+-- | Scenario row type moved to 'QxFx0.Semantic.IREval.Batch'.
 toStrictFileRule :: RuleFileRow -> IO StrictRule
-toStrictFileRule r = StrictRule (frId r)
-  <$> mapM (mustParseRow (frId r)) (frPremises r)
-  <*> mustParseRow (frId r) (frConclusion r)
+toStrictFileRule r = either assertFailure pure (toStrictFileRuleEither r)
 
 runScenario :: [StrictRule] -> ScenarioRowEx -> IO [(T.Text, T.Text, Bool)]
-runScenario rules row = mapM (runExpectation rules row) (scExExpectations row)
-
-runExpectation :: [StrictRule] -> ScenarioRowEx -> ScenarioExpectation -> IO (T.Text, T.Text, Bool)
-runExpectation rules row exp = do
-  let selected = case expTurns exp of
-        AllTurns -> scExTurns row
-        TurnIndices idxs -> [ t | (i, t) <- zip [0 :: Int ..] (scExTurns row), i `elem` idxs ]
-  kb <- concat <$> mapM (parseTurn (scExId row)) selected
-  case expKind exp of
-    "no-conflict" -> pure (scExId row, expKind exp, detectConflict kb == Nothing)
-    "not-entailed" -> case expQuery exp of
-      Nothing -> assertFailure ("not-entailed needs query: " <> T.unpack (scExId row)) >> pure (scExId row, expKind exp, False)
-      Just q -> do
-        query <- mustParseRow (scExId row) q
-        let (closed, _) = forwardChain 32 rules kb
-        pure (scExId row, expKind exp, not (query `elem` closed))
-    "entails" -> case expQuery exp of
-      Nothing -> assertFailure ("entails needs query: " <> T.unpack (scExId row)) >> pure (scExId row, expKind exp, False)
-      Just q -> do
-        query <- mustParseRow (scExId row) q
-        let (closed, _) = forwardChain 32 rules kb
-        pure (scExId row, expKind exp, query `elem` closed)
-    other -> assertFailure ("unknown expectation kind: " <> T.unpack other) >> pure (scExId row, expKind exp, False)
-  where
-    parseTurn sid turn = mapM (mustParseRow sid) (turnInterpretations turn)
+runScenario rules row = case runScenarioDetail rules row of
+  Left e -> assertFailure e >> pure []
+  Right results -> pure results

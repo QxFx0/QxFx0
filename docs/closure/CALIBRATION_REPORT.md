@@ -2460,3 +2460,83 @@ beyond 24 verbs.
   empty entity, covered-topic control).
   Residuals: consent/agreement class (ладно/хорошо/давай/
   понятно), «так»/«вот», paradigms data.
+
+---
+
+# Stage-1 JSON trace scripts — pre-registration (2026-10-02, ADR-0054 §2.3)
+
+- **Gap (audited)**: `IREval` verdicts are instant Haskell values
+  consumed only inside `Test.Suite.SemanticIR`; the ADR-promised
+  "JSON evaluation traces, consumed by scripts and tests" exist
+  only on the tests side. No standalone emitter; measurements
+  cannot be reproduced outside the suite or inspected per-task.
+- **Rule (locked)**: new `executable qxfx0-stage1-traces`
+  (`app/Stage1Traces.hs`, shadow-only, no pipeline callers —
+  same status as `IR`/`IREval`): reads `exit_tasks.jsonl` +
+  `scenarios.jsonl` + `rules.jsonl`, runs the file evaluators,
+  writes `exit_traces.jsonl` (per task: id, kind, expected,
+  verdict + proof/derivation, provenance tags) +
+  `scenario_traces.jsonl` (per scenario per expectation) +
+  `summary.json` (preset-threshold aggregates: strict ≥ 0.80,
+  defeasible ≥ 0.60, conflicts/presuppositions exact).
+  Row/runner logic MOVES (not copied) from
+  `Test.Suite.SemanticIR` into a lib module
+  (`QxFx0.Semantic.IREval.Batch`); the suite re-imports it.
+  New rules: none. New data: none. Exit code 1 on any preset
+  gate breach (real gate, informative today — everything is
+  authored green), 0 otherwise.
+- **Bar**: emitter runs on committed data → 41 task traces +
+  40 scenario traces; aggregates match the suite measurement
+  (strict 17/17, defeasible 12/12, conflicts 6/6,
+  presuppositions 6/6, scenarios 40/40); two runs
+  byte-identical (determinism); unit/fast suites green after
+  the move (same pins, new import site); grep-confirmed no
+  runtime callers of the batch module beyond exe+tests.
+- **Out of scope**: human leg (no second rater); runtime wiring
+  (non-goal §2.7); new rules/senses (additive-only §2.6);
+  CI wiring (later decision); cutover ADR (needs exit +
+  human leg per §2.5).
+
+---
+
+# Stage-1 JSON trace scripts — pre-reg amendment (2026-10-03, before landing)
+
+- **Emitter finding (honest 11/12)**: first emitter run measured
+  defeasible 11/12, not the reported 12/12. Triage per protocol:
+  `x-d10` (duel, expected `tie-kept`) carries facts `promised`
+  against rule premises `permitted` — neither rule can fire, so
+  the doctrine-correct verdict is `no-duel`. Data expectation
+  error since authorship (verified in the landing commit);
+  the ≥0.60 threshold absorbed it and the report overclaimed.
+  Fix (intent-preserving, operator-approved): `x-d10` facts →
+  `(Apply permitted ((theme (Concept visit))))` so both rules
+  fire at equal priority and the tie path — previously with zero
+  positive coverage — is actually exercised. No rule/sense
+  touched (§2.6 additive-only holds; the never-implemented
+  `semanticDataVersion` counter has nothing to bump).
+  Incidental: the moved runner corrects a dead-path triple
+  (`entails`-without-query carried `expQuery` as kind).
+
+---
+
+# Stage-1 JSON trace scripts — landed (2026-10-03)
+
+- **What** (pre-registered + amended): `QxFx0.Semantic.IREval.Batch`
+  (row types + total Either-runners moved verbatim from the
+  suite; wrappers preserve pin behavior) + `executable
+  qxfx0-stage1-traces` (`app/Stage1Traces.hs`, shadow-only):
+  `exit_traces.jsonl` (41) + `scenario_traces.jsonl` (40) +
+  `summary.json` with preset-gate check; exit 1 on breach.
+  Every trace carries `stage1-shadow` provenance (ADR §2.5
+  zero-false-authority by construction).
+- **Measured**: strict 17/17, defeasible 12/12 (honest after the
+  x-d10 correction — only that row's trace changed),
+  conflicts 6/6, presuppositions 6/6, scenarios 40/40.
+  Two runs byte-identical. No runtime callers (grep).
+- **Verification**: unit 1684, fast 1828, core 1199 green
+  (same pins, new import site). Flakiness note: the first core
+  aggregate run died silently at 1075/1199 with 0 failures
+  (no process, no exit line — environmental, box not
+  restarted, no OOM evidence readable); solo re-run 1199/1199
+  exit 0. Pattern matches the documented one-off flakiness.
+  Residuals: human leg, runtime wiring, CI wiring, cutover ADR.
