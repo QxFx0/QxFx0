@@ -1755,7 +1755,7 @@ testRuntimeDegradedUsesVisibleLocalRecovery = TestCase $
       (Just RecoveryRuntimeDegraded)
       (taLocalRecoveryCause turnArtifacts)
     assertBool "degraded runtime output should include scoped user-facing recovery guidance"
-      ("Я удержу только устойчивую часть ответа" `T.isInfixOf` taRendered turnArtifacts)
+      ("Часть проверок сейчас недоступна, поэтому удержу только устойчивую часть ответа" `T.isInfixOf` taRendered turnArtifacts)
     assertBool "degraded runtime output should not leak recovery banner"
       (not ("Локальный режим восстановления" `T.isInfixOf` taRendered turnArtifacts))
     let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts

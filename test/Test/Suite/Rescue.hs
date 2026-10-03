@@ -21,6 +21,11 @@ import QxFx0.Core.TurnPipeline.Route.Render
   , renderRescueLine
   , rescueTag
   )
+import QxFx0.Core.TurnPipeline.Route.Render (renderLocalRecoverySurface)
+import QxFx0.Types.Recovery
+  ( LocalRecoveryCause(..)
+  , LocalRecoveryStrategy(..)
+  )
 import QxFx0.Types.ClaimAst (ClaimAst(..), GfNP(..), GfRelation(..))
 import QxFx0.Render.Dialogue (DialogueRenderArtifact(..))
 import QxFx0.Types.Observability (ContractProvenance(..), SurfaceProvenance(..))
@@ -114,6 +119,47 @@ rescueTests =
         (not (emptyHoldFires ["добро"] ["добро"] True False True True))
       assertBool "a selection never fires"
         (not (emptyHoldFires ["добро"] ["добро"] True True True False))
+
+  , TestLabel "per-cause recovery leads" $ TestCase $ do
+      assertEqual "degraded narrow-scope names the outage"
+        "Часть проверок сейчас недоступна, поэтому удержу только устойчивую часть ответа и не буду достраивать непроверенные выводы."
+        (renderLocalRecoverySurface "ru" RecoveryRuntimeDegraded StrategyNarrowScope "свобода" [])
+      assertEqual "shadow-diverged narrow-scope keeps strategy text"
+        "Я удержу только устойчивую часть ответа и не буду достраивать непроверенные выводы."
+        (renderLocalRecoverySurface "ru" RecoveryShadowDivergence StrategyNarrowScope "свобода" [])
+      assertEqual "shadow-unavailable names the outage"
+        "Проверочный контур сейчас недоступен — уверенность ограничена, поэтому отвечу осторожно и не буду подменять недостающие основания догадкой."
+        (renderLocalRecoverySurface "ru" RecoveryShadowUnavailable StrategyExposeUncertainty "свобода" [])
+      assertEqual "low-legitimacy keeps strategy text"
+        "Уверенность здесь ограничена, поэтому отвечу осторожно и не буду подменять недостающие основания догадкой."
+        (renderLocalRecoverySurface "ru" RecoveryLowLegitimacy StrategyExposeUncertainty "свобода" [])
+      assertEqual "conatus-gate safe-recovery keeps strategy text"
+        "Остановлю расширение ответа и вернусь к проверяемой части хода."
+        (renderLocalRecoverySurface "ru" RecoveryConatusGate StrategySafeRecovery "свобода" [])
+      assertEqual "render-blocked safe-recovery keeps strategy text"
+        "Остановлю расширение ответа и вернусь к проверяемой части хода."
+        (renderLocalRecoverySurface "ru" RecoveryRenderBlocked StrategySafeRecovery "свобода" [])
+      assertEqual "unknown-topic define keeps strategy text"
+        "Чтобы ответ был точнее, нужна рамка употребления для темы: свобода."
+        (renderLocalRecoverySurface "ru" RecoveryUnknownTopic StrategyDefineKnownTerms "свобода" [])
+      assertEqual "parser-low-confidence ask keeps strategy text"
+        "Уточни, тебе нужно определение, различение или пример по теме: свобода?"
+        (renderLocalRecoverySurface "ru" RecoveryParserLowConfidence StrategyAskClarification "свобода" [])
+      assertEqual "self-divergence reanchoring keeps strategy text"
+        "Я вернусь к собственному устойчивому контуру и не буду усиливать текущее отклонение от него."
+        (renderLocalRecoverySurface "ru" RecoverySelfDivergence StrategySelfReanchoring "свобода" [])
+      assertEqual "learning-need request keeps strategy text"
+        "Для точной калибровки здесь не хватает внешнего критерия; пока зафиксирую осторожную рабочую версию."
+        (renderLocalRecoverySurface "ru" RecoveryLearningNeed StrategyRequestCalibration "свобода" [])
+      assertEqual "en degraded lead mirrors ru"
+        "Some checks are currently unavailable, so I will keep the answer within stable evidence and avoid speculative completion."
+        (renderLocalRecoverySurface "en" RecoveryRuntimeDegraded StrategyNarrowScope "freedom" [])
+      assertEqual "en shadow-unavailable lead mirrors ru"
+        "The verification contour is currently unavailable, so confidence is limited — I will answer cautiously instead of filling gaps with guesses."
+        (renderLocalRecoverySurface "en" RecoveryShadowUnavailable StrategyExposeUncertainty "freedom" [])
+      assertEqual "en legacy pair keeps strategy text"
+        "I will keep the answer within stable evidence and avoid speculative completion."
+        (renderLocalRecoverySurface "en" RecoveryShadowDivergence StrategyNarrowScope "freedom" [])
 
   , TestLabel "mentioned topics name the held noun" $ TestCase $ do
       assertEqual "stub hold names добро"

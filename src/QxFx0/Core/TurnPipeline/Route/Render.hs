@@ -25,6 +25,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , claimAstDefaultLexemeExcused
   , legacyOverrideAdmissible
   , recoveryTopicText
+  , renderLocalRecoverySurface
   , emptyHoldFires
   , mentionedCoveredTopics
   ) where
@@ -1451,7 +1452,7 @@ renderLocalRecoverySurface :: Text -> LocalRecoveryCause -> LocalRecoveryStrateg
 renderLocalRecoverySurface gfLang cause strategy topic _evidence =
   if gfLangTelemetryTag gfLang == "en"
     then renderLocalRecoverySurfaceEn cause strategy topic
-    else renderLocalRecoverySurfaceRu strategy topic
+    else renderLocalRecoverySurfaceRu cause strategy topic
 
 -- | Recovery topic fallback (pre-registered 2026-10-01): empty
 -- and invented topics render as the generic question. Pure; pinned.
@@ -1460,10 +1461,23 @@ recoveryTopicText fallback topic
   | T.null topic || isFallbackTopic topic = fallback
   | otherwise = topic
 
-renderLocalRecoverySurfaceRu :: LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurfaceRu strategy topic =
+renderLocalRecoverySurfaceRu :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceRu cause strategy topic =
   let topicText = recoveryTopicText "этот вопрос" topic
-   in case strategy of
+   in case (cause, strategy) of
+        -- Per-cause leads (pre-registered 2026-10-03, operator-approved):
+        -- only where the cause changes the honest statement.
+        (RecoveryRuntimeDegraded, StrategyNarrowScope) ->
+          "Часть проверок сейчас недоступна, поэтому удержу только устойчивую часть ответа и не буду достраивать непроверенные выводы."
+        (RecoveryShadowUnavailable, StrategyExposeUncertainty) ->
+          "Проверочный контур сейчас недоступен — уверенность ограничена, поэтому отвечу осторожно и не буду подменять недостающие основания догадкой."
+        _ -> renderLocalRecoverySurfaceRuLegacy strategy topicText
+
+-- | Strategy-only surfaces (legacy; byte-identical for all pairs
+-- without a per-cause lead above).
+renderLocalRecoverySurfaceRuLegacy :: LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceRuLegacy strategy topicText =
+  case strategy of
         StrategyAskClarification ->
           "Уточни, тебе нужно определение, различение или пример по теме: " <> topicText <> "?"
         StrategyNarrowScope ->
@@ -1494,9 +1508,20 @@ renderLocalRecoverySurfaceRu strategy topic =
           "Я вернусь к собственному устойчивому контуру и не буду усиливать текущее отклонение от него."
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
-renderLocalRecoverySurfaceEn _cause strategy topic =
+renderLocalRecoverySurfaceEn cause strategy topic =
   let topicText = recoveryTopicText "this question" topic
-   in case strategy of
+   in case (cause, strategy) of
+        (RecoveryRuntimeDegraded, StrategyNarrowScope) ->
+          "Some checks are currently unavailable, so I will keep the answer within stable evidence and avoid speculative completion."
+        (RecoveryShadowUnavailable, StrategyExposeUncertainty) ->
+          "The verification contour is currently unavailable, so confidence is limited — I will answer cautiously instead of filling gaps with guesses."
+        _ -> renderLocalRecoverySurfaceEnLegacy strategy topicText
+
+-- | Strategy-only surfaces (legacy; byte-identical for all pairs
+-- without a per-cause lead above).
+renderLocalRecoverySurfaceEnLegacy :: LocalRecoveryStrategy -> Text -> Text
+renderLocalRecoverySurfaceEnLegacy strategy topicText =
+  case strategy of
         StrategyAskClarification ->
           "Clarify whether you need a definition, a distinction, or an example for: " <> topicText <> "."
         StrategyNarrowScope ->

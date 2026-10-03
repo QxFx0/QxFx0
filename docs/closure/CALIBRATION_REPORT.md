@@ -2637,3 +2637,52 @@ beyond 24 verbs.
   The refusal-interaction analysis above still stands for that
   landing: the gate reads `tiBestTopic`, so any future fix
   must pin fresh-refuses vs post-content-continues.
+
+---
+
+# Per-cause recovery leads — pre-registration (2026-10-03)
+
+- **Fact (audited)**: `renderLocalRecoverySurfaceRu/En` receive
+  the cause but ignore it — surfaces key by strategy only.
+  Collisions: NarrowScope ← {ShadowDivergence,
+  RuntimeDegraded}, ExposeUncertainty ← {ShadowUnavailable,
+  LowLegitimacy}, SafeRecovery ← {ConatusGate, RenderBlocked}.
+- **Rule (locked)**: two cause-specific leads, operator-approved
+  wordings (RU + EN mirrors); all other pairs keep strategy
+  text byte-identical. No jargon leak (no Conatus/energy/shadow
+  internals; "проверочный контур" / "часть проверок" are new
+  plain-language phrasings, operator-approved, not prior art).
+  Wiring: thread the already-passed cause into both renderers.
+- **Bar**: unit matrix pins — the two refined pairs render the
+  new leads, all other cause×strategy pairs render legacy text
+  (exhaustive over the ladder's proximate pairings);
+  live — degraded-mode turn renders the RuntimeDegraded lead
+  (that cause fires in degraded sessions), contact/define
+  controls unchanged; crisis control; zero new failures in
+  unit/fast/core.
+- **Out of scope**: remaining 8 causes (strategy text already
+  honest; distinction lives in trace); ShadowUnavailable live
+  forcing (pins only); jargon surfaces; retry promises.
+
+---
+
+# Per-cause recovery leads — landed (2026-10-03)
+
+- **Rule** (pre-registered above + one honesty correction):
+  two cause-specific leads (RU + EN mirrors) for
+  RuntimeDegraded+NarrowScope and ShadowUnavailable+
+  ExposeUncertainty; the `cause` already passed into both
+  renderers is now consumed. Correction en route: the pre-reg
+  called the new phrasings "established" — they are not prior
+  art, fixed to "new plain-language phrasings,
+  operator-approved" before implementing.
+- **Probe**: degraded contentless/contact turns render the new
+  lead (`rec=runtime_degraded`); definitional content, crisis
+  surface (resources intact) and speculative probe unchanged.
+- **Verification**: unit 1686, fast 1829, core 1200 green.
+  New pins: cause×strategy matrix (`Rescue`, 13 assertions
+  incl. EN mirrors); one expected delta triaged — the degraded
+  protocol pin now asserts the new lead verbatim.
+  Residuals: remaining 8 causes (trace-level distinction);
+  ShadowUnavailable live forcing; retry-promise doctrine
+  untouched.

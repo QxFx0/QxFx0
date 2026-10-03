@@ -652,7 +652,7 @@ runtime regression:
 | qxfx0-test | 1307 (core 1200 + runtime 94 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-fast | 1829 |
-| qxfx0-test-unit | 1685 |
+| qxfx0-test-unit | 1686 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
