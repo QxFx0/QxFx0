@@ -2540,3 +2540,55 @@ beyond 24 verbs.
   restarted, no OOM evidence readable); solo re-run 1199/1199
   exit 0. Pattern matches the documented one-off flakiness.
   Residuals: human leg, runtime wiring, CI wiring, cutover ADR.
+
+---
+
+# Consent-marker focus exclusion (ладно/хорошо/давай) — pre-registration (2026-10-03)
+
+- **Mechanism (proven live)**: same shape as the backchannel
+  wart. Bare consent markers pass `isFocusCandidate`
+  (length ≥ 3, not stopwords) and displace carried topics:
+  свобода → «ладно»/«хорошо»/«давай» render «Смысловая точка:
+  ладно/...». Fresh turns carry them as `bestTopic` with the
+  mirror surface. No pin depends on these focuses (only
+  commitment/phase pins over «свобода это хорошо» touch the
+  tokens in-sentence; deltas triaged via suite).
+- **Rule (locked)**: frozen «ладно», «хорошо», «давай» join
+  `logicalFocusStopwords` (`Proposition/Focus.hs`) — same
+  single site as ага/угу. Frame-layer echoes untouched.
+- **Expected**: fresh turns → `bestTopic=""` + topic-less hold;
+  after content → carried topic continues. In-sentence uses
+  («свобода это хорошо», «давай порассуждаем…») resolve focus
+  from remaining candidates — suite verifies no pin breaks.
+- **Bar**: unit pins — all three rejected by
+  `isFocusCandidate`, `extractFocusEntity` empty on bare
+  forms, covered topics unaffected; live — fresh trio
+  topic-less with `bestTopic=""`, continuity battery keeps
+  свобода, greeting + contact + definitional controls
+  unchanged; crisis + speculative controls; zero new failures
+  in unit/fast/core.
+- **Out of scope**: «понятно» (anomaly-refusal-linked — the
+  refusal surface fires with best=понятно; whether the refusal
+  depends on focus candidacy needs its own analysis, separate
+  landing); paradigms data; `isFallbackTopic` (trio stays
+  not-fenced).
+
+---
+
+# Consent-marker focus exclusion (ладно/хорошо/давай) — landed (2026-10-03)
+
+- **Rule** (pre-registered above): frozen «ладно», «хорошо»,
+  «давай» in `logicalFocusStopwords` (`Proposition/Focus.hs`)
+  — same single site as ага/угу. Frame-layer echoes untouched.
+- **Probe**: fresh trio → `bestTopic=""` with the topic-less
+  hold; continuity battery (свобода?→ладно→хорошо→давай) keeps
+  свобода throughout. Greeting + contact + definitional
+  controls unchanged; crisis control (bounded surface,
+  resources) and speculative probe coherent.
+- **Verification**: unit 1685, fast 1829, core 1200 green.
+  New pin: `testConsentMarkerFocusExclusion`. In-sentence uses
+  («свобода это хорошо», «давай порассуждаем…») cause zero pin
+  breakage — focus resolves from remaining candidates.
+  Infra note: post-restart re-verification from scratch.
+  Residuals: «понятно» (anomaly-refusal-linked, separate
+  analysis); «так»/«вот»; paradigms data.

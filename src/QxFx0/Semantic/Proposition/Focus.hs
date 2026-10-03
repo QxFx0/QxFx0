@@ -212,6 +212,10 @@ logicalFocusStopwords =
   -- Consent/agreement markers (ладно/хорошо/давай/понятно) are
   -- a separate class, out of scope.
   , "ага", "угу"
+  -- Consent-marker focus exclusion (pre-registered 2026-10-03):
+  -- bare consent markers are never topics. «понятно» stays out:
+  -- it is anomaly-refusal-linked and needs its own analysis.
+  , "ладно", "хорошо", "давай"
   ]
 
 -- | Extract key phrases (words longer than 4 characters).

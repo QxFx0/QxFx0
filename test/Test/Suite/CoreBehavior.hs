@@ -447,6 +447,7 @@ coreBehaviorTests =
     , testFallbackTopicMoves
     , testEmptyTopicNoInvention
     , testBackchannelFocusExclusion
+    , testConsentMarkerFocusExclusion
     , testParsePropositionUserSideMisunderstandingReport
     , testDialogAtomsTopicMentionGuard
     , testParsePropositionSelfKnowledgeConfidenceHigh
@@ -3052,6 +3053,18 @@ testBackchannelFocusExclusion = TestCase $ do
     (Proposition.isFocusCandidate "свобода")
   assertEqual "real focus entity resolves"
     "свобода" (Proposition.extractFocusEntity "что такое свобода?")
+
+-- | Consent-marker focus exclusion (pre-registered 2026-10-03):
+-- bare consent markers are never focus candidates.
+testConsentMarkerFocusExclusion :: Test
+testConsentMarkerFocusExclusion = TestCase $ do
+  forM_ ["ладно", "хорошо", "давай"] $ \input ->
+    do assertBool ("not a focus candidate: " <> T.unpack input)
+         (not (Proposition.isFocusCandidate input))
+       assertEqual ("no focus entity for " <> T.unpack input)
+         "" (Proposition.extractFocusEntity input)
+  assertBool "real topics still candidates"
+    (Proposition.isFocusCandidate "ответственность")
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do
