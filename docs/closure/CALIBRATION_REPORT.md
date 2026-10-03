@@ -2592,3 +2592,48 @@ beyond 24 verbs.
   Infra note: post-restart re-verification from scratch.
   Residuals: «понятно» (anomaly-refusal-linked, separate
   analysis); «так»/«вот»; paradigms data.
+
+---
+
+# «понятно» focus exclusion — pre-registration addendum (2026-10-03)
+
+- **Analysis (read-only, operator-approved)**: the Unclassifiable
+  gate reads `tiBestTopic` (covered-check), never
+  `ipfFocusEntity` directly — excluding «понятно» changes the
+  gate's input, not the gate. Interaction is narrow and pinned:
+  fresh «понятно» still refuses (best="", uncovered, nothing to
+  acknowledge — refusal appropriate); «понятно» after content
+  stops refusing and continues the carried topic (fixes the
+  misfire: user signals understanding, system claimed not to
+  understand). No suite pin references «понятно» anywhere.
+- **Rule (locked)**: frozen «понятно» joins
+  `logicalFocusStopwords`, same site. Frame echoes untouched.
+- **Bar**: unit pins (rejection + empty entity + covered
+  control); live — fresh «понятно» refuses with `bestTopic=""`,
+  post-content «понятно» continues свобода, trio + controls +
+  crisis + speculative unchanged; zero new failures unit/fast/core.
+
+---
+
+# «понятно» addendum outcome — rule insufficient, reverted (2026-10-03)
+
+- **Live probe FAILED the bar**: fresh and post-content
+  «понятно» still carry `bestTopic="понятно"` with the refusal
+  surface. The stopwords rule is vacuous here: «понятно»
+  reaches `bestTopic` via `atomFocus` (prepare-phase
+  lexical/structural atom findings over the input carry the raw
+  token), bypassing `ipfFocusEntity` entirely. The unit pin
+  (`extractFocusEntity == ""`) passed while live behavior stood
+  still — pins without live effect are not landed.
+- **Reverted**: «понятно» out of `logicalFocusStopwords`, pin
+  extension rolled back to the trio. Working tree behavior for
+  «понятно» is byte-identical to the consent landing.
+- **True mechanism recorded**: the atom path
+  (`buildAtomSetFromFindings` → `extractObjectFromAtom` →
+  `atomFocus`, `Effects.hs`) carries raw-token atoms into
+  topic candidacy. Fixing it means atom-path surgery under the
+  admission-pin regime (`twoBranchChecks` equivalence) — a
+  separate pre-reg with its own audit, not a stopwords line.
+  The refusal-interaction analysis above still stands for that
+  landing: the gate reads `tiBestTopic`, so any future fix
+  must pin fresh-refuses vs post-content-continues.

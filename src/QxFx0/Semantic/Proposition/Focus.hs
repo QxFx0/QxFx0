@@ -214,7 +214,10 @@ logicalFocusStopwords =
   , "ага", "угу"
   -- Consent-marker focus exclusion (pre-registered 2026-10-03):
   -- bare consent markers are never topics. «понятно» stays out:
-  -- it is anomaly-refusal-linked and needs its own analysis.
+  -- it reaches bestTopic via atomFocus (prepare-phase atom
+  -- findings), not ipfFocusEntity — stopwords cannot fix it.
+  -- See the 2026-10-03 addendum outcome; atom-path surgery
+  -- needs its own pre-reg with an admission-pin audit.
   , "ладно", "хорошо", "давай"
   ]
 
