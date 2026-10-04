@@ -40,6 +40,7 @@ lexiconTests =
   , TestLabel "ambiguity fallback: same tier and quality returns raw surface" (TestCase testAmbiguityFallbackSameTierQuality)
   , TestLabel "ambiguity fallback: different tier resolves" (TestCase testAmbiguityFallbackDifferentTier)
   , TestLabel "old morphology maps: toNominative uses mdNominative first" (TestCase testOldMorphologyToNominative)
+  , TestLabel "nominative override: ambiguous вина resolves to guilt" (TestCase testNominativeSurfaceOverride)
   , TestLabel "old morphology maps: genitiveForm uses mdGenitive first" (TestCase testOldMorphologyGenitive)
   , TestLabel "old morphology maps: prepositionalForm uses mdPrepositional first" (TestCase testOldMorphologyPrepositional)
   , TestLabel "candidate fallback: genitiveForm uses mdFormsBySurface" (TestCase testCandidateGenitiveFallback)
@@ -129,6 +130,15 @@ testOldMorphologyToNominative = do
   assertEqual "toNominative should use mdNominative direct lookup" "свобода" (toNominative md "свободе")
   assertEqual "toNominative should use mdNominative direct lookup" "диалог" (toNominative md "диалога")
   assertEqual "toNominative should fallback to surface for unknown" "неизвестно" (toNominative md "неизвестно")
+
+-- Batch-4 amendment (pre-registered 2026-10-04): frozen
+-- nominative override for the genuinely ambiguous bare topic.
+testNominativeSurfaceOverride :: Assertion
+testNominativeSurfaceOverride = do
+  let md = MorphologyData Map.empty Map.empty (Map.fromList [("вина", "вино")]) Map.empty
+  assertEqual "ambiguous вина resolves to guilt, not wine" "вина" (toNominative md "вина")
+  assertEqual "unambiguous вино still resolves to wine" "вино" (toNominative md "вино")
+  assertEqual "unknown surfaces still pass through" "неизвестно" (toNominative md "неизвестно")
 
 testOldMorphologyGenitive :: Assertion
 testOldMorphologyGenitive = do

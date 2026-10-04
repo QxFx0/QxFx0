@@ -2686,3 +2686,86 @@ beyond 24 verbs.
   Residuals: remaining 8 causes (trace-level distinction);
   ShadowUnavailable live forcing; retry-promise doctrine
   untouched.
+
+---
+
+# Dictionary expansion batch-4 (cluster scope) — pre-registration (2026-10-04)
+
+- **Trigger**: coverage audit (2026-10-03, read-only): 136
+  `definitionCorpus` keys vs cluster-gold noun lemmas
+  (repo-lemmatized, nouns only). 14 frequent cluster nouns
+  missing; top-12 by frequency form this batch
+  (решение/привычка, tied at 4, deferred to next batch for a
+  clean frequency cut). Metaphorical one-offs (якорь, дверь,
+  камень) and off-cluster nouns (город) excluded by rule.
+- **Scope compliance**: all 12 inside the freedom cluster
+  (ADR-0054 §2.7 freeze respected — no out-of-cluster growth).
+- **Rule (locked)**: `definitionCorpus` 136→148, 2 predicates
+  (prop/rel + EN gloss) per topic, texts operator-approved
+  verbatim; GF lexemes via `add_gf_lexemes.py` (decline();
+  masculine-consonant and neuter-ие paths already cover this
+  set — verified before running); grammar abstract/Rus/Eng +
+  PGF recompile (`compile_gf_grammar.sh`); SQL seed +
+  Generated.hs via the lexicon pipeline (no concurrent
+  export/hand-edits); Agda witness re-record
+  (`--write-agda-witness`) per the lexicon doctrine; no
+  weights, no code, no thresholds.
+- **Bar**: lib clean; unit/fast green (pins hold despite 12 new
+  graph nodes); Agda green with re-recorded witness; live —
+  «что такое X?» renders the approved predicates verbatim for
+  all 12 (any overlay-preference delta triaged: selection
+  working, not a defect); zero new failures in unit/fast/core.
+- **Out of scope**: решение/привычка (next batch);
+  out-of-cluster topics (ADR freeze); paradigms data beyond
+  what decline() covers (lexicon loop owns it); weights.
+
+---
+
+# Dictionary batch-4 amendment: вина nominative override (2026-10-04)
+
+- **Defect (proven live)**: «что такое вина?» → `bestTopic="вино"`.
+  `mdNominative` (Resources/Morphology.hs) is a broad
+  surface→lemma index over every stored form with last-wins
+  ordering; alphabetically вино follows вина, so the oblique
+  reading (gen.sg of wine) beats the nominative (guilt).
+  Frame layer is correct (`ipfFocusEntity=ipfFocusNominative=
+  subj=вина` pinned by diag); the corruption happens in
+  production `toNominative` over the real morphology
+  (fixtures use empty morph → passthrough, hence green).
+- **Rule (locked)**: frozen single-surface override
+  вина→вина consulted first in `toNominative`
+  (`Lexicon/Inflection.hs`; precedent: hush-final дождь
+  override). A global nominative-preference flip (306
+  surfaces) is explicitly out of scope — separate landing
+  with per-flip audit.
+- **Bar**: unit pin (override fires; unknown surfaces pass
+  through); live — «что такое вина?» carries `bestTopic=вина`
+  with guilt content; nominative controls («что такое вино?» —
+  must stay вино) unchanged; zero new failures unit/fast/core.
+
+---
+
+# Dictionary batch-4 — landed (2026-10-04)
+
+- **What** (pre-registered + one amendment): `definitionCorpus`
+  136→148, 12 cluster topics with operator-approved verbatim
+  predicates; 4 SQL provenance inserts (the rest pre-existed);
+  export regen (only `lexicon_quality.json` moved — all other
+  artifacts already carried the forms); 6 Eng-concrete
+  hand-appends with senior-gloss dedupe (intent/pact/promise/
+  refusal/aftermath/deed); PGF recompiled (binary legitimately
+  identical — Syntax PGF does not embed LexiconEng; manifest
+  source-hash updated); Agda untouched (no re-record needed).
+- **Triage**: 7 topics render verbatim corpus predicates; 5
+  (намерение/ограничение/риск/договор/вина) prefer overlay
+  predicates from `curated_predicates.jsonl` — coherent,
+  hypothesis-marked, selection working per the дождь
+  precedent, not a defect. Real defect found and fixed:
+  вина→вино (amendment above + frozen override + live spot).
+- **Infra notes**: cold starts after rebuild can exceed 90–180s
+  (page cache; warmed runs fast) — size turn timeouts
+  accordingly. First two live probes timed out cold; no code
+  defect.
+- **Verification**: lib clean, export --check green, unit 1687,
+  fast 1830, core 1201 green. Agda not re-run (no Agda inputs
+  changed).

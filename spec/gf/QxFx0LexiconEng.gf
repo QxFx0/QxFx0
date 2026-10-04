@@ -3796,4 +3796,12 @@ concrete QxFx0LexiconEng of QxFx0Lexicon = open ParadigmsEng, CatEng, Structural
     ustalost_N = mkN "fatigue" ;
     vdohnovenie_N = mkN "inspiration" ;
     nostalgiya_N = mkN "nostalgia" ;
+-- 2026-10-04 cluster batch-4 (only funIds without a senior gloss;
+-- intenciya/kontrakt/sledstvie/effekt/agreement/outcome keep theirs).
+    dogovor_N = mkN "pact" ;
+    namerenie_N = mkN "intent" ;
+    obeshchanie_N = mkN "promise" ;
+    otkaz_N = mkN "refusal" ;
+    posledstvie_N = mkN "aftermath" ;
+    postupok_N = mkN "deed" ;
 }

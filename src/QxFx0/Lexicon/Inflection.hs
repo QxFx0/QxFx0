@@ -13,6 +13,7 @@ module QxFx0.Lexicon.Inflection
 import Data.Text (Text)
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
+import Control.Applicative ((<|>))
 
 import QxFx0.Policy.RenderLexicon
   ( morphFemSuffixA
@@ -32,13 +33,29 @@ dropLastChar w = T.take (T.length w - 1) w
 lastCharOf :: T.Text -> Char
 lastCharOf w = T.index w (T.length w - 1)
 
+-- | Frozen nominative overrides (pre-registered 2026-10-04,
+-- batch-4 amendment): genuinely ambiguous bare-topic surfaces
+-- where the oblique reading must not win. `mdNominative` is a
+-- broad surface->lemma index with last-wins ordering, so
+-- alphabetically-later вино beats вина (gen.sg of wine over
+-- nom.sg of guilt). Bare topics are nominative position.
+-- Precedent: hush-final дождь override. A global
+-- nominative-preference flip (306 surfaces) is out of scope.
+nominativeSurfaceOverrides :: [(Text, Text)]
+nominativeSurfaceOverrides =
+  [ ("вина", "вина")
+  ]
+
 toNominative :: MorphologyData -> Text -> Text
 toNominative md w =
-  case M.lookup w (mdNominative md) of
-    Just f -> f
-    Nothing -> case M.lookup (T.toLower w) (mdNominative md) of
+  case lookup w nominativeSurfaceOverrides
+    <|> lookup (T.toLower w) nominativeSurfaceOverrides of
+    Just lemma -> lemma
+    Nothing -> case M.lookup w (mdNominative md) of
       Just f -> f
-      Nothing -> resolveCandidateNominative md w
+      Nothing -> case M.lookup (T.toLower w) (mdNominative md) of
+        Just f -> f
+        Nothing -> resolveCandidateNominative md w
 
 resolveCandidateNominative :: MorphologyData -> Text -> Text
 resolveCandidateNominative md surface =

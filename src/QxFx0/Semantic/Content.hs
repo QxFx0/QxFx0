@@ -1055,6 +1055,78 @@ definitionCorpus = M.fromList
       , rel "гнев требует паузы перед действием"
             "anger demands a pause before acting"
       ]
+  , entry "намерение"
+      [ prop "намерение предшествует действию"
+             "intention precedes action"
+      , rel "намерение связывает желание с планом"
+            "intention connects desire with a plan"
+      ]
+  , entry "последствие"
+      [ prop "последствие следует из действия"
+             "a consequence follows from an action"
+      , rel "последствие проверяет намерение"
+            "a consequence tests the intention"
+      ]
+  , entry "принуждение"
+      [ prop "принуждение отменяет добровольность"
+             "coercion cancels voluntariness"
+      , rel "принуждение отличается от убеждения отсутствием выбора"
+            "coercion differs from persuasion by the absence of choice"
+      ]
+  , entry "согласие"
+      [ prop "согласие есть совпадение воль"
+             "consent is the coincidence of wills"
+      , rel "согласие требует понимания а не подчинения"
+            "consent requires understanding, not submission"
+      ]
+  , entry "ограничение"
+      [ prop "ограничение задаёт границу возможного"
+             "a limit sets the boundary of the possible"
+      , rel "ограничение отличает свободу от произвола"
+            "a limit distinguishes freedom from arbitrariness"
+      ]
+  , entry "обещание"
+      [ prop "обещание связывает будущее обязательством"
+             "a promise binds the future with an obligation"
+      , rel "обещание держится исполнением а не словами"
+            "a promise stands on fulfillment, not words"
+      ]
+  , entry "риск"
+      [ prop "риск есть действие при неопределённости"
+             "risk is action under uncertainty"
+      , rel "риск оправдан оценкой последствий"
+            "risk is justified by assessing consequences"
+      ]
+  , entry "договор"
+      [ prop "договор фиксирует взаимные обязательства"
+             "a contract records mutual obligations"
+      , rel "договор держится доверием сторон"
+            "a contract stands on the trust of the parties"
+      ]
+  , entry "вина"
+      [ prop "вина есть признание причинённого вреда"
+             "guilt is the acknowledgment of caused harm"
+      , rel "вина искупается исправлением"
+            "guilt is redeemed by amends"
+      ]
+  , entry "поступок"
+      [ prop "поступок есть осуществлённый выбор"
+             "a deed is a realized choice"
+      , rel "поступок оценивается по последствиям"
+            "a deed is judged by its consequences"
+      ]
+  , entry "запрет"
+      [ prop "запрет очерчивает недопустимое"
+             "a ban outlines the inadmissible"
+      , rel "запрет нуждается в основании"
+            "a ban needs a grounding"
+      ]
+  , entry "отказ"
+      [ prop "отказ есть несогласие действовать"
+             "refusal is unwillingness to act"
+      , rel "отказ сохраняет границу субъекта"
+            "refusal preserves the subject's boundary"
+      ]
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))
