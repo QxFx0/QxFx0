@@ -656,7 +656,7 @@ unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-03, incl. recovery leads;
+per-group green on current HEAD 2026-10-05, incl. dict batch-4;
 chains die post-runtime — relaunch state solo; unbuffered output
 required to judge the long runtime test) |
 
