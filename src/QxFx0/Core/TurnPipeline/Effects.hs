@@ -48,6 +48,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import QxFx0.Semantic.Proposition (focusCandidateOrEmpty, parsePropositionWithFrameWithMorphology)
+import QxFx0.Semantic.Intent.Classifier
+  ( resolveCarryTopic
+  , semanticIntentForRender
+  )
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
@@ -455,10 +459,17 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
           , atomFocus
           , fromMaybe fallbackWord (listToMaybe (T.words input))
           ]
-      -- понятно atom-path (pre-registered 2026-10-05): the atom
-      -- link is cut by candidacy here; conceptToCheck above keeps
-      -- working on raw atoms (constitutional check untouched).
-      focus = firstNonEmpty [ipfFocusNominative frame, ipfFocusEntity frame, focusCandidateOrEmpty atomFocus, ssLastTopic ss]
+      -- Intent-topic carry override (pre-registered 2026-10-05):
+      -- same pure call as render stage (same inputs → same verdict
+      -- by construction); overrides ONLY the pure-carry case.
+      -- conceptToCheck above keeps raw atoms (untouched).
+      prepareIntent = semanticIntentForRender
+        (ipfPropositionType frame)
+        input
+        (map T.toLower (T.words (T.strip input)))
+        (ssMorphology ss)
+      linkFocus = firstNonEmpty [ipfFocusNominative frame, ipfFocusEntity frame, focusCandidateOrEmpty atomFocus]
+      focus = resolveCarryTopic linkFocus prepareIntent (ssLastTopic ss)
       bestTopic = if T.null focus then ssLastTopic ss else focus
       resonance = atCurrentLoad newTrace
       atomLoad = asLoad atomSet

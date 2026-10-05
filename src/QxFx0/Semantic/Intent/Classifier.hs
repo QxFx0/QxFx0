@@ -28,6 +28,8 @@ module QxFx0.Semantic.Intent.Classifier
   , normalizeIntentTopics
   , intentToPropositionType
   , intentToFamily
+  , semanticIntentForRender
+  , resolveCarryTopic
   ) where
 
 import Data.Text (Text)
@@ -40,7 +42,7 @@ import Data.Aeson (ToJSON, FromJSON)
 
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns)
-import QxFx0.Semantic.Content (isCoveredTopic)
+import QxFx0.Semantic.Content (isCoveredTopic, isFallbackTopic)
 import QxFx0.Types (CanonicalMoveFamily(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import QxFx0.Semantic.Proposition.Types (PropositionType(..))
@@ -137,6 +139,53 @@ normalizeIntentTopics morph intent = case intent of
   -- the head is unknown to morphology). Clause-topics are a
   -- frame-extraction problem, not a normalization problem.
   other -> other
+
+-- | Render-stage intent resolution, shared with Prepare.
+-- Moved verbatim from 'QxFx0.Core.TurnPipeline.Route.Render'
+-- (2026-10-05, carry-override pre-reg): a single home so Prepare
+-- and Render classify identically — same function, same inputs.
+semanticIntentForRender :: PropositionType -> Text -> [Text] -> MorphologyData -> SemanticIntent
+semanticIntentForRender propositionType input tokens morphology =
+  case propositionType of
+    ConfrontQ -> IntentChallenge
+    MisunderstandingReport -> IntentRepair
+    RepairSignal -> IntentRepair
+    -- Bare-noun definitional (D1-probe fix, pre-registered 2026-09-24):
+    -- a single token asking "what is X?" maps straight to IntentDefine.
+    -- Multi-word inputs fall through to the feature classifier, so
+    -- "что такое X?" behavior is byte-identical.
+    ConceptKnowledgeQ
+      | [w] <- filter (not . T.null) (map T.strip tokens) ->
+          IntentDefine (canonicalTopic morphology w)
+    -- F1b (pre-registered 2026-09-28): the compositional backstop
+    -- re-derived selfhood from bare pronouns («я думаю, что…» →
+    -- biography) whenever prepare said anything but SelfKnowledgeQ.
+    -- Respect prepare's precise detector: only SelfKnowledgeQ keeps
+    -- the legacy chain (byte-identical); every other type classifies
+    -- without the self-reference backstop.
+    _ -> (if propositionType == SelfKnowledgeQ
+            then classifyIntent
+            else classifyIntentWithoutSelfReference) input tokens morphology
+
+-- | Intent-topic carry override (pre-registered 2026-10-05).
+-- 'linkFocus' is the focus resolved from the three topic links
+-- (nominative/entity/atom, "" when all empty); 'lastTopic' is the
+-- carried previous topic. Returns 'linkFocus' unchanged unless it
+-- is empty AND the normalized intent sets an explicit covered
+-- topic (Define, or the subject of Distinguish) — then the intent
+-- topic wins over stale carry. Total.
+resolveCarryTopic :: Text -> SemanticIntent -> Text -> Text
+resolveCarryTopic linkFocus intent lastTopic
+  | not (T.null linkFocus) = linkFocus
+  | otherwise = case intent of
+      IntentDefine topic | isIntentTopic topic -> topic
+      IntentDistinguish left _ | isIntentTopic left -> left
+      _ -> lastTopic
+  where
+    isIntentTopic topic =
+      not (T.null topic)
+        && isCoveredTopic topic
+        && not (isFallbackTopic topic)
 
 -- | Short covered head: ≤3-token input whose first content noun names
 -- a covered topic. Nominative-leaning (extractContentNouns lemmas).

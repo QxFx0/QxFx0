@@ -108,7 +108,7 @@ import QxFx0.Render.Dialogue
   , generateFromFrameWithActivation
   , semanticFrameActivationTopics
   )
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, canonicalTopic)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), semanticIntentForRender)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
@@ -160,28 +160,10 @@ data RenderStatic = RenderStatic
   , rsSurfacingFragmentText :: !Text
   } deriving stock (Eq, Show)
 
-semanticIntentForRender :: PropositionType -> Text -> [Text] -> MorphologyData -> SemanticIntent
-semanticIntentForRender propositionType input tokens morphology =
-  case propositionType of
-    ConfrontQ -> IntentChallenge
-    MisunderstandingReport -> IntentRepair
-    RepairSignal -> IntentRepair
-    -- Bare-noun definitional (D1-probe fix, pre-registered 2026-09-24):
-    -- a single token asking "what is X?" maps straight to IntentDefine.
-    -- Multi-word inputs fall through to the feature classifier, so
-    -- "что такое X?" behavior is byte-identical.
-    ConceptKnowledgeQ
-      | [w] <- filter (not . T.null) (map T.strip tokens) ->
-          IntentDefine (canonicalTopic morphology w)
-    -- F1b (pre-registered 2026-09-28): the compositional backstop
-    -- re-derived selfhood from bare pronouns («я думаю, что…» →
-    -- biography) whenever prepare said anything but SelfKnowledgeQ.
-    -- Respect prepare's precise detector: only SelfKnowledgeQ keeps
-    -- the legacy chain (byte-identical); every other type classifies
-    -- without the self-reference backstop.
-    _ -> (if propositionType == SelfKnowledgeQ
-            then classifyIntent
-            else classifyIntentWithoutSelfReference) input tokens morphology
+-- | Render-stage intent resolution lives in
+-- 'QxFx0.Semantic.Intent.Classifier' (shared with Prepare since
+-- the 2026-10-05 carry-override pre-reg); re-exported here so
+-- existing importers are unaffected.
 
 data LocalRecoveryPlan = LocalRecoveryPlan
   { lrpCause :: !LocalRecoveryCause

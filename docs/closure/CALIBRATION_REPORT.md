@@ -2958,3 +2958,57 @@ beyond 24 verbs.
   `focusCandidateOrEmpty` passthrough/empty cases.
   The fallback-topic program is now complete: no path —
   frame, focus-entity, atoms — invents topic nouns.
+
+---
+
+# Intent-topic carry override — pre-registration (2026-10-05)
+
+- **Defect (proven live, harvest live-0273)**: «что такое
+  обязательство?» (after давление) renders the right
+  predicate but carries `bestTopic=давление`. Focus links are
+  all empty (обязательство is a deontic stopword) so the chain
+  falls to `ssLastTopic`. Carry is correct for acknowledgements
+  but wrong on explicit topic-setting questions — follow-up
+  threading then continues the wrong topic.
+- **Audit**: `SemanticIntent` (Intent/Classifier) is NOT
+  available in Prepare/Effects (only the geometric classifier
+  is); ResponsePlan classifies later. M6.1 forbids
+  post-hoc `tiBestTopic` overrides downstream — the fix belongs
+  in Effects, which has `input` + `ssMorphology` but needs
+  `Intent.Features` threaded in (new dependency; same pure
+  function + same inputs as the later call → identical
+  verdicts, pinned by equality).
+- **Rule (locked)**: classify intent in Prepare; override ONLY
+  the pure-carry case (nom/entity/atom links all empty) AND
+  normalized intent topic covered non-fallback AND intent ∈
+  {Define, Distinguish} (the only acts normalizeIntentTopics
+  touches — F2 doctrine). Contact/challenge/generative and all
+  resolved focuses byte-identical.
+- **Bar**: unit pins — Define intent extraction, carry
+  preserved for non-Define acts and for resolved focuses,
+  Prepare/ResponsePlan verdict equality; live —
+  обязательство-definitional carries обязательство,
+  понятно/ага/ну continuity unchanged, fresh empties
+  unchanged, controls + crisis + speculative unchanged;
+  zero new failures in unit/fast/core.
+- **Out of scope**: M6.1 violation (no downstream override);
+  deontic-stopword removal; paradigms data.
+
+---
+
+# Intent-topic carry override — landed (2026-10-05)
+
+- **Rule** (pre-registered above): `semanticIntentForRender`
+  moved verbatim to `Intent.Classifier` (Route/Render
+  re-exports it — zero import churn for tests); new total
+  `resolveCarryTopic` overrides ONLY the pure-carry case
+  with an explicit covered Define/Distinguish topic;
+  Effects computes the same call as render stage (same
+  function, same inputs — verdict equality by construction).
+  `conceptToCheck` untouched.
+- **Probe**: обязательство after давление carries
+  обязательство; ну/ага/понятно continuity, fresh empties,
+  greeting/contact/definitional controls, crisis (resources)
+  and speculative probe all unchanged.
+- **Verification**: unit 1693, fast 1830, core 1201 green.
+  New pins: `carryOverrideTests` (6 assertions).

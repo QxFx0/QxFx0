@@ -22,7 +22,7 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, intentToPropositionType, normalizeIntentTopics)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, intentToPropositionType, normalizeIntentTopics, resolveCarryTopic)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
 import QxFx0.Semantic.Frame.Builder (buildFrame, extractTarget)
@@ -62,6 +62,40 @@ intentClassifierTests =
   , canonicalTopicTests
   , challengeTargetTests
   , selfReferenceGateTests
+  , carryOverrideTests
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Carry override (pre-registered 2026-10-05): intent topic wins
+-- over stale carry ONLY in the pure-carry case.
+-- ---------------------------------------------------------------------------
+
+carryOverrideTests :: Test
+carryOverrideTests = TestLabel "CarryOverride" $ TestList
+  [ TestCase $ do
+      assertEqual "define overrides stale carry"
+        "обязательство"
+        (resolveCarryTopic "" (IntentDefine "обязательство") "давление")
+  , TestCase $ do
+      assertEqual "define with uncovered topic keeps carry"
+        "давление"
+        (resolveCarryTopic "" (IntentDefine "тема") "давление")
+  , TestCase $ do
+      assertEqual "distinguish overrides with subject"
+        "свобода"
+        (resolveCarryTopic "" (IntentDistinguish "свобода" "произвол") "давление")
+  , TestCase $ do
+      assertEqual "resolved focus never overridden"
+        "свобода"
+        (resolveCarryTopic "свобода" (IntentDefine "обязательство") "давление")
+  , TestCase $ do
+      assertEqual "non-topic intent keeps carry"
+        "давление"
+        (resolveCarryTopic "" IntentChallenge "давление")
+  , TestCase $ do
+      assertEqual "empty carry without intent stays empty"
+        ""
+        (resolveCarryTopic "" IntentChallenge "")
   ]
 
 -- ---------------------------------------------------------------------------
