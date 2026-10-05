@@ -14,6 +14,7 @@ module QxFx0.Semantic.Proposition.Focus
   , dedupeEvidence
   , isSemanticCandidateSurface
   , isFocusCandidate
+  , focusCandidateOrEmpty
   , normalizeFocus
   , logicalFocusStopwords
   ) where
@@ -164,6 +165,17 @@ isFocusCandidate raw =
   let key = normalizeFocus raw
   in T.length key >= 3 && key `notElem` logicalFocusStopwords
 
+-- | Admit a peripheral focus signal (e.g. atom-derived) only when
+-- it is a genuine topic candidate; otherwise empty. Total.
+-- (Pre-registered 2026-10-05, понятно atom-path: the Effects
+-- focus chain applies this to atomFocus so raw-token atoms never
+-- become topics, while content nouns flow unchanged.)
+focusCandidateOrEmpty :: Text -> Text
+focusCandidateOrEmpty raw
+  | T.null (T.strip raw) = ""
+  | isFocusCandidate raw = raw
+  | otherwise = ""
+
 -- | Normalize focus text to lowercase first token.
 normalizeFocus :: Text -> Text
 normalizeFocus raw =
@@ -205,20 +217,13 @@ logicalFocusStopwords =
   , "думаешь", "думать", "есть", "такой", "такая", "такое", "зовут"
   , "тут", "здесь", "там"
   , "hence", "thus", "so", "consequently", "since"
-  -- Backchannel focus exclusion (pre-registered 2026-10-02):
-  -- bare acknowledgements are never topics. Fresh ага/угу yield
-  -- no focus (topic-less hold downstream); after real content
-  -- the carried topic continues instead of being displaced.
-  -- Consent/agreement markers (ладно/хорошо/давай/понятно) are
-  -- a separate class, out of scope.
+  -- Backchannel + consent-marker focus exclusion (pre-registered
+  -- 2026-10-02/03, completed 2026-10-05): bare acknowledgements
+  -- and consent markers are never topics. «понятно» included
+  -- since the atom-path pre-reg (entity link here, atom link cut
+  -- by focusCandidateOrEmpty in Effects).
   , "ага", "угу"
-  -- Consent-marker focus exclusion (pre-registered 2026-10-03):
-  -- bare consent markers are never topics. «понятно» stays out:
-  -- it reaches bestTopic via atomFocus (prepare-phase atom
-  -- findings), not ipfFocusEntity — stopwords cannot fix it.
-  -- See the 2026-10-03 addendum outcome; atom-path surgery
-  -- needs its own pre-reg with an admission-pin audit.
-  , "ладно", "хорошо", "давай"
+  , "ладно", "хорошо", "давай", "понятно"
   ]
 
 -- | Extract key phrases (words longer than 4 characters).

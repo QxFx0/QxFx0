@@ -47,7 +47,7 @@ import QxFx0.Types.PropositionType (PropositionType(..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import QxFx0.Semantic.Proposition (parsePropositionWithFrameWithMorphology)
+import QxFx0.Semantic.Proposition (focusCandidateOrEmpty, parsePropositionWithFrameWithMorphology)
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
@@ -455,7 +455,10 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
           , atomFocus
           , fromMaybe fallbackWord (listToMaybe (T.words input))
           ]
-      focus = firstNonEmpty [ipfFocusNominative frame, ipfFocusEntity frame, atomFocus, ssLastTopic ss]
+      -- понятно atom-path (pre-registered 2026-10-05): the atom
+      -- link is cut by candidacy here; conceptToCheck above keeps
+      -- working on raw atoms (constitutional check untouched).
+      focus = firstNonEmpty [ipfFocusNominative frame, ipfFocusEntity frame, focusCandidateOrEmpty atomFocus, ssLastTopic ss]
       bestTopic = if T.null focus then ssLastTopic ss else focus
       resonance = atCurrentLoad newTrace
       atomLoad = asLoad atomSet

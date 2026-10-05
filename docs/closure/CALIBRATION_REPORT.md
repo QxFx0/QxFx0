@@ -2903,3 +2903,58 @@ beyond 24 verbs.
   defected). No collision-class defect in this batch.
 - **Verification**: lib clean, export --check green, unit 1687,
   fast 1830, core 1201 green.
+
+---
+
+# «понятно» atom-path — pre-registration (2026-10-05)
+
+- **Mechanism (proven by audit)**: «понятно» has no
+  что/как/почему/? marker → zero structural atoms; the
+  `atomFocus` comes from a lexical-cluster match carrying the
+  raw token. So «понятно» reaches `bestTopic` through TWO
+  links: `ipfFocusEntity` (length ≥ 3 passes candidacy) and
+  `atomFocus` (no candidacy check at all). The reverted
+  stopwords attempt cut only the first — vacuous by
+  construction. Any complete fix must cut both.
+- **Rule (locked), two parts**:
+  - (1) «понятно» rejoins `logicalFocusStopwords`
+    (entity link; same site as the trio).
+  - (2) New total pure `focusCandidateOrEmpty`
+    (`Proposition/Focus.hs`, tested) applied to `atomFocus`
+    in the Effects `focus`/`bestTopic` computation ONLY
+    (`conceptToCheck` untouched — the constitutional check
+    keeps working on raw atoms). Legitimate atom focuses
+    (content nouns passing candidacy) flow unchanged; only
+    the contentless class filters to "".
+- **Anomaly interaction (from the addendum, still binding)**:
+  fresh «понятно» still refuses (best="" uncovered);
+  post-content «понятно» continues the carried topic.
+- **Bar**: unit pins — stopwords rejection + empty entity
+  (re-landed) + `focusCandidateOrEmpty` (понятно→"",
+  свобода→свобода, ""→""); live — fresh refuses with
+  `bestTopic=""`, post-content continues свобода,
+  trio + controls + crisis + speculative unchanged;
+  zero new failures in unit/fast/core.
+- **Out of scope**: global 306-surface audit; `conceptToCheck`
+  filtering; paradigms data.
+
+---
+
+# «понятно» atom-path — landed (2026-10-05)
+
+- **Rule** (pre-registered above, both links cut): «понятно»
+  rejoins `logicalFocusStopwords` (entity link) + new total
+  `focusCandidateOrEmpty` (`Proposition/Focus.hs`) applied to
+  `atomFocus` in the Effects focus computation only
+  (`conceptToCheck` untouched — constitutional check keeps raw
+  atoms). Re-exported through `Proposition` for pins/tests.
+- **Probe**: fresh «понятно» refuses with `bestTopic=""`;
+  post-content «понятно» continues свобода (anchor hold
+  naming the carried topic — honest continuity). Trio,
+  greeting, contact, definitional controls unchanged; crisis
+  (resources intact) and speculative probe coherent.
+- **Verification**: unit 1687, fast 1830, core 1201 green.
+  New pins: stopwords/entity/atom-link coverage for понятно +
+  `focusCandidateOrEmpty` passthrough/empty cases.
+  The fallback-topic program is now complete: no path —
+  frame, focus-entity, atoms — invents topic nouns.

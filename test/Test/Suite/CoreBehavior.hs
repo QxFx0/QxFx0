@@ -3058,13 +3058,19 @@ testBackchannelFocusExclusion = TestCase $ do
 -- bare consent markers are never focus candidates.
 testConsentMarkerFocusExclusion :: Test
 testConsentMarkerFocusExclusion = TestCase $ do
-  forM_ ["ладно", "хорошо", "давай"] $ \input ->
+  forM_ ["ладно", "хорошо", "давай", "понятно"] $ \input ->
     do assertBool ("not a focus candidate: " <> T.unpack input)
          (not (Proposition.isFocusCandidate input))
        assertEqual ("no focus entity for " <> T.unpack input)
          "" (Proposition.extractFocusEntity input)
+       assertEqual ("no atom-link topic for " <> T.unpack input)
+         "" (Proposition.focusCandidateOrEmpty input)
   assertBool "real topics still candidates"
     (Proposition.isFocusCandidate "ответственность")
+  assertEqual "real atom focuses flow through"
+    "свобода" (Proposition.focusCandidateOrEmpty "свобода")
+  assertEqual "empty stays empty"
+    "" (Proposition.focusCandidateOrEmpty "")
 
 testParsePropositionSelfKnowledgeConfidenceHigh :: Test
 testParsePropositionSelfKnowledgeConfidenceHigh = TestCase $ do

@@ -33,6 +33,7 @@ module QxFx0.Semantic.Proposition
   , dedupeEvidence
   , isSemanticCandidateSurface
   , isFocusCandidate
+  , focusCandidateOrEmpty
   , normalizeFocus
   , logicalFocusStopwords
     -- * Semantic Analysis
@@ -121,6 +122,7 @@ import QxFx0.Semantic.Proposition.Focus
   , dedupeEvidence
   , isSemanticCandidateSurface
   , isFocusCandidate
+  , focusCandidateOrEmpty
   , normalizeFocus
   , logicalFocusStopwords
   )
