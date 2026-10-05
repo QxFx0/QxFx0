@@ -1199,6 +1199,78 @@ definitionCorpus = M.fromList
       , rel "демократия держится согласием проигравших"
             "democracy stands on the consent of the losers"
       ]
+  , entry "легитимность"
+      [ prop "легитимность есть признанное право"
+             "legitimacy is recognized right"
+      , rel "легитимность держится согласием"
+            "legitimacy stands on consent"
+      ]
+  , entry "выгода"
+      [ prop "выгода измеряет пользу"
+             "benefit measures usefulness"
+      , rel "выгода отличается от смысла расчётом"
+            "benefit differs from meaning by calculation"
+      ]
+  , entry "цена"
+      [ prop "цена называет меру обмена"
+             "price names the measure of exchange"
+      , rel "цена проверяет желание"
+            "price tests desire"
+      ]
+  , entry "гарантия"
+      [ prop "гарантия обещает исход"
+             "a guarantee promises an outcome"
+      , rel "гарантия отличается от надежды обязательством"
+            "a guarantee differs from hope by obligation"
+      ]
+  , entry "обязательство"
+      [ prop "обязательство связывает волю"
+             "an obligation binds the will"
+      , rel "обязательство исполняется независимо от желания"
+            "an obligation is fulfilled regardless of desire"
+      ]
+  , entry "контроль"
+      [ prop "контроль сверяет ход с нормой"
+             "control checks the course against the norm"
+      , rel "контроль отличается от доверия проверкой"
+            "control differs from trust by verification"
+      ]
+  , entry "норма"
+      [ prop "норма задаёт должное"
+             "a norm sets what is due"
+      , rel "норма отличается от привычки требованием"
+            "a norm differs from habit by demand"
+      ]
+  , entry "правильность"
+      [ prop "правильность есть соответствие мере"
+             "correctness is correspondence to a measure"
+      , rel "правильность проверяется воспроизводимостью"
+            "correctness is tested by reproducibility"
+      ]
+  , entry "предательство"
+      [ prop "предательство нарушает доверие"
+             "betrayal breaks trust"
+      , rel "предательство отличается от ошибки намерением"
+            "betrayal differs from error by intention"
+      ]
+  , entry "гордость"
+      [ prop "гордость держит достоинство"
+             "pride upholds dignity"
+      , rel "гордость отличается от тщеславия мерой"
+            "pride differs from vanity by measure"
+      ]
+  , entry "сила"
+      [ prop "сила осуществляет возможность"
+             "strength realizes possibility"
+      , rel "сила отличается от насилия направленностью"
+            "strength differs from violence by directedness"
+      ]
+  , entry "путь"
+      [ prop "путь соединяет начало с целью"
+             "a path connects beginning with goal"
+      , rel "путь проверяется шагом"
+            "a path is tested by a step"
+      ]
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))

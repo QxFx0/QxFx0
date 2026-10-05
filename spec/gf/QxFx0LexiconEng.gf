@@ -3811,4 +3811,14 @@ concrete QxFx0LexiconEng of QxFx0Lexicon = open ParadigmsEng, CatEng, Structural
     prikaz_N = mkN "directive" ;
     privychka_N = mkN "habituation" ;
     prosba_N = mkN "plea" ;
+-- 2026-10-05 cluster batch-6 (only funIds without a senior gloss;
+-- price/control/norm/correctness/strength keep theirs, some twice).
+    garantiya_N = mkN "guarantee" ;
+    kontrol_N = mkN "checking" ;
+    norma_N = mkN "precept" ;
+    pravilnost_N = mkN "rightness" ;
+    predatelstvo_N = mkN "betrayal" ;
+    sila_N = mkN "might" ;
+    tsena_N = mkN "valuation" ;
+    vygoda_N = mkN "benefit" ;
 }

@@ -2847,3 +2847,59 @@ beyond 24 verbs.
   cold-start timeouts sized at 300s (page cache).
 - **Verification**: lib clean, export --check green, unit 1687,
   fast 1830, core 1201 green.
+
+---
+
+# Dictionary expansion batch-6 (tail) — pre-registration (2026-10-05)
+
+- **Trigger**: tail audit (same method): 160 keys vs cluster
+  noun lemmas; 42 missing, mostly off-cluster concretes and
+  generics. 12 taken: легитимность, выгода (batch-5
+  deferrals), цена, гарантия, обязательство, контроль, норма,
+  правильность, предательство, гордость, сила, путь (borderline:
+  polysemous road/way — operator may veto for проверка).
+  Excluded by rule: metaphorical one-offs, off-cluster
+  concretes (птица, машина, вода, золото…), generics
+  (дело, люди, начало, конец…), non-topics (есть, ничто…).
+- **Scope compliance**: freedom-cluster/adjacent only
+  (ADR-0054 §2.7 freeze respected).
+- **Rule (locked)**: same pipeline — `definitionCorpus`
+  160→172, 2 predicates (prop/rel + EN) operator-approved
+  verbatim; SQL inserts only for lemmas missing from
+  seed_ru_curated (обязательство, гордость — paradigms from
+  funmap cross-check); export regen + --check; Eng hand-appends
+  with senior-gloss dedupe; PGF recompile; Agda re-record ONLY
+  if spec/*.agda moves; no weights, no code, no thresholds.
+- **Known headwind**: overlay may outrank corpus predicates —
+  triaged per precedent; verbatim bar where corpus wins.
+- **Bar**: lib clean; unit/fast green; live — «что такое X?»
+  verbatim-or-coherent-overlay for all 12 with honest
+  bestTopic (collision-class triaged on sight); zero new
+  failures unit/fast/core.
+- **Out of scope**: remaining tail (next batch or never —
+  value per topic falls); overlay precedence design; weights.
+
+---
+
+# Dictionary batch-6 (tail) — landed (2026-10-05)
+
+- **What** (pre-registered above): `definitionCorpus` 160→172,
+  12 topics with operator-approved verbatim predicates
+  (легитимность, выгода, цена, гарантия, обязательство,
+  контроль, норма, правильность, предательство, гордость,
+  сила, путь). Lexicon: only 2 SQL inserts needed
+  (обязательство, гордость — paradigms from funmap); export
+  regen (quality.json only); 8 Eng-concrete hand-appends with
+  senior-gloss dedupe (benefit/valuation/guarantee/checking/
+  precept/rightness/betrayal/might); PGF recompiled (binary
+  identical, manifest updated); Agda untouched.
+- **Triage**: 4 topics verbatim; 8 coherent overlays
+  (контроль carries mixed-language "plans" inside the overlay
+  text — curated-overlay quality note, not this batch;
+  давление renders the physics sense — genuine ambiguity,
+  honest hypothesis-marked). bestTopic honest everywhere
+  (обязательство empty via pre-existing deontic stopword —
+  response correct through the intent path; recorded, not
+  defected). No collision-class defect in this batch.
+- **Verification**: lib clean, export --check green, unit 1687,
+  fast 1830, core 1201 green.
