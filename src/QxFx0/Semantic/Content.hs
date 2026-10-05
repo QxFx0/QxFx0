@@ -1127,6 +1127,78 @@ definitionCorpus = M.fromList
       , rel "отказ сохраняет границу субъекта"
             "refusal preserves the subject's boundary"
       ]
+  , entry "решение"
+      [ prop "решение завершает выбор"
+             "a decision concludes a choice"
+      , rel "решение отвечает за последствия"
+            "a decision answers for consequences"
+      ]
+  , entry "привычка"
+      [ prop "привычка действует без выбора"
+             "habit acts without choosing"
+      , rel "привычка отличается от решения отсутствием усилия"
+            "habit differs from decision by the absence of effort"
+      ]
+  , entry "приказ"
+      [ prop "приказ требует подчинения"
+             "an order demands obedience"
+      , rel "приказ отличается от просьбы отсутствием отказа"
+            "an order differs from a request by the absence of refusal"
+      ]
+  , entry "граница"
+      [ prop "граница разделяет своё и чужое"
+             "a boundary separates one's own from another's"
+      , rel "граница делает свободу различимой"
+            "a boundary makes freedom discernible"
+      ]
+  , entry "просьба"
+      [ prop "просьба оставляет возможность отказа"
+             "a request leaves room for refusal"
+      , rel "просьба отличается от приказа свободой ответа"
+            "a request differs from an order by the freedom of response"
+      ]
+  , entry "давление"
+      [ prop "давление сужает выбор"
+             "pressure narrows choice"
+      , rel "давление отличается от убеждения скрытостью"
+            "pressure differs from persuasion by covertness"
+      ]
+  , entry "действие"
+      [ prop "действие осуществляет намерение"
+             "an action realizes an intention"
+      , rel "действие проверяется последствием"
+            "an action is tested by its consequence"
+      ]
+  , entry "разрешение"
+      [ prop "разрешение снимает запрет"
+             "permission lifts a ban"
+      , rel "разрешение отличается от согласия односторонностью"
+            "permission differs from consent by one-sidedness"
+      ]
+  , entry "цель"
+      [ prop "цель направляет действие"
+             "a goal directs action"
+      , rel "цель оправдывает средства лишь до границы"
+            "a goal justifies means only up to a boundary"
+      ]
+  , entry "спор"
+      [ prop "спор сталкивает позиции"
+             "a dispute clashes positions"
+      , rel "спор требует основания а не громкости"
+            "a dispute needs grounds, not loudness"
+      ]
+  , entry "вседозволенность"
+      [ prop "вседозволенность отменяет границу"
+             "permissiveness cancels boundaries"
+      , rel "вседозволенность есть произвол под маской свободы"
+            "permissiveness is arbitrariness masked as freedom"
+      ]
+  , entry "демократия"
+      [ prop "демократия распределяет решение"
+             "democracy distributes decision-making"
+      , rel "демократия держится согласием проигравших"
+            "democracy stands on the consent of the losers"
+      ]
   ]
   where
     entry topic preds = (topic, DefinitionContent topic (mergeArgued topic preds))

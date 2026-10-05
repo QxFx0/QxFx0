@@ -138,6 +138,7 @@ testNominativeSurfaceOverride = do
   let md = MorphologyData Map.empty Map.empty (Map.fromList [("вина", "вино")]) Map.empty
   assertEqual "ambiguous вина resolves to guilt, not wine" "вина" (toNominative md "вина")
   assertEqual "unambiguous вино still resolves to wine" "вино" (toNominative md "вино")
+  assertEqual "ambiguous спор resolves to dispute, not spore" "спор" (toNominative md "спор")
   assertEqual "unknown surfaces still pass through" "неизвестно" (toNominative md "неизвестно")
 
 testOldMorphologyGenitive :: Assertion

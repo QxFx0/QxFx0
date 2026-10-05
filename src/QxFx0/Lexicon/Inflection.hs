@@ -44,6 +44,7 @@ lastCharOf w = T.index w (T.length w - 1)
 nominativeSurfaceOverrides :: [(Text, Text)]
 nominativeSurfaceOverrides =
   [ ("вина", "вина")
+  , ("спор", "спор")
   ]
 
 toNominative :: MorphologyData -> Text -> Text

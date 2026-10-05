@@ -3804,4 +3804,11 @@ concrete QxFx0LexiconEng of QxFx0Lexicon = open ParadigmsEng, CatEng, Structural
     otkaz_N = mkN "refusal" ;
     posledstvie_N = mkN "aftermath" ;
     postupok_N = mkN "deed" ;
+-- 2026-10-05 cluster batch-5 (only funIds without a senior gloss;
+-- habit/order/request/action/democracy keep their committed glosses).
+    deistvie_N = mkN "doing" ;
+    demokratiya_N = mkN "popular rule" ;
+    prikaz_N = mkN "directive" ;
+    privychka_N = mkN "habituation" ;
+    prosba_N = mkN "plea" ;
 }

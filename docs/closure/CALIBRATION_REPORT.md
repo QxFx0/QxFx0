@@ -2769,3 +2769,81 @@ beyond 24 verbs.
 - **Verification**: lib clean, export --check green, unit 1687,
   fast 1830, core 1201 green. Agda not re-run (no Agda inputs
   changed).
+
+---
+
+# Dictionary expansion batch-5 — pre-registration (2026-10-05)
+
+- **Trigger**: batch-4 leftovers + next frequency tier
+  (same audit method). 12 topics: решение, привычка, приказ,
+  граница, просьба, давление, действие, разрешение, цель,
+  спор, вседозволенность, демократия. Deferred: легитимность,
+  выгода (most peripheral to freedom semantics; next batch).
+  Excluded by rule (as in batch-4): metaphorical one-offs
+  (якорь, пауза, клетка), off-cluster concretes (город, дверь,
+  дорога), non-topic nouns (ничто, другой, завтра).
+- **Scope compliance**: all 12 inside/adjacent the freedom
+  cluster (ADR-0054 §2.7 freeze respected).
+- **Rule (locked)**: same pipeline as batch-4 —
+  `definitionCorpus` 148→160, 2 predicates (prop/rel + EN
+  gloss) per topic, texts operator-approved verbatim; SQL
+  provenance inserts only for lemmas missing from
+  seed_ru_curated; export regen + --check; Eng-concrete
+  hand-appends with senior-gloss dedupe; PGF recompile;
+  Agda witness re-record ONLY if spec/*.agda moves; no
+  weights, no code, no thresholds.
+- **Known headwind (batch-4 finding)**: curated overlay may
+  outrank new corpus predicates (~40% last batch) — triaged
+  per the дождь precedent, not a defect; verbatim bar applies
+  where corpus wins, coherence bar where overlay wins.
+- **Bar**: lib clean; unit/fast green; live — «что такое X?»
+  renders verbatim-or-coherent-overlay for all 12 with honest
+  bestTopic (вина-class collisions triaged on sight);
+  zero new failures in unit/fast/core.
+- **Out of scope**: легитимность/выгода (next batch);
+  out-of-cluster topics; overlay-vs-corpus precedence design
+  (separate selection work); weights.
+
+---
+
+# Dictionary batch-5 amendment: спор nominative override (2026-10-05)
+
+- **Defect (proven live, same class as вина)**: «что такое спор?»
+  → `bestTopic="спора"`. Surface "спор" is NomSg of спор and
+  GenPl of спора; last-wins alphabetical order resolves to
+  спора. Overlay/verbatim triage otherwise clean (7 verbatim,
+  5 coherent overlays; давление renders the physics sense —
+  genuine ambiguity, honest hypothesis-marked rendering, noted
+  not defected).
+- **Rule (locked)**: extend the frozen override table with
+  ("спор", "спор"). General 306-surface audit stays out of
+  scope.
+- **Bar**: unit pin extended; live — «что такое спор?» carries
+  `bestTopic=спор`; zero new failures unit/fast/core.
+
+---
+
+# Dictionary batch-5 — landed (2026-10-05)
+
+- **What** (pre-registered + one amendment): `definitionCorpus`
+  148→160, 12 topics with operator-approved verbatim
+  predicates (решение, привычка, приказ, граница, просьба,
+  давление, действие, разрешение, цель, спор,
+  вседозволенность, демократия). Lexicon: 4 SQL provenance
+  inserts (8 lemmas pre-existed — an early grep with a wrong
+  pattern briefly duplicated them; caught and removed before
+  landing, forms verified identical); export regen
+  (quality.json only); 5 Eng-concrete hand-appends with
+  senior-gloss dedupe (habituation/directive/plea/doing/
+  popular rule); PGF recompiled (binary identical, manifest
+  updated); Agda untouched.
+- **Triage**: 7 topics verbatim; 5 coherent overlays
+  (давление renders the physics sense — genuine ambiguity,
+  honest hypothesis-marked, noted not defected). Real defect
+  found and fixed: спор→спора (same class as вина; frozen
+  override extended, live spot green). Deferred: легитимность,
+  выгода.
+- **Infra notes**: post-restart re-verification from scratch;
+  cold-start timeouts sized at 300s (page cache).
+- **Verification**: lib clean, export --check green, unit 1687,
+  fast 1830, core 1201 green.
