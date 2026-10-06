@@ -139,6 +139,10 @@ testNominativeSurfaceOverride = do
   assertEqual "ambiguous вина resolves to guilt, not wine" "вина" (toNominative md "вина")
   assertEqual "unambiguous вино still resolves to wine" "вино" (toNominative md "вино")
   assertEqual "ambiguous спор resolves to dispute, not spore" "спор" (toNominative md "спор")
+  assertEqual "ambiguous душ resolves to shower, not soul" "душ" (toNominative md "душ")
+  assertEqual "ambiguous метод resolves to method" "метод" (toNominative md "метод")
+  assertEqual "ambiguous логик resolves to logician" "логик" (toNominative md "логик")
+  assertEqual "unambiguous душа still resolves to soul" "душа" (toNominative md "душа")
   assertEqual "unknown surfaces still pass through" "неизвестно" (toNominative md "неизвестно")
 
 testOldMorphologyGenitive :: Assertion

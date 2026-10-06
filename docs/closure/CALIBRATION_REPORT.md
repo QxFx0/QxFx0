@@ -3012,3 +3012,43 @@ beyond 24 verbs.
   and speculative probe all unchanged.
 - **Verification**: unit 1693, fast 1830, core 1201 green.
   New pins: `carryOverrideTests` (6 assertions).
+
+---
+
+# 306-audit: душ/метод/логик nominative overrides — pre-registration (2026-10-06)
+
+- **Audit (read-only)**: 306 surfaces flip under a global
+  nominative-preference; only 7 can actually become topics
+  (corpus/cluster intersection); of those, спор is fixed and
+  вод/машин/техник are never bare topics (oblique-only
+  forms). Three genuine defects remain, all proven live:
+  «душ»→душа (worst: renders SOUL content for a SHOWER
+  question), «метод»→метода (trace-level; content correct
+  via intent path), «логик»→логика (same class, probe
+  post-fix).
+- **Rule (locked)**: extend the frozen override table with
+  ("душ","душ"), ("метод","метод"), ("логик","логик").
+  Post-fix «душ» becomes uncovered-honest (hold/abstain,
+  no soul content). Global flip stays out of scope.
+- **Bar**: unit pins extended (3 pairs + душа/логика/метода
+  controls); live — душ/метод/логик carry their own topics,
+  душа/логика controls unchanged, crisis control;
+  zero new failures in unit/fast/core.
+
+---
+
+# 306-audit overrides (душ/метод/логик) — landed (2026-10-06)
+
+- **Rule** (pre-registered above): frozen table extended with
+  three pairs. Audit result: 306 surfaces flip globally, but
+  only 7 can become topics; спор fixed earlier, вод/машин/
+  техник never bare topics. This landing closes the
+  topic-relevant set (вина/спор/душ/метод/логик).
+- **Triage**: душ content stays душа-compositional (governed
+  neighbor composition over shared atoms, hypothesis-marked —
+  designed uncovered behavior, not a misresolution); метод
+  content was already correct via intent path; логик renders
+  логика overlay with honest bestTopic. Fixed layer is
+  bestTopic/threading only, as barred.
+- **Verification**: unit 1693, fast 1830, core 1201 green.
+  New pins: 3 override pairs + душа control.

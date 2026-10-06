@@ -45,6 +45,9 @@ nominativeSurfaceOverrides :: [(Text, Text)]
 nominativeSurfaceOverrides =
   [ ("вина", "вина")
   , ("спор", "спор")
+  , ("душ", "душ")
+  , ("метод", "метод")
+  , ("логик", "логик")
   ]
 
 toNominative :: MorphologyData -> Text -> Text
