@@ -3052,3 +3052,105 @@ beyond 24 verbs.
   bestTopic/threading only, as barred.
 - **Verification**: unit 1693, fast 1830, core 1201 green.
   New pins: 3 override pairs + душа control.
+
+---
+
+# Curated-quality surgery — pre-registration (2026-10-07)
+
+- **Audit (read-only)**: 83 RU-topic rows in
+  `curated_predicates.jsonl` carry mixed-language fragments
+  (EN/PT/PL/IT/CN/JP shards, latin-in-cyrillic typos). Legit
+  technical tokens (USB/HTML/Wi-Fi/LIFO/XX века/a + bi/2πr)
+  explicitly excluded. EN-topic bulk out of scope (separate
+  corpus, separate landing).
+- **Rule (locked), two tiers**:
+  - Mechanical (~70 rows): unambiguous typo/fragment
+    completion (mobilizes→мобилизует, plans→планов,
+    artefacts→артефакты, tenniS→теннис, 负ativных→
+    негативных, 共→общим, 自然→естественные, etc.).
+    Scripted edits, diff-reviewed; no row deleted, no topic
+    renamed (except row 57's `_loc` slot leak, fixed to the
+    plain topic).
+  - Flagged (~10 rows): ambiguous reconstructions
+    (утыkanie, marathon, producción, gases, утыkanie…),
+    decided per-item by the operator before landing.
+- **Pins/bar**: exact-match pins on the live-observed row
+  (контроль/plans→планов) + a sample of repaired rows;
+  `loadCuratedPredicates` still parses all rows (strict
+  decoder — any botched edit fails loudly); CuratedPredicates
+  suite green (topic presence/predicate counts untouched);
+  live spot — «что такое контроль?» renders планов;
+  zero new failures in unit/fast/core.
+- **Out of scope**: EN-topic bulk; 1009 duplicate topics
+  (last-wins silent loss — recorded as separate data issue);
+  overlay precedence; weights.
+
+---
+
+# Stage-1 Batch A: verdict taxonomy + fuel signal — pre-registration (2026-10-07)
+
+- **Defect (verified in code)**: `Verdict.NotEntailed` is
+  payload-free (`IREval.hs`); `forwardChain` does not report
+  fuel exhaustion; and `Verdict` is constructed nowhere except
+  one JSON round-trip pin — runners return `Bool`, so the
+  taxonomy is decorative.
+- **Rule (locked)**:
+  - `Verdict` gains `Refuted [ProofStep]` and
+    `NotEntailed SearchBoundary` with
+    `SearchBoundary = OpenWorldMissingFacts | FuelExhausted
+    FuelReport | UnsupportedPredicate` (all with ToJSON/
+    FromJSON; old traces contain no verdicts, so no migration).
+    `AmbiguousInterpretation` explicitly DEFERRED (needs
+    interpretation-alternative plumbing — Batch D/E).
+  - New `forwardChainFuel` returns the fuel outcome
+    (fixpoint vs exhausted + fuel used); `forwardChain` stays
+    as a compatible wrapper (zero churn for existing callers).
+  - New pure `entailmentVerdict :: Int -> [StrictRule] ->
+    [Proposition] -> Proposition -> Verdict` in IREval:
+    entailed → `Entails`; negation entailed → `Refuted`;
+    fuel exhausted → `NotEntailed (FuelExhausted _)`; query
+    predicates outside the rules+facts inventory →
+    `NotEntailed UnsupportedPredicate`; else `NotEntailed
+    OpenWorldMissingFacts`.
+  - `IREval.Batch` gains verdict runners; `ExitTrace` gains
+    nullable `etVerdict` (schema v2 note in the landed entry;
+    old fields kept). Defeasible maps to
+    `Entails []`/`DefeatedBy`; conflicts to `Conflict`.
+    Emitter re-run shows verdicts per task.
+- **Bar**: unit pins — refuted vs open-world vs fuel-exhausted
+  vs unsupported (4+ cases), JSON round-trips, fuel-signal
+  unit (fixpoint vs exhausted), emitter aggregates unchanged
+  (17/17, 12/12, 6/6, 6/6, 40/40) + verdicts present on all
+  strict traces; zero new failures in unit/fast/core.
+  Slow NOT warranted (shadow-only, no runtime readers).
+- **Out of scope**: `AmbiguousInterpretation`; render rules
+  (Batch B); composition (Batch C); runtime wiring (non-goal).
+
+---
+
+# Stage-1 Batch A: verdict taxonomy — landed (2026-10-07)
+
+- **What** (pre-registered above): `Verdict` gains `Refuted`
+  and `NotEntailed SearchBoundary` (OpenWorld/FuelExhausted/
+  Unsupported; Ambiguous deferred); `forwardChainFuel` with
+  dry-round exhaustion signal (`forwardChain` wraps it,
+  zero churn); pure `entailmentVerdict` (entails → negation →
+  unsupported → fuel → open-world); Batch verdict runners +
+  `etVerdict` on traces (schema v2; defeasible →
+  Entails[]/DefeatedBy, conflicts → Conflict, duels/
+  presuppositions → null by design).
+- **Measured**: aggregates unchanged (17/17, 12/12, 6/6, 6/6,
+  40/40); verdicts present on all strict/single/conflict-
+  found traces. No Refuted/Fuel/Unsupported in exit data
+  (authored tasks don't cover those paths) — covered by
+  synthetic pins instead.
+- **Corrections en route**: (1) fuel pin used in-order rules
+  that `foldl'` chains within one round — reversed order
+  genuinely starves (documents a fuel-semantics footgun for
+  rule authors); (2) missing paren (parse error, caught by
+  build); (3) anti-rot pin allowlist needed runtime/Type-C/
+  HDMI/2πr additions after it caught 3 legitimate terms.
+- **Verification**: unit 1695, fast 1831, core 1201 green.
+- **Also landed here**: curated-quality surgery (72 fixes +
+  2 deletions + 1 gloss-guided repair, pre-registered above;
+  exact-match pin on контроль + whole-file anti-rot pin).

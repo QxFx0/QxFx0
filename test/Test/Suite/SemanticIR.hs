@@ -415,6 +415,53 @@ evalTests =
           verdict = Entails [step]
       assertEqual "json round trip"
         (Just verdict) (Aeson.decode (Aeson.encode verdict))
+      assertEqual "refuted round trip"
+        (Just (Refuted [step])) (Aeson.decode (Aeson.encode (Refuted [step])))
+      assertEqual "boundary round trip"
+        (Just (NotEntailed OpenWorldMissingFacts))
+        (Aeson.decode (Aeson.encode (NotEntailed OpenWorldMissingFacts)))
+      assertEqual "fuel report round trip"
+        (Just (NotEntailed (FuelExhausted (FuelReport 1 0))))
+        (Aeson.decode (Aeson.encode (NotEntailed (FuelExhausted (FuelReport 1 0)))))
+
+  , TestLabel "verdict taxonomy: refuted vs open-world vs fuel vs unsupported" $ TestCase $ do
+      let p = Apply (PredicateId "holds") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          q = Apply (PredicateId "binding") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          r = Apply (PredicateId "answers-for") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          strange = Apply (PredicateId "never-seen-pred") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          rulePQ = StrictRule "t-pq" [p] q
+          ruleQR = StrictRule "t-qr" [q] r
+      -- entailed through a chain
+      case entailmentVerdict 32 [rulePQ, ruleQR] [p] r of
+        Entails _ -> pure ()
+        other -> assertFailure ("chain should entail: " <> show other)
+      -- refuted: negation derived
+      case entailmentVerdict 32 [StrictRule "t-nq" [p] (Not q)] [p] q of
+        Refuted _ -> pure ()
+        other -> assertFailure ("negation should refute: " <> show other)
+      -- open world: fixpoint, known predicates, nothing derived
+      case entailmentVerdict 32 [rulePQ] [] q of
+        NotEntailed OpenWorldMissingFacts -> pure ()
+        other -> assertFailure ("underived query should stay open: " <> show other)
+      -- fuel exhausted: reversed two-step chain on fuel 1
+      -- (foldl' chains in-order rules within one round, so the
+      -- reversed order genuinely needs two rounds)
+      case entailmentVerdict 1 [ruleQR, rulePQ] [p] r of
+        NotEntailed (FuelExhausted _) -> pure ()
+        other -> assertFailure ("starved chain should exhaust fuel: " <> show other)
+      -- unsupported: predicate outside the inventory
+      case entailmentVerdict 32 [rulePQ] [p] strange of
+        NotEntailed UnsupportedPredicate -> pure ()
+        other -> assertFailure ("unknown predicate should be unsupported: " <> show other)
+
+  , TestLabel "forwardChainFuel signals fixpoint vs exhaustion" $ TestCase $ do
+      let p = Apply (PredicateId "holds") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          q = Apply (PredicateId "binding") [RoleBinding "theme" (Concept (ConceptId "oath"))]
+          rulePQ = StrictRule "t-pq" [p] q
+          (_, _, fixOutcome) = forwardChainFuel 32 [rulePQ] [p]
+          (_, _, starvedOutcome) = forwardChainFuel 0 [rulePQ] [p]
+      assertEqual "quiescent base reports fixpoint" ReachedFixpoint fixOutcome
+      assertEqual "starved base reports exhaustion" (ExhaustedFuel 0) starvedOutcome
 
   , TestLabel "rules file fires end to end" $ TestCase $ do
       fileRules <- readJsonlRows "data/semantic_ir/rules.jsonl" :: IO [RuleFileRow]

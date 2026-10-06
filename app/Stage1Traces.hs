@@ -75,26 +75,27 @@ evalRow :: ExitTaskRow -> IO ExitTrace
 evalRow row = case exitKind row of
   "defeasible" -> do
     outcome <- either fail pure (runDefeasibleDetail row)
-    pure (base (dfoPass outcome)) { etDefeasible = Just outcome }
+    pure (base (dfoPass outcome) (dfoVerdict outcome)) { etDefeasible = Just outcome }
   "defeasible-duel" -> do
     outcome <- either fail pure (runDefeasibleDetail row)
-    pure (base (dfoPass outcome)) { etDefeasible = Just outcome }
+    pure (base (dfoPass outcome) (dfoVerdict outcome)) { etDefeasible = Just outcome }
   "conflict" -> do
     outcome <- either fail pure (runConflictDetail row)
-    pure (base (coPass outcome)) { etConflict = Just outcome }
+    pure (base (coPass outcome) (coVerdict outcome)) { etConflict = Just outcome }
   "presupposition" -> do
     outcome <- either fail pure (runPresupDetail row)
-    pure (base (poPass outcome)) { etPresup = Just outcome }
+    pure (base (poPass outcome) Nothing) { etPresup = Just outcome }
   other -> fail ("unknown exit kind: " <> T.unpack other)
   where
-    base pass = ExitTrace (exitId row) (exitKind row) (exitExpected row)
-      pass traceProvenance Nothing Nothing Nothing Nothing
+    base pass verdict = ExitTrace (exitId row) (exitKind row) (exitExpected row)
+      pass traceProvenance Nothing Nothing Nothing Nothing verdict
 
 runStrict :: ExitStrictRow -> IO ExitTrace
 runStrict row = do
   outcome <- either fail pure (runStrictDetail row)
+  verdict <- either fail pure (runStrictVerdict row)
   pure (ExitTrace (esrId row) "strict" (esrExpected row)
-    (soPass outcome) traceProvenance (Just outcome) Nothing Nothing Nothing)
+    (soPass outcome) traceProvenance (Just outcome) Nothing Nothing Nothing (Just verdict))
 
 runScenarios :: [StrictRule] -> ScenarioRowEx -> IO [ScenarioTrace]
 runScenarios rules row = do

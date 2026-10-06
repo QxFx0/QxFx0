@@ -45,6 +45,7 @@ module QxFx0.Semantic.IREval.Batch
     -- * Task outcomes (Bool runners for pins, detail runners for traces)
   , StrictOutcome(..)
   , runStrictDetail
+  , runStrictVerdict
   , DefOutcome(..)
   , runDefeasibleDetail
   , ConflictOutcome(..)
@@ -71,9 +72,11 @@ import QxFx0.Semantic.IREval
   ( DefeasibleRule(..)
   , ProofStep(..)
   , StrictRule(..)
+  , Verdict(..)
   , checkPresuppositions
   , defeasibleFire
   , detectConflict
+  , entailmentVerdict
   , forwardChain
   )
 
@@ -322,9 +325,26 @@ runStrictDetail row = do
       <$> mapM (parseRowEither ctx) (isrPremises r)
       <*> parseRowEither ctx (isrConclusion r)
 
+-- | Batch A (2026-10-07): the logical verdict for a strict task,
+-- via 'entailmentVerdict' (fuel 32, same budget as the harness).
+runStrictVerdict :: ExitStrictRow -> Either String Verdict
+runStrictVerdict row = do
+  facts <- mapM (parseRowEither (esrId row)) (esrFacts row)
+  rules <- mapM (\(i, r) -> toStrictInline (esrId row) i r) (zip [0 :: Int ..] (esrRules row))
+  query <- parseRowEither (esrId row) (esrQuery row)
+  pure (entailmentVerdict 32 rules facts query)
+  where
+    toStrictInline ctx i r = StrictRule (ctx <> "#s" <> T.pack (show i))
+      <$> mapM (parseRowEither ctx) (isrPremises r)
+      <*> parseRowEither ctx (isrConclusion r)
+
 data DefOutcome = DefOutcome
   { dfoPass :: !Bool
   , dfoDetail :: !Text
+  , dfoVerdict :: !(Maybe Verdict)
+    -- ^ Batch A (schema v2): the logical verdict for single
+    -- firings ('Entails []' on fire, 'DefeatedBy' on block);
+    -- 'Nothing' for duels (resolution outcome, not a verdict).
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -336,37 +356,41 @@ runDefeasibleDetail row = case exitKind row of
       rule <- toDefRuleEither (exitId row) inline
       facts <- mapM (parseRowEither (exitId row)) (exitFacts row)
       Right $ case (defeasibleFire (exitScope row) rule facts, exitExpected row) of
-        (Right _, "fires") -> DefOutcome True "fires"
-        (Left _, "blocked") -> DefOutcome True "blocked"
-        (Right _, _) -> DefOutcome False "fired-unexpected"
-        (Left _, _) -> DefOutcome False "blocked-unexpected"
+        (Right _, "fires") -> DefOutcome True "fires" (Just (Entails []))
+        (Left exc, "blocked") -> DefOutcome True "blocked" (Just (DefeatedBy (exitId row) exc))
+        (Right _, _) -> DefOutcome False "fired-unexpected" (Just (Entails []))
+        (Left exc, _) -> DefOutcome False "blocked-unexpected" (Just (DefeatedBy (exitId row) exc))
   "defeasible-duel" -> do
     rules <- mapM (toDefRuleEither (exitId row)) (exitRules row)
     facts <- mapM (parseRowEither (exitId row)) (exitFacts row)
     case rules of
       [r1, r2] ->
         let got = resolveDuel (exitScope row) r1 r2 facts
-        in Right (DefOutcome (got == exitExpected row) got)
+        in Right (DefOutcome (got == exitExpected row) got Nothing)
       _ -> Left ("duel needs two rules: " <> T.unpack (exitId row))
   other -> Left ("unknown defeasible kind: " <> T.unpack other)
 
 data ConflictOutcome = ConflictOutcome
   { coPass :: !Bool
   , coFound :: !Bool
+  , coVerdict :: !(Maybe Verdict)
+    -- ^ Batch A (schema v2): 'Just (Conflict p q)' when a
+    -- conflicting pair is found, 'Nothing' otherwise.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
 runConflictDetail :: ExitTaskRow -> Either String ConflictOutcome
 runConflictDetail row = do
   facts <- mapM (parseRowEither (exitId row)) (exitFacts row)
-  let found = case detectConflict facts of
+  let foundPair = detectConflict facts
+      found = case foundPair of
         Just _ -> True
         Nothing -> False
   pass <- case exitExpected row of
     "conflict" -> Right found
     "none" -> Right (not found)
     want -> Left ("conflict mismatch on " <> T.unpack (exitId row) <> ": want " <> T.unpack want)
-  pure (ConflictOutcome pass found)
+  pure (ConflictOutcome pass found (uncurry Conflict <$> foundPair))
 
 data PresupOutcome = PresupOutcome
   { poPass :: !Bool
@@ -433,6 +457,10 @@ data ExitTrace = ExitTrace
   , etDefeasible :: !(Maybe DefOutcome)
   , etConflict :: !(Maybe ConflictOutcome)
   , etPresup :: !(Maybe PresupOutcome)
+  , etVerdict :: !(Maybe Verdict)
+    -- ^ Batch A (schema v2): the logical verdict where the task
+    -- kind admits one (strict, single defeasible, conflict-found).
+    -- Old fields kept; readers ignore unknown/missing fields.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 

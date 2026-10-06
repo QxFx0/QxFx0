@@ -40,8 +40,13 @@ module QxFx0.Semantic.IREval
   , DefeasibleRule(..)
   , ProofStep(..)
   , Verdict(..)
+  , SearchBoundary(..)
+  , FuelReport(..)
+  , FuelOutcome(..)
     -- * Strict forward chaining
   , forwardChain
+  , forwardChainFuel
+  , entailmentVerdict
     -- * Defeasible firing
   , defeasibleFire
     -- * Presuppositions and conflicts
@@ -51,6 +56,7 @@ module QxFx0.Semantic.IREval
 
 import Data.Aeson (FromJSON, ToJSON)
 import Data.List (foldl')
+import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
@@ -185,12 +191,46 @@ data ProofStep = ProofStep
   } deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON)
 
--- | Evaluation verdicts. JSON-serializable for the (later) trace scripts.
+-- | Evaluation verdicts. JSON-serializable for the trace scripts.
+-- Batch A (2026-10-07): 'Refuted' and the 'NotEntailed' payload
+-- distinguish known-false from unproven. 'AmbiguousInterpretation'
+-- is deferred (needs interpretation alternatives — Batch D/E).
 data Verdict
   = Entails ![ProofStep]
-  | NotEntailed
+  | Refuted ![ProofStep]
+  | NotEntailed !SearchBoundary
   | DefeatedBy !Text !Proposition
   | Conflict !Proposition !Proposition
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+-- | Why a query is not entailed. Carries the reason so traces and
+-- exit metrics never conflate false / unknown / under-resourced.
+data SearchBoundary
+  = OpenWorldMissingFacts
+    -- ^ Fixpoint reached, neither the query nor its negation derived:
+    -- absence of proof, not proof of absence.
+  | FuelExhausted !FuelReport
+    -- ^ The fuel budget ran out with rules still firing: the search
+    -- was cut short, not completed.
+  | UnsupportedPredicate
+    -- ^ The query mentions predicates outside the rules+facts
+    -- inventory: no derivation could even start.
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+-- | Fuel accounting for a bounded forward-chaining run.
+data FuelReport = FuelReport
+  { frFuelAllocated :: !Int
+  , frRulesFired :: !Int
+  } deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+-- | How a bounded forward-chaining run terminated.
+data FuelOutcome
+  = ReachedFixpoint
+  | ExhaustedFuel !Int
+    -- ^ Fuel consumed when the budget ran out with rules pending.
   deriving stock (Eq, Show, Generic)
   deriving anyclass (ToJSON, FromJSON)
 
@@ -201,13 +241,24 @@ data Verdict
 -- fuel exhaustion. Returns the closed base plus the proof trace in
 -- derivation order (deterministic: rules and facts in given order).
 forwardChain :: Int -> [StrictRule] -> [Proposition] -> ([Proposition], [ProofStep])
-forwardChain fuel rules facts = go fuel facts []
+forwardChain fuel rules facts =
+  let (closed, proof, _) = forwardChainFuel fuel rules facts
+  in (closed, proof)
+
+-- | Bounded forward chaining with a fuel outcome. At budget
+-- exhaustion one extra dry round distinguishes a fixpoint that
+-- coincides with fuel-out ('ReachedFixpoint') from a cut-short
+-- search ('ExhaustedFuel').
+forwardChainFuel :: Int -> [StrictRule] -> [Proposition] -> ([Proposition], [ProofStep], FuelOutcome)
+forwardChainFuel fuel rules facts = go fuel facts []
   where
-    go 0 base proof = (base, proof)
+    go 0 base proof =
+      let (_, newSteps) = foldl' fireRule (base, []) rules
+      in (base, proof, if null newSteps then ReachedFixpoint else ExhaustedFuel fuel)
     go n base proof =
       let (base', newSteps) = foldl' fireRule (base, []) rules
       in if null newSteps
-           then (base, proof)
+           then (base, proof, ReachedFixpoint)
            else go (n - 1) base' (proof ++ newSteps)
     fireRule (base, steps) rule =
       case matchPremises base (srPremises rule) of
@@ -227,6 +278,49 @@ forwardChain fuel rules facts = go fuel facts []
             ((j, s) : _) -> goPremises (unSubst s) (indices ++ [j]) rest
         matchWith subst pat fact = matchPattern (applySubst (Subst subst) pat) fact >>= unionSubst subst
         unionSubst subst (Subst s) = Just (Subst (s ++ subst))
+
+-- | Total strict-evaluation verdict for one query. Priority:
+-- entailed, then explicitly refuted (negation entailed), then
+-- structurally unsupported predicates, then fuel exhaustion, else
+-- open-world absence of proof. The 'Entails'/'Refuted' proof is the
+-- whole derivation trace in derivation order; dependency-sliced
+-- proofs arrive with Batch D lineage.
+entailmentVerdict :: Int -> [StrictRule] -> [Proposition] -> Proposition -> Verdict
+entailmentVerdict fuel rules facts query =
+  let (closed, proof, fuelOut) = forwardChainFuel fuel rules facts
+  in if query `elem` closed
+       then Entails proof
+       else if negateProposition query `elem` closed
+         then Refuted proof
+         else if not (propositionPredicates query `S.isSubsetOf` inventoryPredicates rules facts)
+           then NotEntailed UnsupportedPredicate
+           else case fuelOut of
+             ExhaustedFuel _ -> NotEntailed (FuelExhausted (FuelReport fuel (length proof)))
+             ReachedFixpoint -> NotEntailed OpenWorldMissingFacts
+  where
+    negateProposition (Not p) = p
+    negateProposition p = Not p
+    inventoryPredicates rs fs =
+      S.unions (map rulePredicates rs ++ map propositionPredicates fs)
+    rulePredicates r =
+      S.unions (map propositionPredicates (srPremises r))
+        `S.union` propositionPredicates (srConclusion r)
+
+-- | Predicate identifiers occurring anywhere in a proposition.
+propositionPredicates :: Proposition -> S.Set Text
+propositionPredicates prop = case prop of
+  Apply (PredicateId p) args ->
+    S.insert p (S.unions (map (termPredicates . rbTerm) args))
+  Not p -> propositionPredicates p
+  And ps -> S.unions (map propositionPredicates ps)
+  Or ps -> S.unions (map propositionPredicates ps)
+  Implies p q -> propositionPredicates p `S.union` propositionPredicates q
+  Quantified _ _ p -> propositionPredicates p
+  Modal _ p -> propositionPredicates p
+  AtTime _ p -> propositionPredicates p
+  InScope _ p -> propositionPredicates p
+  where
+    termPredicates _ = S.empty
 
 -- | Attempt one defeasible firing under a query scope. Returns the
 -- instantiated conclusion, or the blocking exception (premises

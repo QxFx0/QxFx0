@@ -185,6 +185,38 @@ testCuratedPredicatesBatch51To100 = TestLabel "curated predicates batch 51-100" 
                                    (length (dcPredicates dc) >= 2))
         batch51To100
 
+-- | Curated-quality surgery (pre-registered 2026-10-07): RU-topic
+-- rows must not carry foreign-language shards in their RU surfaces.
+-- Mechanizes the 2026-10-07 audit (83 contaminated rows repaired);
+-- legitimate technical tokens are allowlisted. Any new contamination
+-- fails loudly instead of reaching output.
+testCuratedRuPredicatesClean :: Test
+testCuratedRuPredicatesClean = TestLabel "curated RU predicates carry no foreign shards" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  let isRuTopic t = not (T.null (T.strip t))
+        && T.all (\c -> isCyrillic c || c == ' ' || c == '-') (T.toLower (T.strip t))
+      violations =
+        [ (topic, spRu predicate)
+        | (topic, dc) <- M.toList curated
+        , isRuTopic topic
+        , predicate <- dcPredicates dc
+        , hasForeignShard (spRu predicate)
+        ]
+  assertEqual "no foreign shards in RU predicates" [] violations
+  where
+    isCyrillic c = ('\x0400' <= c && c <= '\x04FF') || c == '\x0451' || c == '\x0401'
+    hasForeignShard text =
+      let stripped = foldr (\token acc -> T.replace token "" acc) text technicalAllowlist
+      in T.any isLatinOrCjk stripped
+    isLatinOrCjk c =
+      ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+        || ('\x4E00' <= c && c <= '\x9FFF')
+    technicalAllowlist =
+      [ "HTML", "CSS", "JavaScript", "USB", "HDD", "SSD", "Wi-Fi", "WiFi"
+      , "DVD", "Blu-ray", "LIFO", "FIFO", "CO2", "DNA", "a la carte", "XX"
+      , "a + bi", "runtime", "Type-C", "HDMI", "2πr"
+      ]
+
 -- | P1.6: Verify that batch 101-150 concepts are curated
 testCuratedPredicatesBatch101To150 :: Test
 testCuratedPredicatesBatch101To150 = TestLabel "curated predicates batch 101-150" $ TestCase $ do
@@ -399,4 +431,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch213To242
   , testCuratedPredicatesBatch243To272
   , testCuratedPredicatesBatch273To293
+  , testCuratedRuPredicatesClean
   ]
