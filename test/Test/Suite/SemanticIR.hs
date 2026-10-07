@@ -13,6 +13,7 @@ module Test.Suite.SemanticIR
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.List (sort)
+import Data.Maybe (isJust)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import qualified Data.Text as T
@@ -21,6 +22,11 @@ import Test.HUnit
 import QxFx0.Semantic.IR
 import QxFx0.Semantic.IREval
 import QxFx0.Semantic.IREval.Batch
+import QxFx0.Semantic.IRCompose
+  ( CompositionDef(..)
+  , expandComposition
+  , expansionConflicts
+  )
 
 semanticIRTests :: [Test]
 semanticIRTests =
@@ -85,7 +91,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests ++ compositionTests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -521,6 +527,110 @@ toStrict r = either assertFailure pure (toStrictEither r)
 
 toDefeasible :: RuleFileRow -> IO DefeasibleRule
 toDefeasible r = either assertFailure pure (toDefeasibleEither r)
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 Batch C (ADR-0054): typed composition with entailment
+-- boundaries. Operators in code, domain composites as data (Batch E
+-- owns the ownership domain; here abstract machinery checks).
+-- ---------------------------------------------------------------------------
+
+compositionTests :: [Test]
+compositionTests =
+  [ TestLabel "compositions file holds" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/compositions.jsonl" :: IO [FileComposition]
+      assertEqual "2 synthetic compositions" 2 (length rows)
+      assertEqual "unique ids" 2 (length (foldr (\r acc -> if fcId r `elem` acc then acc else fcId r : acc) [] rows))
+  , TestLabel "file composition expands" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/compositions.jsonl" :: IO [FileComposition]
+      case [ r | r <- rows, fcId r == "cmp-blocked-conclusion" ] of
+        [fc] -> case expandFileComposites fc of
+          Left err -> assertFailure ("must expand: " <> err)
+          Right (cid, rules) -> do
+            assertEqual "id carried" "cmp-blocked-conclusion" cid
+            blocked <- mapM (parseSexprOrFail cid) (fcBlocked fc)
+            kept <- parseSexprOrFail cid "(Apply kept ((theme (Concept oath))))"
+            let conclusions = map srConclusion rules
+            assertBool "blocked conclusion withheld"
+              (all (`notElem` blocked) conclusions)
+            assertBool "unblocked conclusion kept"
+              (kept `elem` conclusions)
+        _ -> assertFailure "cmp-blocked-conclusion missing"
+  , TestLabel "temporary transfer: entailment boundaries" $ TestCase $ do
+      gave <- parseSexprOrFail "t" "(Apply gave ((agent ?a) (recipient ?b) (theme ?x)))"
+      temporary <- parseSexprOrFail "t" "(Apply temporary ((theme ?x)))"
+      owns <- parseSexprOrFail "t" "(Apply owns ((agent ?b) (theme ?x)))"
+      mustReturn <- parseSexprOrFail "t" "(Apply must-return ((agent ?b) (theme ?x)))"
+      let base = StrictRule "t-give" [gave] owns
+          comp = CompositionDef "t-temp" [base] [temporary] [mustReturn] [owns]
+      case expandComposition comp of
+        Left err -> assertFailure ("must expand: " <> err)
+        Right rules -> do
+          assertBool "blocked ownership withheld"
+            (all (\r -> srConclusion r /= owns) rules)
+          assertBool "added obligation kept"
+            (any (\r -> srConclusion r == mustReturn) rules)
+          let facts = [ Apply (PredicateId "gave")
+                          [ RoleBinding "agent" (Entity (EntityId "a"))
+                          , RoleBinding "recipient" (Entity (EntityId "b"))
+                          , RoleBinding "theme" (Concept (ConceptId "book"))
+                          ]
+                      , Apply (PredicateId "temporary")
+                          [ RoleBinding "theme" (Concept (ConceptId "book")) ]
+                      ]
+              holder = Apply (PredicateId "must-return")
+                         [ RoleBinding "agent" (Entity (EntityId "b"))
+                         , RoleBinding "theme" (Concept (ConceptId "book"))
+                         ]
+              owner = Apply (PredicateId "owns")
+                        [ RoleBinding "agent" (Entity (EntityId "b"))
+                        , RoleBinding "theme" (Concept (ConceptId "book"))
+                        ]
+          case entailmentVerdict 32 rules facts holder of
+            Entails _ -> pure ()
+            other -> assertFailure ("obligation should entail: " <> show other)
+          -- Blocked is absence, never refutation. Withheld
+          -- ownership leaves the theory's vocabulary
+          -- (UnsupportedPredicate); an in-vocabulary but
+          -- underivable claim stays open world. Neither refutes.
+          case entailmentVerdict 32 rules facts owner of
+            NotEntailed UnsupportedPredicate -> pure ()
+            other -> assertFailure ("withheld ownership should stay unproven: " <> show other)
+          let stranger = Apply (PredicateId "must-return")
+                           [ RoleBinding "agent" (Entity (EntityId "c"))
+                           , RoleBinding "theme" (Concept (ConceptId "book"))
+                           ]
+          case entailmentVerdict 32 rules facts stranger of
+            NotEntailed OpenWorldMissingFacts -> pure ()
+            other -> assertFailure ("third-party claim should stay open: " <> show other)
+  , TestLabel "dangling variables rejected" $ TestCase $ do
+      gave <- parseSexprOrFail "t" "(Apply gave ((agent ?a) (theme ?x)))"
+      stray <- parseSexprOrFail "t" "(Apply owes ((agent ?z) (theme ?x)))"
+      let comp = CompositionDef "t-stray" [] [] [stray] []
+          _ = gave
+      case expandComposition comp of
+        Left _ -> pure ()
+        Right _ -> assertFailure "unbound ?z must fail role compatibility"
+  , TestLabel "scope wrappers preserved" $ TestCase $ do
+      premise <- parseSexprOrFail "t" "(Modal Obligatory (Apply obeys ((agent ?x) (theme ?o))))"
+      conclusion <- parseSexprOrFail "t" "(Apply bound ((agent ?x) (theme ?o)))"
+      extra <- parseSexprOrFail "t" "(Apply witnessed ((theme ?o)))"
+      let comp = CompositionDef "t-scope" [StrictRule "t-r" [premise] conclusion] [extra] [] []
+      case expandComposition comp of
+        Left err -> assertFailure ("must expand: " <> err)
+        Right [refined] -> assertEqual "modal premise carried intact"
+          [premise, extra] (srPremises refined)
+        Right _ -> assertFailure "one base rule in, one refined rule out"
+  , TestLabel "conflicts propagate, never silence" $ TestCase $ do
+      p <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      let comp = CompositionDef "t-conf"
+            [ StrictRule "t-a" [p] p
+            , StrictRule "t-b" [p] (Not p)
+            ] [] [] []
+      case expandComposition comp of
+        Left err -> assertFailure ("must expand: " <> err)
+        Right rules -> assertBool "conflict surfaces"
+          (isJust (expansionConflicts rules))
+  ]
 
 -- ---------------------------------------------------------------------------
 -- Stage-1 batch 4 (ADR-0054 §2.4): frozen held-out split. Content-hash

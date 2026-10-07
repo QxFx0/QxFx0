@@ -46,6 +46,8 @@ module QxFx0.Semantic.IREval.Batch
   , StrictOutcome(..)
   , runStrictDetail
   , runStrictVerdict
+  , FileComposition(..)
+  , expandFileComposites
   , DefOutcome(..)
   , runDefeasibleDetail
   , ConflictOutcome(..)
@@ -68,6 +70,10 @@ import qualified Data.Text as T
 import GHC.Generics (Generic)
 
 import QxFx0.Semantic.IR (Proposition(..), parseProposition)
+import QxFx0.Semantic.IRCompose
+  ( CompositionDef(..)
+  , expandComposition
+  )
 import QxFx0.Semantic.IREval
   ( DefeasibleRule(..)
   , ProofStep(..)
@@ -437,6 +443,40 @@ runExpectation rules row exp = do
     other -> Left ("unknown expectation kind: " <> T.unpack other)
   where
     parseTurn sid turn = mapM (parseRowEither sid) (turnInterpretations turn)
+
+-- | File composition row (Batch C): self-contained composite
+-- with inline base rules (mirrors exit-task inline rules, no
+-- coupling to rules.jsonl). Domain data waits for Batch E;
+-- the two shipped rows are abstract machinery checks.
+data FileComposition = FileComposition
+  { fcId :: !Text
+  , fcRules :: ![InlineStrictRule]
+  , fcExtraPremises :: ![Text]
+  , fcAddedConclusions :: ![Text]
+  , fcBlocked :: ![Text]
+  } deriving stock (Eq, Show)
+
+instance FromJSON FileComposition where
+  parseJSON = Aeson.withObject "FileComposition" $ \o -> FileComposition
+    <$> o Aeson..: "id"
+    <*> o Aeson..:? "rules" Aeson..!= []
+    <*> o Aeson..:? "extra_premises" Aeson..!= []
+    <*> o Aeson..:? "added_conclusions" Aeson..!= []
+    <*> o Aeson..:? "blocked" Aeson..!= []
+
+-- | Expand file composites into named strict-rule sets.
+expandFileComposites :: FileComposition -> Either String (Text, [StrictRule])
+expandFileComposites fc = do
+  bases <- mapM (\(i, r) -> toStrictInline (fcId fc) i r) (zip [0 :: Int ..] (fcRules fc))
+  extra <- mapM (parseRowEither (fcId fc)) (fcExtraPremises fc)
+  added <- mapM (parseRowEither (fcId fc)) (fcAddedConclusions fc)
+  blocked <- mapM (parseRowEither (fcId fc)) (fcBlocked fc)
+  expanded <- expandComposition (CompositionDef (fcId fc) bases extra added blocked)
+  pure (fcId fc, expanded)
+  where
+    toStrictInline ctx i r = StrictRule (ctx <> "#s" <> T.pack (show i))
+      <$> mapM (parseRowEither ctx) (isrPremises r)
+      <*> parseRowEither ctx (isrConclusion r)
 
 -- ---------------------------------------------------------------------------
 -- JSON trace schema (ADR-0054 §2.3). Provenance tags mark every

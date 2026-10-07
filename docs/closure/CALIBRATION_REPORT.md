@@ -3217,3 +3217,62 @@ beyond 24 verbs.
   New pins: status mapping (7), render templates (4),
   claim-mode totality. Infra: post-restart re-verification
   from scratch.
+
+---
+
+# Stage-1 Batch C: typed composition — pre-registration (2026-10-07)
+
+- **Gap (audited)**: shadow Stage-1 has NO composition —
+  rules are flat, scenarios use file rules only. (Runtime
+  `composeFromActivation` exists but is out of scope —
+  different layer, untouched.) Primitives/senses/rules do not
+  combine into novel derivations.
+- **Rule (locked)**: new shadow module `QxFx0.Semantic.IRCompose`
+  (no pipeline callers). Composition compiles DOWN to strict
+  rules so Batch A verdicts apply unchanged:
+  - `CompositionDef`: id, base rule refs, added premises/
+    conclusions, BLOCKED conclusions (not-entails list),
+    role bindings.
+  - `expandComposition`: inherits base conclusions, adds new
+    ones, NEVER emits blocked ones (blocking enforced at
+    expansion, not by post-filter).
+  - Role compatibility (bound roles consistent across base
+    + additions), scope preservation (quantifier/modal
+    wrappers carried intact), conflict propagation (base
+    conflict with additions surfaces via `detectConflict`
+    on the expansion, not silently).
+  - Domain composites as DATA (new `compositions.jsonl`,
+    additive); operators in CODE. Batch C ships generic
+    operators + synthetic test composites only; ownership
+    domain data waits for Batch E.
+- **Bar**: unit pins — TemporaryTransfer-shaped example
+  (entails holder + obligation, NOT-entails ownership),
+  inheritance, blocking (blocked conclusion absent even when
+  base would derive it), role-mismatch rejection, scope
+  preservation, conflict propagation; JSON round-trips;
+  exit aggregates unchanged (no exit-data changes);
+  zero new failures in unit/fast/core. Slow NOT warranted
+  (shadow-only).
+- **Out of scope**: runtime composition; ownership domain
+  data (Batch E); learning (separate ADR); cutover.
+
+---
+
+# Stage-1 Batch C: typed composition — landed (2026-10-07)
+
+- **What** (pre-registered above): new shadow module
+  `QxFx0.Semantic.IRCompose` (operators in code) +
+  `compositions.jsonl` file support in Batch (domain data
+  mechanism, 2 abstract machinery rows) + pins. Composition
+  compiles down to strict rules; Batch A verdicts apply.
+- **Corrections en route**: (1) the withheld-ownership pin
+  exposed that blocked conclusions leave the theory's
+  vocabulary — `UnsupportedPredicate`, not open-world
+  (pinned both precisely: withheld→Unsupported, third-party
+  in-vocabulary→OpenWorld; blocked is absence, never
+  refutation); (2) fuel pin used in-order rules that `foldl'`
+  chains in one round — reversed order genuinely starves
+  (same footgun as Batch A, now pinned twice).
+- **Measured**: exit aggregates unchanged (17/17, 12/12, 6/6,
+  6/6, 40/40 — no exit-data changes).
+- **Verification**: unit 1703, fast 1831, core 1201 green.
