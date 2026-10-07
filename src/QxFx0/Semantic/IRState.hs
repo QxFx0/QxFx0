@@ -34,14 +34,31 @@ module QxFx0.Semantic.IRState
   , reviseHistory
   , fluentsAt
   , lineageOf
+  , matchAllPatterns
+  , FileOwnershipRow(..)
+  , toEventSpec
+  , toOwnershipRule
   ) where
 
-import Data.Aeson (FromJSON, FromJSONKey, ToJSON, ToJSONKey)
+import Data.Aeson (FromJSON(..), FromJSONKey, ToJSON, ToJSONKey)
+import qualified Data.Aeson as Aeson
 import qualified Data.Map.Strict as M
+import qualified Data.Set as S
 import Data.Text (Text)
 import GHC.Generics (Generic)
 
-import QxFx0.Semantic.IR (Proposition(..))
+import QxFx0.Semantic.IR
+  ( Proposition(..)
+  , Term(..)
+  , VarId(..)
+  , freeVariables
+  , parseProposition
+  )
+import QxFx0.Semantic.IREval
+  ( Subst(..)
+  , applySubst
+  , matchPattern
+  )
 
 -- | Opaque ordered time labels ("t0", "t1", ...). Ordering is
 -- lexicographic by construction site convention; the engine
@@ -101,26 +118,34 @@ contradicts (Not p) q = p == q
 contradicts p (Not q) = p == q
 contradicts _ _ = False
 
--- | Apply one event to a state. Preconditions are checked against
--- the union of all recorded fluents (structural equality); on
--- violation the event is rejected ('Left'). Withdrawn fluents
--- (and anything they contradict... no: only exact structural
--- matches) leave; contradicted survivors leave too; everything
--- else persists with 'SupportPersisted'; assertions arrive with
--- 'SupportAsserted'. The result is recorded at 'evAdvancesTo'.
+-- | Apply one event to a state. Preconditions match conjunctively
+-- against held fluents with variable binding (same discipline as
+-- rule premises); on failure the event is rejected ('Left').
+-- Withdrawals and assertions are instantiated with the binding;
+-- surviving free variables are a data error ('Left'). Withdrawn
+-- fluents (structural match on instantiated forms) leave;
+-- contradicted survivors leave too; everything else persists
+-- with 'SupportPersisted'. Assertions arrive with
+-- 'SupportAsserted' and win direct collisions. The result is
+-- recorded at 'evAdvancesTo'.
 applyEvent :: FluentState -> TimeStep -> EventSpec -> Either String FluentState
 applyEvent st from ev = do
   prior <- case M.lookup from (unFluentState st) of
     Nothing -> Left ("no state at time: " <> show (unTimeStep from))
     Just recs -> Right recs
   let held = map frFluent prior
-  mapM_ (\pre -> if pre `elem` held
-                   then Right ()
-                   else Left ("precondition violated by " <> show (evId ev)
-                               <> ": " <> show pre))
-        (evPreconditions ev)
-  let withdrawn p = p `elem` evWithdraws ev
-      contradicted p = any (contradicts p) (evWithdraws ev ++ evAsserts ev)
+  subst <- case matchAllPatterns (evPreconditions ev) held of
+    Nothing -> Left ("precondition violated by " <> show (evId ev))
+    Just s -> Right s
+  let withdraws = map (applySubst subst) (evWithdraws ev)
+      asserts = map (applySubst subst) (evAsserts ev)
+      unbound = filter (not . S.null . freeVariables) (withdraws ++ asserts)
+  case unbound of
+    (bad : _) -> Left ("unbound variables after match by " <> show (evId ev)
+                        <> ": " <> show bad)
+    [] -> Right ()
+  let withdrawn p = p `elem` withdraws
+      contradicted p = any (contradicts p) (withdraws ++ asserts)
       survivors =
         [ FluentRecord (frFluent r) (SupportPersisted (evId ev) from)
         | r <- prior
@@ -129,13 +154,25 @@ applyEvent st from ev = do
         ]
       asserted =
         [ FluentRecord p (SupportAsserted (evId ev))
-        | p <- evAsserts ev
+        | p <- asserts
         ]
       -- Asserts win over survivors on direct collision: a freshly
       -- asserted fluent and a persisted structural duplicate cannot
       -- both stand; the event's own assertion is authoritative.
-      deduped = asserted ++ filter (\r -> frFluent r `notElem` evAsserts ev) survivors
+      deduped = asserted ++ filter (\r -> frFluent r `notElem` asserts) survivors
   pure (FluentState (M.insert (evAdvancesTo ev) deduped (unFluentState st)))
+
+-- | Conjunctive pattern match (first match wins per pattern, in
+-- order), mirroring rule-premise matching.
+matchAllPatterns :: [Proposition] -> [Proposition] -> Maybe Subst
+matchAllPatterns pats facts = go (Subst []) pats
+  where
+    go subst [] = Just subst
+    go subst (pat : rest) =
+      case [ s | fact <- facts, Just s <- [matchPattern (applySubst subst pat) fact] ] of
+        [] -> Nothing
+        (s : _) -> go (unionSubst subst s) rest
+    unionSubst (Subst a) (Subst b) = Subst (b ++ a)
 
 -- | Fold a seeded history: initial time, initial fluents, then
 -- events applied in order, each from the previous event's time.
@@ -170,3 +207,81 @@ lineageOf st t p =
     [] -> Nothing
   where
     fluentsAtRecords s tm = maybe [] id (M.lookup tm (unFluentState s))
+
+-- ---------------------------------------------------------------------------
+-- Ownership contract library (Batch E): file rows plus pure
+-- converters. Times stay scenario-bound (tests assign them).
+-- ---------------------------------------------------------------------------
+
+-- | One ownership-library row: an event template or a strict rule.
+data FileOwnershipRow = FileOwnershipRow
+  { foId :: !Text
+  , foKind :: !Text
+  , foPreconditions :: ![Text]
+  , foWithdraws :: ![Text]
+  , foAsserts :: ![Text]
+  , foPremises :: ![Text]
+  , foConclusion :: !(Maybe Text)
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON)
+
+instance FromJSON FileOwnershipRow where
+  parseJSON = Aeson.withObject "FileOwnershipRow" $ \o -> FileOwnershipRow
+    <$> o Aeson..: "id"
+    <*> o Aeson..: "kind"
+    <*> o Aeson..:? "preconditions" Aeson..!= []
+    <*> o Aeson..:? "withdraws" Aeson..!= []
+    <*> o Aeson..:? "asserts" Aeson..!= []
+    <*> o Aeson..:? "premises" Aeson..!= []
+    <*> o Aeson..:? "conclusion"
+
+-- | Convert a file event template into an 'EventSpec' advancing to
+-- the given time under the given environment (variable bindings,
+-- e.g. participants named by the utterance). Fails on unparseable
+-- s-exprs, non-event rows, and variables unbound after the
+-- environment and precondition matching (variable discipline:
+-- the event must not invent participants the context never
+-- named — existential introduction is explicit, never silent).
+toEventSpec :: FileOwnershipRow -> TimeStep -> [(VarId, Term)] -> Either String EventSpec
+toEventSpec row advancesTo env = do
+  whenKind
+  pre <- mapM (parseRow (foId row)) (foPreconditions row)
+  wd <- mapM (parseRow (foId row)) (foWithdraws row)
+  as <- mapM (parseRow (foId row)) (foAsserts row)
+  let applyEnv = applySubst (Subst env)
+      pre' = map applyEnv pre
+      wd' = map applyEnv wd
+      as' = map applyEnv as
+      bound = S.unions (map freeVariables pre')
+      dangling = S.unions (map freeVariables (wd' ++ as')) `S.difference` bound
+  case S.toList dangling of
+    (v : _) -> Left ("unbound variable in " <> show (foId row) <> ": " <> show v)
+    [] -> Right (EventSpec (foId row) pre' wd' as' advancesTo)
+  where
+    whenKind
+      | foKind row /= "event" =
+          Left ("not an event row: " <> show (foId row))
+      | otherwise = Right ()
+    parseRow ctx sexpr = case parseProposition sexpr of
+      Just p -> Right p
+      Nothing -> Left ("s-expr must parse (" <> show ctx <> ")")
+
+-- | Convert a file strict-rule row. Fails on unparseable s-exprs,
+-- non-strict rows, and conclusion variables unbound by premises.
+toOwnershipRule :: FileOwnershipRow -> Either String (Text, [Proposition], Proposition)
+toOwnershipRule row
+  | foKind row /= "strict" =
+      Left ("not a strict row: " <> show (foId row))
+  | otherwise = do
+      pre <- mapM (parseRow (foId row)) (foPremises row)
+      conclu <- case foConclusion row of
+        Nothing -> Left ("strict row needs conclusion: " <> show (foId row))
+        Just sexpr -> parseRow (foId row) sexpr
+      let bound = S.unions (map freeVariables pre)
+      case S.toList (freeVariables conclu `S.difference` bound) of
+        (v : _) -> Left ("unbound conclusion variable in " <> show (foId row) <> ": " <> show v)
+        [] -> Right (foId row, pre, conclu)
+  where
+    parseRow ctx sexpr = case parseProposition sexpr of
+      Just p -> Right p
+      Nothing -> Left ("s-expr must parse (" <> show ctx <> ")")

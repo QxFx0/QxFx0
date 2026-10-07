@@ -3328,3 +3328,59 @@ beyond 24 verbs.
   `ToJSONKey`/`FromJSONKey` newtype-deriving (caught by
   build). Domain data stays out (Batch E).
 - **Verification**: unit 1709, fast 1831, core 1201 green.
+
+---
+
+# Stage-1 Batch E: ownership microworld — pre-registration (2026-10-07)
+
+- **Gap**: Batch D engine has no domain; Batch C has no
+  domain composites. Nothing applies known concepts in novel
+  combinations end to end.
+- **Rule (locked)**:
+  - Data: `data/semantic_ir/ownership.jsonl` — contract
+    library, 7 event templates (give/lend/return/take/show/
+    steal/return-right) + ownership-exclusivity strict rule,
+    all s-exprs, no times (scenario-bound in tests).
+  - Code: file row type + pure converters in IRState
+    (`toEventSpec`, `toOwnershipRule`); verdicts via Batch A,
+    expansion via Batch C where composites apply, lineage
+    via Batch D — the batches compose, nothing reimplemented.
+  - Held-out tests (combinations NOT in the data file):
+    give-vs-lend (Own moves vs persists+obligation),
+    lend-vs-show (exclusive hold+obligation vs shared hold,
+    none), take-vs-steal (wrongness fluent present/absent),
+    return-object-vs-return-right, double-lend,
+    return-without-lend (precondition rejection),
+    lend-corrected-to-give revision demo (Own flips,
+    obligation withdrawn, independents identical).
+  - The user demo path verbatim: Lend → owner query →
+    correction to Give → recompute (pinned step by step).
+- **Bar**: unit pins — file decodes (7+1 rows), all held-out
+  contrasts, demo path, exclusivity Refuted (not merely
+  open); exit aggregates unchanged; zero new failures in
+  unit/fast/core. Slow NOT warranted (shadow-only).
+- **Out of scope**: learning (separate ADR); runtime wiring;
+  cutover (next decision); new primitives.
+
+---
+
+# Stage-1 Batch E: ownership microworld — landed (2026-10-07)
+
+- **What** (pre-registered above): `data/semantic_ir/
+  ownership.jsonl` (7 event templates + borrower-not-owner
+  strict rule) + file converters in IRState + held-out tests.
+  Batches compose: verdicts (A), statuses (B), expansion (C),
+  engine+lineage (D) — nothing reimplemented.
+- **Design correction en route**: bare templates cannot bind
+  fresh participants — instantiation takes an explicit
+  environment (utterance-named bindings); silent existential
+  introduction stays a data error. Precondition matching uses
+  variable binding (same discipline as rule premises), which
+  the pre-reg's "checked" always meant.
+- **Measured**: the user demo path verbatim (Lend → owner
+  query Refuted with proof → correct to Give → Own(B),
+  obligation withdrawn, t0 identical); all minimal
+  contrasts green (give/lend, lend/show, take/steal,
+  return-object/return-right, double-lend rejects,
+  lend-return-lend works).
+- **Verification**: unit 1716, fast 1831, core 1201 green.

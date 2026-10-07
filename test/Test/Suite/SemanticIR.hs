@@ -38,6 +38,11 @@ import QxFx0.Semantic.IRState
   , lineageOf
   , reviseHistory
   )
+import QxFx0.Semantic.IRState
+  ( FileOwnershipRow(..)
+  , toEventSpec
+  , toOwnershipRule
+  )
 
 semanticIRTests :: [Test]
 semanticIRTests =
@@ -102,7 +107,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests ++ compositionTests ++ stateEngineTests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests ++ compositionTests ++ stateEngineTests ++ ownershipTests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -713,6 +718,162 @@ stateEngineTests =
   ]
 
 -- ---------------------------------------------------------------------------
+-- Stage-1 Batch E (ADR-0054): ownership microworld. Contract
+-- library as data; held-out tests combine contracts in ways the
+-- file never lists (no scenario rows in the data by design).
+-- ---------------------------------------------------------------------------
+
+ownershipTests :: [Test]
+ownershipTests =
+  [ TestLabel "ownership library loads" $ TestCase $ do
+      rows <- readJsonlRows "data/semantic_ir/ownership.jsonl" :: IO [FileOwnershipRow]
+      assertEqual "7 events + 1 rule" 8 (length rows)
+      assertEqual "unique ids" 8 (length (foldr (\r acc -> if foId r `elem` acc then acc else foId r : acc) [] rows))
+      lib <- loadOwnershipEvents
+      mapM_ (\eid -> do
+               _ <- grabEvent eid lib (TimeStep "t1")
+               pure ())
+        ["give", "lend", "return", "take", "show", "steal", "return-right"]
+      borrower <- loadBorrowerRule
+      assertEqual "borrower rule id" "borrower-not-owner" (srId borrower)
+  , TestLabel "demo: lend, query, correct to give" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      borrower <- loadBorrowerRule
+      ownA <- parseSexprOrFail "t" "(Apply owns ((agent (Entity a)) (theme (Concept book))))"
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      ownB <- parseSexprOrFail "t" "(Apply owns ((agent (Entity b)) (theme (Concept book))))"
+      lendEv <- grabEvent "lend" lib (TimeStep "t1")
+      giveEv <- grabEvent "give" lib (TimeStep "t1")
+      (st, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [lendEv])
+      -- Is B the owner? The borrower rule refutes it (not merely open).
+      case entailmentVerdict 32 [borrower] (fluentsAt st (TimeStep "t1")) ownB of
+        Refuted _ -> pure ()
+        other -> assertFailure ("borrower must be refuted owner: " <> show other)
+      -- Correction: it was a gift, not a loan. Recompute.
+      (st2, _) <- either assertFailure pure
+        (reviseHistory (TimeStep "t0") [ownA, holdA] [lendEv] "lend" giveEv)
+      assertBool "gift transfers ownership" (ownB `elem` fluentsAt st2 (TimeStep "t1"))
+      assertBool "t0 byte-identical"
+        (fluentsAt st (TimeStep "t0") == fluentsAt st2 (TimeStep "t0"))
+  , TestLabel "give versus lend" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      ownA <- parseSexprOrFail "t" "(Apply owns ((agent (Entity a)) (theme (Concept book))))"
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      ownB <- parseSexprOrFail "t" "(Apply owns ((agent (Entity b)) (theme (Concept book))))"
+      holdB <- parseSexprOrFail "t" "(Apply holds ((agent (Entity b)) (theme (Concept book))))"
+      oblig <- parseSexprOrFail "t" "(Apply must-return ((agent (Entity b)) (theme (Concept book)) (recipient (Entity a))))"
+      giveEv <- grabEvent "give" lib (TimeStep "t1")
+      lendEv <- grabEvent "lend" lib (TimeStep "t1")
+      (giveSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [giveEv])
+      (lendSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [lendEv])
+      assertBool "gift moves ownership" (ownB `elem` fluentsAt giveSt (TimeStep "t1"))
+      assertBool "gift creates no obligation"
+        (oblig `notElem` fluentsAt giveSt (TimeStep "t1"))
+      assertBool "loan keeps ownership" (ownA `elem` fluentsAt lendSt (TimeStep "t1"))
+      assertBool "loan moves holding" (holdB `elem` fluentsAt lendSt (TimeStep "t1"))
+      assertBool "loan creates obligation" (oblig `elem` fluentsAt lendSt (TimeStep "t1"))
+  , TestLabel "lend versus show" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      holdB <- parseSexprOrFail "t" "(Apply holds ((agent (Entity b)) (theme (Concept book))))"
+      oblig <- parseSexprOrFail "t" "(Apply must-return ((agent (Entity b)) (theme (Concept book)) (recipient (Entity a))))"
+      ownA <- parseSexprOrFail "t" "(Apply owns ((agent (Entity a)) (theme (Concept book))))"
+      lendEv <- grabEvent "lend" lib (TimeStep "t1")
+      showEv <- grabEvent "show" lib (TimeStep "t1")
+      (lendSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [lendEv])
+      (showSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [showEv])
+      assertBool "lend moves holding exclusively"
+        (holdA `notElem` fluentsAt lendSt (TimeStep "t1"))
+      assertBool "show shares holding"
+        (holdA `elem` fluentsAt showSt (TimeStep "t1")
+          && holdB `elem` fluentsAt showSt (TimeStep "t1"))
+      assertBool "show creates no obligation"
+        (oblig `notElem` fluentsAt showSt (TimeStep "t1"))
+  , TestLabel "take versus steal" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      holdB <- parseSexprOrFail "t" "(Apply holds ((agent (Entity b)) (theme (Concept book))))"
+      wrongB <- parseSexprOrFail "t" "(Apply wrong ((agent (Entity b))))"
+      takeEv <- grabEvent "take" lib (TimeStep "t1")
+      stealEv <- grabEvent "steal" lib (TimeStep "t1")
+      (takeSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [holdA] [takeEv])
+      (stealSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [holdA] [stealEv])
+      assertBool "take moves holding" (holdB `elem` fluentsAt takeSt (TimeStep "t1"))
+      assertBool "take records no wrongness" (wrongB `notElem` fluentsAt takeSt (TimeStep "t1"))
+      assertBool "steal records wrongness" (wrongB `elem` fluentsAt stealSt (TimeStep "t1"))
+  , TestLabel "return object versus return right" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      ownA <- parseSexprOrFail "t" "(Apply owns ((agent (Entity a)) (theme (Concept book))))"
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      holdB <- parseSexprOrFail "t" "(Apply holds ((agent (Entity b)) (theme (Concept book))))"
+      oblig <- parseSexprOrFail "t" "(Apply must-return ((agent (Entity b)) (theme (Concept book)) (recipient (Entity a))))"
+      ownB <- parseSexprOrFail "t" "(Apply owns ((agent (Entity b)) (theme (Concept book))))"
+      lendEv <- grabEvent "lend" lib (TimeStep "t1")
+      returnEv <- grabEvent "return" lib (TimeStep "t2")
+      rightEv <- grabEvent "return-right" lib (TimeStep "t1")
+      (retSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [lendEv, returnEv])
+      assertBool "return moves holding back" (holdA `elem` fluentsAt retSt (TimeStep "t2"))
+      assertBool "return clears obligation" (oblig `notElem` fluentsAt retSt (TimeStep "t2"))
+      (rightSt, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownB, holdB] [rightEv])
+      assertBool "return-right moves ownership" (ownA `elem` fluentsAt rightSt (TimeStep "t1"))
+  , TestLabel "double lend rejects, lend-return-lend works" $ TestCase $ do
+      lib <- loadOwnershipEvents
+      ownA <- parseSexprOrFail "t" "(Apply owns ((agent (Entity a)) (theme (Concept book))))"
+      holdA <- parseSexprOrFail "t" "(Apply holds ((agent (Entity a)) (theme (Concept book))))"
+      holdB <- parseSexprOrFail "t" "(Apply holds ((agent (Entity b)) (theme (Concept book))))"
+      lend1 <- grabEvent "lend" lib (TimeStep "t1")
+      lend2 <- grabEvent "lend" lib (TimeStep "t2")
+      returnEv <- grabEvent "return" lib (TimeStep "t2")
+      lend3 <- grabEvent "lend" lib (TimeStep "t3")
+      case foldHistory (TimeStep "t0") [ownA, holdA] [lend1, lend2] of
+        Left _ -> pure ()
+        Right _ -> assertFailure "second lend without holding must reject"
+      (st, _) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [ownA, holdA] [lend1, returnEv, lend3])
+      assertBool "re-lend moves holding again" (holdB `elem` fluentsAt st (TimeStep "t3"))
+  ]
+
+-- | Load ownership event templates keyed by id (times assigned by tests).
+loadOwnershipEvents :: IO (M.Map T.Text FileOwnershipRow)
+loadOwnershipEvents = do
+  rows <- readJsonlRows "data/semantic_ir/ownership.jsonl" :: IO [FileOwnershipRow]
+  pure (M.fromList [ (foId row, row) | row <- rows, foKind row == "event" ])
+
+-- | Concrete demo bindings (utterance-named participants).
+bookEnv :: [(VarId, Term)]
+bookEnv =
+  [ (VarId "?a", Entity (EntityId "a"))
+  , (VarId "?b", Entity (EntityId "b"))
+  , (VarId "?x", Concept (ConceptId "book"))
+  ]
+
+-- | Instantiate one library event at one time under explicit
+-- bindings (fails the test on misuse).
+grabEvent :: T.Text -> M.Map T.Text FileOwnershipRow -> TimeStep -> IO EventSpec
+grabEvent eid lib t = case M.lookup eid lib of
+  Nothing -> assertFailure ("unknown ownership event: " <> T.unpack eid)
+  Just row -> case toEventSpec row t bookEnv of
+    Left err -> assertFailure ("bad ownership event " <> T.unpack eid <> ": " <> err)
+    Right ev -> pure ev
+
+-- | Load the borrower-not-owner strict rule.
+loadBorrowerRule :: IO StrictRule
+loadBorrowerRule = do
+  rows <- readJsonlRows "data/semantic_ir/ownership.jsonl" :: IO [FileOwnershipRow]
+  case [ row | row <- rows, foId row == "borrower-not-owner" ] of
+    [row] -> case toOwnershipRule row of
+      Left err -> fail ("bad ownership rule: " <> err)
+      Right (_, pre, conclu) -> pure (StrictRule "borrower-not-owner" pre conclu)
+    _ -> fail "borrower-not-owner missing"
 -- Stage-1 batch 4 (ADR-0054 §2.4): frozen held-out split. Content-hash
 -- integrity lives in scripts/split_semantic_ir.py --check; unit pins
 -- the partition structure. Rules stay unsplit by design (model, not
