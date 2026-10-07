@@ -28,6 +28,7 @@ import QxFx0.Semantic.ResponsePlan
   , buildGenerativeResponsePlanWithActiveQuestion
   , buildResponseSemanticPlan
   , buildResponseSemanticPlanWithActiveQuestion
+  , claimModeFor
   , isGenerativeRequestText
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
@@ -94,6 +95,7 @@ responsePlanTests =
   , TestLabel "recovery text owns failure honestly" testRecoveryTextHonest
   , TestLabel "uncovered topic claim is framed as hypothesis" testUncoveredClaimIsHypothesis
   , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
+  , TestLabel "claim mode mapping is total and hypothetical-safe" testClaimModeMappingTotal
   , TestLabel "generated predicate under covered topic is hypothesis" testGeneratedPredicateUnderCoveredTopicIsHypothesis
   ]
 
@@ -589,6 +591,21 @@ testUncoveredClaimIsHypothesis = TestCase $ do
         [] -> assertFailure "uncovered plan must carry its claim"
       assertBool "headline must be hypothesis, not definition"
         ("Гипотеза:" `T.isPrefixOf` renderResponseSemanticPlan plan)
+
+-- | Leak ban (Batch B, pre-registered 2026-10-07): the mode mapping
+-- is total and hypothetical goals never produce Known claims.
+-- Headline/suffix marking lives one layer up (Route); this pins the
+-- data invariant it stands on.
+testClaimModeMappingTotal :: Test
+testClaimModeMappingTotal = TestCase $ do
+  assertEqual "generate-thesis is hypothetical"
+    ClaimHypothetical (claimModeFor GoalGenerateThesis)
+  assertEqual "hypothesize is hypothetical"
+    ClaimHypothetical (claimModeFor GoalHypothesize)
+  assertEqual "define is known"
+    ClaimKnown (claimModeFor GoalDefine)
+  assertEqual "clarify is question"
+    ClaimQuestion (claimModeFor GoalClarify)
 
 -- | Covered topics keep canonical framing (doctrine boundary control).
 testCoveredClaimKeepsCanonicalMode :: Test

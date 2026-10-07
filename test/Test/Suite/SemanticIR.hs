@@ -454,6 +454,28 @@ evalTests =
         NotEntailed UnsupportedPredicate -> pure ()
         other -> assertFailure ("unknown predicate should be unsupported: " <> show other)
 
+  , TestLabel "status mapping never asserts the unproven" $ TestCase $ do
+      assertEqual "entails grounds"
+        StatusGrounded (statusOfVerdict (Entails []))
+      assertEqual "refuted is explicit"
+        StatusRefuted (statusOfVerdict (Refuted []))
+      assertEqual "open world abstains"
+        StatusAbstain (statusOfVerdict (NotEntailed OpenWorldMissingFacts))
+      assertEqual "starved search abstains"
+        StatusAbstain (statusOfVerdict (NotEntailed (FuelExhausted (FuelReport 1 1))))
+      assertEqual "unsupported abstains"
+        StatusAbstain (statusOfVerdict (NotEntailed UnsupportedPredicate))
+      assertEqual "defeated abstains"
+        StatusAbstain (statusOfVerdict (DefeatedBy "r" (Apply (PredicateId "p") [])))
+      assertEqual "grounded renders content unchanged"
+        "thesis" (renderStatusSurface StatusGrounded "thesis")
+      assertEqual "refuted marks negation"
+        "Установлено, что неверно: thesis" (renderStatusSurface StatusRefuted "thesis")
+      assertBool "hypothesis marks itself"
+        ("Гипотеза: " `T.isPrefixOf` renderStatusSurface StatusHypothesis "thesis")
+      assertBool "abstain owns the gap"
+        (not (T.null (renderStatusSurface StatusAbstain "thesis")))
+
   , TestLabel "forwardChainFuel signals fixpoint vs exhaustion" $ TestCase $ do
       let p = Apply (PredicateId "holds") [RoleBinding "theme" (Concept (ConceptId "oath"))]
           q = Apply (PredicateId "binding") [RoleBinding "theme" (Concept (ConceptId "oath"))]

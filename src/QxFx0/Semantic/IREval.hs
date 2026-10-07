@@ -43,6 +43,9 @@ module QxFx0.Semantic.IREval
   , SearchBoundary(..)
   , FuelReport(..)
   , FuelOutcome(..)
+  , EvalStatus(..)
+  , statusOfVerdict
+  , renderStatusSurface
     -- * Strict forward chaining
   , forwardChain
   , forwardChainFuel
@@ -375,3 +378,38 @@ detectConflict base =
   where
     isNegationOf (Not p) q = p == q
     isNegationOf _ _ = False
+
+-- | Epistemic status of evaluated content (Batch B, 2026-10-07,
+-- shadow-only). Three agreed regimes plus an explicit refuted
+-- status so render rules can say "known false" distinctly from
+-- "known true". Status never upgrades content: anything but a
+-- strict entailment lands at or below hypothesis/abstain.
+data EvalStatus
+  = StatusGrounded
+  | StatusRefuted
+  | StatusHypothesis
+  | StatusAbstain
+  deriving stock (Eq, Show, Generic)
+  deriving anyclass (ToJSON, FromJSON)
+
+-- | Total mapping from evaluation verdicts to statuses.
+-- Defeated, conflicted, open, starved and unsupported queries
+-- never assert: all map to 'StatusAbstain'.
+statusOfVerdict :: Verdict -> EvalStatus
+statusOfVerdict verdict = case verdict of
+  Entails _ -> StatusGrounded
+  Refuted _ -> StatusRefuted
+  NotEntailed _ -> StatusAbstain
+  DefeatedBy _ _ -> StatusAbstain
+  Conflict _ _ -> StatusAbstain
+
+-- | Pure render contract per status (Batch B, shadow-only: no
+-- callers by law). RU templates; the Abstain surface reuses the
+-- established honest-abstain phrasing, Hypothesis always marks
+-- itself and never claims fact recording.
+renderStatusSurface :: EvalStatus -> Text -> Text
+renderStatusSurface status content = case status of
+  StatusGrounded -> content
+  StatusRefuted -> "Установлено, что неверно: " <> content
+  StatusHypothesis -> "Гипотеза: " <> content <> " (требует проверки; не записываю как факт)"
+  StatusAbstain -> "По этому вопросу у меня нет достаточного основания для утверждения."

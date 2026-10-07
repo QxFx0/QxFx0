@@ -14,6 +14,7 @@ module QxFx0.Semantic.ResponsePlan
   , buildGenerativeResponsePlanWithActiveQuestion
   , buildResponseSemanticPlan
   , buildResponseSemanticPlanWithActiveQuestion
+  , claimModeFor
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   , responsePlanTopic

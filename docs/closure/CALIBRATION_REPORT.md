@@ -3154,3 +3154,66 @@ beyond 24 verbs.
 - **Also landed here**: curated-quality surgery (72 fixes +
   2 deletions + 1 gloss-guided repair, pre-registered above;
   exact-match pin on контроль + whole-file anti-rot pin).
+
+---
+
+# Stage-1 Batch B: status doctrine + leak ban — pre-registration (2026-10-07)
+
+- **Audit (read-only)**: claim modes exist
+  (Known/Interpretive/Hypothetical/Question/Unknown);
+  Hypothesize renders "Гипотеза"-headed, GenerateThesis
+  "Тезис"-headed with hypothetical mode + hypothesis suffix;
+  abstain fallbacks exist (NoTopic/NotCovered/NoPredicate/
+  ConflictingEvidence/QualityRejected + empty-claims hold).
+  Commitments derive from user frames, stances from
+  challenges — system hypotheses have no intake path into
+  either store. The leak surface is render marking +
+  future cutover, not storage.
+- **Rule (locked)**:
+  - New `EvalStatus = StatusGrounded | StatusRefuted |
+    StatusHypothesis | StatusAbstain` (shadow, IREval) +
+    total `statusOfVerdict` (Entails→Grounded,
+    Refuted→Refuted, everything else→Abstain: defeated,
+    conflicted, open, starved and unsupported queries
+    never assert).
+  - Pure render contract `renderStatusSurface`
+    (RU, no callers): per-status templates; Abstain reuses
+    the established honest-abstain phrasing, Hypothesis
+    requires explicit marking + no fact-recording claim.
+  - Leak-ban pin (anti-rot on current behavior):
+    Hypothesize/GenerateThesis plans render with Гипотеза
+    marking (headline or suffix); GenerateThesis never
+    renders bare-categorical.
+  - Doctrine text (this report + code comments):
+    abstain-vs-hypothesize rules mirroring the fallback
+    reasons; hypothesis never enters strict proof, never
+    recorded as fact, never upgraded at render,
+    disputable/replaceable.
+- **Bar**: unit pins — status mapping (7+ cases), all four
+  render templates, marking invariant on built plans;
+  JSON round-trips; zero new failures in unit/fast/core.
+  Slow NOT warranted (shadow-only).
+- **Out of scope**: runtime render changes (surfaces
+  unchanged); trace schema (status derives from verdict);
+  AmbiguousInterpretation; cutover (later decision).
+
+---
+
+# Stage-1 Batch B: status doctrine + leak ban — landed (2026-10-07)
+
+- **What** (pre-registered above): `EvalStatus`
+  (Grounded/Refuted/Hypothesis/Abstain) + total
+  `statusOfVerdict` (only `Entails` asserts) + pure
+  `renderStatusSurface` (RU, no callers by law) in IREval;
+  `claimModeFor` exported for pins; leak-ban data pin
+  (hypothetical goals never produce Known claims).
+  Audit finding recorded: Hypothesize renders Гипотеза-headed,
+  GenerateThesis Тезис-headed with hypothetical mode +
+  suffix; commitments derive from user frames and stances
+  from challenges — no storage intake for system
+  hypotheses. Suffix marking is Route-level (live-probed,
+  future cutover enforces).
+- **Verification**: unit 1697, fast 1831, core 1201 green.
+  New pins: status mapping (7), render templates (4),
+  claim-mode totality. Infra: post-restart re-verification
+  from scratch.
