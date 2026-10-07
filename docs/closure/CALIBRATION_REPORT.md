@@ -3384,3 +3384,50 @@ beyond 24 verbs.
   return-object/return-right, double-lend rejects,
   lend-return-lend works).
 - **Verification**: unit 1716, fast 1831, core 1201 green.
+
+---
+
+# Stage-1 trace review for gated cutover (2026-10-07)
+
+- **Mechanical leg (measured today, emitter)**: strict 17/17
+  (≥0.80 ✓ with margin), defeasible 12/12 (≥0.60 ✓),
+  conflicts 6/6 exact ✓, presuppositions 6/6 exact ✓,
+  scenarios 40/40 ✓. Zero false-authority by construction
+  (stage1-shadow provenance on every trace; hypothesis
+  marking + leak ban landed in Batch B).
+- **Batches since the last review**: A (verdicts), B
+  (statuses), C (composition), D (state engine), E
+  (microworld) — all shadow-only, all green.
+- **Human leg**: OPEN. Requires B2-style blind pairs on
+  novel out-of-corpus freedom-cluster examples,
+  operator-rated (coherent majority, zero false-authority,
+  honest abstain allowed). Packet preparation is next;
+  rating needs the operator.
+- **Cutover decision**: NOT YET. Mechanical passes; human
+  leg pending; cutover ADR writable only after both
+  (ADR-0054 §2.5). No runtime wiring meanwhile (non-goal).
+
+---
+
+# Human leg (Stage-1 exit): packet rated, operator-confirmed (2026-10-07)
+
+- **Packet**: `data/semantic_ir/human_leg_packet.jsonl`,
+  20 novel out-of-corpus items (strict chains, refuted ×2,
+  open-world, fuel-starved, unsupported ×3, defeasible
+  fire/blocked, duel tie, conflict, presuppositions,
+  composition ±, state query ±, revision, statuses ×2).
+- **Machine verdicts** (temporary runner, deleted after use):
+  01 Entails, 02 Unsupported, 03 Refuted, 04 Refuted []
+  (given-negation, empty proof — honest), 05 Unsupported,
+  06 OpenWorld, 07 FuelExhausted, 08 Unsupported, 09 fires,
+  10 blocked, 11 tie-kept, 12 conflict found, 13 held+missing,
+  14 Entails, 15 Unsupported (withheld leaves vocabulary),
+  16 Entails [], 17 OpenWorld, 18 Entails [] post-revision,
+  19 Grounded, 20 Abstain.
+- **Operator verdict**: CONFIRMED (coherent 20/20, zero
+  false-authority, no abstain cases needed — packet inputs
+  all well-formed, recorded as coverage note).
+- **Cutover decision**: mechanical PASS + human CONFIRMED.
+  Cutover ADR is now writable (bounded domain, shadow-first
+  comparison, explicit abstain doctrine). No runtime wiring
+  in this landing.

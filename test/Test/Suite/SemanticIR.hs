@@ -31,15 +31,13 @@ import QxFx0.Semantic.IRState
   ( TimeStep(..)
   , FluentSupport(..)
   , EventSpec(..)
+  , FileOwnershipRow(..)
   , applyEvent
   , emptyState
   , fluentsAt
   , foldHistory
   , lineageOf
   , reviseHistory
-  )
-import QxFx0.Semantic.IRState
-  ( FileOwnershipRow(..)
   , toEventSpec
   , toOwnershipRule
   )
