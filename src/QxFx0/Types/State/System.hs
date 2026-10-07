@@ -67,6 +67,7 @@ import QxFx0.Types.Domain
   , UserState
   )
 import QxFx0.Types.Lexicon.RuntimeParadigms (RuntimeParadigms)
+import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..))
 import QxFx0.Types.Bayesian (BeliefState)
 import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
@@ -319,6 +320,11 @@ data SystemState = SystemState
     -- ^ P1.2: extended definition corpus = hardcoded seed corpus merged with
     --   curated predicates loaded from @resources/knowledge/curated_predicates.jsonl@.
     --   Used by projection to report missing predicates and by rendering paths.
+  , ssOwnershipLibrary :: !(M.Map Text FileOwnershipRow)
+    -- ^ Cutover Stage 1a (ADR-0055): ownership contract library
+    --   rows loaded from @data/semantic_ir/ownership.jsonl@ at
+    --   bootstrap (empty when the file is missing). Read by the
+    --   shadow-compare computation in Prepare; never rendered.
   , ssCuratedOverlay :: !(Maybe CuratedOverlayRuntime)
     -- ^ Active promotion overlay provenance, rebuilt from the local promotion
     -- store on bootstrap. It is never persisted as session authority.

@@ -126,6 +126,7 @@ library
     QxFx0.Types.Semantic.DialogueContext
     QxFx0.Types.Semantic.IntentMetrics
     QxFx0.Types.Semantic.Network
+    QxFx0.Types.Semantic.Ownership
     QxFx0.Types.Semantic.Ontology
     QxFx0.Types.Semantic.Ontology.Dynamic
     QxFx0.Types.Semantic.ResponsePlan
@@ -375,6 +376,7 @@ library
     QxFx0.Semantic.Ontology.Dynamic
     QxFx0.Semantic.Input.Parse
     QxFx0.Semantic.Lexicon.RuntimeParadigms
+    QxFx0.Semantic.Ownership.Detect
      QxFx0.Semantic.Embedding
      QxFx0.Semantic.Morphology
       QxFx0.Semantic.ResponsePlan
@@ -672,6 +674,7 @@ common test-common
     Test.Suite.RenderDialogueCoverage
     Test.Suite.ObserverDiscipline
     Test.Suite.TraceSchema
+    Test.Suite.OwnershipDetect
     Test.Suite.RegenerableDerived
     Test.Suite.PromotionFlagDiscipline
     Test.Suite.SemanticContentB3

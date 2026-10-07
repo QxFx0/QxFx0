@@ -117,6 +117,7 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       , tiIsNixBlocked = isNixBlocked
       , tiConceptToCheck = psConceptToCheck prepareStatic
       , tiBestTopic = psBestTopic prepareStatic
+      , tiOwnershipCompare = psOwnershipCompare prepareStatic
       , tiMetrics = metrics6
       , tiConatusEnergy = psConatusEnergy prepareStatic
       , tiBlanketViolationCount = psBlanketViolationCount prepareStatic

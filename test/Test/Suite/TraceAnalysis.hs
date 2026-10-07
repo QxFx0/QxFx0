@@ -238,6 +238,7 @@ minimalTrace = TurnReplayTrace
           , trcAssemblyCandidates = []
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
+          , trcOwnershipCompare = Nothing
   }
 
 testRecoveryNoTrigger :: Test
@@ -343,6 +344,7 @@ testDogfoodingFieldsRoundTrip = TestCase $ do
           , trcAssemblyCandidates = []
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
+          , trcOwnershipCompare = Nothing
         }
   let decoded = decode (encode trace)
   assertEqual "Activated concepts round-trip" (Just ["свобода", "выбор"]) (trcActivatedConcepts <$> decoded)

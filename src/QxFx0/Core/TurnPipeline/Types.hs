@@ -142,6 +142,7 @@ data TurnInput = TurnInput
   , tiIsNixBlocked :: !Bool
   , tiConceptToCheck :: !Text
   , tiBestTopic :: !Text
+  , tiOwnershipCompare :: !(Maybe OwnershipCompareTrace)
   , tiMetrics :: !TurnMetrics
   , tiConatusEnergy :: !ConatusEnergy
     -- ^ Phase 6 (M6): runtime Conatus energy carried from

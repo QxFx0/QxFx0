@@ -1773,6 +1773,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
            , trcAssemblyCandidates = []
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
+          , trcOwnershipCompare = Nothing
                   }
            , tqpDivergence = True
            }
@@ -2385,6 +2386,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
            , trcAssemblyCandidates = []
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
+          , trcOwnershipCompare = Nothing
                   }
            , tqpDivergence = True
            }

@@ -198,6 +198,7 @@ instance ToJSON SystemState where
     , "stanceLineages" .= ssStanceLineages ss
     , "runtimeGraph" .= ssRuntimeGraph ss
     , "definitionCorpus" .= ssDefinitionCorpus ss
+    , "ownershipLibrary" .= ssOwnershipLibrary ss
     , "emittedPredicates" .= ssEmittedPredicates ss
     , "userR5Contour" .= ssUserR5Contour ss
     ]
@@ -276,7 +277,7 @@ instance FromJSON SystemState where
       <*> o .:? "stances" .!= M.empty <*> o .:? "stanceDefenses" .!= M.empty
       <*> o .:? "userStanceTrackers" .!= M.empty <*> o .:? "stanceLineages" .!= M.empty
       <*> o .:? "runtimeGraph" .!= seedGraph
-      <*> o .:? "definitionCorpus" .!= M.empty <*> pure Nothing
+      <*> o .:? "definitionCorpus" .!= M.empty <*> o .:? "ownershipLibrary" .!= M.empty <*> pure Nothing
       <*> o .:? "emittedPredicates" .!= Set.empty
       <*> o .:? "userR5Contour" .!= emptyUserR5ContourState
 
@@ -343,6 +344,7 @@ emptySystemState = SystemState
   , ssStanceLineages = M.empty
   , ssRuntimeGraph = seedGraph
   , ssDefinitionCorpus = M.empty
+  , ssOwnershipLibrary = M.empty
   , ssCuratedOverlay = Nothing
   , ssEmittedPredicates = Set.empty
   , ssUserR5Contour = emptyUserR5ContourState

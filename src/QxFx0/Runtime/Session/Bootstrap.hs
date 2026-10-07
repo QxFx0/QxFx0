@@ -158,6 +158,7 @@ import QxFx0.Semantic.Network.Ingest (buildNetworkFromAtomGraph, ingestExternalK
 import QxFx0.Semantic.Content.AtomStore (seedGraph)
 import Data.Maybe (fromMaybe)
 import QxFx0.Semantic.Network.Substrate (BrainKBEntry(..), loadBrainKB, resolveBrainKBPath, buildSubstrateEdges, SubstrateEdgeInfo(..))
+import QxFx0.Semantic.IRState (FileOwnershipRow(..))
 import QxFx0.Semantic.Content.SubstrateCandidate
   ( extractCandidates, admitCandidates, promoteAll, defaultAdmissionConfig )
 import QxFx0.Semantic.Content.AtomStore (AtomId(..), allTopics, allAtomIds, relationStore, Relation(..), RelationSource(..), seedGraph, withPromoted, atomStore, Atom(..), AtomCategory(..))
@@ -189,6 +190,9 @@ import qualified Data.UUID.V4 as UUIDv4
 import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.Environment (lookupEnv)
 import System.FilePath (takeDirectory)
+import System.FilePath ((</>))
+import Data.Aeson (eitherDecodeStrict)
+import qualified Data.ByteString as BS
 import System.IO (hPutStrLn, stderr)
 import Paths_qxfx0 (getDataFileName)
 
@@ -444,6 +448,23 @@ resolveKnowledgePath path = do
 -- Curated material remains local and deterministic; a missing or malformed
 -- resource degrades to the checked-in seed corpus just as session bootstrap
 -- does.
+
+-- | Load the ownership contract library for cutover Stage 1a
+-- (ADR-0055). Returns an empty map when the file is missing or
+-- malformed: the gate stays closed, legacy serves unchanged.
+loadOwnershipLibraryAtBoot :: IO (M.Map Text FileOwnershipRow)
+loadOwnershipLibraryAtBoot = do
+  resolvedPath <- resolveKnowledgePath ownershipLibraryRelPath
+  contentResult <- tryIO (BS.readFile resolvedPath)
+  case contentResult of
+    Left (_ :: IOException) -> pure M.empty
+    Right content ->
+      case mapM eitherDecodeStrict (filter (not . BS.null) (BS.split 0x0A content)) of
+        Left (_ :: String) -> pure M.empty
+        Right rows -> pure (M.fromList [ (foId row, row) | row <- rows ])
+  where
+    ownershipLibraryRelPath = "data" </> "semantic_ir" </> "ownership.jsonl"
+
 loadBootstrapDefinitionCorpus :: IO (M.Map Text DefinitionContent)
 loadBootstrapDefinitionCorpus = do
   curatedPath <- resolveKnowledgePath curatedPredicatesPath
@@ -688,6 +709,11 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
   -- hardcoded seed corpus.
   extendedCorpus <- loadBootstrapDefinitionCorpus
 
+  -- Cutover Stage 1a (ADR-0055): load the ownership contract
+  -- library for shadow-compare. Failure is non-fatal: the gate
+  -- stays closed and the legacy path serves unchanged.
+  ownershipLibrary <- loadOwnershipLibraryAtBoot
+
   activePromotionOverlay <- withRuntimeDb runtime $ \db ->
     loadActivePromotionOverlay (QxFx0DB dbPath db)
   let (promotionOverlayRuntime, promotionCorpus) =
@@ -739,6 +765,7 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
         , ssOntology = ontology
         , ssRuntimeGraph = withPromoted promotedRelations seedGraph
         , ssDefinitionCorpus = effectiveCorpus
+        , ssOwnershipLibrary = ownershipLibrary
         , ssCuratedOverlay = promotionOverlayRuntime
         , ssSelfState = bootstrapSelfState selfBootstrapConfig Nothing
         }
@@ -798,6 +825,7 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
                    , ssLemmaMap = lemmaMap
                    , ssRuntimeGraph = withPromoted promotedRelations seedGraph
                    , ssDefinitionCorpus = effectiveCorpus
+        , ssOwnershipLibrary = ownershipLibrary
                    , ssCuratedOverlay = promotionOverlayRuntime
                    , ssSelfState = bootstrapSelfState selfBootstrapConfig (Just (ssSelfState ss))
                    }

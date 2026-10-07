@@ -46,6 +46,7 @@ module QxFx0.Semantic.IREval
   , EvalStatus(..)
   , statusOfVerdict
   , renderStatusSurface
+  , verdictTag
     -- * Strict forward chaining
   , forwardChain
   , forwardChainFuel
@@ -402,6 +403,18 @@ statusOfVerdict verdict = case verdict of
   NotEntailed _ -> StatusAbstain
   DefeatedBy _ _ -> StatusAbstain
   Conflict _ _ -> StatusAbstain
+
+-- | Stable machine-readable tag for a verdict (cutover Stage 1a:
+-- the trace stores tags, keeping 'QxFx0.Types' contract-only).
+verdictTag :: Verdict -> Text
+verdictTag verdict = case verdict of
+  Entails _ -> "Entails"
+  Refuted _ -> "Refuted"
+  NotEntailed OpenWorldMissingFacts -> "NotEntailed:OpenWorldMissingFacts"
+  NotEntailed (FuelExhausted _) -> "NotEntailed:FuelExhausted"
+  NotEntailed UnsupportedPredicate -> "NotEntailed:UnsupportedPredicate"
+  DefeatedBy _ _ -> "DefeatedBy"
+  Conflict _ _ -> "Conflict"
 
 -- | Pure render contract per status (Batch B, shadow-only: no
 -- callers by law). RU templates; the Abstain surface reuses the

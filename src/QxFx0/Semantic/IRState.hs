@@ -41,7 +41,7 @@ module QxFx0.Semantic.IRState
   ) where
 
 import Data.Aeson (FromJSON(..), FromJSONKey, ToJSON, ToJSONKey)
-import qualified Data.Aeson as Aeson
+import Control.DeepSeq (NFData)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Text (Text)
@@ -54,6 +54,7 @@ import QxFx0.Semantic.IR
   , freeVariables
   , parseProposition
   )
+import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..))
 import QxFx0.Semantic.IREval
   ( Subst(..)
   , applySubst
@@ -208,32 +209,8 @@ lineageOf st t p =
   where
     fluentsAtRecords s tm = maybe [] id (M.lookup tm (unFluentState s))
 
--- ---------------------------------------------------------------------------
--- Ownership contract library (Batch E): file rows plus pure
--- converters. Times stay scenario-bound (tests assign them).
--- ---------------------------------------------------------------------------
-
--- | One ownership-library row: an event template or a strict rule.
-data FileOwnershipRow = FileOwnershipRow
-  { foId :: !Text
-  , foKind :: !Text
-  , foPreconditions :: ![Text]
-  , foWithdraws :: ![Text]
-  , foAsserts :: ![Text]
-  , foPremises :: ![Text]
-  , foConclusion :: !(Maybe Text)
-  } deriving stock (Eq, Show, Generic)
-    deriving anyclass (ToJSON)
-
-instance FromJSON FileOwnershipRow where
-  parseJSON = Aeson.withObject "FileOwnershipRow" $ \o -> FileOwnershipRow
-    <$> o Aeson..: "id"
-    <*> o Aeson..: "kind"
-    <*> o Aeson..:? "preconditions" Aeson..!= []
-    <*> o Aeson..:? "withdraws" Aeson..!= []
-    <*> o Aeson..:? "asserts" Aeson..!= []
-    <*> o Aeson..:? "premises" Aeson..!= []
-    <*> o Aeson..:? "conclusion"
+-- Ownership file-row type lives in QxFx0.Types.Semantic.Ownership
+-- (contracts-only, per the Types-layer invariant); converters below.
 
 -- | Convert a file event template into an 'EventSpec' advancing to
 -- the given time under the given environment (variable bindings,

@@ -3431,3 +3431,79 @@ beyond 24 verbs.
   Cutover ADR is now writable (bounded domain, shadow-first
   comparison, explicit abstain doctrine). No runtime wiring
   in this landing.
+
+---
+
+# Cutover Stage 1: shadow-compare wiring — pre-registration (2026-10-07, ADR-0055)
+
+- **Scope (locked)**: compute-only wiring, zero surface
+  change. New pure module `QxFx0.Semantic.Ownership.Detect`
+  (micro-grammar: 7 events over explicit mentions; pronouns
+  and bare roles close the gate). New sub-record
+  `trcOwnershipCompare :: Maybe OwnershipCompareTrace`
+  (gate verdict + reason, detected events, verdicts, lineage
+  refs; backward-compat Nothing; sub-record discipline).
+  Computation in Finalize (ss+ti available); surfaces,
+  plans, commitments, stances untouched.
+- **Entity rule**: mentions resolve via morphology
+  nominative; unresolvable → gate closed (abstain, logged).
+  No guessing, no defaults.
+- **Bar**: unit pins — all 7 detectors fire/decline,
+  pronoun/bare-role closure, entity resolution,
+  compare-record JSON round-trip; live — fixed gate battery
+  (Batch E demo + all contrasts + 3 corrections +
+  5 out-of-domain controls): gate fires exactly where
+  specified, abstains elsewhere; IDENTICAL 15-turn battery
+  re-run pre/post wiring diffed byte-identical surfaces
+  (any delta triaged before landing); zero new failures in
+  unit/fast/core; slow per discipline (live surfaces
+  touched, even read-only — the binary changes).
+- **Out of scope**: gated surfaces (Stage 2); runtime reads
+  of verdicts (trace only); definitional path (untouched);
+  cutover exit decision (after review).
+
+---
+
+# Cutover Stage 1 scope amendment (2026-10-07, before wiring)
+
+- **Finding**: multi-turn histories (return, corrections,
+  revision) need a session-scoped fluent journal — new
+  persisted `SystemState` field with JSON + migration.
+  That is state surgery, not compute-only wiring.
+- **Split (locked)**: Stage 1a (this landing) = single-turn
+  event application + verdicts (give/lend/take/show/steal
+  with presupposed seed) + gate battery of single turns +
+  out-of-domain controls. Stage 1b (separate pre-reg) =
+  session journal + multi-turn (return/correction/revision)
+  + the Batch E demo path live.
+- **Bar unchanged otherwise** (pre-reg above), battery
+  adjusted: 5 seedable events + 5 controls (no multi-turn
+  claims in 1a).
+
+---
+
+# Cutover Stage 1a: shadow-compare wiring — landed (2026-10-08)
+
+- **What** (pre-registered + one amendment): pure detectors
+  (`Ownership.Detect`, 7 events, exactly-one-match +
+  pronoun + parties discipline, canonical-order roles
+  documented); `ssOwnershipLibrary` loaded at bootstrap
+  (empty on failure; persisted backward-compat);
+  `buildOwnershipCompare` in Prepare (trace-only;
+  per-event party mapping take/steal swap; presupposed
+  seed; borrower-rule verdict; lineage refs) carried
+  `PrepareStatic` → `TurnInput` → `trcOwnershipCompare`
+  sub-record (M6.1 respected).
+- **Corrections en route**: (1) single-turn scope only —
+  multi-turn needs the session journal (Stage 1b);
+  (2) bootstrap path resolution (CWD-first, not bare
+  `getDataFileName`); (3) seed role shapes must mirror
+  library roles (arity mismatch found by live probe);
+  (4) REAL regression caught by fast/core: derived-ToJSON
+  wrote `foId` while manual FromJSON read `id` — session
+  restore broke (14 fast errors + 6 core failures);
+  manual ToJSON with file-schema keys + round-trip pin.
+- **Measured**: gate battery 10/10 (5 fires with correct
+  verdicts incl. live Refuted on lend, 5 abstains);
+  10-turn surfaces byte-identical pre/post wiring.
+- **Verification**: unit 1725, fast 1831, core 1201 green.

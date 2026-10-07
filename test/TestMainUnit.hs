@@ -26,6 +26,7 @@ import Test.Suite.ReplayGate (replayGateTests)
 import Test.Suite.ReplayDeterminism (replayDeterminismTests)
 import Test.Suite.AdmissionEquivalence (admissionEquivalenceTests)
 import Test.Suite.TraceSchema (traceSchemaTests)
+import Test.Suite.OwnershipDetect (ownershipDetectTests)
 import Test.Suite.RegenerableDerived (regenerableDerivedTests)
 import Test.Suite.PromotionFlagDiscipline (promotionFlagDisciplineTests)
 import Test.Suite.SelfSalience (selfSalienceTests)
@@ -107,6 +108,7 @@ main = do
          ++ selfSalienceTests
            ++ selfDeliberationTests
            ++ traceSchemaTests
+           ++ ownershipDetectTests
            ++ regenerableDerivedTests
            ++ promotionFlagDisciplineTests
             ++ selfEssenceTests

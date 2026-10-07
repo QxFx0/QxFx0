@@ -7,6 +7,7 @@ module QxFx0.Types.TurnProjection
   ( ParserStatus(..)
   , TurnReplayTrace(..)
   , UserRegimeTrace(..)
+  , OwnershipCompareTrace(..)
   , ReplayTraceEnvelope(..)
   , currentReplayTraceEnvelopeVersion
   , encodePersistedReplayTrace
@@ -40,6 +41,7 @@ import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import QxFx0.Types.Domain.User (IdentityClaimRef)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Types.Self.Conatus (ConatusEnergy)
+
 import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.Self.Essence (EssenceResetEvent)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
@@ -507,6 +509,13 @@ data TurnReplayTrace = TurnReplayTrace
      --   contour, ontological directedness, the computed move, and
      --   the frozen encoder version.  Always populated on new turns;
      --   @Nothing@ on traces recorded before the regime landed.
+  , trcOwnershipCompare :: !(Maybe OwnershipCompareTrace)
+    -- ^ Cutover Stage 1a (ADR-0055): shadow-compare record for the
+    --   ownership microworld — gate verdict plus reason, detected
+    --   events, evaluation verdicts, lineage references.
+    --   'Nothing' when the gate did not fire or on traces
+    --   recorded before Stage 1a. Sub-record discipline:
+    --   future cutover fields grow this record, not the top level.
    } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 
@@ -530,6 +539,26 @@ data UserRegimeTrace = UserRegimeTrace
     -- ^ The frozen user-R5 encoder version ('r5EncoderVersion'),
     --   machine-visible per-model (global math version is
     --   'trcRegimeVersion').
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | Cutover Stage 1a (ADR-0055) shadow-compare record for one turn
+-- (see 'trcOwnershipCompare'). Verdicts reference Batch A types;
+-- lineage references are event ids plus support tags.
+data OwnershipCompareTrace = OwnershipCompareTrace
+  { octGateFired :: !Bool
+  , octGateReason :: !Text
+  , octEventId :: !(Maybe Text)
+  , octAgent :: !(Maybe Text)
+  , octRecipient :: !(Maybe Text)
+  , octObject :: !(Maybe Text)
+  , octVerdict :: !(Maybe Text)
+    -- ^ Batch A verdict rendered as a tag ('Entails',
+    --   'Refuted', 'NotEntailed:OpenWorldMissingFacts', ...).
+    --   Text (not the 'Verdict' type) keeps 'QxFx0.Types'
+    --   contract-only per the architecture invariant: verdict
+    --   logic lives in 'QxFx0.Semantic.IREval'.
+  , octLineage :: ![Text]
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -757,6 +786,7 @@ instance FromJSON TurnReplayTrace where
        <*> pure assemblyCandidates
        <*> o .:? "trcResponsePlan"
        <*> o .:? "trcUserRegime"
+       <*> o .:? "trcOwnershipCompare"
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

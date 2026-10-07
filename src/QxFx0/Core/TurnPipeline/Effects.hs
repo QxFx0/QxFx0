@@ -52,6 +52,33 @@ import QxFx0.Semantic.Intent.Classifier
   ( resolveCarryTopic
   , semanticIntentForRender
   )
+import QxFx0.Semantic.Ownership.Detect
+  ( OwnershipDetection(..)
+  , detectOwnershipEvent
+  , isMentionEntity
+  )
+import QxFx0.Semantic.IR
+  ( ConceptId(..)
+  , EntityId(..)
+  , PredicateId(..)
+  , Proposition(..)
+  , RoleBinding(..)
+  , Term(..)
+  , VarId(..)
+  )
+import QxFx0.Semantic.IREval (StrictRule(..), entailmentVerdict, verdictTag)
+import QxFx0.Semantic.IRState
+  ( EventSpec(..)
+  , FileOwnershipRow(..)
+  , FluentSupport(..)
+  , TimeStep(..)
+  , fluentsAt
+  , foldHistory
+  , lineageOf
+  , toEventSpec
+  , toOwnershipRule
+  )
+import QxFx0.Lexicon.Inflection (toNominative)
 import QxFx0.Semantic.SemanticInput (SemanticInput, buildSemanticInputSimple)
 import QxFx0.Policy.Contracts (fallbackWord)
 import QxFx0.Core.StanceClassifier (ConsciousnessNarrative)
@@ -275,6 +302,9 @@ data PrepareStatic = PrepareStatic
     --   admitted interpretation surface after the bounded CTS-02 seam.
   , psConceptToCheck :: !Text
   , psBestTopic :: !Text
+  , psOwnershipCompare :: !(Maybe OwnershipCompareTrace)
+    -- ^ Cutover Stage 1a (ADR-0055): shadow-compare record,
+    --   computed once per turn. Trace-only downstream.
   , psResonance :: !Double
   , psAtomLoad :: !Double
   , psConatusEnergy :: !ConatusEnergy
@@ -404,6 +434,96 @@ data PrepareEffectPlan = PrepareEffectPlan
   , pepApiHealthRequest :: !PrepareEffectRequest
   } deriving stock (Eq, Show)
 
+-- | Cutover Stage 1a (ADR-0055) shadow-compare computation.
+-- Total and trace-only: returns 'Nothing' when the gate is closed
+-- (no record — see 'trcOwnershipCompare'), otherwise the compare
+-- record with the gate reason, detected mentions, the ownership
+-- verdict over the single-turn history, and lineage references.
+-- Per-event party mapping: take/steal bind ?a to the holder
+-- mention (second position); all others bind ?a to the agent
+-- mention (first position). Canonical order assumed (documented
+-- in 'QxFx0.Semantic.Ownership.Detect').
+buildOwnershipCompare :: SystemState -> Text -> Maybe OwnershipCompareTrace
+buildOwnershipCompare ss input =
+  case detectOwnershipEvent input of
+    (Nothing, _) -> Nothing
+    (Just det, _) -> Just (runDetection det)
+  where
+    morph = ssMorphology ss
+    lib = ssOwnershipLibrary ss
+    runDetection det =
+      let eid = odEventId det
+      in case M.lookup eid lib of
+        Nothing -> firedRecord det "event-unknown-to-library" Nothing []
+        Just row -> case toEventSpec row (TimeStep "t1") (envFor eid det) of
+          Left err -> firedRecord det ("event-compute-failed:" <> T.pack (take 80 err)) Nothing []
+          Right ev ->
+            let borrowerRules = [ StrictRule (foId r) pre concl
+                                | r <- M.elems lib
+                                , foKind r == "strict"
+                                , Right (_, pre, concl) <- [toOwnershipRule r] ]
+                seed = seedFor det
+            in case foldHistory (TimeStep "t0") seed [ev] of
+              Left err -> firedRecord det ("event-compute-failed:" <> T.pack (take 80 err)) Nothing []
+              Right (st, _) ->
+                let fluents = fluentsAt st (TimeStep "t1")
+                    query = ownershipQuery det
+                    verdict = verdictTag (entailmentVerdict 32 borrowerRules fluents query)
+                    lineage =
+                      [ renderSupport p s
+                      | p <- fluents
+                      , Just s <- [lineageOf st (TimeStep "t1") p] ]
+                in firedRecord det ("event-matched:" <> eid) (Just verdict) lineage
+    firedRecord det reason verdict lineage = OwnershipCompareTrace
+      { octGateFired = True
+      , octGateReason = reason
+      , octEventId = Just (odEventId det)
+      , octAgent = Just (odAgent det)
+      , octRecipient = Just (odRecipient det)
+      , octObject = Just (odObject det)
+      , octVerdict = verdict
+      , octLineage = lineage
+      }
+    mentionTerm mention =
+      let lemma = toNominative morph mention
+      in if isMentionEntity mention
+           then Entity (EntityId lemma)
+           else Concept (ConceptId lemma)
+    envFor eid det =
+      let agentT = mentionTerm (odAgent det)
+          recipientT = mentionTerm (odRecipient det)
+          objectT = mentionTerm (odObject det)
+          (holderT, takerT) = if eid `elem` ["take", "steal"]
+                                then (recipientT, agentT)
+                                else (agentT, recipientT)
+      in [ (VarId "?a", holderT)
+         , (VarId "?b", takerT)
+         , (VarId "?x", objectT)
+         ]
+    seedFor det =
+      let party v = case lookup v (envFor (odEventId det) det) of
+            Just t -> t
+            Nothing -> Concept (ConceptId "")
+          aTerm = party (VarId "?a")
+          xTerm = party (VarId "?x")
+      in [ Apply (PredicateId "owns")
+             [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
+         , Apply (PredicateId "holds")
+             [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
+         ]
+    ownershipQuery det =
+      let lookupTerm v = case lookup v (envFor (odEventId det) det) of
+            Just t -> t
+            Nothing -> Concept (ConceptId "")
+      in Apply (PredicateId "owns")
+           [ RoleBinding "agent" (lookupTerm (VarId "?b"))
+           , RoleBinding "theme" (lookupTerm (VarId "?x"))
+           ]
+    renderSupport _ SupportInitial = "initial"
+    renderSupport _ (SupportAsserted eid) = "asserted:" <> eid
+    renderSupport _ (SupportPersisted eid t) =
+      "persisted:" <> eid <> "@" <> unTimeStep t
+
 buildPrepareEffectPlan :: Bool -> SystemState -> Text -> UTCTime -> PrepareEffectPlan
 buildPrepareEffectPlan repairDisabled ss input currentTime =
   let rawPhraseDecisions = collectRawLexicalClusterPhraseDecisions input (ssClusters ss)
@@ -470,6 +590,10 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         (ssMorphology ss)
       linkFocus = firstNonEmpty [ipfFocusNominative frame, ipfFocusEntity frame, focusCandidateOrEmpty atomFocus]
       focus = resolveCarryTopic linkFocus prepareIntent (ssLastTopic ss)
+      -- Cutover Stage 1a (ADR-0055, pre-registered 2026-10-07):
+      -- shadow-compare computation. Trace-only: bestTopic, plans,
+      -- surfaces, commitments and stances are untouched below.
+      ownershipCompare = buildOwnershipCompare ss input
       bestTopic = if T.null focus then ssLastTopic ss else focus
       resonance = atCurrentLoad newTrace
       atomLoad = asLoad atomSet
@@ -638,6 +762,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         , psFrame = admittedFrame
         , psConceptToCheck = conceptToCheck
         , psBestTopic = bestTopic
+        , psOwnershipCompare = ownershipCompare
         , psResonance = resonance
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy

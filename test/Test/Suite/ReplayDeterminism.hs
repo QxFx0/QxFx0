@@ -215,6 +215,7 @@ minimalReplayTrace apiHealthy =
           , trcAssemblyCandidates = []
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
+          , trcOwnershipCompare = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.
