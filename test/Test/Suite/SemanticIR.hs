@@ -27,6 +27,17 @@ import QxFx0.Semantic.IRCompose
   , expandComposition
   , expansionConflicts
   )
+import QxFx0.Semantic.IRState
+  ( TimeStep(..)
+  , FluentSupport(..)
+  , EventSpec(..)
+  , applyEvent
+  , emptyState
+  , fluentsAt
+  , foldHistory
+  , lineageOf
+  , reviseHistory
+  )
 
 semanticIRTests :: [Test]
 semanticIRTests =
@@ -91,7 +102,7 @@ semanticIRTests =
       let pairs = M.fromListWith (++) [(p, [goldSexpr r]) | r <- rows, Just p <- [goldPair r]]
       mapM_ (\(p, sexprs) -> assertBool ("pair shares IR: " <> T.unpack p)
                (all (== head sexprs) sexprs)) (M.toList pairs)
-  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests ++ compositionTests
+  ] ++ stage1Batch1Tests ++ evalTests ++ splitIntegrityTests ++ scenarioTests ++ clusterGoldTests ++ exitHarnessTests ++ scenarioExpectationTests ++ stage1Batch2Tests ++ compositionTests ++ stateEngineTests
 
 data GoldRow = GoldRow
   { goldId :: !T.Text
@@ -630,6 +641,75 @@ compositionTests =
         Left err -> assertFailure ("must expand: " <> err)
         Right rules -> assertBool "conflict surfaces"
           (isJust (expansionConflicts rules))
+  ]
+
+-- ---------------------------------------------------------------------------
+-- Stage-1 Batch D (ADR-0054): generic state-transition engine.
+-- Abstract fluents/events; domain contracts wait for Batch E.
+-- ---------------------------------------------------------------------------
+
+stateEngineTests :: [Test]
+stateEngineTests =
+  [ TestLabel "apply asserts and withdraws" $ TestCase $ do
+      holds <- parseSexprOrFail "t" "(Apply holds ((theme (Concept oath))))"
+      kept <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      gone <- parseSexprOrFail "t" "(Apply gone ((theme (Concept oath))))"
+      let ev = EventSpec "e1" [holds] [gone] [kept] (TimeStep "t1")
+      st <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [holds, gone] [ev] >>= \(st, _) -> pure st)
+      assertBool "asserted present" (kept `elem` fluentsAt st (TimeStep "t1"))
+      assertBool "withdrawn absent" (gone `notElem` fluentsAt st (TimeStep "t1"))
+      assertBool "unrelated persists" (holds `elem` fluentsAt st (TimeStep "t1"))
+      assertEqual "support recorded"
+        (Just (SupportAsserted "e1")) (lineageOf st (TimeStep "t1") kept)
+      assertEqual "persistence recorded"
+        (Just (SupportPersisted "e1" (TimeStep "t0"))) (lineageOf st (TimeStep "t1") holds)
+  , TestLabel "precondition violation rejects" $ TestCase $ do
+      holds <- parseSexprOrFail "t" "(Apply holds ((theme (Concept oath))))"
+      missing <- parseSexprOrFail "t" "(Apply missing ((theme (Concept oath))))"
+      kept <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      let ev = EventSpec "e1" [missing] [] [kept] (TimeStep "t1")
+      case foldHistory (TimeStep "t0") [holds] [ev] of
+        Left _ -> pure ()
+        Right _ -> assertFailure "violated precondition must reject"
+  , TestLabel "contradiction revises state" $ TestCase $ do
+      p <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      let ev = EventSpec "e1" [] [] [Not p] (TimeStep "t1")
+      st <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [p] [ev] >>= \(st, _) -> pure st)
+      assertBool "contradicted fluent leaves" (p `notElem` fluentsAt st (TimeStep "t1"))
+      assertBool "negation arrives" (Not p `elem` fluentsAt st (TimeStep "t1"))
+  , TestLabel "revision recomputes dependents only" $ TestCase $ do
+      holds <- parseSexprOrFail "t" "(Apply holds ((theme (Concept oath))))"
+      kept <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      dropped <- parseSexprOrFail "t" "(Apply dropped ((theme (Concept oath))))"
+      other <- parseSexprOrFail "t" "(Apply other ((theme (Concept artifact))))"
+      let ev1 = EventSpec "e1" [holds] [] [kept] (TimeStep "t1")
+          ev2 = EventSpec "e2" [kept] [] [dropped] (TimeStep "t2")
+          ev2alt = EventSpec "e2" [kept] [] [other] (TimeStep "t2")
+      (st, times) <- either assertFailure pure
+        (foldHistory (TimeStep "t0") [holds] [ev1, ev2])
+      assertEqual "times advance" [TimeStep "t0", TimeStep "t1", TimeStep "t2"] times
+      assertBool "dependent present" (dropped `elem` fluentsAt st (TimeStep "t2"))
+      (st2, _) <- either assertFailure pure
+        (reviseHistory (TimeStep "t0") [holds] [ev1, ev2] "e2" ev2alt)
+      assertBool "dependent recomputed" (dropped `notElem` fluentsAt st2 (TimeStep "t2"))
+      assertBool "replacement present" (other `elem` fluentsAt st2 (TimeStep "t2"))
+      assertBool "independent persists" (holds `elem` fluentsAt st2 (TimeStep "t2"))
+      assertBool "t1 byte-identical"
+        (fluentsAt st (TimeStep "t1") == fluentsAt st2 (TimeStep "t1"))
+  , TestLabel "unknown event revision fails" $ TestCase $ do
+      holds <- parseSexprOrFail "t" "(Apply holds ((theme (Concept oath))))"
+      kept <- parseSexprOrFail "t" "(Apply kept ((theme (Concept oath))))"
+      let ev = EventSpec "e1" [holds] [] [kept] (TimeStep "t1")
+      case reviseHistory (TimeStep "t0") [holds] [ev] "nope" ev of
+        Left _ -> pure ()
+        Right _ -> assertFailure "unknown event must fail"
+  , TestLabel "state types serialize to JSON" $ TestCase $ do
+      assertEqual "timestep round trip"
+        (Just (TimeStep "t0")) (Aeson.decode (Aeson.encode (TimeStep "t0")))
+      assertEqual "support round trip"
+        (Just (SupportAsserted "e1")) (Aeson.decode (Aeson.encode (SupportAsserted "e1")))
   ]
 
 -- ---------------------------------------------------------------------------

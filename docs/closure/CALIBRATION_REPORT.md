@@ -3276,3 +3276,55 @@ beyond 24 verbs.
 - **Measured**: exit aggregates unchanged (17/17, 12/12, 6/6,
   6/6, 40/40 — no exit-data changes).
 - **Verification**: unit 1703, fast 1831, core 1201 green.
+
+---
+
+# Stage-1 Batch D: generic state-transition engine — pre-registration (2026-10-07)
+
+- **Gap**: shadow Stage-1 evaluates timeless rule bases; no
+  notion of state, change, persistence, or derivation
+  lineage. Batch C composes rules; nothing applies events
+  over time.
+- **Rule (locked)**: new shadow module
+  `QxFx0.Semantic.IRState` (no pipeline callers).
+  Event-sourced design (state = fold over events, so
+  correction = replace event + refold — no incremental TMS):
+  - `FluentState`: time-indexed fluent sets (`AtTime`-tagged
+    propositions; times are opaque ordered labels).
+  - `EventSpec`: id, preconditions (checked against
+    pre-state, `Left` on violation), withdraws, asserts,
+    time advance.
+  - Frame axiom: fluents persist across events unless
+    withdrawn or contradicted (structural negation).
+  - Lineage: every derived fluent carries its support
+    (event id + kind: asserted/persisted/derived) —
+    the Explain substrate (Batch A proofs + this lineage =
+    full dependency objects).
+  - `reviseHistory`: replace one event, refold; dependent
+    fluents recomputed, independent ones byte-identical
+    (pinned).
+  - Domain contracts as DATA wait for Batch E; Batch D pins
+    use abstract fluents/events (holds/owes style).
+- **Bar**: unit pins — apply/withdraw/persist/contradict,
+  precondition violation, lineage query (why does F hold at
+  t2), revision by replacement (dependents change,
+  independents identical), time advance; JSON round-trips;
+  exit aggregates unchanged; zero new failures in
+  unit/fast/core. Slow NOT warranted (shadow-only).
+- **Out of scope**: ownership domain (Batch E); learning;
+  runtime wiring; cutover.
+
+---
+
+# Stage-1 Batch D: state-transition engine — landed (2026-10-07)
+
+- **What** (pre-registered above): new shadow module
+  `QxFx0.Semantic.IRState` — event-sourced histories
+  (fold over events; correction = replace + refold),
+  frame axiom with structural-contradiction revision,
+  per-fluent support lineage (Explain substrate alongside
+  Batch A proofs), time advance, JSON instances.
+- **Corrections en route**: `Map TimeStep` JSON keys needed
+  `ToJSONKey`/`FromJSONKey` newtype-deriving (caught by
+  build). Domain data stays out (Batch E).
+- **Verification**: unit 1709, fast 1831, core 1201 green.
