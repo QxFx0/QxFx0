@@ -3608,3 +3608,22 @@ beyond 24 verbs.
   expires — a much-later ownership turn inherits ancient
   history. Scoping/expiry is Stage 2 or later work.
 - **Verification**: unit 1729, fast 1831, core 1201 green.
+
+---
+
+# Shadow-compare review for Stage 2 (ADR-0055, 2026-10-08)
+
+- **Battery**: 10-turn gate battery + 2 multi-turn sessions
+  (lend→return, lend→correction), re-run live on HEAD.
+- **Attribution**: legacy surfaces on gated inputs are
+  mirror holds asserting NOTHING about ownership relations;
+  IR verdicts (Entails on give, Refuted on lend, OpenWorld
+  post-return, Entails post-correction) answer questions
+  legacy never asks. ZERO contradictions found.
+- **One expositional divergence (out of gate)**: душ renders
+  душа-compositional content (hypothesis-marked, governed
+  neighbor composition — designed uncovered behavior).
+  No ownership verb fires there; Stage 2 would not engage;
+  recorded, not blocking.
+- **Review verdict**: zero unattributed divergence. Stage 2
+  (gated surfaces) may proceed to pre-registration.
