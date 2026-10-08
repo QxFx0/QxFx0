@@ -85,12 +85,22 @@ accusativeForm md w =
   case resolveCandidateAccusative md w of
     Just form -> form
     Nothing ->
-      let gender = guessGender w
+      let lower = T.toLower w
+          gender = guessGender w
           animacy = guessAnimacy w
-      in case (gender, animacy) of
-            (Masculine, Inanimate) -> w
-            (Neuter, _) -> w
-            _ -> genitiveForm md w
+      -- Feminine a/я-stems in nominative position take у/ю
+      -- (книга→книгу). The nominative gate keeps already-oblique
+      -- forms intact (человека stays человека): inflect only what
+      -- the nominative map returns unchanged. Fixed 2026-10-08
+      -- (Stage 2 verbalizer exposed it).
+      in if gender == Feminine
+            && (T.isSuffixOf "а" lower || T.isSuffixOf "я" lower)
+            && toNominative md w == w
+           then T.dropEnd 1 w <> (if T.isSuffixOf "я" lower then "ю" else "у")
+           else case (gender, animacy) of
+                  (Masculine, Inanimate) -> w
+                  (Neuter, _) -> w
+                  _ -> genitiveForm md w
 
 resolveCandidateAccusative :: MorphologyData -> Text -> Maybe Text
 resolveCandidateAccusative md surface =

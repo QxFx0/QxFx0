@@ -3627,3 +3627,52 @@ beyond 24 verbs.
   recorded, not blocking.
 - **Review verdict**: zero unattributed divergence. Stage 2
   (gated surfaces) may proceed to pre-registration.
+
+---
+
+# Cutover Stage 2: gated surfaces — pre-registration (2026-10-08, ADR-0055)
+
+- **Scope (locked)**: on gated turns with successful IR
+  computation, the base content surface renders from derived
+  fluents through operator-approved RU templates (below);
+  crisis/anomaly/recovery surfaces keep precedence; all
+  tails/suffixes preserved. Compute-failed or unfired gate
+  → legacy surface (abstain-first). EN inputs never fire
+  (detectors are RU) → legacy by construction.
+- **Rule**: new pure `renderOwnershipSurface` (Route/Render,
+  status via Batch B mapping over the trace verdict tag):
+  fluent verbalization with morphology case forms
+  (genitive/dative/accusative from paradigms); no new claims
+  beyond derived fluents (leak ban); operator wordings
+  verbatim (approved next).
+- **Bar**: unit pins — verbalizer per event (7) + status
+  routing + fallback preservation; live — fixed 10-turn
+  battery renders the approved surfaces verbatim, correction
+  and multi-turn included, controls/crisis/spec unchanged;
+  trace carries status; zero new failures in unit/fast/core;
+  slow (surfaces change by design).
+- **Out of scope**: EN templates; journal expiry; case-based
+  roles; learning; domain widening (follow-up ADR).
+
+---
+
+# Cutover Stage 2: gated surfaces — landed (2026-10-08, ADR-0055)
+
+- **What** (pre-registered above): `renderOwnershipSurface`
+  (Route/Render) replaces the base content body on gated
+  turns with successful computation; crisis/anomaly keep
+  precedence; recovery tails, knowledge fragments and rescue
+  suffixes preserved; compute-failed/unfired keeps legacy.
+  EN inputs never fire (detectors RU-only).
+- **Corrections en route**: (1) proper-name capitalization
+  in every position (mention decides, never the lemma);
+  (2) feminine accusative heuristic was wrong
+  (книга→книги) — gated on nominative position, with pin;
+  (3) return-right belongs to the holder-mapping class
+  (template uses recipient dative);
+  (4) `octCorrectedFrom` field added for the correction
+  special surface.
+- **Measured**: all 7 approved surfaces + correction
+  special + return verbatim live (modulo standard degraded
+  tails); controls/crisis/speculative unchanged.
+- **Verification**: unit 1733, fast 1832, core 1202 green.

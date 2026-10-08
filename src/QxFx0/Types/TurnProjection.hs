@@ -560,6 +560,9 @@ data OwnershipCompareTrace = OwnershipCompareTrace
     --   logic lives in 'QxFx0.Semantic.IREval'.
   , octHistoryDepth :: !(Maybe Int)
   , octCorrected :: !(Maybe Bool)
+  , octCorrectedFrom :: !(Maybe Text)
+    -- ^ Cutover Stage 2: the replaced event on correction turns
+    -- (for the correction-specific surface).
     -- ^ Cutover Stage 1b: journal depth after this turn and
     --   whether a correction rewrote the last entry. Sub-record
     --   discipline: old readers ignore them.

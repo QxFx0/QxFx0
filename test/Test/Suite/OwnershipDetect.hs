@@ -17,6 +17,20 @@ import Data.Aeson (encode, decode)
 import QxFx0.Semantic.Ownership.Detect
 import QxFx0.Types.TurnProjection (OwnershipCompareTrace(..))
 import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..), OwnershipJournalEntry(..))
+import QxFx0.Types.Domain.Atoms
+  ( MorphologyData(..)
+  , LexemeForm(..)
+  , LexemeCase(..)
+  , LexemeNumber(..)
+  , SourceTier(..)
+  )
+import QxFx0.Types.Lexicon.RuntimeParadigms
+  ( RuntimeParadigms(..)
+  , ParadigmEntry(..)
+  , PartOfSpeech(..)
+  )
+import QxFx0.Core.TurnPipeline.Route.Render (renderOwnershipSurface)
+import qualified Data.Map.Strict as M
 import QxFx0.Semantic.IR
   ( ConceptId(..)
   , EntityId(..)
@@ -105,6 +119,7 @@ ownershipDetectTests =
             , octLineage = ["asserted:lend"]
             , octHistoryDepth = Just 1
             , octCorrected = Just False
+            , octCorrectedFrom = Nothing
             }
       assertEqual "json round trip" (Just rec)
         (decode (encode rec) :: Maybe OwnershipCompareTrace)
@@ -139,6 +154,7 @@ ownershipDetectTests =
       assertBool "ownership differs after rewrite"
         (fluentsAt stLend (TimeStep "t1") /= fluentsAt stGive (TimeStep "t1"))
       assertBool "gift transfers" (ownProp agentB objectB `elem` fluentsAt stGive (TimeStep "t1"))
+  , stage2SurfaceTests
   , TestLabel "journal entry JSON round-trips" $ TestCase $ do
       let entry = OwnershipJournalEntry "lend" "Аня" "Боре" "книгу" 3
       assertEqual "entry round trip" (Just entry)
@@ -151,6 +167,123 @@ ownershipDetectTests =
       assertEqual "8 library rows" 8 (length rows)
       mapM_ (\row -> assertEqual ("row round trip: " <> T.unpack (foId row))
                (Just row) (decode (encode row) :: Maybe FileOwnershipRow)) rows
+  ]
+
+-- | Stage 2 verbalizer fixture: hand-built morphology plus gendered
+-- paradigms for the battery names (mirrors production data shapes).
+stage2Morph :: MorphologyData
+stage2Morph = MorphologyData M.empty genMap nomMapBroad fbsMap
+  where
+    nomMap = M.fromList [("аня", "аня"), ("боря", "боря"), ("книга", "книга")]
+    -- Broad reverse index like production 'mdNominative': every
+    -- stored form resolves (oblique forms included).
+    nomMapBroad = nomMap `M.union` M.fromList
+      [("книгу", "книга"), ("боре", "боря"), ("ане", "аня")]
+    genMap = M.fromList [("аня", "ани"), ("боря", "бори"), ("книга", "книги")]
+    mkForm surface lemma cas =
+      LexemeForm surface lemma "noun" cas SingularNumber CuratedTier 1.0
+    fbsMap = M.fromList
+      [ ("аня", [mkForm "аня" "аня" NominativeCase])
+      , ("боря", [mkForm "боря" "боря" NominativeCase])
+      , ("книга", [mkForm "книга" "книга" NominativeCase])
+      , ("ани", [mkForm "ани" "аня" GenitiveCase])
+      , ("бори", [mkForm "бори" "боря" GenitiveCase])
+      , ("книги", [mkForm "книги" "книга" GenitiveCase])
+      , ("ане", [mkForm "ане" "аня" DativeCase])
+      , ("боре", [mkForm "боре" "боря" DativeCase])
+      , ("книге", [mkForm "книге" "книга" DativeCase])
+      , ("аню", [mkForm "аню" "аня" AccusativeCase])
+      , ("борю", [mkForm "борю" "боря" AccusativeCase])
+      , ("книгу", [mkForm "книгу" "книга" AccusativeCase])
+      ]
+
+stage2Paradigms :: RuntimeParadigms
+stage2Paradigms = RuntimeParadigms
+  (M.fromList
+    [ ("аня", ParadigmEntry PosNoun (Just "femn") Nothing Nothing Nothing M.empty)
+    , ("боря", ParadigmEntry PosNoun (Just "masc") Nothing Nothing Nothing M.empty)
+    , ("книга", ParadigmEntry PosNoun (Just "femn") Nothing Nothing Nothing M.empty)
+    ])
+  M.empty
+
+-- | Stage 2 surface pins (operator-approved wordings verbatim).
+stage2SurfaceTests :: Test
+stage2SurfaceTests = TestLabel "stage2 surfaces" $ TestList
+  [ TestCase $ do
+      putStrLn "stage2 verbalizer renders approved surfaces"
+      let cmp eid agent recipient object = OwnershipCompareTrace
+      let cmp eid agent recipient object = OwnershipCompareTrace
+            { octGateFired = True
+            , octGateReason = "event-matched:" <> eid
+            , octEventId = Just eid
+            , octAgent = Just agent
+            , octRecipient = Just recipient
+            , octObject = Just object
+            , octVerdict = Just "Entails"
+            , octLineage = []
+            , octHistoryDepth = Just 1
+            , octCorrected = Just False
+            , octCorrectedFrom = Nothing
+            }
+          render eid agent recipient object =
+            renderOwnershipSurface stage2Morph stage2Paradigms
+              (cmp eid agent recipient object)
+      assertEqual "lend"
+        (Just "Понял: Аня одолжила книгу Боре. Книга теперь у Бори, вернуть её Боря должен Ане.")
+        (render "lend" "Аня" "Боре" "книгу")
+      assertEqual "give"
+        (Just "Понял: Аня подарила книгу Боре. Книга теперь принадлежит Боре.")
+        (render "give" "Аня" "Боре" "книгу")
+      assertEqual "take"
+        (Just "Понял: Боря взял книгу у Ани. Книга теперь у Бори.")
+        (render "take" "Боря" "Ани" "книгу")
+      assertEqual "steal"
+        (Just "Понял: Боря украл книгу у Ани. Книга теперь у Бори.")
+        (render "steal" "Боря" "Ани" "книгу")
+      assertEqual "show"
+        (Just "Понял: Аня показала книгу Боре.")
+        (render "show" "Аня" "Боре" "книгу")
+      assertEqual "return"
+        (Just "Понял: Боря вернул книгу Ане. Книга снова у Ани, обязательств не осталось.")
+        (render "return" "Боря" "Ане" "книгу")
+      assertEqual "return-right"
+        (Just "Понял: право на книгу возвращено Ане.")
+        (render "return-right" "Боря" "Ане" "книгу")
+  , TestCase $ do
+      putStrLn "stage2 correction renders the special surface"
+      let cmp = OwnershipCompareTrace
+            { octGateFired = True
+            , octGateReason = "correction:lend>give"
+            , octEventId = Just "give"
+            , octAgent = Just "Аня"
+            , octRecipient = Just "Боре"
+            , octObject = Just "книгу"
+            , octVerdict = Just "Entails"
+            , octLineage = []
+            , octHistoryDepth = Just 1
+            , octCorrected = Just True
+            , octCorrectedFrom = Just "lend"
+            }
+      assertEqual "correction special"
+        (Just "Понял: это был подарок, не одалживание. Книга принадлежит Боре.")
+        (renderOwnershipSurface stage2Morph stage2Paradigms cmp)
+  , TestCase $ do
+      putStrLn "stage2 failed computation keeps legacy"
+      let cmp = OwnershipCompareTrace
+            { octGateFired = True
+            , octGateReason = "event-compute-failed:x"
+            , octEventId = Nothing
+            , octAgent = Nothing
+            , octRecipient = Nothing
+            , octObject = Nothing
+            , octVerdict = Nothing
+            , octLineage = []
+            , octHistoryDepth = Just 1
+            , octCorrected = Just False
+            , octCorrectedFrom = Nothing
+            }
+      assertEqual "no verdict means legacy" Nothing
+        (renderOwnershipSurface stage2Morph stage2Paradigms cmp)
   ]
 
 -- | Journal pin helpers.

@@ -45,6 +45,7 @@ lexiconTests =
   , TestLabel "old morphology maps: prepositionalForm uses mdPrepositional first" (TestCase testOldMorphologyPrepositional)
   , TestLabel "candidate fallback: genitiveForm uses mdFormsBySurface" (TestCase testCandidateGenitiveFallback)
   , TestLabel "candidate fallback: accusativeForm inherits genitive fallback" (TestCase testCandidateAccusativeFallback)
+  , TestLabel "accusativeForm inflects feminine a-stems" (TestCase testAccusativeFeminineAStem)
   , TestLabel "JSON backward compatibility: MorphologyData parses without mdFormsBySurface" (TestCase testJsonBackwardCompatibility)
   , TestLabel "canonical artifact: paradigms.json is valid and structured" (TestCase testParadigmsJsonValid)
   , TestLabel "canonical artifact: exceptions.json is valid and structured" (TestCase testExceptionsJsonValid)
@@ -166,6 +167,13 @@ testCandidateGenitiveFallback = do
   let genForm = LexemeForm "человека" "человек" "noun" GenitiveCase SingularNumber AutoVerifiedTier 0.9
       md = MorphologyData Map.empty Map.empty Map.empty (Map.fromList [("человек", [genForm])])
   assertEqual "genitiveForm should use candidate forms when flat map misses" "человека" (genitiveForm md "человек")
+
+testAccusativeFeminineAStem :: Assertion
+testAccusativeFeminineAStem = do
+  let md = MorphologyData Map.empty Map.empty Map.empty Map.empty
+  assertEqual "feminine -а takes -у" "книгу" (accusativeForm md "книга")
+  assertEqual "feminine -я takes -ю" "землю" (accusativeForm md "земля")
+  assertEqual "masculine inanimate identical" "стол" (accusativeForm md "стол")
 
 testCandidateAccusativeFallback :: Assertion
 testCandidateAccusativeFallback = do

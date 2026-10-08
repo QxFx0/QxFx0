@@ -464,7 +464,8 @@ buildOwnershipCompare ss input =
       , old == "" || old == ojeEvent lastEntry ->
         let corrected = init journal
               ++ [lastEntry { ojeEvent = new, ojeTurn = turnNo }]
-        in runJournal corrected True ("correction:" <> old <> ">" <> new)
+            fromEvent = if old == "" then ojeEvent lastEntry else old
+        in runJournal corrected True ("correction:" <> old <> ">" <> new) (Just fromEvent)
     _ -> case detectOwnershipEvent input of
       (Nothing, _) -> (Nothing, journal)
       (Just det, _)
@@ -484,14 +485,14 @@ buildOwnershipCompare ss input =
                 , ojeObject = odObject det
                 , ojeTurn = turnNo
                 }
-          in runJournal (journal ++ [entry]) False ("event-matched:" <> odEventId det)
+          in runJournal (journal ++ [entry]) False ("event-matched:" <> odEventId det) Nothing
   where
     isHistoryDependent det = odEventId det `elem` ["return", "return-right"]
     morph = ssMorphology ss
     lib = ssOwnershipLibrary ss
-    runJournal entries corrected reason =
+    runJournal entries corrected reason fromEvent =
       case refold entries of
-        Left err -> (Just (emptyRecord ("event-compute-failed:" <> T.pack (take 80 err)) entries corrected), entries)
+        Left err -> (Just (emptyRecord ("event-compute-failed:" <> T.pack (take 80 err)) entries corrected fromEvent), entries)
         Right (st, finalTime, query) ->
           let fluents = fluentsAt st finalTime
               verdict = verdictTag (entailmentVerdict 32 (borrowerRules lib) fluents query)
@@ -499,7 +500,7 @@ buildOwnershipCompare ss input =
                 [ renderSupport p sup
                 | p <- fluents
                 , Just sup <- [lineageOf st finalTime p] ]
-          in (Just (fullRecord reason entries corrected (Just verdict) lineage), entries)
+          in (Just (fullRecord reason entries corrected fromEvent (Just verdict) lineage), entries)
     refold entries = do
       firstEntry <- case entries of
         [] -> Left "empty journal"
@@ -513,7 +514,7 @@ buildOwnershipCompare ss input =
           query = queryForEntry morph (last entries)
       (st, _) <- foldHistory (TimeStep "t0") seed evs
       pure (st, finalTime, query)
-    emptyRecord reason entries corrected = OwnershipCompareTrace
+    emptyRecord reason entries corrected fromEvent = OwnershipCompareTrace
       { octGateFired = True
       , octGateReason = reason
       , octEventId = Nothing
@@ -524,8 +525,9 @@ buildOwnershipCompare ss input =
       , octLineage = []
       , octHistoryDepth = Just (length entries)
       , octCorrected = Just corrected
+      , octCorrectedFrom = fromEvent
       }
-    fullRecord reason entries corrected verdict lineage =
+    fullRecord reason entries corrected fromEvent verdict lineage =
       let det = last entries
       in OwnershipCompareTrace
         { octGateFired = True
@@ -538,6 +540,7 @@ buildOwnershipCompare ss input =
         , octLineage = lineage
         , octHistoryDepth = Just (length entries)
         , octCorrected = Just corrected
+        , octCorrectedFrom = fromEvent
         }
     borrowerRules library =
       [ StrictRule (foId r) pre concl
@@ -572,7 +575,7 @@ envForEntry morph entry =
   let agentT = mentionTerm morph (ojeAgent entry)
       recipientT = mentionTerm morph (ojeRecipient entry)
       objectT = mentionTerm morph (ojeObject entry)
-      (holderT, takerT) = if ojeEvent entry `elem` ["take", "steal", "return"]
+      (holderT, takerT) = if ojeEvent entry `elem` ["take", "steal", "return", "return-right"]
                             then (recipientT, agentT)
                             else (agentT, recipientT)
   in [ (VarId "?a", holderT)

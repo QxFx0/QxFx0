@@ -26,6 +26,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   , legacyOverrideAdmissible
   , recoveryTopicText
   , renderLocalRecoverySurface
+  , renderOwnershipSurface
   , emptyHoldFires
   , mentionedCoveredTopics
   ) where
@@ -109,12 +110,15 @@ import QxFx0.Render.Dialogue
   , semanticFrameActivationTopics
   )
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), semanticIntentForRender)
+import QxFx0.Semantic.Ownership.Detect (isMentionEntity)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Frame.Builder (buildFrame)
 import QxFx0.Semantic.DialogAtom (emptyDialogAtoms)
 import QxFx0.Semantic.Content (isCoveredTopic, lookupDefinitionContent, lookupDistinctionContent)
 import QxFx0.Semantic.Analogy (findNearestCoveredTopic)
 import QxFx0.Semantic.Lexicon.RuntimeParadigms (RuntimeParadigms, emptyRuntimeParadigms)
+import QxFx0.Semantic.Lexicon.RuntimeParadigms (lemmaGender)
+import QxFx0.Lexicon.Inflection (toNominative, genitiveForm, dativeForm, accusativeForm)
 import QxFx0.Semantic.Input.Parse (emptyParsedInput)
 import QxFx0.Semantic.Input.Lexicon (inputGeneratedLexiconProvenanceTag)
 import QxFx0.Semantic.ResponsePlan
@@ -948,6 +952,16 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
           _ -> lrpSurface <$> localRecoveryPlan
       knowledgeFragment = maybe "" ("\n[знание] " <>) (rerKnowledgeFact effectResults)
       templateArtifact0 = rsTemplateArtifact renderStatic
+      -- Cutover Stage 2 (ADR-0055, pre-registered 2026-10-08):
+      -- gated IR surface replaces the normal content body only.
+      -- Crisis/anomaly keep precedence above; recovery tails,
+      -- knowledge fragments and rescue suffixes are preserved.
+      -- Compute-failed or unfired gate keeps legacy ('Nothing').
+      contentBody =
+        case tiOwnershipCompare ti of
+          Just cmp -> fromMaybe renderWithBg
+            (renderOwnershipSurface (ssMorphology ss) (ssRuntimeParadigms ss) cmp)
+          Nothing -> renderWithBg
       -- Rescue fires only with real morphology: minimal-morphology
       -- fixtures own their fallback surfaces by design (pinned exact
       -- text), and environmental degradation there is not content
@@ -971,8 +985,8 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
         case (crisisText, anomalyText, localRecoveryText) of
           (Just crisis, _, _) -> crisis
           (Nothing, Just anom, _) -> anom
-          (Nothing, Nothing, Just fb) -> moveLeadText <> renderWithBg <> "\n" <> fb <> knowledgeFragment <> rescueSuffix
-          (Nothing, Nothing, Nothing) -> moveLeadText <> renderWithBg <> knowledgeFragment <> rescueSuffix
+          (Nothing, Nothing, Just fb) -> moveLeadText <> contentBody <> "\n" <> fb <> knowledgeFragment <> rescueSuffix
+          (Nothing, Nothing, Nothing) -> moveLeadText <> contentBody <> knowledgeFragment <> rescueSuffix
       preSafetySurface =
         Guard.GuardSurface
           { Guard.gsRenderedText = preSafetyRendered
@@ -1488,6 +1502,78 @@ renderLocalRecoverySurfaceRuLegacy strategy topicText =
           "Эту тему лучше разворачивать через отдельное исследование; сейчас удержу исходный вопрос: " <> topicText <> "."
         StrategySelfReanchoring ->
           "Я вернусь к собственному устойчивому контуру и не буду усиливать текущее отклонение от него."
+
+-- | Cutover Stage 2 (ADR-0055, pre-registered 2026-10-08):
+-- ownership IR surfaces. Operator-approved RU wordings, templated
+-- over morphology case forms (never hardcoded names); verb and
+-- 'должен' agreement by paradigm gender with a documented
+-- masculine default for unknown lemmas. Returns 'Nothing' when
+-- the computation failed (caller keeps the legacy surface:
+-- abstain-first). EN inputs never fire (detectors are RU).
+renderOwnershipSurface :: MorphologyData -> RuntimeParadigms -> OwnershipCompareTrace -> Maybe Text
+renderOwnershipSurface morph rp cmp = do
+  if not (octGateFired cmp) then Nothing else do
+    _ <- octVerdict cmp
+    eid <- octEventId cmp
+    agent <- octAgent cmp
+    recipient <- octRecipient cmp
+    object <- octObject cmp
+    let aMention = agent
+        bMention = recipient
+        lemma = toNominative morph
+        aNom = capitalize (lemma agent)
+        aLemma = lemma agent
+        bLemma = lemma recipient
+        xLemma = lemma object
+        gen l = genitiveForm morph l
+        dat l = dativeForm morph l
+        acc l = accusativeForm morph l
+        nameNom mention l = nameForm mention (capitalize l)
+        nameGen mention l = nameForm mention (gen l)
+        nameDat mention l = nameForm mention (dat l)
+        fem l = lemmaGender rp l == Just "femn"
+        past m f l = if fem l then f else m
+        dolzhen l = if fem l then "должна" else "должен"
+        xNom = capitalize xLemma
+    pure $ case eid of
+      _ | octCorrected cmp == Just True
+        , octCorrectedFrom cmp == Just "lend"
+        , eid == "give" ->
+          "Понял: это был подарок, не одалживание. "
+            <> xNom <> " принадлежит " <> nameDat bMention bLemma <> "."
+      "lend" ->
+        "Понял: " <> aNom <> " " <> past "одолжил" "одолжила" aLemma
+          <> " " <> acc xLemma <> " " <> nameDat bMention bLemma <> ". "
+          <> xNom <> " теперь у " <> nameGen bMention bLemma <> ", вернуть её "
+          <> nameNom bMention bLemma <> " " <> dolzhen bLemma <> " " <> nameDat aMention aLemma <> "."
+      "give" ->
+        "Понял: " <> aNom <> " " <> past "подарил" "подарила" aLemma
+          <> " " <> acc xLemma <> " " <> nameDat bMention bLemma <> ". "
+          <> xNom <> " теперь принадлежит " <> nameDat bMention bLemma <> "."
+      "take" ->
+        "Понял: " <> aNom <> " " <> past "взял" "взяла" aLemma
+          <> " " <> acc xLemma <> " у " <> nameGen bMention bLemma <> ". "
+          <> xNom <> " теперь у " <> nameGen aMention aLemma <> "."
+      "steal" ->
+        "Понял: " <> aNom <> " " <> past "украл" "украла" aLemma
+          <> " " <> acc xLemma <> " у " <> nameGen bMention bLemma <> ". "
+          <> xNom <> " теперь у " <> nameGen aMention aLemma <> "."
+      "show" ->
+        "Понял: " <> aNom <> " " <> past "показал" "показала" aLemma
+          <> " " <> acc xLemma <> " " <> nameDat bMention bLemma <> "."
+      "return" ->
+        "Понял: " <> aNom <> " " <> past "вернул" "вернула" aLemma
+          <> " " <> acc xLemma <> " " <> nameDat bMention bLemma <> ". "
+          <> xNom <> " снова у " <> nameGen bMention bLemma <> ", обязательств не осталось."
+      "return-right" ->
+        "Понял: право на " <> acc xLemma <> " возвращено " <> nameDat bMention bLemma <> "."
+      _ -> "Понял."
+  where
+    capitalize t = if T.null t then t else T.toUpper (T.take 1 t) <> T.drop 1 t
+    -- Proper names keep capitals in every position (Russian
+    -- orthography); common nouns keep the input case. The
+    -- mention's own capitalization decides, never the lemma.
+    nameForm mention form = if isMentionEntity mention then capitalize form else form
 
 renderLocalRecoverySurfaceEn :: LocalRecoveryCause -> LocalRecoveryStrategy -> Text -> Text
 renderLocalRecoverySurfaceEn cause strategy topic =
