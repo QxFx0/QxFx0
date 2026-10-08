@@ -67,7 +67,7 @@ import QxFx0.Types.Domain
   , UserState
   )
 import QxFx0.Types.Lexicon.RuntimeParadigms (RuntimeParadigms)
-import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..))
+import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..), OwnershipJournalEntry(..))
 import QxFx0.Types.Bayesian (BeliefState)
 import QxFx0.Types.Dream (DreamState(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport)
@@ -325,6 +325,10 @@ data SystemState = SystemState
     --   rows loaded from @data/semantic_ir/ownership.jsonl@ at
     --   bootstrap (empty when the file is missing). Read by the
     --   shadow-compare computation in Prepare; never rendered.
+  , ssOwnershipJournal :: ![OwnershipJournalEntry]
+    -- ^ Cutover Stage 1b (ADR-0055): session ownership journal
+    --   (event id + explicit mentions + turn, texts only).
+    --   Refolded per turn in Prepare; persisted backward-compat.
   , ssCuratedOverlay :: !(Maybe CuratedOverlayRuntime)
     -- ^ Active promotion overlay provenance, rebuilt from the local promotion
     -- store on bootstrap. It is never persisted as session authority.

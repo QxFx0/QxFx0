@@ -534,6 +534,8 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
            , dsRecentNarrativeSuccess = newNarrativeSuccess
            , dsContext = addUserEntry (dsContext (ssDialogue ss)) (tiBestTopic ti) (ipfRawText (tiFrame ti))
            }
+      -- Cutover Stage 1b: persist the Prepare-computed next journal.
+      , ssOwnershipJournal = tiOwnershipJournalNext ti
       , ssIdentity = (ssIdentity ss)
           { idsEgo = tpNewEgo tp
           , idsOrbitalMemory = tpUpdatedOrbital tp

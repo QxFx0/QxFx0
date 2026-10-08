@@ -3,6 +3,12 @@
 concrete QxFx0LexiconRus of QxFx0Lexicon = {
   lincat Lexeme = { nom : Str ; gen : Str ; prep : Str ; acc : Str ; ins : Str } ;
   lin
+    anya_N = { nom = "аня" ; gen = "ани" ; prep = "ане" ; acc = "аню" ; ins = "аней" } ;
+    borya_N = { nom = "боря" ; gen = "бори" ; prep = "боре" ; acc = "борю" ; ins = "борей" } ;
+    vera_N = { nom = "вера" ; gen = "веры" ; prep = "вере" ; acc = "веру" ; ins = "верой" } ;
+    kolya_N = { nom = "коля" ; gen = "коли" ; prep = "коле" ; acc = "колю" ; ins = "колей" } ;
+    masha_N = { nom = "маша" ; gen = "маши" ; prep = "маше" ; acc = "машу" ; ins = "машей" } ;
+    petya_N = { nom = "петя" ; gen = "пети" ; prep = "пете" ; acc = "петю" ; ins = "петей" } ;
     abazhur_N = { nom = "абажур" ; gen = "абажура" ; prep = "абажуре" ; acc = "абажур" ; ins = "абажуром" } ;
     abaz_N = { nom = "абаз" ; gen = "абаза" ; prep = "абазе" ; acc = "абаз" ; ins = "абазом" } ;
     abak_N = { nom = "абак" ; gen = "абака" ; prep = "абаке" ; acc = "абак" ; ins = "абаком" } ;
@@ -906,7 +912,7 @@ concrete QxFx0LexiconRus of QxFx0Lexicon = {
     venchik_N = { nom = "венчик" ; gen = "венчика" ; prep = "венчике" ; acc = "венчик" ; ins = "венчиком" } ;
     vepr_N = { nom = "вепрь" ; gen = "вепря" ; prep = "вепре" ; acc = "вепря" ; ins = "вепрем" } ;
     veps_N = { nom = "вепс" ; gen = "вепса" ; prep = "вепсе" ; acc = "вепса" ; ins = "вепсом" } ;
-    vera_N = { nom = "вера" ; gen = "веры" ; prep = "вере" ; acc = "веру" ; ins = "верой" } ;
+    vera_Nv2 = { nom = "вера" ; gen = "веры" ; prep = "вере" ; acc = "веру" ; ins = "верой" } ;
     veranda_N = { nom = "веранда" ; gen = "веранды" ; prep = "веранде" ; acc = "веранду" ; ins = "верандой" } ;
     verba_N = { nom = "верба" ; gen = "вербы" ; prep = "вербе" ; acc = "вербу" ; ins = "вербой" } ;
     verv_N = { nom = "вервь" ; gen = "верви" ; prep = "верви" ; acc = "вервь" ; ins = "вервью" } ;

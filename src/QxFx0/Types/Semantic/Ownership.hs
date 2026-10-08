@@ -16,6 +16,7 @@ the reverse.
 -}
 module QxFx0.Types.Semantic.Ownership
   ( FileOwnershipRow(..)
+  , OwnershipJournalEntry(..)
   ) where
 
 import Control.DeepSeq (NFData)
@@ -50,6 +51,19 @@ instance ToJSON FileOwnershipRow where
     , "premises" .= foPremises row
     , "conclusion" .= foConclusion row
     ]
+
+-- | One journal line: a fired ownership event with its explicit
+-- participant mentions plus the turn label. Texts only (never
+-- structures): EventSpecs rebuild deterministically from the
+-- library, so persistence stays trivially versionable.
+data OwnershipJournalEntry = OwnershipJournalEntry
+  { ojeEvent :: !Text
+  , ojeAgent :: !Text
+  , ojeRecipient :: !Text
+  , ojeObject :: !Text
+  , ojeTurn :: !Int
+  } deriving stock (Eq, Show, Generic)
+    deriving anyclass (ToJSON, FromJSON, NFData)
 
 instance FromJSON FileOwnershipRow where
   parseJSON = Aeson.withObject "FileOwnershipRow" $ \o -> FileOwnershipRow

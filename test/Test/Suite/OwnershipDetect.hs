@@ -16,7 +16,23 @@ import Data.Aeson (encode, decode)
 
 import QxFx0.Semantic.Ownership.Detect
 import QxFx0.Types.TurnProjection (OwnershipCompareTrace(..))
-import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..))
+import QxFx0.Types.Semantic.Ownership (FileOwnershipRow(..), OwnershipJournalEntry(..))
+import QxFx0.Semantic.IR
+  ( ConceptId(..)
+  , EntityId(..)
+  , PredicateId(..)
+  , Proposition(..)
+  , RoleBinding(..)
+  , Term(..)
+  , VarId(..)
+  )
+import QxFx0.Semantic.IRState
+  ( EventSpec
+  , TimeStep(..)
+  , fluentsAt
+  , foldHistory
+  , toEventSpec
+  )
 
 ownershipDetectTests :: [Test]
 ownershipDetectTests =
@@ -61,12 +77,72 @@ ownershipDetectTests =
       mapM_ (\w -> assertBool ("pronoun: " <> T.unpack w)
                (w `elem` ownershipPronouns))
         ["я", "мне", "его", "нее", "ними", "себя"]
+  , TestLabel "correction detector parses contrast shapes" $ TestCase $ do
+      assertEqual "explicit contrast"
+        (Just ("give", "lend"))
+        (detectOwnershipCorrection "Нет, не подарила, а дала почитать")
+      assertEqual "implicit correction takes the sole event"
+        (Just ("", "lend"))
+        (detectOwnershipCorrection "На самом деле Аня одолжила книгу")
+      assertEqual "no marker declines"
+        Nothing
+        (detectOwnershipCorrection "Аня одолжила книгу Боре")
+      assertEqual "multi-verb soup declines"
+        Nothing
+        (detectOwnershipCorrection "Аня подарила и одолжила книгу Боре")
+      assertEqual "same event twice declines"
+        Nothing
+        (detectOwnershipCorrection "Нет, не подарила, а подарила")
   , TestLabel "compare trace round-trips" $ TestCase $ do
-      let rec = OwnershipCompareTrace True "event-matched:lend"
-            (Just "lend") (Just "Аня") (Just "Боре") (Just "книгу")
-            (Just "Entails") ["asserted:lend"]
+      let rec = OwnershipCompareTrace
+            { octGateFired = True
+            , octGateReason = "event-matched:lend"
+            , octEventId = Just "lend"
+            , octAgent = Just "Аня"
+            , octRecipient = Just "Боре"
+            , octObject = Just "книгу"
+            , octVerdict = Just "Entails"
+            , octLineage = ["asserted:lend"]
+            , octHistoryDepth = Just 1
+            , octCorrected = Just False
+            }
       assertEqual "json round trip" (Just rec)
         (decode (encode rec) :: Maybe OwnershipCompareTrace)
+  , TestLabel "journal refold threads multi-turn histories" $ TestCase $ do
+      lendRow <- mustRow "lend"
+      returnRow <- mustRow "return"
+      agentA <- mustTerm "Аня"
+      agentB <- mustTerm "Боря"
+      objectB <- mustTerm "книгу"
+      let envA = [(VarId "?a", agentA), (VarId "?b", agentB), (VarId "?x", objectB)]
+      lendEv <- either assertFailure pure (toEventSpec lendRow (TimeStep "t1") envA)
+      returnEv <- either assertFailure pure (toEventSpec returnRow (TimeStep "t2") envA)
+      let seedGY = seedFor agentA objectB
+      (st, _) <- either assertFailure pure (foldHistory (TimeStep "t0") seedGY [lendEv, returnEv])
+      let final = fluentsAt st (TimeStep "t2")
+      assertBool "holding returns" (holdProp agentA objectB `elem` final)
+      assertBool "obligation cleared"
+        (all (not . isObligation) final)
+      assertBool "ownership persists" (ownProp agentA objectB `elem` final)
+  , TestLabel "journal rewrite equals refolded replacement" $ TestCase $ do
+      lendRow <- mustRow "lend"
+      giveRow <- mustRow "give"
+      agentA <- mustTerm "Аня"
+      agentB <- mustTerm "Боря"
+      objectB <- mustTerm "книгу"
+      let envA = [(VarId "?a", agentA), (VarId "?b", agentB), (VarId "?x", objectB)]
+      lendEv <- either assertFailure pure (toEventSpec lendRow (TimeStep "t1") envA)
+      giveEv <- either assertFailure pure (toEventSpec giveRow (TimeStep "t1") envA)
+      let seedGY = seedFor agentA objectB
+      (stLend, _) <- either assertFailure pure (foldHistory (TimeStep "t0") seedGY [lendEv])
+      (stGive, _) <- either assertFailure pure (foldHistory (TimeStep "t0") seedGY [giveEv])
+      assertBool "ownership differs after rewrite"
+        (fluentsAt stLend (TimeStep "t1") /= fluentsAt stGive (TimeStep "t1"))
+      assertBool "gift transfers" (ownProp agentB objectB `elem` fluentsAt stGive (TimeStep "t1"))
+  , TestLabel "journal entry JSON round-trips" $ TestCase $ do
+      let entry = OwnershipJournalEntry "lend" "Аня" "Боре" "книгу" 3
+      assertEqual "entry round trip" (Just entry)
+        (decode (encode entry) :: Maybe OwnershipJournalEntry)
   , TestLabel "ownership row JSON round-trips short keys" $ TestCase $ do
       content <- BL.readFile "data/semantic_ir/ownership.jsonl"
       let rows = [ r | line <- BL.split 10 content
@@ -76,3 +152,30 @@ ownershipDetectTests =
       mapM_ (\row -> assertEqual ("row round trip: " <> T.unpack (foId row))
                (Just row) (decode (encode row) :: Maybe FileOwnershipRow)) rows
   ]
+
+-- | Journal pin helpers.
+mustRow :: T.Text -> IO FileOwnershipRow
+mustRow eid = do
+  content <- BL.readFile "data/semantic_ir/ownership.jsonl"
+  let rows = [ r | line <- BL.split 10 content
+                 , not (BL.null line)
+                 , Just r <- [Aeson.decode line :: Maybe FileOwnershipRow] ]
+  case [ r | r <- rows, foId r == eid ] of
+    [row] -> pure row
+    _ -> assertFailure ("library row missing: " <> T.unpack eid)
+
+mustTerm :: T.Text -> IO Term
+mustTerm t = pure (if isMentionEntity t then Entity (EntityId t) else Concept (ConceptId t))
+
+ownProp :: Term -> Term -> Proposition
+ownProp a x = Apply (PredicateId "owns") [RoleBinding "agent" a, RoleBinding "theme" x]
+
+holdProp :: Term -> Term -> Proposition
+holdProp a x = Apply (PredicateId "holds") [RoleBinding "agent" a, RoleBinding "theme" x]
+
+seedFor :: Term -> Term -> [Proposition]
+seedFor a x = [ownProp a x, holdProp a x]
+
+isObligation :: Proposition -> Bool
+isObligation (Apply (PredicateId p) _) = p == "must-return"
+isObligation _ = False

@@ -1376,6 +1376,11 @@ generatedLexemeEntries =
     ("анчаре", "анчар", "noun", "prepositional"),
     ("анчар", "анчар", "noun", "accusative"),
     ("анчаром", "анчар", "noun", "instrumental"),
+    ("аня", "аня", "noun", "nominative"),
+    ("ани", "аня", "noun", "genitive"),
+    ("ане", "аня", "noun", "prepositional"),
+    ("аню", "аня", "noun", "accusative"),
+    ("аней", "аня", "noun", "instrumental"),
     ("аорта", "аорта", "noun", "nominative"),
     ("аорты", "аорта", "noun", "genitive"),
     ("аорте", "аорта", "noun", "prepositional"),
@@ -3466,6 +3471,11 @@ generatedLexemeEntries =
     ("борще", "борщ", "noun", "prepositional"),
     ("борщ", "борщ", "noun", "accusative"),
     ("борщом", "борщ", "noun", "instrumental"),
+    ("боря", "боря", "noun", "nominative"),
+    ("бори", "боря", "noun", "genitive"),
+    ("боре", "боря", "noun", "prepositional"),
+    ("борю", "боря", "noun", "accusative"),
+    ("борей", "боря", "noun", "instrumental"),
     ("босс", "босс", "noun", "nominative"),
     ("босса", "босс", "noun", "genitive"),
     ("боссе", "босс", "noun", "prepositional"),
@@ -4537,9 +4547,14 @@ generatedLexemeEntries =
     ("вепса", "вепс", "noun", "accusative"),
     ("вепсом", "вепс", "noun", "instrumental"),
     ("вера", "вера", "noun", "nominative"),
+    ("вера", "вера", "noun", "nominative"),
+    ("веры", "вера", "noun", "genitive"),
     ("веры", "вера", "noun", "genitive"),
     ("вере", "вера", "noun", "prepositional"),
+    ("вере", "вера", "noun", "prepositional"),
     ("веру", "вера", "noun", "accusative"),
+    ("веру", "вера", "noun", "accusative"),
+    ("верой", "вера", "noun", "instrumental"),
     ("верой", "вера", "noun", "instrumental"),
     ("веранда", "веранда", "noun", "nominative"),
     ("веранды", "веранда", "noun", "genitive"),
@@ -9516,6 +9531,11 @@ generatedLexemeEntries =
     ("кольце", "кольцо", "noun", "prepositional"),
     ("кольцо", "кольцо", "noun", "accusative"),
     ("кольцом", "кольцо", "noun", "instrumental"),
+    ("коля", "коля", "noun", "nominative"),
+    ("коли", "коля", "noun", "genitive"),
+    ("коле", "коля", "noun", "prepositional"),
+    ("колю", "коля", "noun", "accusative"),
+    ("колей", "коля", "noun", "instrumental"),
     ("команда", "команда", "noun", "nominative"),
     ("команды", "команда", "noun", "genitive"),
     ("команде", "команда", "noun", "prepositional"),
@@ -10581,6 +10601,11 @@ generatedLexemeEntries =
     ("махорке", "махорка", "noun", "prepositional"),
     ("махорку", "махорка", "noun", "accusative"),
     ("махоркой", "махорка", "noun", "instrumental"),
+    ("маша", "маша", "noun", "nominative"),
+    ("маши", "маша", "noun", "genitive"),
+    ("маше", "маша", "noun", "prepositional"),
+    ("машу", "маша", "noun", "accusative"),
+    ("машей", "маша", "noun", "instrumental"),
     ("машина", "машина", "noun", "nominative"),
     ("машины", "машина", "noun", "genitive"),
     ("машине", "машина", "noun", "prepositional"),
@@ -13476,6 +13501,11 @@ generatedLexemeEntries =
     ("петухе", "петух", "noun", "prepositional"),
     ("петуха", "петух", "noun", "accusative"),
     ("петухом", "петух", "noun", "instrumental"),
+    ("петя", "петя", "noun", "nominative"),
+    ("пети", "петя", "noun", "genitive"),
+    ("пете", "петя", "noun", "prepositional"),
+    ("петю", "петя", "noun", "accusative"),
+    ("петей", "петя", "noun", "instrumental"),
     ("печаль", "печаль", "noun", "nominative"),
     ("печали", "печаль", "noun", "genitive"),
     ("печали", "печаль", "noun", "prepositional"),
@@ -22818,7 +22848,12 @@ generatedCandidateForms =
       ]),
     ("ане",
       [
-        LexemeForm { lfSurface = "ане" , lfLemma = "ана" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+        LexemeForm { lfSurface = "ане" , lfLemma = "ана" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "ане" , lfLemma = "аня" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("аней",
+      [
+        LexemeForm { lfSurface = "аней" , lfLemma = "аня" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("анекдот",
       [
@@ -22876,6 +22911,10 @@ generatedCandidateForms =
     ("анестетику",
       [
         LexemeForm { lfSurface = "анестетику" , lfLemma = "анестетика" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("ани",
+      [
+        LexemeForm { lfSurface = "ани" , lfLemma = "аня" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("анид",
       [
@@ -23523,6 +23562,14 @@ generatedCandidateForms =
     ("аны",
       [
         LexemeForm { lfSurface = "аны" , lfLemma = "ана" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("аню",
+      [
+        LexemeForm { lfSurface = "аню" , lfLemma = "аня" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("аня",
+      [
+        LexemeForm { lfSurface = "аня" , lfLemma = "аня" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("аорта",
       [
@@ -30709,7 +30756,8 @@ generatedCandidateForms =
       ]),
     ("боре",
       [
-        LexemeForm { lfSurface = "боре" , lfLemma = "бор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+        LexemeForm { lfSurface = "боре" , lfLemma = "бор" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "боре" , lfLemma = "боря" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("борее",
       [
@@ -30722,7 +30770,8 @@ generatedCandidateForms =
     ("борей",
       [
         LexemeForm { lfSurface = "борей" , lfLemma = "борей" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
-        LexemeForm { lfSurface = "борей" , lfLemma = "борей" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+        LexemeForm { lfSurface = "борей" , lfLemma = "борей" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
+        LexemeForm { lfSurface = "борей" , lfLemma = "боря" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("борец",
       [
@@ -30732,6 +30781,10 @@ generatedCandidateForms =
     ("борея",
       [
         LexemeForm { lfSurface = "борея" , lfLemma = "борей" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("бори",
+      [
+        LexemeForm { lfSurface = "бори" , lfLemma = "боря" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("борид",
       [
@@ -30895,6 +30948,14 @@ generatedCandidateForms =
     ("борьбу",
       [
         LexemeForm { lfSurface = "борьбу" , lfLemma = "борьба" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = BrainKbReviewedTier , lfQuality = 0.9 }
+      ]),
+    ("борю",
+      [
+        LexemeForm { lfSurface = "борю" , lfLemma = "боря" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("боря",
+      [
+        LexemeForm { lfSurface = "боря" , lfLemma = "боря" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("босс",
       [
@@ -52354,6 +52415,10 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "кокосом" , lfLemma = "кокос" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("коле",
+      [
+        LexemeForm { lfSurface = "коле" , lfLemma = "коля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("колебание",
       [
         LexemeForm { lfSurface = "колебание" , lfLemma = "колебание" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
@@ -52371,6 +52436,10 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "колебания" , lfLemma = "колебание" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("колей",
+      [
+        LexemeForm { lfSurface = "колей" , lfLemma = "коля" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("колеса",
       [
         LexemeForm { lfSurface = "колеса" , lfLemma = "колесо" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -52387,6 +52456,10 @@ generatedCandidateForms =
     ("колесом",
       [
         LexemeForm { lfSurface = "колесом" , lfLemma = "колесо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("коли",
+      [
+        LexemeForm { lfSurface = "коли" , lfLemma = "коля" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("количество",
       [
@@ -52523,6 +52596,14 @@ generatedCandidateForms =
     ("кольцом",
       [
         LexemeForm { lfSurface = "кольцом" , lfLemma = "кольцо" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("колю",
+      [
+        LexemeForm { lfSurface = "колю" , lfLemma = "коля" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("коля",
+      [
+        LexemeForm { lfSurface = "коля" , lfLemma = "коля" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("ком",
       [
@@ -56505,6 +56586,22 @@ generatedCandidateForms =
       [
         LexemeForm { lfSurface = "махорку" , lfLemma = "махорка" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("маша",
+      [
+        LexemeForm { lfSurface = "маша" , lfLemma = "маша" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("маше",
+      [
+        LexemeForm { lfSurface = "маше" , lfLemma = "маша" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("машей",
+      [
+        LexemeForm { lfSurface = "машей" , lfLemma = "маша" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("маши",
+      [
+        LexemeForm { lfSurface = "маши" , lfLemma = "маша" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("машина",
       [
         LexemeForm { lfSurface = "машина" , lfLemma = "машина" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -56541,6 +56638,10 @@ generatedCandidateForms =
     ("машины",
       [
         LexemeForm { lfSurface = "машины" , lfLemma = "машина" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("машу",
+      [
+        LexemeForm { lfSurface = "машу" , lfLemma = "маша" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("мая",
       [
@@ -65876,6 +65977,18 @@ generatedCandidateForms =
         LexemeForm { lfSurface = "песок" , lfLemma = "песок" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 },
         LexemeForm { lfSurface = "песок" , lfLemma = "песок" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
+    ("пете",
+      [
+        LexemeForm { lfSurface = "пете" , lfLemma = "петя" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("петей",
+      [
+        LexemeForm { lfSurface = "петей" , lfLemma = "петя" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("пети",
+      [
+        LexemeForm { lfSurface = "пети" , lfLemma = "петя" , lfPOS = "noun" , lfCase = GenitiveCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
     ("петле",
       [
         LexemeForm { lfSurface = "петле" , lfLemma = "петля" , lfPOS = "noun" , lfCase = PrepositionalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
@@ -65912,6 +66025,14 @@ generatedCandidateForms =
     ("петухом",
       [
         LexemeForm { lfSurface = "петухом" , lfLemma = "петух" , lfPOS = "noun" , lfCase = InstrumentalCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("петю",
+      [
+        LexemeForm { lfSurface = "петю" , lfLemma = "петя" , lfPOS = "noun" , lfCase = AccusativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
+      ]),
+    ("петя",
+      [
+        LexemeForm { lfSurface = "петя" , lfLemma = "петя" , lfPOS = "noun" , lfCase = NominativeCase , lfNumber = SingularNumber , lfTier = CuratedTier , lfQuality = 0.99 }
       ]),
     ("печали",
       [

@@ -30,6 +30,13 @@ MORPH_DIR = ROOT / "resources" / "morphology"
 KNOWN_FBS_COLLISIONS = {
     "вина:вино,вина",
     "вине:вино,вина",
+    # 2026-10-08, cutover Stage 1b: proper-name paradigms. Each
+    # surface is NomSg of the name and an oblique form of a common
+    # noun; resolution favors the name alphabetically (last-wins)
+    # and the nominative override table agrees. Analyzed, not silent.
+    "ане:ана,аня",
+    "боре:бор,боря",
+    "борей:борей,боря",
 }
 GF_DIR = ROOT / "spec" / "gf"
 CURATED_PREDICATE_SLOTS = GF_DIR / "curated_predicate_slots.tsv"

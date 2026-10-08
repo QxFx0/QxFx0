@@ -31,6 +31,7 @@ module QxFx0.Core.TurnPipeline.Types
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.Semantic.Ownership (OwnershipJournalEntry(..))
 -- import QxFx0.Types.Observability (ArtifactManifest, AssemblyPath, AuthorityClass, ContractProvenance, ExecutedTurnOutcome, SurfaceProvenance, TruthContractStatus)
 import QxFx0.Types.Orbital (OrbitalMemory)
 import QxFx0.Core.PrincipledCore (PrincipledMode, PressureSignal)
@@ -143,6 +144,7 @@ data TurnInput = TurnInput
   , tiConceptToCheck :: !Text
   , tiBestTopic :: !Text
   , tiOwnershipCompare :: !(Maybe OwnershipCompareTrace)
+  , tiOwnershipJournalNext :: ![OwnershipJournalEntry]
   , tiMetrics :: !TurnMetrics
   , tiConatusEnergy :: !ConatusEnergy
     -- ^ Phase 6 (M6): runtime Conatus energy carried from

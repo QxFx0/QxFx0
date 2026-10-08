@@ -361461,5 +361461,119 @@
       "PastNeut": "зависело",
       "PastPl": "зависели"
     }
+  }  ,
+  "аня": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "аня",
+      "NomPl": "ани",
+      "GenSg": "ани",
+      "GenPl": "ань",
+      "DatSg": "ане",
+      "DatPl": "аням",
+      "AccSg": "аню",
+      "AccPl": "ани",
+      "InsSg": "аней",
+      "InsPl": "анями",
+      "LocSg": "ане",
+      "LocPl": "анях"
+    }
+  },
+  "боря": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "боря",
+      "NomPl": "бори",
+      "GenSg": "бори",
+      "GenPl": "борей",
+      "DatSg": "боре",
+      "DatPl": "борям",
+      "AccSg": "борю",
+      "AccPl": "борей",
+      "InsSg": "борей",
+      "InsPl": "борями",
+      "LocSg": "боре",
+      "LocPl": "борях"
+    }
+  },
+  "вера": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "вера",
+      "NomPl": "веры",
+      "GenSg": "веры",
+      "GenPl": "вер",
+      "DatSg": "вере",
+      "DatPl": "верам",
+      "AccSg": "веру",
+      "AccPl": "веры",
+      "InsSg": "верой",
+      "InsPl": "верами",
+      "LocSg": "вере",
+      "LocPl": "верах"
+    }
+  },
+  "коля": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "коля",
+      "NomPl": "коли",
+      "GenSg": "коли",
+      "GenPl": "колей",
+      "DatSg": "коле",
+      "DatPl": "колям",
+      "AccSg": "колю",
+      "AccPl": "колей",
+      "InsSg": "колей",
+      "InsPl": "колями",
+      "LocSg": "коле",
+      "LocPl": "колях"
+    }
+  },
+  "маша": {
+    "pos": "Noun",
+    "gender": "femn",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "маша",
+      "NomPl": "маши",
+      "GenSg": "маши",
+      "GenPl": "маш",
+      "DatSg": "маше",
+      "DatPl": "машам",
+      "AccSg": "машу",
+      "AccPl": "маши",
+      "InsSg": "машей",
+      "InsPl": "машами",
+      "LocSg": "маше",
+      "LocPl": "машах"
+    }
+  },
+  "петя": {
+    "pos": "Noun",
+    "gender": "masc",
+    "animacy": "anim",
+    "forms": {
+      "NomSg": "петя",
+      "NomPl": "пети",
+      "GenSg": "пети",
+      "GenPl": "петей",
+      "DatSg": "пете",
+      "DatPl": "петям",
+      "AccSg": "петю",
+      "AccPl": "петей",
+      "InsSg": "петей",
+      "InsPl": "петями",
+      "LocSg": "пете",
+      "LocPl": "петях"
+    }
   }
 }

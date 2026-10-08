@@ -558,6 +558,11 @@ data OwnershipCompareTrace = OwnershipCompareTrace
     --   Text (not the 'Verdict' type) keeps 'QxFx0.Types'
     --   contract-only per the architecture invariant: verdict
     --   logic lives in 'QxFx0.Semantic.IREval'.
+  , octHistoryDepth :: !(Maybe Int)
+  , octCorrected :: !(Maybe Bool)
+    -- ^ Cutover Stage 1b: journal depth after this turn and
+    --   whether a correction rewrote the last entry. Sub-record
+    --   discipline: old readers ignore them.
   , octLineage :: ![Text]
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)

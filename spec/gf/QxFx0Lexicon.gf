@@ -4,6 +4,12 @@ abstract QxFx0Lexicon = {
   flags startcat = Lexeme ;
   cat Lexeme ;
   fun
+    anya_N : Lexeme ;
+    borya_N : Lexeme ;
+    vera_N : Lexeme ;
+    kolya_N : Lexeme ;
+    masha_N : Lexeme ;
+    petya_N : Lexeme ;
     abazhur_N : Lexeme ;
     abaz_N : Lexeme ;
     abak_N : Lexeme ;
@@ -907,7 +913,7 @@ abstract QxFx0Lexicon = {
     venchik_N : Lexeme ;
     vepr_N : Lexeme ;
     veps_N : Lexeme ;
-    vera_N : Lexeme ;
+    vera_Nv2 : Lexeme ;
     veranda_N : Lexeme ;
     verba_N : Lexeme ;
     verv_N : Lexeme ;

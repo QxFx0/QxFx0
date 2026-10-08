@@ -10,6 +10,12 @@ open import Agda.Builtin.String using (String)
 open import Agda.Builtin.Equality using (_≡_; refl)
 
 data Lemma : Set where
+  anya_N : Lemma
+  borya_N : Lemma
+  vera_N : Lemma
+  kolya_N : Lemma
+  masha_N : Lemma
+  petya_N : Lemma
   abazhur_N : Lemma
   abaz_N : Lemma
   abak_N : Lemma
@@ -913,7 +919,7 @@ data Lemma : Set where
   venchik_N : Lemma
   vepr_N : Lemma
   veps_N : Lemma
-  vera_N : Lemma
+  vera_Nv2 : Lemma
   veranda_N : Lemma
   verba_N : Lemma
   verv_N : Lemma
@@ -3777,6 +3783,12 @@ data Lemma : Set where
   elka_Nv2 : Lemma
 
 lemmaNominative : Lemma → String
+lemmaNominative anya_N = "аня"
+lemmaNominative borya_N = "боря"
+lemmaNominative vera_N = "вера"
+lemmaNominative kolya_N = "коля"
+lemmaNominative masha_N = "маша"
+lemmaNominative petya_N = "петя"
 lemmaNominative abazhur_N = "абажур"
 lemmaNominative abaz_N = "абаз"
 lemmaNominative abak_N = "абак"
@@ -4680,7 +4692,7 @@ lemmaNominative ventilyator_N = "вентилятор"
 lemmaNominative venchik_N = "венчик"
 lemmaNominative vepr_N = "вепрь"
 lemmaNominative veps_N = "вепс"
-lemmaNominative vera_N = "вера"
+lemmaNominative vera_Nv2 = "вера"
 lemmaNominative veranda_N = "веранда"
 lemmaNominative verba_N = "верба"
 lemmaNominative verv_N = "вервь"
@@ -7544,6 +7556,12 @@ lemmaNominative yashchik_N = "ящик"
 lemmaNominative elka_Nv2 = "елка"
 
 lemmaGenitive : Lemma → String
+lemmaGenitive anya_N = "ани"
+lemmaGenitive borya_N = "бори"
+lemmaGenitive vera_N = "веры"
+lemmaGenitive kolya_N = "коли"
+lemmaGenitive masha_N = "маши"
+lemmaGenitive petya_N = "пети"
 lemmaGenitive abazhur_N = "абажура"
 lemmaGenitive abaz_N = "абаза"
 lemmaGenitive abak_N = "абака"
@@ -8447,7 +8465,7 @@ lemmaGenitive ventilyator_N = "вентилятора"
 lemmaGenitive venchik_N = "венчика"
 lemmaGenitive vepr_N = "вепря"
 lemmaGenitive veps_N = "вепса"
-lemmaGenitive vera_N = "веры"
+lemmaGenitive vera_Nv2 = "веры"
 lemmaGenitive veranda_N = "веранды"
 lemmaGenitive verba_N = "вербы"
 lemmaGenitive verv_N = "верви"
@@ -11311,6 +11329,12 @@ lemmaGenitive yashchik_N = "ящика"
 lemmaGenitive elka_Nv2 = "елки"
 
 lemmaPrepositional : Lemma → String
+lemmaPrepositional anya_N = "ане"
+lemmaPrepositional borya_N = "боре"
+lemmaPrepositional vera_N = "вере"
+lemmaPrepositional kolya_N = "коле"
+lemmaPrepositional masha_N = "маше"
+lemmaPrepositional petya_N = "пете"
 lemmaPrepositional abazhur_N = "абажуре"
 lemmaPrepositional abaz_N = "абазе"
 lemmaPrepositional abak_N = "абаке"
@@ -12214,7 +12238,7 @@ lemmaPrepositional ventilyator_N = "вентиляторе"
 lemmaPrepositional venchik_N = "венчике"
 lemmaPrepositional vepr_N = "вепре"
 lemmaPrepositional veps_N = "вепсе"
-lemmaPrepositional vera_N = "вере"
+lemmaPrepositional vera_Nv2 = "вере"
 lemmaPrepositional veranda_N = "веранде"
 lemmaPrepositional verba_N = "вербе"
 lemmaPrepositional verv_N = "верви"
@@ -15078,8 +15102,8 @@ lemmaPrepositional yashchik_N = "ящике"
 lemmaPrepositional elka_Nv2 = "елке"
 
 lemmaCount : Nat
-lemmaCount = 3765
+lemmaCount = 3771
 
-lemmaCountExpected : lemmaCount ≡ 3765
+lemmaCountExpected : lemmaCount ≡ 3771
 lemmaCountExpected = refl
 

@@ -3507,3 +3507,104 @@ beyond 24 verbs.
   verdicts incl. live Refuted on lend, 5 abstains);
   10-turn surfaces byte-identical pre/post wiring.
 - **Verification**: unit 1725, fast 1831, core 1201 green.
+
+---
+
+# Cutover Stage 1b: session journal + multi-turn — pre-registration (2026-10-07, ADR-0055)
+
+- **Gap (audited)**: Stage 1a is single-turn; return,
+  corrections and revision need cross-turn fluent memory.
+- **Rule (locked)**:
+  - Text journal (no structure persistence):
+    `ssOwnershipJournal :: [OwnershipJournalEntry]`
+    (event id + agent/recipient/object mentions + turn
+    label), persisted backward-compat, empty default.
+    Per-turn refold rebuilds EventSpecs from the library
+    (deterministic given same morphology) — no EventSpec
+    /Proposition persistence anywhere.
+  - Prepare: journal non-empty → pre-state = refolded
+    journal fluents (instead of presupposed seed); fired
+    event appended; correction (below) replaces last entry.
+    TurnInput carries the next journal (M6.1: computed once
+    in Prepare); Finalize stores it. Surfaces, plans,
+    commitments, stances untouched (still shadow-compare).
+  - Correction detector (boring, pinned): contrast marker
+    (" а ", "на самом деле", "точнее", leading "нет, ")
+    + exactly one old-verb stem before / new-verb stem
+    after the marker; else decline (gate closed, logged).
+    Applies to the LAST journal entry only (documented).
+  - Trace: `OwnershipCompareTrace` gains nullable
+    `octHistoryDepth :: Maybe Int` + `octCorrected ::
+    Maybe Bool` (sub-record discipline; old readers ignore).
+- **Bar**: unit pins — journal refold identity, return and
+  correction flows, correction-decline shapes, empty-journal
+  fallback to presupposed seed, JSON round-trip of entries;
+  live multi-turn battery (lend→return, lend→correction,
+  lend→unrelated, empty-start controls): threading +
+  verdicts correct, surfaces byte-identical pre/post;
+  zero new failures in unit/fast/core; slow per discipline.
+- **Out of scope**: gated surfaces (Stage 2); pronoun
+  resolution in journal (explicit mentions only, unchanged);
+  case-based roles (documented limitation stands); learning.
+
+---
+
+# Cutover Stage 1b amendment (2026-10-08, before landing)
+
+- **Live finding 1**: return binds ?a wrong. The template's
+  ?a is the prior-state holder (second mention), like
+  take/steal — not the agent. Swap list extended to
+  take/steal/return (prior-state-holder class).
+- **Live finding 2**: fresh return (empty journal) computed
+  then failed. Correct behavior is gate decline: return and
+  return-right presuppose a prior event, and inventing
+  history is worse than presupposing ownership. History-
+  dependent events require a non-empty journal.
+
+---
+
+# Cutover Stage 1b amendment: proper-name paradigms (2026-10-08)
+
+- **Live finding**: cross-turn coreference breaks on
+  inflected proper names ("Боре" vs "Боря", "Аня" vs
+  "Ане"): no paradigm entries exist, so `toNominative`
+  passes surfaces through and structural identity fails.
+  Same-turn turns work (consistent surfaces); multi-turn
+  needs real lemmas.
+- **Rule (locked)**: 6 frozen proper-name paradigms
+  (Аня, Боря, Вера, Коля, Маша, Петя) via the lexicon
+  pipeline (SQL seed + export + witness iff Agda moves).
+  Uncovered names → compute-failed records (honest,
+  logged); full proper-name coverage stays lexicon-loop
+  work, out of scope.
+
+---
+
+# Cutover Stage 1b: session journal + multi-turn — landed (2026-10-08)
+
+- **What** (pre-registered + two amendments): text journal
+  (`ssOwnershipJournal`, persisted backward-compat);
+  per-turn refold in Prepare (TurnInput carries next
+  journal, Finalize stores; M6.1 respected); correction
+  detector (explicit/implicit contrast, last-entry only);
+  history-dependent decline (return/return-right need a
+  journal); trace depth/corrected fields.
+- **Amendment 2 (lexicon)**: cross-turn coreference needs
+  real name lemmas — 6 frozen proper-name paradigms via
+  surgical `paradigms.json` inserts + 3 analyzed collisions
+  into `KNOWN_FBS_COLLISIONS` (вина precedent). Two data
+  fixes en route: instrumental Борей (not Бореем),
+  lowercase form convention (parity ratchet caught both).
+  Agda re-verified on changed files, witness re-recorded,
+  PGF recompiled (binary identical).
+- **Measured**: lend→return (depth 2, OpenWorld — no
+  exclusivity axiom, honest), lend→correction→give
+  (Entails, depth 1), lend→unrelated (no record),
+  fresh return declines. Surfaces: no render code touched
+  (structural); pre-wiring baseline file lost to a server
+  restart, substituted by the matrix's exact-surface pins
+  (all green) + 10-turn gate battery shapes unchanged.
+- **Known limitation (follow-up)**: the journal never
+  expires — a much-later ownership turn inherits ancient
+  history. Scoping/expiry is Stage 2 or later work.
+- **Verification**: unit 1729, fast 1831, core 1201 green.

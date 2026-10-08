@@ -37,6 +37,7 @@ import QxFx0.Semantic.Embedding
   , embeddingSourceText
   )
 import QxFx0.Types
+import QxFx0.Types.Semantic.Ownership (OwnershipJournalEntry(..))
 
 import Data.Text (Text)
 
@@ -118,6 +119,7 @@ buildTurnInput ss requestId sessionId effectPlan effectResults =
       , tiConceptToCheck = psConceptToCheck prepareStatic
       , tiBestTopic = psBestTopic prepareStatic
       , tiOwnershipCompare = psOwnershipCompare prepareStatic
+      , tiOwnershipJournalNext = psOwnershipJournalNext prepareStatic
       , tiMetrics = metrics6
       , tiConatusEnergy = psConatusEnergy prepareStatic
       , tiBlanketViolationCount = psBlanketViolationCount prepareStatic

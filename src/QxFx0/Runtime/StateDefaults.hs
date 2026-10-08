@@ -199,6 +199,7 @@ instance ToJSON SystemState where
     , "runtimeGraph" .= ssRuntimeGraph ss
     , "definitionCorpus" .= ssDefinitionCorpus ss
     , "ownershipLibrary" .= ssOwnershipLibrary ss
+    , "ownershipJournal" .= ssOwnershipJournal ss
     , "emittedPredicates" .= ssEmittedPredicates ss
     , "userR5Contour" .= ssUserR5Contour ss
     ]
@@ -277,7 +278,7 @@ instance FromJSON SystemState where
       <*> o .:? "stances" .!= M.empty <*> o .:? "stanceDefenses" .!= M.empty
       <*> o .:? "userStanceTrackers" .!= M.empty <*> o .:? "stanceLineages" .!= M.empty
       <*> o .:? "runtimeGraph" .!= seedGraph
-      <*> o .:? "definitionCorpus" .!= M.empty <*> o .:? "ownershipLibrary" .!= M.empty <*> pure Nothing
+      <*> o .:? "definitionCorpus" .!= M.empty <*> o .:? "ownershipLibrary" .!= M.empty <*> o .:? "ownershipJournal" .!= [] <*> pure Nothing
       <*> o .:? "emittedPredicates" .!= Set.empty
       <*> o .:? "userR5Contour" .!= emptyUserR5ContourState
 
@@ -345,6 +346,7 @@ emptySystemState = SystemState
   , ssRuntimeGraph = seedGraph
   , ssDefinitionCorpus = M.empty
   , ssOwnershipLibrary = M.empty
+  , ssOwnershipJournal = []
   , ssCuratedOverlay = Nothing
   , ssEmittedPredicates = Set.empty
   , ssUserR5Contour = emptyUserR5ContourState

@@ -12,6 +12,12 @@ open import LexiconData
 -- Structural lexical adequacy proof:
 -- every SQL-exported lemma constructor has a complete form triple.
 lemmaHasAllForms : Lemma → Bool
+lemmaHasAllForms anya_N = true
+lemmaHasAllForms borya_N = true
+lemmaHasAllForms vera_N = true
+lemmaHasAllForms kolya_N = true
+lemmaHasAllForms masha_N = true
+lemmaHasAllForms petya_N = true
 lemmaHasAllForms abazhur_N = true
 lemmaHasAllForms abaz_N = true
 lemmaHasAllForms abak_N = true
@@ -915,7 +921,7 @@ lemmaHasAllForms ventilyator_N = true
 lemmaHasAllForms venchik_N = true
 lemmaHasAllForms vepr_N = true
 lemmaHasAllForms veps_N = true
-lemmaHasAllForms vera_N = true
+lemmaHasAllForms vera_Nv2 = true
 lemmaHasAllForms veranda_N = true
 lemmaHasAllForms verba_N = true
 lemmaHasAllForms verv_N = true
@@ -3779,6 +3785,12 @@ lemmaHasAllForms yashchik_N = true
 lemmaHasAllForms elka_Nv2 = true
 
 lemmaHasAllForms-sound : (l : Lemma) → lemmaHasAllForms l ≡ true
+lemmaHasAllForms-sound anya_N = refl
+lemmaHasAllForms-sound borya_N = refl
+lemmaHasAllForms-sound vera_N = refl
+lemmaHasAllForms-sound kolya_N = refl
+lemmaHasAllForms-sound masha_N = refl
+lemmaHasAllForms-sound petya_N = refl
 lemmaHasAllForms-sound abazhur_N = refl
 lemmaHasAllForms-sound abaz_N = refl
 lemmaHasAllForms-sound abak_N = refl
@@ -4682,7 +4694,7 @@ lemmaHasAllForms-sound ventilyator_N = refl
 lemmaHasAllForms-sound venchik_N = refl
 lemmaHasAllForms-sound vepr_N = refl
 lemmaHasAllForms-sound veps_N = refl
-lemmaHasAllForms-sound vera_N = refl
+lemmaHasAllForms-sound vera_Nv2 = refl
 lemmaHasAllForms-sound veranda_N = refl
 lemmaHasAllForms-sound verba_N = refl
 lemmaHasAllForms-sound verv_N = refl

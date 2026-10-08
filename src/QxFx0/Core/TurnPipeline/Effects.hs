@@ -52,8 +52,10 @@ import QxFx0.Semantic.Intent.Classifier
   ( resolveCarryTopic
   , semanticIntentForRender
   )
+import QxFx0.Types.Semantic.Ownership (OwnershipJournalEntry(..))
 import QxFx0.Semantic.Ownership.Detect
   ( OwnershipDetection(..)
+  , detectOwnershipCorrection
   , detectOwnershipEvent
   , isMentionEntity
   )
@@ -305,6 +307,9 @@ data PrepareStatic = PrepareStatic
   , psOwnershipCompare :: !(Maybe OwnershipCompareTrace)
     -- ^ Cutover Stage 1a (ADR-0055): shadow-compare record,
     --   computed once per turn. Trace-only downstream.
+  , psOwnershipJournalNext :: ![OwnershipJournalEntry]
+    -- ^ Cutover Stage 1b: journal after this turn (append or
+    --   correction rewrite). Stored by Finalize; trace-only.
   , psResonance :: !Double
   , psAtomLoad :: !Double
   , psConatusEnergy :: !ConatusEnergy
@@ -434,95 +439,181 @@ data PrepareEffectPlan = PrepareEffectPlan
   , pepApiHealthRequest :: !PrepareEffectRequest
   } deriving stock (Eq, Show)
 
--- | Cutover Stage 1a (ADR-0055) shadow-compare computation.
--- Total and trace-only: returns 'Nothing' when the gate is closed
--- (no record — see 'trcOwnershipCompare'), otherwise the compare
--- record with the gate reason, detected mentions, the ownership
--- verdict over the single-turn history, and lineage references.
+-- | Cutover Stage 1a/1b (ADR-0055) shadow-compare computation.
+-- Total and trace-only: returns the compare record ('Nothing'
+-- when the gate is closed) plus the next ownership journal.
+-- Stage 1b: the journal accumulates fired events across turns;
+-- each turn refolds the whole journal from the presupposed seed
+-- of its first entry. Corrections rewrite the last entry.
 -- Per-event party mapping: take/steal bind ?a to the holder
 -- mention (second position); all others bind ?a to the agent
 -- mention (first position). Canonical order assumed (documented
 -- in 'QxFx0.Semantic.Ownership.Detect').
-buildOwnershipCompare :: SystemState -> Text -> Maybe OwnershipCompareTrace
+buildOwnershipCompare
+  :: SystemState -> Text -> (Maybe OwnershipCompareTrace, [OwnershipJournalEntry])
 buildOwnershipCompare ss input =
-  case detectOwnershipEvent input of
-    (Nothing, _) -> Nothing
-    (Just det, _) -> Just (runDetection det)
+  let journal = ssOwnershipJournal ss
+      turnNo = ssTurnCount ss + 1
+      lib = ssOwnershipLibrary ss
+      morph = ssMorphology ss
+  in case detectOwnershipCorrection input of
+    Just (old, new)
+      | not (null journal)
+      , M.member new lib
+      , let lastEntry = last journal
+      , old == "" || old == ojeEvent lastEntry ->
+        let corrected = init journal
+              ++ [lastEntry { ojeEvent = new, ojeTurn = turnNo }]
+        in runJournal corrected True ("correction:" <> old <> ">" <> new)
+    _ -> case detectOwnershipEvent input of
+      (Nothing, _) -> (Nothing, journal)
+      (Just det, _)
+        | isHistoryDependent det && null journal ->
+          -- History-dependent events (return, return-right)
+          -- presuppose a prior event the system never saw:
+          -- without a journal the gate declines (no invented
+          -- history). Seedable events (give/lend/take/show/
+          -- steal) presuppose ownership+holding per the
+          -- Stage 1a doctrine.
+          (Nothing, journal)
+        | otherwise ->
+          let entry = OwnershipJournalEntry
+                { ojeEvent = odEventId det
+                , ojeAgent = odAgent det
+                , ojeRecipient = odRecipient det
+                , ojeObject = odObject det
+                , ojeTurn = turnNo
+                }
+          in runJournal (journal ++ [entry]) False ("event-matched:" <> odEventId det)
   where
+    isHistoryDependent det = odEventId det `elem` ["return", "return-right"]
     morph = ssMorphology ss
     lib = ssOwnershipLibrary ss
-    runDetection det =
-      let eid = odEventId det
-      in case M.lookup eid lib of
-        Nothing -> firedRecord det "event-unknown-to-library" Nothing []
-        Just row -> case toEventSpec row (TimeStep "t1") (envFor eid det) of
-          Left err -> firedRecord det ("event-compute-failed:" <> T.pack (take 80 err)) Nothing []
-          Right ev ->
-            let borrowerRules = [ StrictRule (foId r) pre concl
-                                | r <- M.elems lib
-                                , foKind r == "strict"
-                                , Right (_, pre, concl) <- [toOwnershipRule r] ]
-                seed = seedFor det
-            in case foldHistory (TimeStep "t0") seed [ev] of
-              Left err -> firedRecord det ("event-compute-failed:" <> T.pack (take 80 err)) Nothing []
-              Right (st, _) ->
-                let fluents = fluentsAt st (TimeStep "t1")
-                    query = ownershipQuery det
-                    verdict = verdictTag (entailmentVerdict 32 borrowerRules fluents query)
-                    lineage =
-                      [ renderSupport p s
-                      | p <- fluents
-                      , Just s <- [lineageOf st (TimeStep "t1") p] ]
-                in firedRecord det ("event-matched:" <> eid) (Just verdict) lineage
-    firedRecord det reason verdict lineage = OwnershipCompareTrace
+    runJournal entries corrected reason =
+      case refold entries of
+        Left err -> (Just (emptyRecord ("event-compute-failed:" <> T.pack (take 80 err)) entries corrected), entries)
+        Right (st, finalTime, query) ->
+          let fluents = fluentsAt st finalTime
+              verdict = verdictTag (entailmentVerdict 32 (borrowerRules lib) fluents query)
+              lineage =
+                [ renderSupport p sup
+                | p <- fluents
+                , Just sup <- [lineageOf st finalTime p] ]
+          in (Just (fullRecord reason entries corrected (Just verdict) lineage), entries)
+    refold entries = do
+      firstEntry <- case entries of
+        [] -> Left "empty journal"
+        (entry : _) -> Right entry
+      let times = map (TimeStep . ("t" <>) . T.pack . show . ojeTurn) entries
+      evs <- mapM (\(entry, t) -> eventAt lib morph entry t) (zip entries times)
+      let seed = seedForEntry morph firstEntry
+          finalTime = case times of
+            [] -> TimeStep "t0"
+            _ -> last times
+          query = queryForEntry morph (last entries)
+      (st, _) <- foldHistory (TimeStep "t0") seed evs
+      pure (st, finalTime, query)
+    emptyRecord reason entries corrected = OwnershipCompareTrace
       { octGateFired = True
       , octGateReason = reason
-      , octEventId = Just (odEventId det)
-      , octAgent = Just (odAgent det)
-      , octRecipient = Just (odRecipient det)
-      , octObject = Just (odObject det)
-      , octVerdict = verdict
-      , octLineage = lineage
+      , octEventId = Nothing
+      , octAgent = Nothing
+      , octRecipient = Nothing
+      , octObject = Nothing
+      , octVerdict = Nothing
+      , octLineage = []
+      , octHistoryDepth = Just (length entries)
+      , octCorrected = Just corrected
       }
-    mentionTerm mention =
-      let lemma = toNominative morph mention
-      in if isMentionEntity mention
-           then Entity (EntityId lemma)
-           else Concept (ConceptId lemma)
-    envFor eid det =
-      let agentT = mentionTerm (odAgent det)
-          recipientT = mentionTerm (odRecipient det)
-          objectT = mentionTerm (odObject det)
-          (holderT, takerT) = if eid `elem` ["take", "steal"]
-                                then (recipientT, agentT)
-                                else (agentT, recipientT)
-      in [ (VarId "?a", holderT)
-         , (VarId "?b", takerT)
-         , (VarId "?x", objectT)
-         ]
-    seedFor det =
-      let party v = case lookup v (envFor (odEventId det) det) of
-            Just t -> t
-            Nothing -> Concept (ConceptId "")
-          aTerm = party (VarId "?a")
-          xTerm = party (VarId "?x")
-      in [ Apply (PredicateId "owns")
-             [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
-         , Apply (PredicateId "holds")
-             [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
-         ]
-    ownershipQuery det =
-      let lookupTerm v = case lookup v (envFor (odEventId det) det) of
-            Just t -> t
-            Nothing -> Concept (ConceptId "")
-      in Apply (PredicateId "owns")
-           [ RoleBinding "agent" (lookupTerm (VarId "?b"))
-           , RoleBinding "theme" (lookupTerm (VarId "?x"))
-           ]
+    fullRecord reason entries corrected verdict lineage =
+      let det = last entries
+      in OwnershipCompareTrace
+        { octGateFired = True
+        , octGateReason = reason
+        , octEventId = Just (ojeEvent det)
+        , octAgent = Just (ojeAgent det)
+        , octRecipient = Just (ojeRecipient det)
+        , octObject = Just (ojeObject det)
+        , octVerdict = verdict
+        , octLineage = lineage
+        , octHistoryDepth = Just (length entries)
+        , octCorrected = Just corrected
+        }
+    borrowerRules library =
+      [ StrictRule (foId r) pre concl
+      | r <- M.elems library
+      , foKind r == "strict"
+      , Right (_, pre, concl) <- [toOwnershipRule r] ]
     renderSupport _ SupportInitial = "initial"
     renderSupport _ (SupportAsserted eid) = "asserted:" <> eid
     renderSupport _ (SupportPersisted eid t) =
       "persisted:" <> eid <> "@" <> unTimeStep t
+
+-- | Build a ground 'EventSpec' for one journal entry: environment
+-- from its explicit mentions, advancing to the given time.
+eventAt
+  :: M.Map Text FileOwnershipRow
+  -> MorphologyData
+  -> OwnershipJournalEntry
+  -> TimeStep
+  -> Either String EventSpec
+eventAt lib morph entry advancesTo = do
+  row <- case M.lookup (ojeEvent entry) lib of
+    Nothing -> Left ("event-unknown-to-library: " <> show (ojeEvent entry))
+    Just r -> Right r
+  toEventSpec row advancesTo (envForEntry morph entry)
+
+-- | Participant environment for one journal entry. Per-event party
+-- mapping: take/steal/return bind ?a to the holder mention
+-- (second position) — the party whose prior state the template
+-- requires; all others bind ?a to the agent mention.
+envForEntry :: MorphologyData -> OwnershipJournalEntry -> [(VarId, Term)]
+envForEntry morph entry =
+  let agentT = mentionTerm morph (ojeAgent entry)
+      recipientT = mentionTerm morph (ojeRecipient entry)
+      objectT = mentionTerm morph (ojeObject entry)
+      (holderT, takerT) = if ojeEvent entry `elem` ["take", "steal", "return"]
+                            then (recipientT, agentT)
+                            else (agentT, recipientT)
+  in [ (VarId "?a", holderT)
+     , (VarId "?b", takerT)
+     , (VarId "?x", objectT)
+     ]
+
+-- | Seed presupposition for a journal: the first entry's holder
+-- owns and holds the object.
+seedForEntry :: MorphologyData -> OwnershipJournalEntry -> [Proposition]
+seedForEntry morph entry =
+  let party v = case lookup v (envForEntry morph entry) of
+        Just t -> t
+        Nothing -> Concept (ConceptId "")
+      aTerm = party (VarId "?a")
+      xTerm = party (VarId "?x")
+  in [ Apply (PredicateId "owns")
+         [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
+     , Apply (PredicateId "holds")
+         [ RoleBinding "agent" aTerm, RoleBinding "theme" xTerm ]
+     ]
+
+-- | Ownership query for a journal: does the taker own the object?
+queryForEntry :: MorphologyData -> OwnershipJournalEntry -> Proposition
+queryForEntry morph entry =
+  let lookupTerm v = case lookup v (envForEntry morph entry) of
+        Just t -> t
+        Nothing -> Concept (ConceptId "")
+  in Apply (PredicateId "owns")
+       [ RoleBinding "agent" (lookupTerm (VarId "?b"))
+       , RoleBinding "theme" (lookupTerm (VarId "?x"))
+       ]
+
+-- | Mention to term: capitalized mentions become entities,
+-- lowercase ones concepts, both lemmatized to nominative.
+mentionTerm :: MorphologyData -> Text -> Term
+mentionTerm morph mention =
+  let lemma = toNominative morph mention
+  in if isMentionEntity mention
+       then Entity (EntityId lemma)
+       else Concept (ConceptId lemma)
 
 buildPrepareEffectPlan :: Bool -> SystemState -> Text -> UTCTime -> PrepareEffectPlan
 buildPrepareEffectPlan repairDisabled ss input currentTime =
@@ -593,7 +684,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       -- Cutover Stage 1a (ADR-0055, pre-registered 2026-10-07):
       -- shadow-compare computation. Trace-only: bestTopic, plans,
       -- surfaces, commitments and stances are untouched below.
-      ownershipCompare = buildOwnershipCompare ss input
+      (ownershipCompare, ownershipJournalNext) = buildOwnershipCompare ss input
       bestTopic = if T.null focus then ssLastTopic ss else focus
       resonance = atCurrentLoad newTrace
       atomLoad = asLoad atomSet
@@ -763,6 +854,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         , psConceptToCheck = conceptToCheck
         , psBestTopic = bestTopic
         , psOwnershipCompare = ownershipCompare
+        , psOwnershipJournalNext = ownershipJournalNext
         , psResonance = resonance
         , psAtomLoad = atomLoad
         , psConatusEnergy = conatusEnergy

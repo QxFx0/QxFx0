@@ -24,6 +24,7 @@ module QxFx0.Semantic.Ownership.Detect
   ( OwnershipDetection(..)
   , GateReason(..)
   , detectOwnershipEvent
+  , detectOwnershipCorrection
   , ownershipPronouns
   , isMentionEntity
   ) where
@@ -57,6 +58,47 @@ isMentionEntity :: Text -> Bool
 isMentionEntity w = case T.uncons w of
   Just (c, _) -> ('A' <= c && c <= 'Z') || ('\x0410' <= c && c <= '\x042F') || c == '\x0401'
   Nothing -> False
+
+-- | Contrast markers that introduce a correction of the previous
+-- ownership event. Frozen list; anything else declines.
+correctionMarkers :: [Text]
+correctionMarkers =
+  [ " а не "
+  , " а это "
+  , "на самом деле"
+  , "точнее"
+  ]
+
+-- | Detect a correction of the last journal event: a contrast
+-- marker with exactly one old-verb stem before it and exactly
+-- one (different) new-verb stem after it. Returns the
+-- (old event, new event) pair. Anything else declines —
+-- multi-verb soup never rewrites history.
+detectOwnershipCorrection :: Text -> Maybe (Text, Text)
+detectOwnershipCorrection rawText =
+  let lowered = " " <> T.toLower rawText <> " "
+      hasMarker = any (`T.isInfixOf` lowered) correctionMarkers
+      leadingNo = case T.stripPrefix "нет," (T.strip (T.toLower rawText)) of
+        Just _ -> True
+        Nothing -> False
+  in if not (hasMarker || leadingNo)
+       then Nothing
+       else case map (stemsIn . T.strip) (T.splitOn " а " lowered) of
+         [oldStems, newStems] ->
+           case (oldStems, newStems) of
+             ([old], [new]) | old /= new -> Just (old, new)
+             _ -> Nothing
+         _ ->
+           -- Implicit correction ("на самом деле", "точнее",
+           -- leading "нет,"): exactly one new event in the whole
+           -- utterance; the old one is the journal's last event.
+           case stemsIn lowered of
+             [new] -> Just ("", new)
+             _ -> Nothing
+  where
+    stemsIn fragment =
+      [ eid | (eid, stems) <- eventStems
+            , any (`T.isInfixOf` fragment) stems ]
 
 -- | Frozen Russian pronoun inventory (all cases, both numbers,
 -- formal and informal). Any participant resolving to one of
