@@ -168,6 +168,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     ObjectDeystvieNezavisimo = { s = "действие независимо от желания" } ;
     ObjectDeystviyaNezavisimo = { s = "действия независимо от желания" } ;
     ObjectDlyaVosstanovleniya = { s = "для восстановления и интеграции опыта" } ;
+    ObjectDokazatelstvami = { s = "доказательствами" } ;
     ObjectDoverieMezhduSubektami = { s = "доверие между субъектами" } ;
     ObjectDoveriemKIstochniku = { s = "с доверием к источнику или опыту" } ;
     ObjectEsteticheskoePerezhivanie = { s = "эстетическое переживание" } ;
@@ -189,6 +190,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     ObjectObUgroze = { s = "об угрозе целостности субъекта" } ;
     ObjectObyazatelstvamiPeredDrugimi = { s = "с обязательствами перед другими" } ;
     ObjectOpytRazlichenie = { s = "опыт через различение и именование" } ;
+    ObjectOsoznaniemPosledstvij = { s = "с осознанием последствий" } ;
     ObjectOsoznaniyaPosledstviy = { s = "осознания последствий" } ;
     ObjectOtIntuitsii = { s = "от интуиции потребностью в доказательстве" } ;
     ObjectOtIstiny = { s = "от истины личной вовлечённостью рассказчика" } ;

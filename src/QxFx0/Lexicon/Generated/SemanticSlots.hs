@@ -113,7 +113,9 @@ curatedPredicateSlots =
     CuratedPredicateSlots "сознание это способность осознавать окружающий мир и самого себя" "SubjectSoznanie" "RelationEto" "ObjectSposobnostOsoznavatOkruzhayushchiyMirISamogoSebya",
     CuratedPredicateSlots "самосознание выражает рефлексивность субъекта" "SubjectSamosoznanie" "RelationVyrazhaet" "ObjectRefleksivnostSubekta",
     CuratedPredicateSlots "ответственность — это необходимость отвечать за свои действия" "SubjectOtvetstvennost" "RelationEtoNeobhodimost" "ObjectOtvechatZaSvoiDeystviya",
-    CuratedPredicateSlots "власть определяет, чья воля становится законом" "SubjectVlast" "RelationOpredelyaet" "ObjectChyaVolyaStanovitsyaZakonom"
+    CuratedPredicateSlots "власть определяет, чья воля становится законом" "SubjectVlast" "RelationOpredelyaet" "ObjectChyaVolyaStanovitsyaZakonom",
+    CuratedPredicateSlots "истина проверяется доказательствами" "SubjectIstina" "RelationProveryaetsya" "ObjectDokazatelstvami",
+    CuratedPredicateSlots "ответственность связана с осознанием последствий" "SubjectOtvetstvennost" "RelationSvyazana" "ObjectOsoznaniemPosledstvij"
   ]
 
 arguedLeafSlots :: [ArguedLeafSlot]

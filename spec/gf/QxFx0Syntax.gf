@@ -168,6 +168,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     ObjectDeystvieNezavisimo : SemanticObject ;
     ObjectDeystviyaNezavisimo : SemanticObject ;
     ObjectDlyaVosstanovleniya : SemanticObject ;
+    ObjectDokazatelstvami : SemanticObject ;
     ObjectDoverieMezhduSubektami : SemanticObject ;
     ObjectDoveriemKIstochniku : SemanticObject ;
     ObjectEsteticheskoePerezhivanie : SemanticObject ;
@@ -189,6 +190,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     ObjectObUgroze : SemanticObject ;
     ObjectObyazatelstvamiPeredDrugimi : SemanticObject ;
     ObjectOpytRazlichenie : SemanticObject ;
+    ObjectOsoznaniemPosledstvij : SemanticObject ;
     ObjectOsoznaniyaPosledstviy : SemanticObject ;
     ObjectOtIntuitsii : SemanticObject ;
     ObjectOtIstiny : SemanticObject ;

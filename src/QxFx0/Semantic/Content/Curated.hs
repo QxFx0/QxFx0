@@ -140,10 +140,23 @@ loadCuratedPredicates path = do
   entries <- mapM (\line -> case decodeLine line of
     Left err -> throwCuratedParseError (T.pack err)
     Right e  -> pure e) lines'
-  pure $ M.fromList
+  -- Duplicate topics merge (pre-registered 2026-10-09): row order
+  -- preserved, exact-duplicate predicates dropped. Previously
+  -- 'M.fromList' kept only the last row per topic (4047
+  -- predicates silently lost). Note: 'fromListWith' calls the
+  -- combiner as (new, existing), so the accumulator (earlier
+  -- rows) goes first.
+  pure $ M.fromListWith mergeContents
     [ (normalizeTopic (cpeTopic e), definitionContentFromEntry e)
     | e <- entries
     ]
+  where
+    mergeContents newVal existing =
+      let prior = dcPredicates existing
+      in DefinitionContent
+        { dcTopic = dcTopic existing
+        , dcPredicates = prior ++ filter (`notElem` prior) (dcPredicates newVal)
+        }
 
 -- | Load the bundled curated predicates and merge them into the
 -- hardcoded seed corpus.  If the file is missing or fails to parse,

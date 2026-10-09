@@ -3721,3 +3721,52 @@ beyond 24 verbs.
 - **Decision**: no expiry mechanism, no cap (a cap would
   trade proven correctness for a non-problem). Closed as
   analyzed. Reopen only on a live misfire trace.
+
+---
+
+# Curated duplicates merge — pre-registration (2026-10-09)
+
+- **Defect (measured)**: 1009 topics repeat in
+  `curated_predicates.jsonl`; `loadCuratedPredicates` builds
+  `M.fromList` (last-wins) — 4047 predicates silently dropped
+  (смысл keeps 2 of 6, граница 2 of 4, выбор 2 of 12).
+  All dropped content is legitimate.
+- **Rule (locked)**: merge duplicates on load
+  (`M.fromListWith` concatenation in row order + exact-dup
+  removal), single site (`loadCuratedPredicates`) serving
+  runtime and tests. No row deleted, no topic renamed.
+- **Risk (stated)**: pools grow 2–3× for core topics;
+  score-based top-1/3 selection may render different
+  surfaces on existing topics. Triaged, not assumed safe.
+- **Bar**: unit pins — dup merge (concatenated, deduped,
+  order-preserving), last-wins gone; CuratedPredicates
+  suite green; live — identical 12-turn battery re-run and
+  diffed (дефайны ядра + harvest-контроли), every delta
+  triaged; crisis control; zero new failures in
+  unit/fast/core; slow (selection pools change live).
+- **Out of scope**: overlay precedence; weights; EN bulk.
+
+---
+
+# Curated duplicates merge — landed (2026-10-10)
+
+- **What** (pre-registered above): `loadCuratedPredicates`
+  merges duplicate topics (row order, exact-dedup) —
+  4047 predicates restored to the pool. Plus 2 GF slots
+  for predicates that won selection without mappings
+  (истина/доказательствами, ответственность/осознанием),
+  PGF recompiled, slot-catalog count pin 71→73.
+- **Corrections en route**: (1) M6 benchmark regressed on
+  the истина turn (new winner unmapped → shim) — fixed by
+  slotting, not by touching the benchmark; (2) core ran a
+  stale binary once (false alarm, rebuilt); (3) anti-rot pin
+  allowlist needed runtime/Type-C/HDMI/2πr; (4) rationale-
+  variants are distinct content — dedup is record-level,
+  pin adjusted with rationale.
+- **Triage**: bigger pools shift some surfaces (вина,
+  смысл, выбор) — all honest, grounded, marked. M6FeltProven
+  holds in fast and core.
+- **Systemic note**: 284/344 corpus surfaces still lack GF
+  slots; policy is fix-on-win (slot the winner), not
+  284-row bulk authoring. Recorded, not scheduled.
+- **Verification**: unit 1733, fast 1833, core 1202 green.

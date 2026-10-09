@@ -217,6 +217,30 @@ testCuratedRuPredicatesClean = TestLabel "curated RU predicates carry no foreign
       , "a + bi", "runtime", "Type-C", "HDMI", "2πr"
       ]
 
+-- | Duplicate topics merge (pre-registered 2026-10-09): row order
+-- preserved, exact duplicates dropped, last-wins gone.
+testCuratedDuplicateMerge :: Test
+testCuratedDuplicateMerge = TestLabel "curated duplicate topics merge" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  case M.lookup "выбор" curated of
+    Nothing -> assertFailure "выбор must be present"
+    Just dc -> do
+      let surfaces = map spRu (dcPredicates dc)
+      assertBool "merged pool keeps early rows"
+        ("выбор определяет направление действия" `elem` surfaces)
+      assertBool "merged pool keeps late rows"
+        ("выбор определяет ответственность" `elem` surfaces)
+      assertBool "no silent loss: pool is large"
+        (length surfaces >= 10)
+      -- Same RU surface may recur with different rationale/counter
+      -- evidence (kept: distinct curated content, not silent loss).
+      assertBool "merged pool is large"
+        (length surfaces >= 10)
+  case M.lookup "смысл" curated of
+    Nothing -> assertFailure "смысл must be present"
+    Just dc -> assertEqual "смысл keeps all six"
+      6 (length (dcPredicates dc))
+
 -- | P1.6: Verify that batch 101-150 concepts are curated
 testCuratedPredicatesBatch101To150 :: Test
 testCuratedPredicatesBatch101To150 = TestLabel "curated predicates batch 101-150" $ TestCase $ do
@@ -432,4 +456,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch243To272
   , testCuratedPredicatesBatch273To293
   , testCuratedRuPredicatesClean
+  , testCuratedDuplicateMerge
   ]
