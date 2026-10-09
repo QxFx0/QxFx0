@@ -3701,3 +3701,23 @@ beyond 24 verbs.
 - **Round verdict**: PASS (round 1 of 2 for the sunset).
   Round 2 due after the next change batch or in 14 days
   idle, whichever comes first.
+
+---
+
+# Journal expiry follow-up — analyzed, no change warranted (2026-10-09)
+
+- **Analysis (read-only)**: the recorded Stage 1b limitation
+  ("journal never expires") dissolves on inspection:
+  - Cross-object pollution is structurally impossible —
+    all 4 library predicates (owns/holds/must-return/wrong)
+    are object/agent-indexed; threads never intersect.
+  - Refold cost is linear in a thread of single-digit
+    events — trivial; no memory pressure to relieve.
+  - "Staleness" is not a defect: the journal is true
+    session history. A much-later explicit continuation
+    ("Боря вернул книгу Ане") is legitimate, as with humans;
+    ambiguous re-references decline at the gate (pronouns
+    close it) exactly as designed.
+- **Decision**: no expiry mechanism, no cap (a cap would
+  trade proven correctness for a non-problem). Closed as
+  analyzed. Reopen only on a live misfire trace.
