@@ -3676,3 +3676,28 @@ beyond 24 verbs.
   special + return verbatim live (modulo standard degraded
   tails); controls/crisis/speculative unchanged.
 - **Verification**: unit 1733, fast 1832, core 1202 green.
+
+---
+
+# Cutover exit round 1 (ADR-0055 §2.5, 2026-10-09)
+
+- **Gate battery (10 turns, fixed)**: 10/10 — 5 fires with
+  correct verdicts (give Entails, lend Refuted, show/take/
+  steal OpenWorld), 5 abstains (define/contact/nomatch/
+  pronoun/single). Abstain band (preset here, not fitted):
+  single-turn exactly 5/10; multi-turn sessions exactly
+  0/2, 0/2, 1/2, 1/1 abstains (lend→return, lend→correction,
+  lend→unrelated, fresh-return). Any deviation fails.
+- **Multi-turn (4 sessions)**: lend→return (Refuted then
+  OpenWorld), lend→correction (Refuted then Entails),
+  lend→unrelated (fires then abstains), fresh-return
+  abstains. All per design.
+- **Zero false-authority**: IR surfaces acknowledge +
+  derived fluents only; legacy holds assert nothing;
+  hypothesis marking intact; no categorical ungrounded
+  claims on any battery turn (reviewed turn by turn).
+- **Matrix**: unit 1733, fast 1832, core 1202, property 227,
+  integration 46, slow 173 — all green on this HEAD.
+- **Round verdict**: PASS (round 1 of 2 for the sunset).
+  Round 2 due after the next change batch or in 14 days
+  idle, whichever comes first.
