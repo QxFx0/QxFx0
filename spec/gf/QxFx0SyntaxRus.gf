@@ -116,6 +116,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     RelationEto = { s = "это" } ;
     RelationEtoNeobhodimost = { s = "— это" } ;
     RelationImeet = { s = "имеет" } ;
+    RelationIzuchaetsya = { s = "изучается" } ;
     RelationKontrastiruet = { s = "контрастирует" } ;
     RelationMozhet = { s = "может" } ;
     RelationNapravlena = { s = "направлена" } ;
@@ -133,6 +134,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     RelationOtricaet = { s = "отрицает" } ;
     RelationOznachaet = { s = "означает" } ;
     RelationPodderzhivaet = { s = "поддерживает" } ;
+    RelationPoznaetsya = { s = "познается" } ;
     RelationPredpisyvaet = { s = "предписывает" } ;
     RelationPredpolagaet = { s = "предполагает" } ;
     RelationPreobrazuet = { s = "преобразует" } ;
@@ -143,6 +145,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     RelationRekonstruiruet = { s = "реконструирует" } ;
     RelationSignaliziruet = { s = "сигнализирует" } ;
     RelationSohranyaet = { s = "сохраняет" } ;
+    RelationSoputstvuet = { s = "сопутствует" } ;
     RelationSposoben = { s = "способен" } ;
     RelationStroitsya = { s = "строится" } ;
     RelationStrukturiruet = { s = "структурирует" } ;
@@ -154,12 +157,15 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     RelationVosstanavlivaet = { s = "восстанавливает" } ;
     RelationVyrazhaet = { s = "выражает" } ;
     RelationVyzyvaet = { s = "вызывает" } ;
+    RelationYavlyaetsya = { s = "является" } ;
     RelationZadaet = { s = "задаёт" } ;
     RelationZavisit = { s = "зависит" } ;
     ObjectAktObrashcheniya = { s = "актом обращения к личному прошлому" } ;
     ObjectAspektPervogoLitsa = { s = "аспект от первого лица" } ;
+    ObjectAvtonomiyuCheloveka = { s = "автономию человека" } ;
     ObjectBytAktom = { s = "быть актом отказа или знаком присутствия" } ;
     ObjectBytIzbrano = { s = "быть избрано или навязано обстоятельствами" } ;
+    ObjectCherezAnaliz = { s = "через анализ" } ;
     ObjectCherezOpyt = { s = "через повторяемый позитивный опыт" } ;
     ObjectCherezVosproizvodimost = { s = "через воспроизводимость" } ;
     ObjectChyaVolyaStanovitsyaZakonom = { s = "чья воля становится законом" } ;
@@ -173,6 +179,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     ObjectDoveriemKIstochniku = { s = "с доверием к источнику или опыту" } ;
     ObjectEsteticheskoePerezhivanie = { s = "эстетическое переживание" } ;
     ObjectFaktSushchestvovaniya = { s = "сам факт существования" } ;
+    ObjectFilosofiej = { s = "философией" } ;
     ObjectGranitsu = { s = "границу, через которую жизнь обретает конечную форму" } ;
     ObjectKObobshcheniyu = { s = "к обобщению и абстракции" } ;
     ObjectKakUslovie = { s = "как условие возможности любого суждения" } ;
@@ -200,6 +207,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     ObjectOtVosprinimayuschego = { s = "от воспринимающего и культурной рамки" } ;
     ObjectOtsutstvieDrugogo = { s = "отсутствие значимого другого" } ;
     ObjectOtsutstvieDvizheniya = { s = "отсутствие движения и напряжения" } ;
+    ObjectOtsutstvieOgranichenij = { s = "отсутствие ограничений" } ;
     ObjectOtsutstvieOgranicheniy = { s = "отсутствие ограничений" } ;
     ObjectOtvechatZaSvoiDeystviya = { s = "необходимость отвечать за свои действия" } ;
     ObjectOtvetstvennostyu = { s = "ответственностью" } ;
@@ -221,10 +229,17 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     ObjectSMyshleniem = { s = "с мышлением — он не только выражает, но и формирует мысль" } ;
     ObjectSPotrebnostyu = { s = "с потребностью и распределением ресурсов" } ;
     ObjectSRechyu = { s = "с речью, но не тождественно пустоте" } ;
+    ObjectSootvetstvieDejstvitelnosti = { s = "соответствие действительности" } ;
+    ObjectSootvetstvieFaktam = { s = "соответствие фактам" } ;
+    ObjectSootvetstvieMyslejIVyskazyvanijDejstvitelnosti = { s = "соответствие мыслей и высказываний действительности" } ;
     ObjectSootvetstvieRealnosti = { s = "на соответствие реальности" } ;
     ObjectSorazmernosti = { s = "соразмерности между деянием и воздаянием" } ;
     ObjectSposobnostChelovekaSoznatelnoUpravlyatPovedeniem = { s = "способность человека сознательно управлять своим поведением" } ;
+    ObjectSposobnostDejstvovatPoSobstvennomuUsmotreniyu = { s = "способность действовать по собственному усмотрению" } ;
     ObjectSposobnostOsoznavatOkruzhayushchiyMirISamogoSebya = { s = "способность осознавать окружающий мир и самого себя" } ;
+    ObjectSvobode = { s = "свободе" } ;
+    ObjectSvobody = { s = "свободы" } ;
+    ObjectTselyuPoznaniya = { s = "целью познания" } ;
     ObjectUyazvimost = { s = "уязвимость перед другим" } ;
     ObjectVliyatNaDrugih = { s = "способность влиять на действия других" } ;
     ObjectVospriyatieIRefleksiyu = { s = "восприятие и рефлексию" } ;

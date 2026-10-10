@@ -211,7 +211,7 @@ testGfSlotAdapterRejectsUnmapped = TestCase $
 
 testDefinitionCorpusGfCoverage :: Test
 testDefinitionCorpusGfCoverage = TestCase $
-  assertEqual "the definition corpus baseline plus corpus-smoke primary slots must remain cataloged" 73 curatedPredicateSlotCount
+  assertEqual "the definition corpus baseline plus corpus-smoke primary slots must remain cataloged" 84 curatedPredicateSlotCount
 
 testGfPlanLinearization :: Test
 testGfPlanLinearization = TestCase $ do

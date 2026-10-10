@@ -28,6 +28,7 @@ import QxFx0.Semantic.Content.Curated
 import QxFx0.Semantic.ContentSelector (buildContentSelector, ContentSelector(..), csTopicPredicates)
 import QxFx0.Semantic.Network.Ingest (admitRelationEndpoint, normalizeRelationText)
 import QxFx0.Semantic.Space (emptySemanticSpace)
+import QxFx0.Lexicon.Generated.SemanticSlots (lookupCuratedPredicateSlots)
 
 -- | The curated predicates file must exist and contain the top 20 gap
 -- topics from @docs/GAPS.md@, each with at least two predicates.
@@ -216,6 +217,21 @@ testCuratedRuPredicatesClean = TestLabel "curated RU predicates carry no foreign
       , "DVD", "Blu-ray", "LIFO", "FIFO", "CO2", "DNA", "a la carte", "XX"
       , "a + bi", "runtime", "Type-C", "HDMI", "2πr"
       ]
+
+-- | Benchmark-topic slot coverage (pre-registered 2026-10-10):
+-- every merged-pool surface for the M6 benchmark topics resolves
+-- in the GF slot catalog (computed, not hardcoded).
+testBenchmarkTopicsFullySlotted :: Test
+testBenchmarkTopicsFullySlotted = TestLabel "benchmark topics fully slotted" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  let extended = mergeCuratedIntoDefinitionCorpus curated definitionCorpus
+  mapM_ (\topic -> case M.lookup topic extended of
+           Nothing -> assertFailure ("benchmark topic missing: " <> T.unpack topic)
+           Just dc -> mapM_ (\surface ->
+             assertBool ("slotted: " <> T.unpack surface)
+               (isJust (lookupCuratedPredicateSlots surface)))
+             (map spRu (dcPredicates dc)))
+    ["свобода", "ответственность", "истина"]
 
 -- | Duplicate topics merge (pre-registered 2026-10-09): row order
 -- preserved, exact duplicates dropped, last-wins gone.
@@ -457,4 +473,5 @@ curatedPredicatesTests =
   , testCuratedPredicatesBatch273To293
   , testCuratedRuPredicatesClean
   , testCuratedDuplicateMerge
+  , testBenchmarkTopicsFullySlotted
   ]

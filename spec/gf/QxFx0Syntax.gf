@@ -116,6 +116,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     RelationEto : SemanticRelation ;
     RelationEtoNeobhodimost : SemanticRelation ;
     RelationImeet : SemanticRelation ;
+    RelationIzuchaetsya : SemanticRelation ;
     RelationKontrastiruet : SemanticRelation ;
     RelationMozhet : SemanticRelation ;
     RelationNapravlena : SemanticRelation ;
@@ -133,6 +134,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     RelationOtricaet : SemanticRelation ;
     RelationOznachaet : SemanticRelation ;
     RelationPodderzhivaet : SemanticRelation ;
+    RelationPoznaetsya : SemanticRelation ;
     RelationPredpisyvaet : SemanticRelation ;
     RelationPredpolagaet : SemanticRelation ;
     RelationPreobrazuet : SemanticRelation ;
@@ -143,6 +145,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     RelationRekonstruiruet : SemanticRelation ;
     RelationSignaliziruet : SemanticRelation ;
     RelationSohranyaet : SemanticRelation ;
+    RelationSoputstvuet : SemanticRelation ;
     RelationSposoben : SemanticRelation ;
     RelationStroitsya : SemanticRelation ;
     RelationStrukturiruet : SemanticRelation ;
@@ -154,12 +157,15 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     RelationVosstanavlivaet : SemanticRelation ;
     RelationVyrazhaet : SemanticRelation ;
     RelationVyzyvaet : SemanticRelation ;
+    RelationYavlyaetsya : SemanticRelation ;
     RelationZadaet : SemanticRelation ;
     RelationZavisit : SemanticRelation ;
     ObjectAktObrashcheniya : SemanticObject ;
     ObjectAspektPervogoLitsa : SemanticObject ;
+    ObjectAvtonomiyuCheloveka : SemanticObject ;
     ObjectBytAktom : SemanticObject ;
     ObjectBytIzbrano : SemanticObject ;
+    ObjectCherezAnaliz : SemanticObject ;
     ObjectCherezOpyt : SemanticObject ;
     ObjectCherezVosproizvodimost : SemanticObject ;
     ObjectChyaVolyaStanovitsyaZakonom : SemanticObject ;
@@ -173,6 +179,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     ObjectDoveriemKIstochniku : SemanticObject ;
     ObjectEsteticheskoePerezhivanie : SemanticObject ;
     ObjectFaktSushchestvovaniya : SemanticObject ;
+    ObjectFilosofiej : SemanticObject ;
     ObjectGranitsu : SemanticObject ;
     ObjectKObobshcheniyu : SemanticObject ;
     ObjectKakUslovie : SemanticObject ;
@@ -200,6 +207,7 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     ObjectOtVosprinimayuschego : SemanticObject ;
     ObjectOtsutstvieDrugogo : SemanticObject ;
     ObjectOtsutstvieDvizheniya : SemanticObject ;
+    ObjectOtsutstvieOgranichenij : SemanticObject ;
     ObjectOtsutstvieOgranicheniy : SemanticObject ;
     ObjectOtvechatZaSvoiDeystviya : SemanticObject ;
     ObjectOtvetstvennostyu : SemanticObject ;
@@ -221,10 +229,17 @@ abstract QxFx0Syntax = QxFx0Lexicon ** {
     ObjectSMyshleniem : SemanticObject ;
     ObjectSPotrebnostyu : SemanticObject ;
     ObjectSRechyu : SemanticObject ;
+    ObjectSootvetstvieDejstvitelnosti : SemanticObject ;
+    ObjectSootvetstvieFaktam : SemanticObject ;
+    ObjectSootvetstvieMyslejIVyskazyvanijDejstvitelnosti : SemanticObject ;
     ObjectSootvetstvieRealnosti : SemanticObject ;
     ObjectSorazmernosti : SemanticObject ;
     ObjectSposobnostChelovekaSoznatelnoUpravlyatPovedeniem : SemanticObject ;
+    ObjectSposobnostDejstvovatPoSobstvennomuUsmotreniyu : SemanticObject ;
     ObjectSposobnostOsoznavatOkruzhayushchiyMirISamogoSebya : SemanticObject ;
+    ObjectSvobode : SemanticObject ;
+    ObjectSvobody : SemanticObject ;
+    ObjectTselyuPoznaniya : SemanticObject ;
     ObjectUyazvimost : SemanticObject ;
     ObjectVliyatNaDrugih : SemanticObject ;
     ObjectVospriyatieIRefleksiyu : SemanticObject ;

@@ -115,7 +115,18 @@ curatedPredicateSlots =
     CuratedPredicateSlots "ответственность — это необходимость отвечать за свои действия" "SubjectOtvetstvennost" "RelationEtoNeobhodimost" "ObjectOtvechatZaSvoiDeystviya",
     CuratedPredicateSlots "власть определяет, чья воля становится законом" "SubjectVlast" "RelationOpredelyaet" "ObjectChyaVolyaStanovitsyaZakonom",
     CuratedPredicateSlots "истина проверяется доказательствами" "SubjectIstina" "RelationProveryaetsya" "ObjectDokazatelstvami",
-    CuratedPredicateSlots "ответственность связана с осознанием последствий" "SubjectOtvetstvennost" "RelationSvyazana" "ObjectOsoznaniemPosledstvij"
+    CuratedPredicateSlots "ответственность связана с осознанием последствий" "SubjectOtvetstvennost" "RelationSvyazana" "ObjectOsoznaniemPosledstvij",
+    CuratedPredicateSlots "свобода выражает автономию человека" "SubjectSvoboda" "RelationVyrazhaet" "ObjectAvtonomiyuCheloveka",
+    CuratedPredicateSlots "свобода это отсутствие ограничений" "SubjectSvoboda" "RelationEto" "ObjectOtsutstvieOgranichenij",
+    CuratedPredicateSlots "свобода изучается философией" "SubjectSvoboda" "RelationIzuchaetsya" "ObjectFilosofiej",
+    CuratedPredicateSlots "свобода это способность действовать по собственному усмотрению" "SubjectSvoboda" "RelationEto" "ObjectSposobnostDejstvovatPoSobstvennomuUsmotreniyu",
+    CuratedPredicateSlots "ответственность требует свободы" "SubjectOtvetstvennost" "RelationTrebuet" "ObjectSvobody",
+    CuratedPredicateSlots "ответственность сопутствует свободе" "SubjectOtvetstvennost" "RelationSoputstvuet" "ObjectSvobode",
+    CuratedPredicateSlots "истина это соответствие действительности" "SubjectIstina" "RelationEto" "ObjectSootvetstvieDejstvitelnosti",
+    CuratedPredicateSlots "истина познается через анализ" "SubjectIstina" "RelationPoznaetsya" "ObjectCherezAnaliz",
+    CuratedPredicateSlots "истина это соответствие фактам" "SubjectIstina" "RelationEto" "ObjectSootvetstvieFaktam",
+    CuratedPredicateSlots "истина это соответствие мыслей и высказываний действительности" "SubjectIstina" "RelationEto" "ObjectSootvetstvieMyslejIVyskazyvanijDejstvitelnosti",
+    CuratedPredicateSlots "истина является целью познания" "SubjectIstina" "RelationYavlyaetsya" "ObjectTselyuPoznaniya"
   ]
 
 arguedLeafSlots :: [ArguedLeafSlot]

@@ -3770,3 +3770,38 @@ beyond 24 verbs.
   slots; policy is fix-on-win (slot the winner), not
   284-row bulk authoring. Recorded, not scheduled.
 - **Verification**: unit 1733, fast 1833, core 1202 green.
+
+---
+
+# Benchmark-topic GF slot coverage — pre-registration (2026-10-10)
+
+- **Gap (measured)**: merged pools for the M6 benchmark
+  topics carry 11 predicates without GF slots (свобода 4,
+  ответственность 2, истина 5). Any of them winning
+  selection breaks the benchmark exactly like истина did
+  (shim → suppress → gate fail). 284-corpus-wide slotting
+  stays out of scope; this closes the benchmark surface.
+- **Rule (locked)**: 11 slot rows (existing S/R/O +
+  transliteration conventions), export regen, PGF
+  recompile. No predicate text changed anywhere.
+- **Bar**: unit pins — benchmark-topic pools fully slotted
+  (computed, not hardcoded: every merged-pool surface for
+  свобода/ответственность/истина resolves in the slot
+  catalog) + slot-catalog count 73→84; M6FeltProven green
+  in fast and core; zero new failures unit/fast/core.
+- **Out of scope**: the other ~270 unmapped surfaces
+  (fix-on-win policy stands); overlay precedence; weights.
+
+---
+
+# Benchmark-topic GF slot coverage — landed (2026-10-10)
+
+- **What** (pre-registered above): 11 slot rows for merged
+  benchmark-topic pools (свобода 4, ответственность 2,
+  истина 5), export regen, PGF recompiled, slot-catalog
+  count 73→84, computed coverage pin (every merged-pool
+  surface for the 3 topics resolves).
+- **Verification**: M6FeltProven green in fast and core;
+  unit 1733, fast 1834, core 1202 green. Two environmental
+  deaths en route (silent fast-job losses at the tail,
+  solo reruns green — same documented pattern).
