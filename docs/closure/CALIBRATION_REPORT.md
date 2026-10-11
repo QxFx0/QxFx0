@@ -3805,3 +3805,39 @@ beyond 24 verbs.
   unit 1733, fast 1834, core 1202 green. Two environmental
   deaths en route (silent fast-job losses at the tail,
   solo reruns green — same documented pattern).
+
+---
+
+# Curated EN-bulk spelling surgery — pre-registration (2026-10-11)
+
+- **Audit (read-only)**: 18 contaminated rows in EN-topic
+  bulk: 7 latin-in-Cyrillic topic typos (симposium, сиla,
+  кинematограф, ракeta, имaм, ламa, пovar), 3 CJK predicate
+  shards, 1 junk sentence-topic row. No pins reference any
+  broken spelling.
+- **Rule (locked)**: fix spellings in place (correct rows
+  merge naturally via loader: симposium→симпозиум,
+  сиla→сила, ракeta→ракета, пovar→повар; new correct topics
+  for кинematограф/имам/лама); CJK completions
+  (集合→набор, 交易→обмена, 领导яет→командует);
+  DELETE the L117 junk row (topic is a sentence fragment;
+  мышление covered ×4 elsewhere).
+- **Bar**: unit pins — merged-row counts for сила/повар
+  grow, junk topic absent, parser strict (all rows decode);
+  CuratedPredicates suite green; live spot (сила renders);
+  zero new failures in unit/fast/core.
+- **Out of scope**: EN-topic semantics review; overlay
+  precedence; weights.
+
+---
+
+# Curated EN-bulk spelling surgery — landed (2026-10-11)
+
+- **What** (pre-registered above): 7 latin-in-Cyrillic topic
+  spellings fixed in place (merging into correct topics via
+  the loader), 3 CJK completions, 1 junk sentence-topic row
+  deleted (мышление covered ×4 elsewhere). No pins
+  referenced broken spellings.
+- **Verification**: unit green, fast 1835 green (new merge
+  pins). Core + slow per the data-change discipline —
+  pending at landing, run next.

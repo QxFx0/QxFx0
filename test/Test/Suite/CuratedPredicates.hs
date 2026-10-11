@@ -233,6 +233,27 @@ testBenchmarkTopicsFullySlotted = TestLabel "benchmark topics fully slotted" $ T
              (map spRu (dcPredicates dc)))
     ["свобода", "ответственность", "истина"]
 
+-- | EN-bulk spelling surgery (pre-registered 2026-10-11): fixed
+-- spellings merge into correct topics; the junk sentence-topic
+-- row is gone.
+testEnBulkSpellingSurgery :: Test
+testEnBulkSpellingSurgery = TestLabel "en-bulk spelling surgery" $ TestCase $ do
+  curated <- loadCuratedPredicates curatedPredicatesPath
+  assertBool "junk sentence-topic absent"
+    (not (M.member "мышлением — он не только выражает, но и формирует мысль" curated))
+  case M.lookup "сила" curated of
+    Nothing -> assertFailure "сила must be present"
+    Just dc -> assertBool "сила pool grew by merge"
+      (length (dcPredicates dc) >= 4)
+  case M.lookup "повар" curated of
+    Nothing -> assertFailure "повар must be present"
+    Just dc -> assertBool "повар pool grew by merge"
+      (length (dcPredicates dc) >= 4)
+  case M.lookup "кинематограф" curated of
+    Nothing -> assertFailure "кинематограф must be present"
+    Just dc -> assertBool "кинематограф has predicates"
+      (length (dcPredicates dc) >= 2)
+
 -- | Duplicate topics merge (pre-registered 2026-10-09): row order
 -- preserved, exact duplicates dropped, last-wins gone.
 testCuratedDuplicateMerge :: Test
@@ -474,4 +495,5 @@ curatedPredicatesTests =
   , testCuratedRuPredicatesClean
   , testCuratedDuplicateMerge
   , testBenchmarkTopicsFullySlotted
+  , testEnBulkSpellingSurgery
   ]
