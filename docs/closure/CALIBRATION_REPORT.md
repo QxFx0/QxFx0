@@ -3841,3 +3841,16 @@ beyond 24 verbs.
 - **Verification**: unit green, fast 1835 green (new merge
   pins). Core + slow per the data-change discipline —
   pending at landing, run next.
+
+---
+
+# Curated EN-bulk spelling surgery — bar closed (2026-10-11)
+
+- **Live spot**: "что такое сила?" renders cleanly
+  ("Определение: сила осуществляет возможность ...") —
+  no contamination, no crash.
+- **Loader count**: "Curated predicates loaded topics=4036"
+  == normalized-distinct topic keys in the file (case/
+  whitespace variants merge under `normalizeTopic`); the
+  raw-vs-loaded gap is pre-existing normalization, not
+  surgery loss. Parser strict, 6238 rows, 0 decode failures.
