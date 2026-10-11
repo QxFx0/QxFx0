@@ -693,7 +693,6 @@ did not reproduce in two subsequent full runs (names not captured;
 re-observe before treating as real).
 
 ## Hygiene (2026-08-22, П6 mini-section)
-
 - `libHSqxfx0-0.1.0.0-inplace.so` was accidentally tracked at the repo
   root — untracked and removed; `libHSqxfx0*.so` and `*.qxfx0.db` are
   gitignored now (`R5Verdict.csv`, `ShadowAlert.csv`, `src/**/*.hi|o`
@@ -701,6 +700,16 @@ re-observe before treating as real).
 - `brain_kb.jsonl` (substrate source, 53K entries) restored locally
   2026-09-21 (gitignored, never committed) — see the Substrate Network
   note above.
+
+## Hygiene — large-files triage (2026-10-11)
+
+- GH large-files warning is advisory; all three big tracked files
+  are load-bearing and stay: `seed_ru_auto.tsv` (61MB, lexicon
+  pipeline input), `live_dialogues.jsonl` (52MB, harvest sink),
+  `reports/gf-release/surfaces-*.jsonl` (21MB, release evidence).
+  No LFS migration (append-mostly evidence, churn per harvest).
+- `rated_responses.json.bak-batch1` deleted 2026-10-11: all 70 rows
+  verified contained in `rated_responses.json` (160 rows).
 
 ## Pointers
 
