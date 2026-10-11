@@ -660,6 +660,8 @@ per-group green on current HEAD 2026-10-11, incl. EN-bulk surgery
 (chain died post-runtime again — slow10 stays the only
 full CHAIN-DONE); unbuffered output required to judge
 the long runtime test) |
+property/integration re-verified green on HEAD 2026-10-11
+(227/227, 46/46) after the EN-bulk surgery.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
