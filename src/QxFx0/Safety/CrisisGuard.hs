@@ -82,6 +82,16 @@ acuteCrisisMarkers =
   , ("самоповрежд", CrisisSelfHarm)
   , ("резать себя", CrisisSelfHarm)
   , ("резать вены", CrisisSelfHarm)
+    -- Paraphrase class (audit 2026-10-11): genuine first-person
+    -- ideation phrasing outside the original list.  Kept tight:
+    -- every entry is a first-person or act-specific phrase that
+    -- does not occur in philosophical/black-humour decoys.
+  , ("незачем жить", CrisisSuicidalIdeation)
+  , ("уйти из жизни", CrisisSuicidalIdeation)
+  , ("на себя руки", CrisisSuicidalIdeation)
+  , ("лучше бы меня не было", CrisisSuicidalIdeation)
+  , ("вскрыть вены", CrisisSelfHarm)
+  , ("вскрою вены", CrisisSelfHarm)
     -- English acute markers: the runtime is RU-first, but the hard
     -- gate must not silently pass acute English input.
   , ("kill myself", CrisisSuicidalIdeation)
@@ -91,19 +101,35 @@ acuteCrisisMarkers =
   , ("dont want to live", CrisisSuicidalIdeation)
   , ("suicide", CrisisSuicidalIdeation)
   , ("suicidal", CrisisSuicidalIdeation)
-  , ("self-harm", CrisisSelfHarm)
+    -- NOTE: written with a space, not a hyphen — 'normalizeCrisisInput'
+    -- maps hyphens to spaces, so the stored form must be normalized too.
+  , ("self harm", CrisisSelfHarm)
   , ("hurt myself", CrisisSelfHarm)
+  , ("no reason to live", CrisisSuicidalIdeation)
+  , ("end it all", CrisisSuicidalIdeation)
   ]
 
 -- | Normalize input for marker matching: lowercase, ё→е, collapse
 -- runs of whitespace.  Punctuation is /not/ stripped so phrase
 -- boundaries stay sharp (\"нехочу жить\" is not a trigger).
+-- Segmentation separators (hyphens, underscores, asterisks,
+-- zero-width characters) are mapped to spaces so \"не-хочу-жить\"
+-- cannot smuggle a marker past the gate; glued forms without any
+-- separator still do not match.
 normalizeCrisisInput :: Text -> Text
 normalizeCrisisInput =
   T.intercalate " "
     . T.words
+    . T.map smashSeparator
     . T.replace "ё" "е"
     . T.toLower
+  where
+    smashSeparator c
+      | c == '-' || c == '_' || c == '*' || c == '‐' || c == '‑'
+        || c == '‒' || c == '–' || c == '—' || c == '―' = ' '
+      | c == '\x200B' || c == '\x200C' || c == '\x200D'
+        || c == '\xFEFF' = ' '
+      | otherwise = c
 
 -- | Match the first acute marker (list order) on the normalized
 -- input.  'Nothing' means the hard gate does not fire; the turn may

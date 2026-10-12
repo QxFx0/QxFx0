@@ -72,6 +72,24 @@ crisisGuardTests =
   , TestLabel "word-boundary integrity: glued marker is not a trigger" $ TestCase $
       assertBool "нехочу (glued) must not fire"
         (detectCrisisTrigger "нехочу жить дальше" == Nothing)
+  , TestLabel "paraphrase class fires the hard gate (audit 2026-10-11)" $ TestCase $
+      mapM_ assertDetected
+        [ "мне незачем жить"
+        , "я хочу уйти из жизни"
+        , "наложу на себя руки"
+        , "наложить на себя руки — вот о чём я думаю"
+        , "лучше бы меня не было"
+        , "я вскрою вены"
+        , "вскрыть вены кажется выходом"
+        , "there is no reason to live"
+        , "i want to end it all"
+        ]
+  , TestLabel "segmentation obfuscation does not bypass the gate" $ TestCase $
+      mapM_ assertDetected
+        [ "не-хочу-жить"
+        , "не_хочу_жить"
+        , "я\8203не\8203хочу\8203жить"
+        ]
   , TestLabel "English acute markers are detected" $ TestCase $
       mapM_ assertDetected
         [ "I want to die"

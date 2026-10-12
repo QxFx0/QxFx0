@@ -3854,3 +3854,44 @@ beyond 24 verbs.
   whitespace variants merge under `normalizeTopic`); the
   raw-vs-loaded gap is pre-existing normalization, not
   surgery loss. Parser strict, 6238 rows, 0 decode failures.
+
+---
+
+# Crisis-gate paraphrase hardening — pre-registration (2026-10-11)
+
+- **Gap (audited)**: `detectCrisisTrigger` is exact-substring over
+  ~35 markers; genuine first-person paraphrases
+  ("мне незачем жить", "хочу уйти из жизни",
+  "наложу на себя руки", "лучше бы меня не было",
+  "вскрою вены") match nothing, and the R5 relative-branch
+  fallback is evidence-gated, so flat-affect paraphrase stays
+  Protocol A. Dash/underscore/zero-width segmentation
+  ("не-хочу-жить") also bypasses; homoglyph substitution
+  stays a known residual (out of scope).
+- **Rule (locked)**: add the paraphrase-class markers
+  (RU first-person + tight EN equivalents, same categories);
+  extend `normalizeCrisisInput` to map `-_*-`/zero-width to
+  spaces (glued "нехочу" still must NOT fire — pin holds).
+  No marker removed; decoy list untouched and must stay green.
+- **Bar**: new pins — each listed paraphrase asserts Protocol B
+  via `detectCrisisTrigger`, each decoy still asserts Nothing,
+  glued-negative still Nothing; CrisisGuard suite green;
+  zero new failures in unit/fast/core.
+- **Out of scope**: homoglyph mapping; whitelist review
+  (Finding 7); `:semantic` introspection suffix (Finding 5);
+  contour evidence-gate redesign.
+
+---
+
+# Crisis-gate paraphrase hardening — landed (2026-10-12)
+
+- **What** (pre-registered above): 6 RU paraphrase markers +
+  2 EN markers; `normalizeCrisisInput` maps hyphens/
+  underscores/asterisks/zero-width to spaces; `self-harm`
+  marker re-stored as `self harm` (normalized form).
+  Homoglyph substitution stays a known residual.
+- **Verification**: new pins (9 paraphrases + 3 segmentation
+  cases assert Protocol B; all 6 decoys + glued-negative
+  still assert Nothing); unit 1735, fast 1837, core 1202 —
+  all exit 0, zero new failures. Three environmental fast-job
+  deaths en route (silent, pre-teardown); solo rerun green.
