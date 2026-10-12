@@ -651,14 +651,15 @@ runtime regression:
 |---|---|
 | qxfx0-test | 1307 (core 1202 + runtime 94 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1834 |
-| qxfx0-test-unit | 1733 |
+| qxfx0-test-fast | 1837 |
+| qxfx0-test-unit | 1735 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
 | qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-11, incl. EN-bulk surgery
-(chain died post-runtime again — slow10 stays the only
-full CHAIN-DONE); unbuffered output required to judge
+per-group green on current HEAD 2026-10-12, incl. crisis hardening
+(runtime 94 by parts 86+8 — full process dies at 86/94 twice,
+tail standalone exit 0; slow10 stays the only full CHAIN-DONE);
+unbuffered output required to judge
 the long runtime test) |
 property/integration re-verified green on HEAD 2026-10-11
 (227/227, 46/46) after the EN-bulk surgery.
