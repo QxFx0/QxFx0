@@ -3895,3 +3895,40 @@ beyond 24 verbs.
   still assert Nothing); unit 1735, fast 1837, core 1202 —
   all exit 0, zero new failures. Three environmental fast-job
   deaths en route (silent, pre-teardown); solo rerun green.
+
+---
+
+# Finding 5: introspection suffix on crisis turns — pre-registration (2026-10-12)
+
+- **Gap (audited)**: in `:semantic` operator mode,
+  `buildFinalOutput` appends `renderSemanticIntrospection`
+  (focus topic + nix dump, attacker-influenced) to the crisis
+  turn output, breaking the byte-identical bounded surface.
+- **Rule (locked)**: skip the introspection append when the
+  turn trace records a Protocol B crisis verdict
+  (`trcUserRegime.urtCrisis.cgtProtocolB`); the crisis lead
+  text is untouched. Non-crisis introspection unchanged.
+- **Bar**: new slow pin — semantic-mode session + acute
+  crisis input renders resources (112) and no
+  `SEMANTIC_INTROSPECTION_BEGIN`; existing
+  `testSemanticModeTurn` (non-crisis append) stays green;
+  zero new failures in unit/fast/core/slow.
+- **Out of scope**: Finding 7 (whitelist); contour redesign.
+
+---
+
+# Finding 5: introspection suffix on crisis turns — landed (2026-10-13)
+
+- **What** (pre-registered above): `buildFinalOutput` skips the
+  introspection append on Protocol B crisis turns
+  (`trcUserRegime.urtCrisis.cgtProtocolB`); crisis lead text
+  untouched, non-crisis introspection unchanged.
+- **Verification**: new slow pin (`testSemanticModeCrisisSkipsIntrospection`,
+  runtime #32: resources present, no introspection block) +
+  existing `testSemanticModeTurn` green; unit 1735, fast 1837
+  (counts final, teardown death), core/property 227/
+  integration 46 exit 0; slow lifecycle 11, http 23 exit 0,
+  runtime 95 by parts (1–77 clean, 78–86 exit 0, 87–95
+  exit 0), state 45 counts-final. Zero new failures.
+  Full-process runtime deaths continue (this time at 77/95);
+  chunked runs green — environmental, not test signal.

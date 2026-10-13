@@ -76,6 +76,7 @@ import QxFx0.Types.Self.SelfDivergence
   , SelfDivergenceTuning(..)
   , defaultSelfDivergenceTuning
   )
+import QxFx0.Types.Safety.Crisis (cgtProtocolB)
 import QxFx0.Types.User.R5
   ( UserR5ContourState(..)
   , defaultUserConatusWeights
@@ -886,8 +887,13 @@ buildFinalOutput wantIntrospection replayTrace ss baseSurface nextSs =
       -- to maintain referential transparency. The analysis itself is pure.
       _traceAnalysis = analyzeTrace replayTrace
       
+      -- Finding 5 (audit 2026-10-12): on Protocol B crisis turns the
+      -- output must stay the byte-identical bounded surface — never
+      -- append the introspection suffix (attacker-influenced focus +
+      -- nix dump), even in operator :semantic mode.
+      crisisTurn = maybe False (cgtProtocolB . urtCrisis) (trcUserRegime replayTrace)
       preIntrospectionSurface =
-        if wantIntrospection
+        if wantIntrospection && not crisisTurn
           then
             let introspectionText = renderSemanticIntrospection nextSs (Just replayTrace)
             in baseSurface

@@ -649,16 +649,16 @@ runtime regression:
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1307 (core 1202 + runtime 94 + http 23; full single-process
+| qxfx0-test | 1308 (core 1202 + runtime 95 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-fast | 1837 |
 | qxfx0-test-unit | 1735 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
-| qxfx0-test-slow | 173 (runtime 94 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-12, incl. crisis hardening
-(runtime 94 by parts 86+8 — full process dies at 86/94 twice,
-tail standalone exit 0; slow10 stays the only full CHAIN-DONE);
+| qxfx0-test-slow | 174 (runtime 95 + state 45 + http 23 + lifecycle 11;
+per-group green on current HEAD 2026-10-13, incl. Finding 5
+(runtime 95 by parts — full process dies mid-run, chunks exit 0;
+slow10 stays the only full CHAIN-DONE);
 unbuffered output required to judge
 the long runtime test) |
 property/integration re-verified green on HEAD 2026-10-11

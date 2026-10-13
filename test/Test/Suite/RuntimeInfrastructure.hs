@@ -112,6 +112,7 @@ runtimeInfrastructureTests =
    , testBootstrapSessionDegradedRestoresNonAuthoritativePersistedState
    , testRuntimeBootstrapUsesCanonicalSpecSeeds
    , testSemanticModeTurn
+  , testSemanticModeCrisisSkipsIntrospection
   , testShadowSnapshotIdStable
   , testShadowSnapshotIdChangesWithInput
   , testDatalogShadowRespectsAtomSignals
@@ -1285,6 +1286,20 @@ testSemanticModeTurn = TestCase $ do
     (_session1, response) <- Runtime.runTurnInSession semSession "Что такое воля?"
     assertBool "semantic mode should append introspection block"
       ("SEMANTIC_INTROSPECTION_BEGIN" `T.isInfixOf` response)
+
+testSemanticModeCrisisSkipsIntrospection :: Test
+testSemanticModeCrisisSkipsIntrospection = TestCase $ do
+  withRuntimeEnv "qxfx0_test_runtime_semantic_crisis.db" $ do
+    session0 <- Runtime.bootstrapSession True "test_runtime_semantic_crisis"
+    let semSession = session0
+          { Runtime.sessOutputMode = Runtime.SemanticIntrospectionMode
+          , Runtime.sessSystemState = (Runtime.sessSystemState session0) { ssOutputMode = SemanticIntrospectionOutput }
+          }
+    (_session1, response) <- Runtime.runTurnInSession semSession "я не хочу жить"
+    assertBool "crisis turn must still carry resources"
+      ("112" `T.isInfixOf` response)
+    assertBool "crisis turn must skip the introspection suffix even in semantic mode"
+      (not ("SEMANTIC_INTROSPECTION_BEGIN" `T.isInfixOf` response))
 
 testRunTurnInSessionStrictBlocksWhenBackendUnavailable :: Test
 testRunTurnInSessionStrictBlocksWhenBackendUnavailable = TestCase $
