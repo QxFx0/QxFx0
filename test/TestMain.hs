@@ -5,6 +5,7 @@ module Main (main) where
 import System.Environment (lookupEnv)
 import System.Exit (exitFailure, exitSuccess)
 import Test.HUnit
+import Test.Support.SuiteFilter (selectSuites)
 
 import Test.Suite.CoreBehavior (coreBehaviorTests)
 import Test.Suite.ArchitectureInvariants (architectureInvariantTests)
@@ -64,13 +65,71 @@ import Test.Suite.SemanticRepairB3 (semanticRepairB3Tests)
 import Test.Suite.B3MechanicalGateExecution (b3MechanicalGateExecutionTests)
 import Test.Suite.ContentQualityGate (contentQualityGateTests)
 
+coreSuites :: [(String, [Test])]
+coreSuites =
+  [ ("CoreBehavior", coreBehaviorTests)
+  , ("ArchitectureInvariant", architectureInvariantTests)
+  , ("SelfPerspective", selfPerspectiveTests)
+  , ("PerspectiveRegistry", perspectiveRegistryTests)
+  , ("Guardrails", guardrailsTests)
+  , ("KnowledgeTree", knowledgeTreeTests)
+  , ("DialogueDevelopment", dialogueDevelopmentTests)
+  , ("TurnPipelineProtocol", turnPipelineProtocolTests)
+  , ("SemanticCorpus", semanticCorpusTests)
+  , ("Lexicon", lexiconTests)
+  , ("LegalAdapter", legalAdapterTests)
+  , ("RenderDialogueCoverage", renderDialogueCoverageTests)
+  , ("ObserverDiscipline", observerDisciplineTests)
+  , ("TraceSchema", traceSchemaTests)
+  , ("RegenerableDerived", regenerableDerivedTests)
+  , ("PromotionFlagDiscipline", promotionFlagDisciplineTests)
+  , ("ReplayGate", replayGateTests)
+  , ("RussianQuality", russianQualityTests)
+  , ("SelfBlanket", selfBlanketTests)
+  , ("SelfConatus", selfConatusTests)
+  , ("SelfAdjunction", selfAdjunctionTests)
+  , ("SelfField", selfFieldTests)
+  , ("SelfSalience", selfSalienceTests)
+  , ("SelfDeliberation", selfDeliberationTests)
+  , ("SelfEssence", selfEssenceTests)
+  , ("SelfEssenceCommit", selfEssenceCommitTests)
+  , ("SelfDivergence", selfDivergenceTests)
+  , ("ControlAAblation", controlAAblationTests)
+  , ("EssenceCollapse", essenceCollapseTests)
+  , ("CrisisGuard", crisisGuardTests)
+  , ("UserR5", userR5Tests)
+  , ("OntologicalAxis", ontologicalAxisTests)
+  , ("MoveGraph", moveGraphTests)
+  , ("P5Governance", p5GovernanceTests)
+  , ("PhaseM2d", phaseM2dTests)
+  , ("LongSessionCorpus", longSessionCorpusTests)
+  , ("VecProperties", vecPropertiesTests)
+  , ("EgoRead", egoReadTests)
+  , ("LearningLoop", learningLoopTests)
+  , ("TrainingCycle", trainingCycleTests)
+  , ("ReliabilityHardening", reliabilityHardeningTests)
+  , ("M6Witness", m6WitnessTests)
+  , ("M6FeltGate", m6FeltGateTests)
+  , ("M6FeltBenchmark", m6FeltBenchmarkTests)
+  , ("M5Regime", m5RegimeTests)
+  , ("Substrate", substrateTests)
+  , ("MorphologicalNormalization", morphologicalNormalizationTests)
+  , ("AtomStore", atomStoreTests)
+  , ("PathFinder", pathFinderTests)
+  , ("GeneratedPredicateGate", generatedPredicateGateTests)
+  , ("SubstrateCandidate", substrateCandidateTests)
+  , ("SemanticContentB3", semanticContentB3Tests)
+  , ("SemanticRepairB3", semanticRepairB3Tests)
+  , ("B3MechanicalGateExecution", b3MechanicalGateExecutionTests)
+  , ("ContentQualityGate", contentQualityGateTests)
+  ]
+
 main :: IO ()
 main = do
   mGroup <- lookupEnv "QXFX0_AGGREGATE_GROUP"
-  let coreTests = coreBehaviorTests ++ architectureInvariantTests ++ selfPerspectiveTests ++ perspectiveRegistryTests ++ guardrailsTests ++ knowledgeTreeTests ++ dialogueDevelopmentTests ++ turnPipelineProtocolTests
-        ++ semanticCorpusTests ++ lexiconTests ++ legalAdapterTests ++ renderDialogueCoverageTests ++ observerDisciplineTests ++ traceSchemaTests ++ regenerableDerivedTests ++ promotionFlagDisciplineTests ++ replayGateTests ++ russianQualityTests ++ selfBlanketTests ++ selfConatusTests ++ selfAdjunctionTests ++ selfFieldTests ++ selfSalienceTests ++ selfDeliberationTests ++ selfEssenceTests ++ selfEssenceCommitTests ++ selfDivergenceTests ++ controlAAblationTests ++ essenceCollapseTests ++ crisisGuardTests ++ userR5Tests ++ ontologicalAxisTests ++ moveGraphTests ++ p5GovernanceTests ++ phaseM2dTests ++ longSessionCorpusTests ++ vecPropertiesTests ++ egoReadTests ++ learningLoopTests ++ trainingCycleTests ++ reliabilityHardeningTests ++ m6WitnessTests ++ m6FeltGateTests ++ m6FeltBenchmarkTests ++ m5RegimeTests ++ substrateTests ++ morphologicalNormalizationTests ++ atomStoreTests ++ pathFinderTests ++ generatedPredicateGateTests ++ substrateCandidateTests ++ semanticContentB3Tests ++ semanticRepairB3Tests ++ b3MechanicalGateExecutionTests ++ contentQualityGateTests
-      groups =
-        [ ("core", coreTests)
+  coreTests <- selectSuites "QXFX0_CORE_SUITE" coreSuites
+  let groups =
+        [ ("core", [coreTests])
         , ("runtime", runtimeInfrastructureTests)
         , ("http", httpRuntimeTests)
         ]

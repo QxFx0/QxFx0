@@ -4,6 +4,7 @@ module Main (main) where
 
 import System.Exit (exitFailure, exitSuccess)
 import Test.HUnit
+import Test.Support.SuiteFilter (selectSuites)
 
 import Test.Suite.CoreBehavior (coreBehaviorTests)
 import Test.Suite.ArchitectureInvariants (architectureInvariantTests)
@@ -80,86 +81,87 @@ import Test.Suite.B3MechanicalGateExecution (b3MechanicalGateExecutionTests)
 import Test.Suite.ContentQualityGate (contentQualityGateTests)
 import Test.Suite.ResponsePlan (responsePlanTests)
 
+unitSuites :: [(String, [Test])]
+unitSuites =
+  [ ("CoreBehavior", coreBehaviorTests)
+  , ("ArchitectureInvariant", architectureInvariantTests)
+  , ("SelfPerspective", selfPerspectiveTests)
+  , ("PerspectiveRegistry", perspectiveRegistryTests)
+  , ("Guardrails", guardrailsTests)
+  , ("KnowledgeTree", knowledgeTreeTests)
+  , ("DialogueDevelopment", dialogueDevelopmentTests)
+  , ("TurnPipelineProtocol", turnPipelineProtocolTests)
+  , ("Lexicon", lexiconTests)
+  , ("VecProperties", vecPropertiesTests)
+  , ("BoundedLists", boundedListsTests)
+  , ("EgoRead", egoReadTests)
+  , ("SelfConatus", selfConatusTests)
+  , ("ConatusGate", conatusGateTests)
+  , ("SelfBlanket", selfBlanketTests)
+  , ("SelfAdjunction", selfAdjunctionTests)
+  , ("SelfField", selfFieldTests)
+  , ("ReplayGate", replayGateTests)
+  , ("ReplayDeterminism", replayDeterminismTests)
+  , ("AdmissionEquivalence", admissionEquivalenceTests)
+  , ("SelfSalience", selfSalienceTests)
+  , ("SelfDeliberation", selfDeliberationTests)
+  , ("TraceSchema", traceSchemaTests)
+  , ("OwnershipDetect", ownershipDetectTests)
+  , ("RegenerableDerived", regenerableDerivedTests)
+  , ("PromotionFlagDiscipline", promotionFlagDisciplineTests)
+  , ("SelfEssence", selfEssenceTests)
+  , ("SelfEssenceCommit", selfEssenceCommitTests)
+  , ("SelfDivergence", selfDivergenceTests)
+  , ("ControlAAblation", controlAAblationTests)
+  , ("EssenceCollapse", essenceCollapseTests)
+  , ("CrisisGuard", crisisGuardTests)
+  , ("UserR5", userR5Tests)
+  , ("OntologicalAxis", ontologicalAxisTests)
+  , ("MoveGraph", moveGraphTests)
+  , ("P5Governance", p5GovernanceTests)
+  , ("PhaseM2d", phaseM2dTests)
+  , ("LearningLoop", learningLoopTests)
+  , ("TrainingCycle", trainingCycleTests)
+  , ("DreamPressure", dreamPressureTests)
+  , ("DatalogSafety", datalogSafetyTests)
+  , ("SandboxBoundary", sandboxBoundaryTests)
+  , ("PgfErrorHandling", pgfErrorHandlingTests)
+  , ("StructuredErrors", structuredErrorsTests)
+  , ("Observability", observabilityTests)
+  , ("TraceAnalysis", traceAnalysisTests)
+  , ("M6FeltGate", m6FeltGateTests)
+  , ("DoubtLoop", doubtLoopTests)
+  , ("ContentSalience", contentSalienceTests)
+  , ("EpisodicMemory", episodicMemoryTests)
+  , ("AffectModel", affectModelTests)
+  , ("ResponseContentAdmission", responseContentAdmissionTests)
+  , ("ConfigExternalize", configExternalizeTests)
+  , ("CommitmentStoreAdmission", commitmentStoreAdmissionTests)
+  , ("CommitmentQuarantine", commitmentQuarantineTests)
+  , ("CommitmentAwareRouting", commitmentAwareRoutingTests)
+  , ("IntentClassifier", intentClassifierTests)
+  , ("SemanticNetwork", semanticNetworkTests)
+  , ("SemanticSpace", semanticSpaceTests)
+  , ("ContentSelector", contentSelectorTests)
+  , ("Composition", compositionTests)
+  , ("Assembly", assemblyTests)
+  , ("SemanticIR", semanticIRTests)
+  , ("Analogy", [analogyTests])
+  , ("GeometricClassifier", geometricClassifierTests)
+  , ("Anomaly", [anomalyTests])
+  , ("Stance", stanceTests)
+  , ("Rescue", rescueTests)
+  , ("SemanticContentB3", semanticContentB3Tests)
+  , ("SemanticRepairB3", semanticRepairB3Tests)
+  , ("B3MechanicalGateExecution", b3MechanicalGateExecutionTests)
+  , ("ContentQualityGate", contentQualityGateTests)
+  , ("ResponsePlan", responsePlanTests)
+  ]
+
 main :: IO ()
 main = do
-  testCounts <-
-    runTestTT $
-      TestList
-        ( coreBehaviorTests
-        ++ architectureInvariantTests
-        ++ selfPerspectiveTests
-        ++ perspectiveRegistryTests
-        ++ guardrailsTests
-        ++ knowledgeTreeTests
-        ++ dialogueDevelopmentTests
-        ++ turnPipelineProtocolTests
-        ++ lexiconTests
-        ++ vecPropertiesTests
-        ++ boundedListsTests
-        ++ egoReadTests
-        ++ selfConatusTests
-        ++ conatusGateTests
-        ++ selfBlanketTests
-        ++ selfAdjunctionTests
-         ++ selfFieldTests
-         ++ replayGateTests
-         ++ replayDeterminismTests
-         ++ admissionEquivalenceTests
-         ++ selfSalienceTests
-           ++ selfDeliberationTests
-           ++ traceSchemaTests
-           ++ ownershipDetectTests
-           ++ regenerableDerivedTests
-           ++ promotionFlagDisciplineTests
-            ++ selfEssenceTests
-            ++ selfEssenceCommitTests
-            ++ selfDivergenceTests
-            ++ controlAAblationTests
-            ++ essenceCollapseTests
-            ++ crisisGuardTests
-            ++ userR5Tests
-            ++ ontologicalAxisTests
-            ++ moveGraphTests
-            ++ p5GovernanceTests
-            ++ phaseM2dTests
-            ++ learningLoopTests
-            ++ trainingCycleTests
-           
-            ++ dreamPressureTests
-            ++ datalogSafetyTests
-            ++ sandboxBoundaryTests
-            ++ pgfErrorHandlingTests
-            ++ structuredErrorsTests
-            ++ observabilityTests
-            ++ traceAnalysisTests
-            ++ m6FeltGateTests
-            ++ doubtLoopTests
-            ++ contentSalienceTests
-            ++ episodicMemoryTests
-             ++ affectModelTests
-              ++ responseContentAdmissionTests
-              ++ configExternalizeTests
-                ++ commitmentStoreAdmissionTests
-                ++ commitmentQuarantineTests
-                 ++ commitmentAwareRoutingTests
-                  ++ intentClassifierTests
-                  ++ semanticNetworkTests
-                   ++ semanticSpaceTests
-                    ++ contentSelectorTests
-                     ++ compositionTests
-                     ++ assemblyTests
-                     ++ semanticIRTests
-                     ++ [analogyTests]
-                     ++ geometricClassifierTests
-                     ++ [anomalyTests]
-                     ++ stanceTests
-                     ++ rescueTests
-             ++ semanticContentB3Tests
-              ++ semanticRepairB3Tests
-              ++ b3MechanicalGateExecutionTests
-               ++ contentQualityGateTests
-               ++ responsePlanTests
-                  )
+  suiteTest <- selectSuites "QXFX0_UNIT_SUITE" unitSuites
+  testCounts <- runTestTT suiteTest
 
   if errors testCounts + failures testCounts > 0
     then exitFailure

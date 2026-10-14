@@ -645,7 +645,12 @@ SIGKILLs it mid-chain — write the pattern as `[q]xfx0-main
 bracket text no longer matches your own shell) or clean up between
 separately launched groups.
 Standalone http group 23/23 green, so this is resources, not a
-runtime regression:
+runtime regression.
+Suite slicing (2026-10-14): `QXFX0_UNIT_SUITE` / `QXFX0_FAST_SUITE` /
+`QXFX0_CORE_SUITE` run a comma-separated substring slice of the named
+suites (`..._SUITE=crisis`, unknown names fail loudly with the
+available list); unset = byte-identical full run. Slow keeps its
+`QXFX0_SLOW_GROUP` + `QXFX0_*_TEST` index filters:
 
 | Suite | Cases |
 |---|---|

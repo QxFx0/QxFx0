@@ -656,6 +656,7 @@ common test-common
     Test.Support.TurnPipelineFixtures
     Test.Support.GFParityHarness
     Test.Support.QuickCheckConfig
+    Test.Support.SuiteFilter
     Test.Suite.ArchitectureInvariants
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
