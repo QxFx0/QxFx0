@@ -76,7 +76,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.State.Governance (GovernanceRuntimeFault(..))
 import QxFx0.Types.IdentityGuard (IdentityGuardReport(..))
 
-import Test.Support (assertExec, queryCount, withFakeSouffle, withRuntimeEnv, withStrictRuntimeEnv, withEnvVar, removeIfExists)
+import Test.Support (assertExec, queryCount, withFakeNixInstantiateForConcepts, withFakeNixInstantiateOk, withFakeSouffle, withRuntimeEnv, withStrictRuntimeEnv, withEnvVar, removeIfExists)
 import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 
 runtimeInfrastructureTests :: [Test]
@@ -176,6 +176,8 @@ runtimeInfrastructureTests =
   , testHealthShLlmDecisionPathReflectsReality
   , testProbeRuntimeReadinessExposesGfMapStatus
   , testWriteAgdaWitnessReportsActualOutcome
+  , testWhitelistRemovalRoutesSmertThroughEval
+  , testWhitelistRemovalAllowsSmertUnderFakeNixOk
   ]
 
 runtimeLifecycleTests :: [Test]
@@ -2812,6 +2814,31 @@ testNixGuardCaseInsensitiveConceptMatch = TestCase $ do
     (Just lk, Just uk) ->
       assertEqual "lowercase and uppercase concept keys should normalize identically" lk uk
     _ -> assertFailure "concept key normalization returned Nothing"
+
+-- | Finding 7 (audit 2026-10-13): self-harm-adjacent keys must go
+-- through nix-eval, not the whitelist shortcut.  With fake nix
+-- blocking @smert@, "смерть" must be Blocked (proves the eval
+-- path); the whitelist shortcut would have returned Allowed.
+testWhitelistRemovalRoutesSmertThroughEval :: Test
+testWhitelistRemovalRoutesSmertThroughEval = TestCase $
+  withFakeNixInstantiateForConcepts ["smert"] $ do
+    status <- NixGuard.checkConstitution "semantics/concepts.nix" "смерть" 0.5 0.5
+    case status of
+      Blocked _ -> pure ()
+      Allowed -> assertFailure "смерть must go through eval (fake nix blocks smert), not the whitelist shortcut"
+      Unavailable reason -> assertFailure ("смерть eval must not be unavailable: " <> T.unpack reason)
+
+-- | Same routing, permissive side: with fake nix allowing
+-- everything, "смерть" stays Allowed (outcome unchanged
+-- when the constitution is up).
+testWhitelistRemovalAllowsSmertUnderFakeNixOk :: Test
+testWhitelistRemovalAllowsSmertUnderFakeNixOk = TestCase $
+  withFakeNixInstantiateOk $ do
+    status <- NixGuard.checkConstitution "semantics/concepts.nix" "смерть" 0.5 0.5
+    case status of
+      Allowed -> pure ()
+      Blocked reason -> assertFailure ("смерть must stay Allowed when nix is up: " <> T.unpack reason)
+      Unavailable reason -> assertFailure ("смерть eval must not be unavailable: " <> T.unpack reason)
 
 testNixGuardLowercaseConceptMatchesCapitalizedNix :: Test
 testNixGuardLowercaseConceptMatchesCapitalizedNix = TestCase $ do

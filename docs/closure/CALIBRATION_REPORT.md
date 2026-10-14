@@ -3932,3 +3932,47 @@ beyond 24 verbs.
   exit 0), state 45 counts-final. Zero new failures.
   Full-process runtime deaths continue (this time at 77/95);
   chunked runs green — environmental, not test signal.
+
+---
+
+# Finding 7: whitelist auto-Allow — pre-registration (2026-10-13)
+
+- **Gap (audited)**: `philosophicalTopicWhitelist` returns
+  `Allowed` for смерть/страх/тревога/одиночество/уединение
+  without consulting nix-eval — unscreened Allows on the
+  self-harm-adjacent slice. All five are covered corpus
+  topics, so bare removal would Block legitimate turns.
+- **Rule (locked)**: remove the 5 keys from the whitelist;
+  route them through eval via `conceptAlias`
+  (смерть→smert, страх→strah, одиночество→odinochestvo —
+  ids exist; тревога→trevoga, уединение→uedinenie — new
+  null-threshold entries in `semantics/concepts.nix`).
+  Outcome with nix up is unchanged (all five eval true);
+  with nix down they fail closed instead of auto-Allow.
+  No other whitelist key touched; benchmark topics untouched.
+- **Bar**: new pins — alias mapping pure assertions +
+  `checkConstitution` Blocked under fake-nix blocking smert
+  (proves the eval path, not the shortcut) + Allowed under
+  fake-nix-ok; `testNixGuardCorpusDiagnostics` green;
+  zero new failures in unit/fast/core/slow.
+- **Out of scope**: `prohibitedIf` enforcement (unevaluated
+  by the expr today); contour redesign; homoglyphs.
+
+---
+
+# Finding 7: whitelist auto-Allow — landed (2026-10-15)
+
+- **What** (pre-registered above): 5 self-harm-adjacent keys
+  removed from `philosophicalTopicWhitelist`; routed through
+  nix-eval via `conceptAlias` (смерть→smert, страх→strah,
+  одиночество→odinochestvo; тревога→trevoga,
+  уединение→uedinenie with two new null-threshold
+  `concepts.nix` entries, 36→38 concepts). Outcome with nix
+  up unchanged; with nix down they fail closed.
+- **Verification**: new slow pins (runtime #96 Blocked under
+  fake-nix-blocking-smert, #97 Allowed under fake-nix-ok);
+  `testNixGuardCorpusDiagnostics` green inside fast;
+  unit 1735, fast 1837, core/property 227/integration 46
+  exit 0; slow lifecycle 11, http 23 exit 0, runtime 97 by
+  parts (1–59 clean, 60 solo exit 0, 61–97 exit 0),
+  state 45 exit 0. Zero new failures.

@@ -41,5 +41,7 @@
     { id = "chestnost"; name = "Честность"; minAgency = null; minTension = null; layer = "MetaLayer"; family = "CMRepair"; stance = "honest"; prohibitedIf = []; }
     { id = "hrupkost"; name = "Хрупкость"; minAgency = null; minTension = null; layer = "MetaLayer"; family = "CMClarify"; stance = "tentative"; prohibitedIf = []; }
     { id = "pustota"; name = "Пустота"; minAgency = null; minTension = null; layer = "MetaLayer"; family = "CMHypothesis"; stance = "tentative"; prohibitedIf = ["nadezhda" "volya" "lyubov"]; }
+    { id = "trevoga"; name = "Тревога"; minAgency = null; minTension = null; layer = "MetaLayer"; family = "CMClarify"; stance = "honest"; prohibitedIf = []; }
+    { id = "uedinenie"; name = "Уединение"; minAgency = null; minTension = null; layer = "MetaLayer"; family = "CMReflect"; stance = "honest"; prohibitedIf = []; }
   ];
 }

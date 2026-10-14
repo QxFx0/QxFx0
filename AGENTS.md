@@ -654,15 +654,15 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1308 (core 1202 + runtime 95 + http 23; full single-process
+| qxfx0-test | 1322 (core 1202 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-fast | 1837 |
 | qxfx0-test-unit | 1735 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 46 |
-| qxfx0-test-slow | 174 (runtime 95 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-13, incl. Finding 5
-(runtime 95 by parts — full process dies mid-run, chunks exit 0;
+| qxfx0-test-slow | 176 (runtime 97 + state 45 + http 23 + lifecycle 11;
+per-group green on current HEAD 2026-10-15, incl. Finding 7
+(runtime 97 by parts — full process dies mid-run, chunks exit 0;
 slow10 stays the only full CHAIN-DONE);
 unbuffered output required to judge
 the long runtime test) |
