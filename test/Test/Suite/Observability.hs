@@ -12,7 +12,7 @@ import Data.Time.Clock (getCurrentTime, diffUTCTime)
 
 import QxFx0.Observability.Logging
 import QxFx0.Observability.Metrics
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), mkRuntimeInitError)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), mkRuntimeInitError, toErrorCode)
 import QxFx0.Types.TurnProjection (TurnReplayTrace(..))
 import QxFx0.Core.Bayesian (userModelActive)
 import QxFx0.Semantic.Logic (derivedInferenceActive)
@@ -33,33 +33,46 @@ observabilityTests =
 loggingTests :: [Test]
 loggingTests =
   [ TestCase $ do
-      -- This is a smoke test - actual logging goes to stderr
+      -- Emission must not throw; the level tag must render.
       logDebug "test message" emptyContext
-      -- If we get here without exception, logging works
-      pure ()
+      timestamp <- getCurrentTime
+      let rendered = formatLogEntry (LogEntry timestamp LogDebug "test message" emptyContext Nothing)
+      assertBool "DEBUG level must render its tag" ("[DEBUG]" `T.isInfixOf` rendered)
   
   , TestCase $ do
       logInfo "test info" emptyContext
-      pure ()
+      timestamp <- getCurrentTime
+      let rendered = formatLogEntry (LogEntry timestamp LogInfo "test info" emptyContext Nothing)
+      assertBool "INFO level must render its tag" ("[INFO]" `T.isInfixOf` rendered)
   
   , TestCase $ do
       logWarn "test warning" emptyContext
-      pure ()
+      timestamp <- getCurrentTime
+      let rendered = formatLogEntry (LogEntry timestamp LogWarn "test warning" emptyContext Nothing)
+      assertBool "WARN level must render its tag" ("[WARN]" `T.isInfixOf` rendered)
   
   , TestCase $ do
       logError "test error" emptyContext
-      pure ()
+      timestamp <- getCurrentTime
+      let rendered = formatLogEntry (LogEntry timestamp LogError "test error" emptyContext Nothing)
+      assertBool "ERROR level must render its tag" ("[ERROR]" `T.isInfixOf` rendered)
   
   , TestCase $ do
       let ex = mkRuntimeInitError "Test" "test_op" "TEST_ERROR" Map.empty
       logException ex emptyContext
-      pure ()
+      let code = toErrorCode ex
+      assertBool "exception must carry a non-empty error code" (not (T.null code))
+      timestamp <- getCurrentTime
+      let rendered = formatLogEntry (LogEntry timestamp LogError "msg" emptyContext (Just code))
+      assertBool "error code must render in parens" (("(" <> code <> ")") `T.isInfixOf` rendered)
   
   , TestCase $ do
       let ctx = addContext "key1" "value1" $
                 addContext "key2" "value2" emptyContext
-      -- Context is built correctly if no exception
-      pure ()
+      assertEqual "context must retain inserted pairs"
+        (Just "value1") (Map.lookup "key1" ctx)
+      assertEqual "context must retain both pairs"
+        (Just "value2") (Map.lookup "key2" ctx)
   
   , TestCase $ do
       timestamp <- getCurrentTime

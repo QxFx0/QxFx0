@@ -564,11 +564,14 @@ testHttpSidecarStartupFailsWhenPortInUse = TestCase $
 withHttpSocketCapability :: IO () -> IO ()
 withHttpSocketCapability action = do
   ready <- localhostSocketBindingAvailable
-  when ready $
-    withEnvVar "HTTP_PROXY" Nothing $
-      withEnvVar "HTTPS_PROXY" Nothing $
-        withEnvVar "NO_PROXY" (Just "127.0.0.1,localhost") $
-          withEnvVar "QXFX0_RUNTIME_PROBE_TIMEOUT_SECONDS" (Just "20") action
+  if not ready
+    then putStrLn "SKIP: localhost socket binding unavailable (no network namespace); HTTP runtime cases not executed"
+    else
+      when ready $
+        withEnvVar "HTTP_PROXY" Nothing $
+          withEnvVar "HTTPS_PROXY" Nothing $
+            withEnvVar "NO_PROXY" (Just "127.0.0.1,localhost") $
+              withEnvVar "QXFX0_RUNTIME_PROBE_TIMEOUT_SECONDS" (Just "20") action
 
 localhostSocketBindingAvailable :: IO Bool
 localhostSocketBindingAvailable = do

@@ -19,7 +19,7 @@ import qualified Data.Text as T
 import qualified Data.Map.Strict as M
 
 import QxFx0.Runtime.PGF (dialogAtomsToGfExpr, linearizeClaimAstGfLang, linearizeDialogAtomsGfLang)
-import QxFx0.Types (ClaimAst(..))
+import QxFx0.Types (ClaimAst(..), GfLinearizationResult(..))
 import QxFx0.Semantic.DialogAtom (DialogAtoms(..), AtomTag(..), plainSlot)
 
 pgfErrorHandlingTests :: [Test]
@@ -85,9 +85,16 @@ testPGFParseErrorExpr = TestCase $ do
       -- Should get unresolved topic error
       assertBool "Error should indicate topic resolution failure" 
         ("unresolved_topic_lexeme" `T.isInfixOf` err)
-    Right _ -> 
-      -- If it succeeds, the lexeme might exist or fallback worked
-      pure ()
+    Right glr ->
+      -- Success for an unresolvable topic is legal ONLY on the
+      -- tagged fallback path: the result must say so explicitly.
+      -- An untagged success would be a silent resolution regression.
+      case glrFallbackReason glr of
+        Just reason ->
+          assertBool "fallback success must carry non-empty text"
+            (not (T.null (glrText glr)) && not (T.null reason))
+        Nothing -> assertFailure
+          ("unresolvable topic linearized without a fallback tag: " <> T.unpack (glrText glr))
 
 testDefineDialogAtomsArity :: Test
 testDefineDialogAtomsArity = TestCase $ do

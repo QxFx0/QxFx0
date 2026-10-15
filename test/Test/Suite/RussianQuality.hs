@@ -555,9 +555,18 @@ testL3eCandidateParity = TestCase $ do
       -- Record N in the module for ratchet tracking
       putStrLn $ "\nL3e-0 baseline N = " <> show totalMismatches <> " (record in §7 of migration spec)"
 
-      -- Gate: test always passes at L3e-0 (baseline measurement only)
-      -- The ratchet will be lowered in subsequent phases
-      assertBool "L3e-0 baseline measurement complete" True
+      -- Gate at L3e-0 (audit 2026-10-15): the baseline measurement
+      -- itself is pinned — non-vacuous input and a complete
+      -- partition (every noun classified exactly once).  The
+      -- mismatch ratchet itself is still lowered in later phases.
+      assertBool "L3e-0 must measure a non-empty noun set"
+        (totalNouns > 0)
+      -- Partition over the raw classification rows (not the
+      -- summary buckets: plain "G5" rows are reported but not
+      -- totaled in totalMismatches, so count rows directly).
+      let nonOKCount = length [() | (c, _, _) <- classifications, c /= "OK"]
+      assertEqual "L3e-0 classifications must partition the noun set"
+        totalNouns (okCount + nonOKCount)
 
 -- | Helper: load paradigms from the default path for G5 check.
 -- This is safe because we're only checking membership, not form parity.

@@ -3976,3 +3976,25 @@ beyond 24 verbs.
   exit 0; slow lifecycle 11, http 23 exit 0, runtime 97 by
   parts (1–59 clean, 60 solo exit 0, 61–97 exit 0),
   state 45 exit 0. Zero new failures.
+
+---
+
+# P0 test-health tightening — landed (2026-10-16)
+
+- **What** (test-only, no runtime behavior change):
+  Observability logging smoke tests now assert per-level
+  render tags + error-code rendering + context round-trip;
+  PGF `testPGFParseErrorExpr` Right-branch requires a TAGGED
+  fallback (`glrFallbackReason` must be `Just`);
+  HttpRuntime socket gate prints a loud SKIP instead of
+  passing silently; L3e-0 baseline pins a non-vacuous,
+  complete partition (true row count, not the summary
+  buckets — plain "G5" rows are reported but untotaled).
+  P8 compile-pins intentionally untouched (schema locks,
+  no behavioral false-green possible); timing-sensitive
+  concurrency asserts deferred (separate front).
+- **Verification**: unit 1735, fast 1837, core 1202 exit 0;
+  slow http 23 exit 0. Zero new failures. The new L3e-0
+  partition assert caught a real bucket miscount on first
+  run (86 plain-G5 rows outside the totaled buckets) —
+  fixed before landing.
