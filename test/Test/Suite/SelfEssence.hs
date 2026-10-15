@@ -126,15 +126,16 @@ selfEssenceTests =
               ++ show floorV )
           (floorV < 14.0)
 
-    -- WP-F (R-F2b) — the phase-9 reference keeps the historical 0.5 floor for
-    -- backward-compat regression locks, but it must NOT be the live default.
-  , TestLabel "WP-F: phase9 0.5 floor is a kept reference, not the live default" $
+    -- WP-F (R-F2b) — collapsed 2026-10-15 (tech-debt audit): the base
+    -- record itself carries the live 7.0 floor; there is no divergent
+    -- 0.5 reference left for a future caller to grab by mistake.
+  , TestLabel "WP-F: phase9 base record carries the live floor (no 0.5 trap)" $
       TestCase $ do
-        assertEqual "phase9 reference floor pinned at 0.5"
-          (0.5 :: Double) (emConatusStructuralFloor phase9EssenceModulation)
-        assertBool "live default floor must differ from the buggy phase9 reference"
-          ( emConatusStructuralFloor defaultEssenceModulation
-              /= emConatusStructuralFloor phase9EssenceModulation )
+        assertEqual "phase9 base floor pinned at the live log-scale value"
+          (7.0 :: Double) (emConatusStructuralFloor phase9EssenceModulation)
+        assertEqual "live default floor identical to the base record"
+          (emConatusStructuralFloor phase9EssenceModulation)
+          (emConatusStructuralFloor defaultEssenceModulation)
 
     -- WP-F (R-F3) — explicit Deferred contract: the angst-side parameters are
     -- NOT calibrated against the production runtime (ADR-0012 §15.2,

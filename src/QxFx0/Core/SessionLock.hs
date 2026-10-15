@@ -117,7 +117,13 @@ getOrCreateLock mgr sessionId = do
             Just lock -> pure lock
             Nothing -> do
               hPutStrLn stderr $ "session_lock_overflow: session=" <> T.unpack sessionId <> " tracked=" <> show (slmMaxTrackedLocks mgr) <> " cap=" <> show (slmMaxTrackedLocks mgr)
-              pure (pickOverflowShard mgr sessionId)
+              case pickOverflowShard mgr sessionId of
+                Just shard -> pure shard
+                -- Unreachable from 'newSessionLockManager', but a fresh
+                -- per-session lock is the safe fallback (no sharing).
+                Nothing -> do
+                  hPutStrLn stderr $ "session_lock_overflow_no_shards: session=" <> T.unpack sessionId
+                  pure newLock
 
 nextAccessStamp :: SessionLockManager -> IO Int
 nextAccessStamp mgr = atomically $ do
@@ -151,11 +157,13 @@ evictFreeTrackedLock mgr sessionId newLock stamp = do
             Just lock -> pure (Just lock)
             Nothing -> tryCandidates rest
 
-pickOverflowShard :: SessionLockManager -> Text -> MVar ()
+pickOverflowShard :: SessionLockManager -> Text -> Maybe (MVar ())
 pickOverflowShard mgr sessionId =
-  let shards = slmOverflowShards mgr
-      idx = sessionLockOverflowShardIndex sessionId `mod` max 1 (length shards)
-  in shards !! idx
+  case slmOverflowShards mgr of
+    -- Total: the empty case is unreachable from 'newSessionLockManager'
+    -- (fixed 64 shards) but must not throw if it ever happens.
+    [] -> Nothing
+    shards -> Just (shards !! (sessionLockOverflowShardIndex sessionId `mod` length shards))
 
 sessionLockOverflowShardCount :: Int
 sessionLockOverflowShardCount = 64

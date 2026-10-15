@@ -207,7 +207,10 @@ phase9EssenceModulation = EssenceModulation
   , emAngstDecayRate              = 0.02
   , emAngstAccrualDivergenceFloor = 0.5
   , emConatusFloorWindow          = 8
-  , emConatusStructuralFloor      = 0.5
+  -- Was 0.5 ([0,1]-scale bug against log-scale 'ceScalar', WP-F):
+  -- the base record now carries the corrected 7.0 directly so no
+  -- future caller can reintroduce the mismatch via this default.
+  , emConatusStructuralFloor      = 7.0
   , emTrajectoryCapacity          = 32
   , emBandLowEdge                 = 0.33
   , emBandHighEdge                = 0.67
@@ -217,16 +220,15 @@ phase9EssenceModulation = EssenceModulation
 
 -- | Calibrated defaults (post-Phase 10 §4).
 --
--- * @emConatusStructuralFloor@ raised from 0.5 to 7.0 to match the
---   production codomain of 'computeConatusEnergy' (log-scale
---   unbounded, healthy range ~14-15).  See ADR-0012 §15.1.
+-- * @emConatusStructuralFloor@ is 7.0 in the base record itself to
+--   match the production codomain of 'computeConatusEnergy'
+--   (log-scale unbounded, healthy range ~14-15).  See ADR-0012 §15.1.
 -- * Angst-side parameters remain at Phase 9 values because the
 --   synthetic long-session corpus could not reliably produce
 --   'RuleHolisticAdvantage' / 'RuleFormalAdvantage' with
 --   sufficient divergence.  Calibration deferred.  See ADR-0012 §15.2.
 defaultEssenceModulation :: EssenceModulation
 defaultEssenceModulation = phase9EssenceModulation
-  { emConatusStructuralFloor = 7.0 }
 
 -- ---------------------------------------------------------------------------
 -- Constructors

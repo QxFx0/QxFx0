@@ -919,7 +919,8 @@ repairCancelledCorroboration db tasks err =
     Just _ -> do
       forM_ tasks $ \task ->
         markCorroborationTaskFailed db task True 1 "worker_cancelled"
-          `catch` \(_ :: SomeException) -> pure ()
+          `catch` \(markErr :: SomeException) ->
+            hPutStrLn stderr ("[autonomous] repair mark failed for task " <> show (ctId task) <> ": " <> show markErr)
       throwIO err
 
 processCorroborationTask :: AutonomousWorkerConfig -> LLMTransport -> QxFx0DB -> CorroborationTask -> IO ()

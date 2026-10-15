@@ -158,19 +158,23 @@ runSelfPlayCycle config morph graph = do
 generateQuestion :: AtomGraph -> IO Text
 generateQuestion graph = do
   let topics = allTopics
-  randIdx <- randomRIO (0, length topics - 1)
-  let topic = topics L.!! randIdx
+  case topics of
+    -- Degenerate but total: an empty atom store has no topics to ask about.
+    [] -> return "Что такое мысль?"
+    _ -> do
+      randIdx <- randomRIO (0, length topics - 1)
+      let topic = topics L.!! randIdx
 
-  -- 30% chance of cross-topic question
-  isCross <- randomRIO (0, 9 :: Int)
-  if isCross < 3 && length topics >= 2
-    then do
-      randIdx2 <- randomRIO (0, length topics - 1)
-      let topic2 = topics L.!! randIdx2
-      if topic /= topic2
-        then return ("Как " <> topic <> " связан с " <> topic2 <> "?")
+      -- 30% chance of cross-topic question
+      isCross <- randomRIO (0, 9 :: Int)
+      if isCross < 3 && length topics >= 2
+        then do
+          randIdx2 <- randomRIO (0, length topics - 1)
+          let topic2 = topics L.!! randIdx2
+          if topic /= topic2
+            then return ("Как " <> topic <> " связан с " <> topic2 <> "?")
+            else return ("Что такое " <> topic <> "?")
         else return ("Что такое " <> topic <> "?")
-    else return ("Что такое " <> topic <> "?")
 
 -- | Evaluate an answer using LLM.
 -- Returns (score 0-10, list of identified gaps).

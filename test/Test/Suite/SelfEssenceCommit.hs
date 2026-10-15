@@ -535,9 +535,12 @@ testConatusErosionFiresUnderCorrectedFloor = do
     other -> assertFailure
       ("expected Just TriggerConatusErosion under corrected floor, got "
        ++ show other)
-  -- With 'phase9EssenceModulation' (floor = 0.5), 5.0 is NOT sub-floor
-  -- → no trigger.  Regression lock against accidental reversion.
-  case shouldCommit phase9EssenceModulation traj of
+  -- With the historical buggy floor (0.5, constructed explicitly —
+  -- the base record itself carries the live 7.0 since the 2026-10-15
+  -- collapse), 5.0 is NOT sub-floor → no trigger.  Regression lock
+  -- against accidental reversion.
+  let buggyPhase9 = phase9EssenceModulation { emConatusStructuralFloor = 0.5 }
+  case shouldCommit buggyPhase9 traj of
     Nothing -> pure ()
     other -> assertFailure
       ("Phase 9 buggy floor should NOT trigger on scalar 5.0, got "
