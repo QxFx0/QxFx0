@@ -666,6 +666,9 @@ per-group green on current HEAD 2026-10-15, incl. Finding 7
 slow10 stays the only full CHAIN-DONE);
 unbuffered output required to judge
 the long runtime test) |
+Known isolation wart (pre-existing, seen 2026-10-13..15):
+`testComputeReadinessModeReady` (runtime #60) hangs when run
+after 59 others but passes solo — run it standalone on stall.
 property/integration re-verified green on HEAD 2026-10-11
 (227/227, 46/46) after the EN-bulk surgery.
 
