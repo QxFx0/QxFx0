@@ -20,7 +20,9 @@ This module is /not/ a model of phenomenal selfhood. It is a
 structural accumulator over the right- and left-hemispheric
 verdicts already produced by 'QxFx0.Self.Deliberation'. The
 forcing dynamics (Phase 10) are law-driven and unconditionally
-active since 2026-05-19: 'shouldCommit' is evaluated every turn,
+active since 2026-05-19: 'shouldCommit' is evaluated every turn
+while the trajectory is uncommitted and no reset intervenes
+(the committed and reset branches bypass it by construction),
 'validatePlan' guards the committed plan, and 'rrEssenceActive'
 is 'True' (Policy A, ESSENCE-REGIME-RECONCILE.md).  Commitment is
 law-driven, not flag-gated, by design (the historical ADR-0012

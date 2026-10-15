@@ -380,7 +380,9 @@ When a new `QxFx0.Self.*` module becomes canonical
 3. **Add at least one `trc*` field** to
    `TurnReplayTrace`, with Haddock that names the
    Self/* module, the compute site, and the
-   codomain.
+   codomain. Exception: regime/cutover contours grow the
+   `trcUserRegime` / `trcOwnershipCompare` sub-records,
+   not the top-level record (P1-4 precedent).
 4. **Bind** the field in the constructor at
    `Projection.hs:142-199`.
 5. **Update this document** — add a §N section.

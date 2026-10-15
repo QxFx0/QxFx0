@@ -84,7 +84,7 @@ data ControlAAblation = ControlAAblation
   { caDisableSemanticFirst :: !Bool
     -- ^ Semantic-first path off: assembly/template fallback only.
   , caDisableEssence :: !Bool
-    -- ^ 'shouldCommit' always returns 'Nothing' (no new commitments).
+    -- ^ 'shouldCommit' is bypassed, never called (no new commitments).
   , caDisableAdmission :: !Bool
     -- ^ CTS-42 bypassed: all claims admitted (no suppression/quarantine).
   , caDisableRepair :: !Bool

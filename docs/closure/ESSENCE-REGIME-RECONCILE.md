@@ -35,7 +35,7 @@ and whether it matches runtime reality.
 
 | Source | Location | What it says | Essence active? |
 |---|---|---|---|
-| `shouldCommit` invocation | `Finalize/State.hs:344-371` | Comment: "`shouldCommit` is always evaluated; **no feature flag**". `shouldCommit defaultEssenceModulation trajectory'` runs unconditionally every turn. `EssenceCommitted` is sticky, never reverted. | **YES (unconditional)** |
+| `shouldCommit` invocation | `Finalize/State.hs:344-371` | Comment: "`shouldCommit` is always evaluated; **no feature flag**". `shouldCommit defaultEssenceModulation trajectory'` runs every turn while the trajectory is uncommitted (the committed and reset branches bypass it by construction). `EssenceCommitted` is sticky, never reverted. | **YES (unconditional)** |
 | `validatePlan` invocation | `Finalize/State.hs:169`, `Route/Effects.hs:61` | `validatePlan commitment (delibReconciled delib)` called in finalize; `courtesyPred` uses `validatePlan` in route effects. No flag guard. | **YES (unconditional)** |
 | `EssenceRupture` exception | `Commit.hs:91`, `Engine.hs:71,198` | `Left (EssenceViolation …)` → `EssenceRupture` raised at commit; caught and handled in engine. A real, reachable exception. | **YES (reachable)** |
 | Regime stamp | `RuntimeRegime.hs:81` | `rrEssenceActive = True  -- ADR-0036 promoted 2026-06-04`. Field declared at `:56`. | **Stamps "active"** |

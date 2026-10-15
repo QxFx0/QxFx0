@@ -862,6 +862,9 @@ rescueTag RescueEmptyHold    = "empty_hold"
 
 -- | A claim that proves X-is-X (same lexeme both sides, non-empty).
 -- Pure; pinned by unit tests (the «понятие является понятием» class).
+-- Deliberate accept-list: only the MoveDefine-identity shape can be a
+-- tautology, so anything else is 'False' by design (not an overlapped
+-- wildcard swallowing future 'ClaimAst' constructors).
 claimAstTautology :: Maybe ClaimAst -> Bool
 claimAstTautology claim = case claim of
   Just (MoveDefine (MkNP a) RelIdentity (MkNP b)) ->
