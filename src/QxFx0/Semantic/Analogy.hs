@@ -13,6 +13,7 @@ import qualified Data.Text as T
 import Data.List (maximumBy)
 import Data.Function (on)
 import QxFx0.Semantic.Content (SemanticPredicate(..), DefinitionContent(..), lookupDefinitionContent, coveredTopics)
+import QxFx0.Types.Thresholds.Selection
 
 analogicalResponse :: Text -> Text -> Maybe Text
 analogicalResponse uncoveredTopic sourceTopic =
@@ -52,6 +53,6 @@ findNearestCoveredTopic topic =
     else
       let scored = [(t, fallbackSimilarity topic t) | t <- coveredTopics]
           (nearest, score) = maximumBy (compare `on` snd) scored
-      in if score >= 0.3
+      in if score >= analogyFallbackFloor
          then Just nearest
          else Nothing

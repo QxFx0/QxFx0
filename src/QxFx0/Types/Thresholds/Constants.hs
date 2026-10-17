@@ -6,6 +6,9 @@ module QxFx0.Types.Thresholds.Constants
   , module QxFx0.Types.Thresholds.Orbital
   , module QxFx0.Types.Thresholds.Routing
   , module QxFx0.Types.Thresholds.Dream
+  , module QxFx0.Types.Thresholds.Anomaly
+  , module QxFx0.Types.Thresholds.Conatus
+  , module QxFx0.Types.Thresholds.Selection
   ) where
 
 import QxFx0.Types.Thresholds.Common
@@ -15,3 +18,6 @@ import QxFx0.Types.Thresholds.Consciousness
 import QxFx0.Types.Thresholds.Orbital
 import QxFx0.Types.Thresholds.Routing
 import QxFx0.Types.Thresholds.Dream
+import QxFx0.Types.Thresholds.Anomaly
+import QxFx0.Types.Thresholds.Conatus
+import QxFx0.Types.Thresholds.Selection

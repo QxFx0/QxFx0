@@ -40,6 +40,7 @@ import QxFx0.Semantic.ContentSelector.Types
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Semantic.Ontology (Ontology(..), OntologyNode(..), lookupOntologyNode, lookupSiblings, lookupChildren, lookupCategory)
 import QxFx0.Self.Field (Field(..), FieldHeuristics(..), Resonance(..), Atmosphere(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
+import QxFx0.Types.Thresholds.Selection
 
 buildContentSelector :: SemanticSpace -> Map Text (Set Text) -> Map Text [SemanticPredicate] -> Map Text Text -> Maybe Ontology -> ContentSelector
 buildContentSelector space atoms predicates lemmaMap mOntology = ContentSelector space atoms predicates lemmaMap mOntology
@@ -94,11 +95,11 @@ selectPredicatesWithDiagnostics cs field topic mActivatedNetwork =
                                   totalAct = sum [M.findWithDefault 0.0 a actMap | a <- S.toList activatedAtoms]
                               in if S.null atoms then 0.0 else totalAct / fromIntegral (S.size atoms)
                             Nothing -> 0.0
-            , let adjustedScore = baseScore * (1.0 + 0.3 * bonus)
+            , let adjustedScore = baseScore * (selectorBaseMultiplier + selectorBonusRate * bonus)
             ]
           qualified = [ (predicate, atoms, base, rawAffinity, bonus, adjustedScore)
                       | (predicate, atoms, base, rawAffinity, bonus, adjustedScore) <- detailed
-                      , adjustedScore > 0.1
+                      , adjustedScore > selectorAffinityFloor
                       ]
           selection = case qualified of
             [] -> []
@@ -153,8 +154,8 @@ scorePred field space lemmaMap mNetwork pred =
                        totalAct = sum [M.findWithDefault 0.0 a actMap | a <- S.toList activatedAtoms]
                    in if S.null atoms then 0.0 else totalAct / fromIntegral (S.size atoms)
         Nothing -> 0.0
-      adjustedScore = baseScore * (1.0 + 0.3 * activationBonus)
-  in if adjustedScore > 0.1 then Just (pred, adjustedScore) else Nothing
+      adjustedScore = baseScore * (selectorBaseMultiplier + selectorBonusRate * activationBonus)
+  in if adjustedScore > selectorAffinityFloor then Just (pred, adjustedScore) else Nothing
 
 buildVector :: SemanticSpace -> Set Text -> Vector Double
 buildVector space atoms =
@@ -185,10 +186,10 @@ composePredicates cs field preds mNetwork =
     _ ->
       let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) mNetwork) preds
           totalScore = sum (map snd scored)
-      in if totalScore < 0.1
+      in if totalScore < selectorAffinityFloor
          then []
          else
-           let threshold = totalScore * 0.3
+           let threshold = totalScore * compositionShareFloor
                filtered = filter (\(_, s) -> s >= threshold) scored
            in map fst filtered
 
@@ -206,7 +207,7 @@ composeFromActivation cs field heuristics topic network =
           Just preds ->
             let scored = mapMaybe (scorePred field (csSpace cs) (csLemmaMap cs) (Just activatedNetwork)) preds
                 depthBoost = ontologyDepthBoost cs heuristics t
-                boosted = map (\(p, s) -> (p, s * (1.0 + depthBoost))) scored
+                boosted = map (\(p, s) -> (p, s * (selectorBaseMultiplier + depthBoost))) scored
             in case boosted of
                  [] -> Nothing
                  _ -> let (bestPred, _) = maximumBy (comparing snd) boosted
@@ -270,7 +271,7 @@ composeFromActivationSnapshot
   -> ([SemanticPredicate], [SelectorDiagnostic])
 composeFromActivationSnapshot cs field heuristics topic actMap mGraph =
   let activatedAtoms = S.fromList
-        [ a | (a, v) <- M.toList actMap, v > 0.05 ]
+        [ a | (a, v) <- M.toList actMap, v > compositionActivationFloor ]
       overlapping =
         M.keys (M.filter (not . S.null . S.intersection activatedAtoms) (csTopicAtoms cs))
       ontologyCast = ontologyRelatedTopics cs topic
@@ -367,16 +368,16 @@ composeBestForActivation cs field heuristics activatedNetwork t =
                 | (a, v) <- M.toList (snActivation activatedNetwork)
                 , S.member a (M.findWithDefault S.empty t (csTopicAtoms cs))
                 ]
-          in if topicActivation > 0.05
+          in if topicActivation > compositionActivationFloor
                then case listToMaybe preds of
                       Nothing -> Nothing
                       Just p ->
                         let depthBoost = ontologyDepthBoost cs heuristics t
-                        in Just (t, p, 0.3 * (1.0 + depthBoost))
+                        in Just (t, p, compositionFallbackBaseScore * (selectorBaseMultiplier + depthBoost))
                else Nothing
         scored ->
           let depthBoost = ontologyDepthBoost cs heuristics t
-              boosted = map (\ (p, s) -> (p, s * (1.0 + depthBoost))) scored
+              boosted = map (\ (p, s) -> (p, s * (selectorBaseMultiplier + depthBoost))) scored
               (bestPred, bestScore) = maximumBy (comparing snd) boosted
           in Just (t, bestPred, bestScore)
 

@@ -88,6 +88,7 @@ module QxFx0.Self.Conatus
 
 import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
 import QxFx0.Types.Self.Conatus
+import QxFx0.Types.Thresholds.Conatus
 
 -- | Tunable coefficients of the Conatus functional. The defaults
 -- in 'defaultConatusWeights' encode the editorial judgement that
@@ -103,10 +104,10 @@ import QxFx0.Types.Self.Conatus
 -- 'computeConatusGradientWith'.
 builtinConatusWeights :: ConatusWeights
 builtinConatusWeights = ConatusWeights
-  { cwMorphology = 1.0
-  , cwIdentity   = 0.5
-  , cwTurns      = 0.25
-  , cwViolation  = 10.0
+  { cwMorphology = conatusWeightMorphology
+  , cwIdentity   = conatusWeightIdentity
+  , cwTurns      = conatusWeightTurns
+  , cwViolation  = conatusWeightViolation
   }
 
 -- | Pure reference weights. Runtime configuration is loaded explicitly by
@@ -230,7 +231,7 @@ conatusViolationPenalty w vs = negate (cwViolation w * fromIntegral (length vs))
 --
 -- See ADR-0045 for the integration rationale.
 lowEnergyThreshold :: Double
-lowEnergyThreshold = 3.0
+lowEnergyThreshold = conatusLowEnergy
 
 -- | Numerically robust \(\log(1 + x)\) for \(x \geq 0\). Avoids
 -- catastrophic cancellation for small \(x\), and is well-defined

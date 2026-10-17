@@ -83,6 +83,7 @@ import QxFx0.Core.ContentCluster (computeContentSaliency, contentSalienceActive)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import qualified QxFx0.Types.CognitiveSignals as CS
 import QxFx0.Types
+import QxFx0.Types.Thresholds.Selection
 import QxFx0.Types.Config.Dream (defaultDreamPressureRegime)
 import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
@@ -135,7 +136,7 @@ turnInputSalience = svSalience . tiSelfVerdict
 activatedConcepts :: Maybe ActivationArtifact -> [Text]
 activatedConcepts Nothing = []
 activatedConcepts (Just artifact) =
-  M.keys (M.filter (>= 0.05) (aaActivation artifact))
+  M.keys (M.filter (>= activationReportFloor) (aaActivation artifact))
 
 -- | P0.2: subset of activated concepts that have no surface predicate in the
 -- definition corpus.  Drives the GAPS.md curation backlog.

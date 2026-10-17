@@ -30,6 +30,7 @@ import QxFx0.Semantic.Input.Lexicon
   )
 import QxFx0.Semantic.Input.Model
 import QxFx0.Semantic.Content (isCoveredTopic)
+import QxFx0.Types.Thresholds.Selection
 import QxFx0.Semantic.Input.Normalize (NormalizedInput(..), normalizeInput)
 import QxFx0.Semantic.Morphology
   ( Case(..)
@@ -405,7 +406,7 @@ scoreRouteHint normalized units ruleHint =
       useBest =
         (not preserveRuleHint)
           && ( irhTag ruleHint == TagUnknown
-                || rcFinalScore bestCandidate > rcFinalScore ruleCandidate + 0.05
+                || rcFinalScore bestCandidate > rcFinalScore ruleCandidate + routeHintMargin
              )
       chosen = if useBest then bestCandidate else ruleCandidate
   in InputRouteHint
@@ -857,7 +858,7 @@ shortDialogueProbe tokens =
 -- is X?". Nominative-leaning (lemma map); inflected forms stay on the
 -- old path. Score 0.95: exact-match precision justifies beating the
 -- contemplative max 0.88 through admission (displacement needs
--- best > rule + 0.05).
+-- best > rule + routeHintMargin).
 isBareCoveredNoun :: [WordMeaningUnit] -> Bool
 isBareCoveredNoun units = case contentLemmas units of
   [w] -> isCoveredTopic w

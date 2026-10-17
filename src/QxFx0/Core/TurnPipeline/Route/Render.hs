@@ -32,6 +32,7 @@ module QxFx0.Core.TurnPipeline.Route.Render
   ) where
 
 import QxFx0.Types
+import QxFx0.Types.Thresholds.Selection
 import QxFx0.Types.Anomaly (AnomalySurface(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Types.Safety.Crisis (CrisisCause(..), CrisisSurface(..))
@@ -642,7 +643,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       let mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
           decision = canIssueExternalAction (ssGuardrailState ss) actionKind (ssTurnCount ss)
       in case (decision, mTool) of
-           (ExternalActionAllowed, Just tool) | etReliability tool >= 0.3 -> Just (tool, need, queryText)
+           (ExternalActionAllowed, Just tool) | etReliability tool >= externalToolReliabilityFloor -> Just (tool, need, queryText)
            _ -> Nothing
     deniedTrace kind need decision =
       ExternalActionDecisionTrace kind (decisionReason kind need decision) (Just (renderNeedTag need))
@@ -1431,13 +1432,13 @@ selectConatusRecoveryStrategy g =
 
 -- | WP3: predicate for whether a persisted learning need is active
 -- and severe enough to trigger an external-request recovery strategy.
--- The threshold (0.6) is chosen so that only high-deficit needs
+-- The threshold (learningNeedEscalationLevel) is chosen so that only high-deficit needs
 -- escalate beyond local strategies; moderate deficits remain handled
 -- by the normal turn pipeline.
 learningNeedActive :: SystemState -> Bool
 learningNeedActive ss =
   let lns = ssLearningNeedState ss
-  in lnsCurrentNeed lns /= NeedNone && lnsLevel lns >= 0.6
+  in lnsCurrentNeed lns /= NeedNone && lnsLevel lns >= learningNeedEscalationLevel
 
 -- | WP3: map an active 'LearningNeed' to the corresponding
 -- 'LocalRecoveryStrategy' that requests external help.

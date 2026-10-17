@@ -494,6 +494,9 @@ library
     QxFx0.Types.Thresholds.Orbital
     QxFx0.Types.Thresholds.Routing
     QxFx0.Types.Thresholds.Dream
+    QxFx0.Types.Thresholds.Anomaly
+    QxFx0.Types.Thresholds.Conatus
+    QxFx0.Types.Thresholds.Selection
     QxFx0.Types.Thresholds.Constants
     QxFx0.Policy.Contracts
     QxFx0.Policy.Consciousness
