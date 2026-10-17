@@ -656,21 +656,23 @@ available list); unset = byte-identical full run. Slow keeps its
 |---|---|
 | qxfx0-test | 1322 (core 1202 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1837 |
-| qxfx0-test-unit | 1735 |
+| qxfx0-test-fast | 1841 |
+| qxfx0-test-unit | 1739 |
 | qxfx0-test-property | 227 |
-| qxfx0-test-integration | 46 |
-| qxfx0-test-slow | 176 (runtime 97 + state 45 + http 23 + lifecycle 11;
-per-group green on current HEAD 2026-10-15, incl. Finding 7
-(runtime 97 by parts — full process dies mid-run, chunks exit 0;
-slow10 stays the only full CHAIN-DONE);
-unbuffered output required to judge
+| qxfx0-test-integration | 47 |
+| qxfx0-test-slow | 179 (runtime 100 + state 45 + http 23 + lifecycle 11;
+per-group green on HEAD 2026-10-17 (batch-1 landing), all exit 0 —
+runtime 100 ran as ONE process on 2026-10-17 (the "by parts" wart of
+2026-10-15 did not reproduce); unbuffered output required to judge
 the long runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
 after 59 others but passes solo — run it standalone on stall.
 property/integration re-verified green on HEAD 2026-10-11
 (227/227, 46/46) after the EN-bulk surgery.
+Batch-1 landing (2026-10-17, tree = landing commits): unit 1739,
+fast 1841, property 227, integration 47, slow 179 (100+45+23+11) —
+all exit 0; full `qxfx0-test` and the core slice were not re-run.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -724,11 +726,16 @@ re-observe before treating as real).
 
 - Audit 2026-10-16 → register (verdicts, amended fix order, open
   decisions): `docs/closure/AUDIT_2026-10-16.md`; batch-1 bars
-  pre-registered in `CALIBRATION_REPORT.md` (2026-10-17). Batch 1
-  (п.5 кризисный префлайт → п.1 коллапс супервенит коммитмент →
-  п.3 токенный self-ref) реализован 2026-10-17; матрица
-  верификации идёт, landing-коммиты после её зелёного прогона.
-  Пороговый реестр — в этом же лендинге.
+  pre-registered and landed in `CALIBRATION_REPORT.md` (2026-10-17).
+  **Батч 1 завершён 2026-10-17** (матрица зелёная: unit 1739,
+  fast 1841, property 227, integration 47, slow 179 = runtime 100
+  (одним процессом, впервые) + state 45 + http 23 + lifecycle 11,
+  все exit 0): пороги `e2ecd0d`, п.5 кризисный префлайт `af05785`,
+  п.1 коллапс супервенит коммитмент `911151c` (внутри — фикс петли
+  `<<loop>>` в `store0`), п.3 токенный self-ref `035127b`; пороговый
+  реестр — `Types/Thresholds/{Anomaly,Conatus,Selection}` + заметки
+  лендинга. **Далее пакет 2** — п.6 → п.7 → п.8 (пре-регистрация на
+  входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

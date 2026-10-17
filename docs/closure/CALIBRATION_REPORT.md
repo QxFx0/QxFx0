@@ -4128,3 +4128,105 @@ pre-registered on entry.
 - **Out of scope**: connection pooling / FFI safety (audit p.19,
   separate performance front); BEGIN IMMEDIATE read semantics
   (audit p.20, separate small fix).
+
+---
+
+# Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
+
+Status: landed; the pre-registered bars above were registered BEFORE
+any behavior change and held. Commits: thresholds `e2ecd0d`, p.5
+`af05785`, p.1 `911151c`, p.3 `035127b`. Register statuses:
+`docs/closure/AUDIT_2026-10-16.md`.
+
+## Threshold registry (decision (3), landed `e2ecd0d`)
+
+Values verbatim; no behavior change. Single address for tuning —
+any change here is calibration-grade (pre-register rule + bar; a
+math-version bump when an equation moves).
+
+- `QxFx0.Types.Thresholds.Anomaly` (v3.0 detector gates):
+  `anomalySelfRefAngst` 0.9, `anomalyCollapseConfidence` 0.95,
+  `anomalyAntiConatusConfidence` 0.7, `anomalyAntiConatusAngst` 0.8,
+  `anomalyAntiConatusEnergy` 5.0,
+  `anomalyAntiConatusConfidenceOut` 0.85,
+  `anomalyTemporalConfidence` 0.85, `anomalyUnclassifiableRatio` 0.2.
+- `QxFx0.Types.Thresholds.Conatus`: `conatusWeightMorphology` 1.0,
+  `conatusWeightIdentity` 0.5, `conatusWeightTurns` 0.25,
+  `conatusWeightViolation` 10.0, `conatusLowEnergy` 3.0 (ADR-0045).
+- `QxFx0.Types.Thresholds.Selection`: `selectorAffinityFloor` 0.1,
+  `selectorBaseMultiplier` 1.0, `selectorBonusRate` 0.3,
+  `compositionActivationFloor` 0.05, `compositionShareFloor` 0.3,
+  `compositionFallbackBaseScore` 0.3, `analogyFallbackFloor` 0.3,
+  `externalToolReliabilityFloor` 0.3, `learningNeedEscalationLevel`
+  0.6, `adaptiveSignalEpsilon` 0.15, `activationReportFloor` 0.05,
+  `routeHintMargin` 0.05.
+- `Types.Thresholds.Constants` re-exports the three modules. Adoption
+  hunks inside `Finalize/State.hs` and `Route/Anomaly.hs` landed with
+  p.1 / p.3 (noted in those commit messages).
+
+## (1) p.5 crisis preflight — landed (`af05785`)
+
+Bars held as pre-registered; new pins:
+`testOverlongCrisisInputStillGetsResources`,
+`testStrictGateFailureKeepsCrisisResources`,
+`testCliCrisisPreflightChecksRawInputBeforeTruncation` (slow
+runtime) and the `Test.Suite.CrisisGuard` preflight case. CLI
+semantics confirmed: an over-long crisis input returns the bounded
+surface and the session does not advance; over-long calm input keeps
+truncate-and-process. In-pipeline detection/persistence untouched;
+no trace-schema change.
+
+## (2) p.1 collapse supersession — landed (`911151c`)
+
+Bars held; pins: `testCollapseSupersedesCommitment` (pure,
+`Test.Suite.EssenceCollapse`) and
+`testFinalizeCollapseSupersedesCommitment` (pipeline,
+`Test.Suite.Anomaly`, incl. the fail-closed control on the raw pair).
+
+**Incident — `<<loop>>` caught by the regression matrix.** After the
+first implementation, `qxfx0-test-fast` case #1065 (M6FeltBenchmark)
+died with `<<loop>>`: the new `mCollapse`-driven store path closed a
+strict-field cycle
+
+    mCollapse -> store1/store2 -> store0 -> nextWithLog
+      -> (strict ssSelfState) -> nextEssence -> supersede -> mCollapse
+      (black hole)
+
+`store0` had read `ssSemanticCommitments nextWithLog`. Root fix:
+`store0 = ssSemanticCommitments ss` (pre-turn state) — value-identical,
+since neither `baseNext` nor `appendAdaptiveMutationRecords` touches
+`ssSemanticCommitments`; the read is the same store without closing
+the cycle. The deterministic catch (M6FeltBenchmark) stays as the
+pin. No math-version bump: control-flow / reset ordering only, no
+equation moved.
+
+## (3) p.3 whole-token self-ref — landed (`035127b`)
+
+Bars held; pin `testSelfReferentialCollapseWholeTokens`
+(`Test.Suite.Anomaly`): «философия», «что такое философия?»,
+«identity», «моя», «системный», «sistema», «thyself» do not fire;
+«я», «ты», «qxfx0», «система», «i», «you», «myself», «yourself»
+and case-folded / punctuation-adjacent standalone tokens do; low
+angst does not. Detector priority and morphology matching stay as
+pre-registered out of scope.
+
+## Verification matrix (landing tree)
+
+unit 1739/1739, fast 1841/1841, property 227/227, integration 47/47
+— exit 0. Slow per-group with recorded exit codes: runtime 100/100
+exit 0 (whole group in a SINGLE process — first time; the
+2026-10-15 "by parts" wart did not reproduce), state 45/45 exit 0,
+http 23/23 exit 0, lifecycle 11/11 exit 0 (`CHAIN-DONE`). Full
+`qxfx0-test` and the core slice were not re-run in this landing.
+
+## Ops notes (run discipline)
+
+- Three first fast attempts (58m53s / 59m36s / 60m56s) were killed
+  EXTERNALLY at wall-clock ~59–61 min — not test failures and not
+  OOM: the third reached 1840/1841 with 0 errors/failures before the
+  kill. Lesson: suites that can exceed ~30 min run detached (setsid
+  or a systemd user unit) with the verdict read from the log, never
+  from a foreground session.
+- The slow chain ran as one systemd unit, groups sequentially
+  (state needs `-M10G`; `-M8G` heap-exhausts and `-M12G` invites the
+  OOM killer); heavy suites are not run in parallel (box memory).
