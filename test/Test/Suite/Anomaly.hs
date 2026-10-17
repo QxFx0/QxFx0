@@ -76,6 +76,7 @@ anomalyTests = TestList
   , "StanceLineage: bounded history" ~: testStanceLineageBounded
   , "BoundedSet: FIFO eviction" ~: testBoundedSetFIFO
   , "SelfReferentialCollapse: trigger conditions" ~: testSelfReferentialCollapseTrigger
+  , "SelfReferentialCollapse: whole-token matching (audit p.3)" ~: testSelfReferentialCollapseWholeTokens
   , "SelfReferentialCollapse: collapseEssence" ~: testCollapseEssence
   , "SelfReferentialCollapse: canonical collapseEssenceAt (BD2)" ~: testCollapseEssenceAt
   , "SelfReferentialCollapse: production plan/finalize path" ~: testSelfReferentialCollapseProductionPath
@@ -163,6 +164,26 @@ testSelfReferentialCollapseTrigger = do
     let frame = emptyInputPropositionFrame { ipfSemanticSubject = subj }
     in assertBool ("should trigger for '" ++ show subj ++ "'") 
          (selfReferentialCollapse traj4 frame)) subjects
+
+-- | Audit 2026-10-16 (p.3): the 8 subjects match whole tokens only.
+-- «философия» / «identity» / «моя» used to fire through substrings;
+-- punctuation-adjacent and case-folded standalone tokens keep firing.
+testSelfReferentialCollapseWholeTokens :: Assertion
+testSelfReferentialCollapseWholeTokens = do
+  let hi = emptyTrajectory { etAngstLevel = 0.95 }
+      lo = emptyTrajectory { etAngstLevel = 0.50 }
+      frame subj = emptyInputPropositionFrame { ipfSemanticSubject = subj }
+  mapM_ (\subj ->
+    assertBool ("substring subject " ++ show subj ++ " must not fire")
+      (not (selfReferentialCollapse hi (frame subj))))
+    ["философия", "что такое философия?", "identity", "моя", "системный", "sistema", "thyself"]
+  mapM_ (\subj ->
+    assertBool ("standalone token " ++ show subj ++ " must fire")
+      (selfReferentialCollapse hi (frame subj)))
+    ["я", "ты", "qxfx0", "система", "i", "you", "myself", "yourself"
+    , "Я", "Myself!", "что ты об этом думаешь?", "i'm tired"]
+  assertBool "standalone token with low angst must not fire"
+    (not (selfReferentialCollapse lo (frame "я")))
 
 testCollapseEssence :: Assertion
 testCollapseEssence = do

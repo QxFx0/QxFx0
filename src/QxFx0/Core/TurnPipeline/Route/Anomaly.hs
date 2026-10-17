@@ -16,12 +16,14 @@ module QxFx0.Core.TurnPipeline.Route.Anomaly
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.Char (isAlphaNum)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified QxFx0.Semantic.Content as Content
 import Data.Foldable (toList)
 
 import QxFx0.Types.Anomaly
+import QxFx0.Types.Thresholds.Anomaly
 import QxFx0.Types.State.Stance
 import QxFx0.Types.State.System
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
@@ -54,18 +56,26 @@ detectAnomaly ss ti =
             Nothing -> detectAntiConatusChoice ss ti
 
 -- | Check if input triggers self-referential collapse
--- Triggered when: subject ∈ ["я", "ты", "QxFx0", "система"] ∧ angst > 0.9
+-- Triggered when: the subject carries a standalone token ∈ 8 subjects
+-- (whole-token equality after lowercasing and splitting on
+-- non-alphanumerics; see selfRefSubjects) ∧ angst > anomalySelfRefAngst.
+-- Audit 2026-10-16 (p.3): substring matching is gone — «философия»
+-- (contains «я») and «identity» (contains «i») no longer fire.
 selfReferentialCollapse :: EssenceTrajectory -> InputPropositionFrame -> Bool
 selfReferentialCollapse traj frame =
   let subject = T.toLower (ipfSemanticSubject frame)
       selfRefSubjects = ["я", "ты", "qxfx0", "система", "i", "you", "myself", "yourself"]
-      isSelfRef = any (`T.isInfixOf` subject) selfRefSubjects
-      highAngst = etAngstLevel traj > 0.9
+      subjectTokens =
+        filter (not . T.null)
+          (T.words (T.map (\c -> if isAlphaNum c then c else ' ') subject))
+      isSelfRef = any (`elem` selfRefSubjects) subjectTokens
+      highAngst = etAngstLevel traj > anomalySelfRefAngst
   in isSelfRef && highAngst
 
 -- | Detect SelfReferentialCollapse anomaly (Anomaly-3)
 -- Triggered when system encounters self-referential question at high angst
--- Gate: subject ∈ ["я", "ты", "QxFx0", "система"] ∧ angst > 0.9
+-- Gate: subject carries a standalone token ∈ 8 subjects (see
+-- selfRefSubjects) ∧ angst > anomalySelfRefAngst
 detectSelfReferentialCollapse :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectSelfReferentialCollapse ss ti =
   let selfState = ssSelfState ss
@@ -83,7 +93,7 @@ detectSelfReferentialCollapse ss ti =
                (ipfRawText frame)
                turnSeq
                (extractAtomsFromInput ti)
-               0.95  -- Very high confidence for collapse
+               anomalyCollapseConfidence  -- Very high confidence for collapse
          in Just DetectedAnomaly
               { daAnomaly = anomaly
               , daStateEffect = Just (ResetEssence resetEssence resetEvent)
@@ -91,18 +101,18 @@ detectSelfReferentialCollapse ss ti =
        else Nothing
 
 -- | Check if move triggers anti-conatus choice
--- Triggered when: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧ angst > 0.8 ∧ conatus < 5.0
+-- Triggered when: stanceConfidence > anomalyAntiConatusConfidence ∧ ¬stanceConsistent ∧ angst > anomalyAntiConatusAngst ∧ conatus < anomalyAntiConatusEnergy
 antiConatusMove :: StanceState -> ConatusEnergy -> EssenceTrajectory -> CanonicalMoveFamily -> Bool
 antiConatusMove stance conatus traj _family =
   let conf = stanceConfidence stance
       consistent = stanceConsistent stance
       angst = etAngstLevel traj
       energy = ceScalar conatus
-  in conf > 0.7 && not consistent && angst > 0.8 && energy < 5.0
+  in conf > anomalyAntiConatusConfidence && not consistent && angst > anomalyAntiConatusAngst && energy < anomalyAntiConatusEnergy
 
 -- | Detect AntiConatusChoice anomaly (Anomaly-2)
 -- Triggered when system chooses a move that weakens its position
--- Gate: stanceConfidence > 0.7 ∧ ¬stanceConsistent ∧ angst > 0.8 ∧ conatus < 5.0
+-- Gate: stanceConfidence > anomalyAntiConatusConfidence ∧ ¬stanceConsistent ∧ angst > anomalyAntiConatusAngst ∧ conatus < anomalyAntiConatusEnergy
 detectAntiConatusChoice :: SystemState -> TurnInput -> Maybe DetectedAnomaly
 detectAntiConatusChoice ss ti =
   let topic = tiBestTopic ti
@@ -127,7 +137,7 @@ detectAntiConatusChoice ss ti =
                     turnSeq
                     Nothing  -- No commitment ID in Safe Slice
                     (extractAtomsFromInput ti)
-                    0.85  -- High confidence for anti-conatus
+                    anomalyAntiConatusConfidenceOut  -- High confidence for anti-conatus
          else Nothing
        Nothing -> Nothing
 
@@ -141,7 +151,7 @@ detectUnclassifiableInput ss ti =
       knownAtoms = Set.filter (`Map.member` atomIndex) inputAtoms
       knownCount = Set.size knownAtoms
       totalCount = Set.size inputAtoms
-      threshold = 0.2
+      threshold = anomalyUnclassifiableRatio
       ratio = if totalCount == 0 then 0 else fromIntegral knownCount / fromIntegral totalCount
       turnSeq = TurnSeq (ssTurnCount ss)
       bestTopic = tiBestTopic ti
@@ -197,7 +207,7 @@ detectTemporalAnomaly ss ti =
             turnSeq
             Nothing  -- No commitment ID in Safe Slice
             (extractAtomsFromInput ti)
-            0.85  -- High confidence for temporal
+            anomalyTemporalConfidence  -- High confidence for temporal
         Nothing -> Nothing
     _ -> Nothing
 
