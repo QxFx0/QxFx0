@@ -21,6 +21,8 @@ import QxFx0.Core.PipelineIO
   , pipelineUpdateHistory
   )
 import QxFx0.Core.TurnPipeline.Finalize.State (computeNextEssence)
+import QxFx0.Core.TurnPipeline.Finalize.State (computeEssenceValidation)
+import QxFx0.Types.Self.Essence (EssenceViolation(..))
 import QxFx0.Core.TurnPipeline.Types (defaultControlAAblation)
 import QxFx0.Core.TurnPipeline.Protocol
   ( FinalizePrecommitBundle(..)
@@ -85,6 +87,7 @@ anomalyTests = TestList
   , "Finalize: computed SelfState survives without collapse" ~: testFinalizePreservesComputedSelfState
   , "Finalize: stance challenge and recovery persist" ~: testFinalizePersistsStanceTransitions
   , "Finalize: collapse preserves new adaptive SelfState" ~: testFinalizeCollapsePreservesAdaptiveSelfState
+  , "Finalize: same-turn collapse supersedes commitment (audit p.1)" ~: testFinalizeCollapseSupersedesCommitment
   ]
 
 -- | Representative production chains promoted into the integration manifest.
@@ -95,6 +98,7 @@ anomalyProductionBoundaryTests =
   , "Finalize: computed SelfState survives without collapse" ~: testFinalizePreservesComputedSelfState
   , "Finalize: stance challenge and recovery persist" ~: testFinalizePersistsStanceTransitions
   , "Finalize: collapse preserves new adaptive SelfState" ~: testFinalizeCollapsePreservesAdaptiveSelfState
+  , "Finalize: collapse supersedes the same-turn commitment (audit p.1)" ~: testFinalizeCollapseSupersedesCommitment
   ]
 
 testStanceConfidence :: Assertion
@@ -469,6 +473,64 @@ testFinalizeCollapsePreservesAdaptiveSelfState =
       Nothing -> assertFailure "collapsing stance defense must remain present"
       Just actual -> assertEqual "a collapsing challenge must reset, not increment, recovery"
         0 (sdRecoveryCounter actual)
+
+-- | Audit 2026-10-16 (p.1): when the pentagon collapse fires on the very
+-- turn the Essence commitment triggers, the raw trigger used to reach
+-- precommit as (Just trigger, reset Uncommitted) and threw
+-- 'EssenceRupture', losing the turn together with the reset event.  The
+-- supersession drops the raw trigger and keeps the single reset event
+-- visible; the validator stays fail-closed for the raw pair (control).
+testFinalizeCollapseSupersedesCommitment :: Assertion
+testFinalizeCollapseSupersedesCommitment =
+  withDeterministicEmbedding $ do
+    let topic = "supersede-topic"
+        cid = CommitmentId 1
+        collapsingDefense = emptyStanceDefense
+          { sdStance = StanceDoubted 0.4
+          }
+        preCommitTrajectory = emptyTrajectory { etAngstLevel = 0.80 }
+        startState = withCommitment cid topic calibrationReadyState
+          { ssStanceDefenses = Map.singleton topic collapsingDefense }
+    (ss, ti0, ts, tp0, ta) <- buildRenderedFixtureWithState startState "a b c d e"
+    let ti = ti0
+          { tiEssence = EssenceUncommitted preCommitTrajectory
+          , tiBestTopic = topic
+          , tiAtomSet = strongChallengeAtoms
+          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
+          , tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 }
+          }
+        tp = tp0
+          { tpCommitmentEngagement = CommitmentEngagement [cid] True ContradictedStrong }
+    -- Control (the pre-fix failure mode): the raw witnessed trajectory
+    -- does commit, and the validator refuses exactly the raw pair
+    -- (Just trigger, reset Uncommitted) — fail-closed intact.
+    let (rawEssence, rawTrigger) = computeNextEssence False ss ti tp
+        (resetControl, _) = collapseEssenceAt 1 rawEssence
+    assertEqual "control: raw witnessed trajectory commits"
+      (Just TriggerAngstThreshold) rawTrigger
+    assertBool "control: (Just trigger, reset Uncommitted) is what the validator refuses"
+      (case computeEssenceValidation ti tp resetControl rawTrigger of
+         Left (ViolationRefusedCommitment _) -> True
+         _ -> False)
+    -- Main pin: collapse fires; the trigger is superseded; the reset is
+    -- published as the single visible EssenceResetEvent.
+    bundle <- finalizeFixture ss ti ts tp ta
+    assertEqual "collapse turn carries no commitment trigger"
+      Nothing (fpbCommitmentTrigger bundle)
+    assertEqual "validator stays clean on the superseded turn"
+      (Right ()) (fpbEssenceValidation bundle)
+    let nextSelf = ssSelfState (fpbNextSs bundle)
+    case selfEssence nextSelf of
+      EssenceCommitted{} -> assertFailure "collapse turn must end Uncommitted"
+      EssenceUncommitted resetTrajectory -> do
+        assertEqual "post-collapse essence is the reset trajectory"
+          0.0 (etAngstLevel resetTrajectory)
+        assertEqual "post-collapse witnesses are cleared"
+          Seq.empty (etWitnesses resetTrajectory)
+    case selfLastEssenceResetEvent nextSelf of
+      Nothing -> assertFailure "the collapse reset event must be published"
+      Just ev -> assertEqual "reset event turn is the collapse turn"
+        (ssTurnCount ss + 1) (ereTurn ev)
 
 finalizeFixture
   :: SystemState

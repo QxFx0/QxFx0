@@ -10,6 +10,7 @@ module QxFx0.Core.TurnPipeline.Finalize.State
   , finalizeMetrics
   , computeEssenceValidation
   , computeNextEssence
+  , supersedeCommitmentOnCollapse
   ) where
 
 -- | CF-2 Decomposition: Extracted essence computation phase.
@@ -52,6 +53,7 @@ import QxFx0.Types.Thresholds
   , recentFamiliesLimit
   , rawInputHistoryLimit
   )
+import QxFx0.Types.Thresholds.Selection
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection, turnInputSalience)
 import QxFx0.Core.TurnRender (updateStateNixCache)
@@ -234,8 +236,8 @@ selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights 
       , "loop=" <> textShow (scLoopRisk comps)
       , "branch=" <> textShow (scBranchHealthTrend comps)
       ]
-    strength = if abs signal >= 0.15 then EvidenceStrong else EvidenceWeak
-    decision = if abs signal >= 0.15 then AdaptiveAccepted else AdaptiveObserved
+    strength = if abs signal >= adaptiveSignalEpsilon then EvidenceStrong else EvidenceWeak
+    decision = if abs signal >= adaptiveSignalEpsilon then AdaptiveAccepted else AdaptiveObserved
     salienceDelta = salienceWeightsMaxDelta oldWeights newWeights
     maxFieldHeuristicsDelta = fieldHeuristicsMaxDelta oldHeuristics newHeuristics
     salienceRecord =
@@ -332,7 +334,7 @@ calibrationMutationRecord turn decision signal comps = AdaptiveMutationRecord
       , "loop=" <> textShow (scLoopRisk comps)
       , "branch=" <> textShow (scBranchHealthTrend comps)
       ]
-  , amrEvidenceStrength = if abs signal >= 0.15 then EvidenceStrong else EvidenceWeak
+  , amrEvidenceStrength = if abs signal >= adaptiveSignalEpsilon then EvidenceStrong else EvidenceWeak
   , amrConfidence = min 1.0 (abs signal)
   , amrBoundedDelta = Just 1.0
   , amrDecision = adaptiveDecisionForCalibration decision
@@ -421,6 +423,29 @@ computeNextEssence essenceCommitDisabled ss ti tp =
                 trajectory
         in (EssenceCommitted trajectory' commitment, Nothing)
 
+-- | Audit 2026-10-16 (p.1): a same-turn pentagon collapse supersedes the
+-- commitment outcome.  When the collapse fired, the canonical reset
+-- ('collapseEssenceAt', BD2 single branch) is applied exactly once to the
+-- witnessed 'Essence' and the raw commitment outcome is dropped, so the
+-- runtime can never surface @('EssenceCommitted', reset)@ — the ordering
+-- conflict that used to throw 'EssenceRupture' is impossible by
+-- construction.  Post-turn Essence is the reset trajectory (fresh
+-- witnesses, zero angst), and the single 'EssenceResetEvent' is returned
+-- for publication on the replay trace.
+supersedeCommitmentOnCollapse
+  :: Bool
+  -- ^ pentagon collapse fired this turn
+  -> Int
+  -- ^ collapse turn ordinal
+  -> (Essence, Maybe CommitmentTrigger)
+  -- ^ raw 'computeNextEssence' result (witnessed)
+  -> ((Essence, Maybe CommitmentTrigger), Maybe EssenceResetEvent)
+supersedeCommitmentOnCollapse collapsed turn (essence, trigger)
+  | collapsed =
+      let (resetEssence, resetEvent) = collapseEssenceAt turn essence
+      in ((resetEssence, Nothing), Just resetEvent)
+  | otherwise = ((essence, trigger), Nothing)
+
 buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
 buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
@@ -431,12 +456,24 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       newNarrativeSuccess = take 5 (narrativeSuccess : ssRecentNarrativeSuccess ss)
       -- WP1 (contour closure): law-driven commitment (CF-2: extracted to computeNextEssence).
       -- B2 Control-A: caDisableEssence bypasses shouldCommit entirely.
-      (nextEssence, commitmentTrigger) = computeNextEssence (caDisableEssence ablation) ss ti tp
+      (nextEssenceRaw, rawCommitmentTrigger) = computeNextEssence (caDisableEssence ablation) ss ti tp
+      -- Audit 2026-10-16 (p.1): a same-turn pentagon collapse supersedes the
+      -- commitment outcome — the canonical reset ('collapseEssenceAt', BD2)
+      -- runs exactly once on the witnessed trajectory, the raw trigger is
+      -- dropped, and the post-turn Essence is the reset one, so
+      -- ('EssenceCommitted', reset) can never co-occur.  Calibration below
+      -- still reads the witnessed trajectory ('nextEssenceRaw'): adaptation
+      -- is a property of the trajectory, not of the reset ordering.
+      ((nextEssence, commitmentTrigger), mCollapseResetEvent) =
+        supersedeCommitmentOnCollapse
+          (case mCollapse of Just _ -> True; Nothing -> False)
+          (unTurnSeq turnSeq)
+          (nextEssenceRaw, rawCommitmentTrigger)
       -- Phase 7: bounded calibration signal + rooted tree maintenance.
       -- Compute signal from conatus trend, uncertainty, loop risk,
       -- and branch health.  Only adapt when committed.
       (adaptedWeights, adaptedHeuristics, nextTree, calibrationSnapshots, nextCalibrationLog, adaptiveRecords) =
-        case nextEssence of
+        case nextEssenceRaw of
           EssenceCommitted _ commitment ->
             let -- Extract counterfactual from the pre-turn Field
                 counterfactual =
@@ -641,7 +678,15 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       -- P4: commit the pre-parsed authority surface payload if recognised.
       -- Nothing parse is silently skipped (non-authority surface).
       turnSeq = TurnSeq (ssTurnCount ss + 1)
-      store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments nextWithLog)
+      -- Audit 2026-10-16 (p.1): read the store from the pre-turn state
+      -- directly.  Neither 'baseNext' nor 'appendAdaptiveMutationRecords'
+      -- touches 'ssSemanticCommitments' (verified at introduction), so the
+      -- value is identical to 'ssSemanticCommitments nextWithLog' — but
+      -- going through 'nextWithLog' closes a strict-field cycle under the
+      -- p.1 supersession: mCollapse → store1/store2 → store0 →
+      -- nextWithLog → (strict 'ssSelfState') → nextEssence → supersede
+      -- → mCollapse (black hole).
+      store0 = fromMaybe emptySemanticCommitmentStore (ssSemanticCommitments ss)
       -- C3: additionally commit a typed anchor observation when SemanticAnchor
       -- is established this turn. This makes the anchor machine-visible in the
       -- SemanticCommitmentStore alongside the surface-parsed claim.
@@ -730,16 +775,14 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
 -- BD2 single-ff: all runtime resets run through the canonical
 -- 'collapseEssenceAt' morphism; the 'EssenceResetEvent' is preserved
 -- (never dropped) so the soft-rupture is replay-visible.
+-- Audit 2026-10-16 (p.1): the reset itself already ran exactly once in
+-- 'supersedeCommitmentOnCollapse' (which also dropped the same-turn
+-- commitment) — here the single event is attached to the Self state.
       selfStateBeforeCollapse = ssSelfState nextWithLog
-      selfStateAfterCollapse = case mCollapse of
-        Just _ ->
-          let currentEssence = selfEssence selfStateBeforeCollapse
-              (resetEssence, resetEvent) =
-                collapseEssenceAt (unTurnSeq turnSeq) currentEssence
-          in selfStateBeforeCollapse
-               { selfEssence = resetEssence
-               , selfLastEssenceResetEvent = Just resetEvent
-               }
+      selfStateAfterCollapse = case mCollapseResetEvent of
+        Just resetEvent ->
+          selfStateBeforeCollapse
+            { selfLastEssenceResetEvent = Just resetEvent }
         Nothing -> selfStateBeforeCollapse
       -- A-slice: measure this turn's self-divergence against the
       -- deterministic prediction (predict -> witness -> diff).  The

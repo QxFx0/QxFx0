@@ -17,7 +17,11 @@ Pins, offline:
   * a zero-divergence agreement regime never commits (no spurious
     commitment inside the reachability window);
   * after a soft collapse the trajectory recommits within the same
-    14-15 turn window (the soft rupture does not poison the loop).
+    14-15 turn window (the soft rupture does not poison the loop);
+  * audit 2026-10-16 (p.1): a same-turn pentagon collapse supersedes
+    the commitment outcome — the raw trigger is dropped and the
+    single reset event is returned; without a collapse the raw
+    outcome passes through untouched.
 -}
 module Test.Suite.EssenceCollapse
   ( essenceCollapseTests
@@ -28,6 +32,7 @@ import Test.HUnit (Test (..), assertBool, assertEqual)
 import qualified Data.Sequence as Seq
 
 import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+import QxFx0.Core.TurnPipeline.Finalize.State (supersedeCommitmentOnCollapse)
 import QxFx0.Self.Deliberation
   ( Agreement (..)
   , Deliberation (..)
@@ -73,6 +78,8 @@ essenceCollapseTests =
       TestCase testNoSpuriousCommitUnderAgreement
   , TestLabel "BD3: post-collapse recommitment within the 14-15 window" $
       TestCase testRecommitAfterSoftCollapse
+  , TestLabel "P1: collapse supersedes same-turn commitment (audit p.1)" $
+      TestCase testCollapseSupersedesCommitment
   ]
 
 -- ---------------------------------------------------------------------------
@@ -163,6 +170,38 @@ testRecommitAfterSoftCollapse = do
       recommitted = escalateFrom resetTraj 15 em
   assertEqual "post-collapse recommit within 15 turns"
     (Just TriggerAngstThreshold) (shouldCommit em recommitted)
+
+-- | Audit 2026-10-16 (p.1): when the pentagon collapse fires, the raw
+-- commitment outcome is superseded by the canonical reset — the trigger
+-- is dropped and the single reset event is returned, so the runtime can
+-- never surface (Just trigger, reset Uncommitted).  Without a collapse
+-- the raw outcome passes through untouched.
+testCollapseSupersedesCommitment :: IO ()
+testCollapseSupersedesCommitment = do
+  let traj = emptyTrajectory
+        { etAngstLevel = 0.8
+        , etWitnesses = Seq.fromList [mkWitness 1]
+        }
+      raw = (EssenceUncommitted traj, Just TriggerAngstThreshold)
+      ((resetEssence, resetTrigger), mEvent) =
+        supersedeCommitmentOnCollapse True 9 raw
+      ((passedEssence, passedTrigger), noEvent) =
+        supersedeCommitmentOnCollapse False 9 raw
+  assertEqual "collapse drops the raw same-turn trigger"
+    Nothing resetTrigger
+  case (resetEssence, mEvent) of
+    (EssenceUncommitted resetTraj, Just ev) -> do
+      assertEqual "reset clears angst" 0.0 (etAngstLevel resetTraj)
+      assertEqual "reset clears witnesses" 0 (Seq.length (etWitnesses resetTraj))
+      assertEqual "reset restores the conatus floor" 1.0 (etConatusFloor resetTraj)
+      assertEqual "event turn is the collapse turn" 9 (ereTurn ev)
+      assertEqual "event carries the previous angst" 0.8 (erePreviousAngst ev)
+      assertEqual "event carries the previous witness count" 1 (erePreviousWitnessCount ev)
+    _ -> assertBool "collapse must repack to Uncommitted with a reset event" False
+  assertEqual "no collapse: raw essence passes through" (fst raw) passedEssence
+  assertEqual "no collapse: raw trigger passes through"
+    (Just TriggerAngstThreshold) passedTrigger
+  assertEqual "no collapse: no reset event" Nothing noEvent
 
 -- ---------------------------------------------------------------------------
 -- Helpers
