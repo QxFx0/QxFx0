@@ -722,6 +722,13 @@ re-observe before treating as real).
 
 ## Pointers
 
+- Audit 2026-10-16 → register (verdicts, amended fix order, open
+  decisions): `docs/closure/AUDIT_2026-10-16.md`; batch-1 bars
+  pre-registered in `CALIBRATION_REPORT.md` (2026-10-17). Batch 1
+  (п.5 кризисный префлайт → п.1 коллапс супервенит коммитмент →
+  п.3 токенный self-ref) реализован 2026-10-17; матрица
+  верификации идёт, landing-коммиты после её зелёного прогона.
+  Пороговый реестр — в этом же лендинге.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

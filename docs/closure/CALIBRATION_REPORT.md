@@ -3998,3 +3998,133 @@ beyond 24 verbs.
   partition assert caught a real bucket miscount on first
   run (86 plain-G5 rows outside the totaled buckets) —
   fixed before landing.
+
+---
+
+# Audit 2026-10-16 fix batch 1 — pre-registration (2026-10-17)
+
+Status: staged; registered BEFORE any behavior change. Source
+register: `docs/closure/AUDIT_2026-10-16.md`. Batches 2+ are
+pre-registered on entry.
+
+## (1) Engine crisis preflight on early-return paths (audit p.5)
+
+- **Gap (re-verified)**: the hard lexical crisis gate runs only
+  inside the turn pipeline (`Effects.hs:730–731`). Four early-return
+  classes bypass it: input-length gate (`Engine.hs:62–66`), CLI
+  truncation to 10 000 chars before the turn (`:261`), readiness /
+  strict-health gates (`:161–190`), post-pipeline Left handlers
+  (`:199–213`; same class in `runTurnWithVersion`, `:76–90`).
+- **Rule (locked)**: on every early-return path that would render an
+  operational failure string, run `detectCrisisTrigger` on the RAW
+  (untruncated) input first; when it fires, return
+  `renderCrisisSurface crisisResourcesRu (CrisisHardTrigger trigger)`
+  instead. CLI: the preflight runs BEFORE truncation when the raw
+  input exceeds `maxInputLength`; when it fires, return resources
+  without advancing the session (an over-long crisis input is never
+  silently truncated; over-long non-crisis input keeps today's
+  truncate-and-process behavior). Normal-path behavior is
+  untouched (pipeline
+  detection and persistence stay as-is); no trace-schema change.
+- **Bar**: pins — (a) 10 001-char input carrying an acute marker
+  returns resources (112 + 8-800-2000-122), never the
+  «текст слишком длинный» template; (b) the CLI preflight helper
+  (`cliCrisisPreflight`) fires on the RAW input before truncation —
+  the marker beyond position 10 000 returns the bounded surface,
+  over-long calm input keeps truncate-and-process (pure pin; the
+  interactive read loop itself is not driven in tests); (c) a
+  strict-mode gate failure with crisis input
+  returns resources, not «Turn blocked»; (d) the post-pipeline Left
+  handlers are covered through the shared preflight helper (full
+  embedding/Agda error simulation pinned only if the harness
+  reaches it). Existing crisis slow pins stay green; zero new
+  failures in unit/fast/core; slow runtime by parts.
+- **Out of scope**: contour-exit (Protocol B soft backstop) on early
+  paths — the preflight is the hard lexical gate only; resource-pack
+  doctrine unchanged (recall > precision).
+
+## (2) Essence: collapse supersedes same-turn commitment (audit p.1)
+
+- **Defect (re-verified)**: `computeNextEssence` can return
+  `(EssenceCommitted …, Just trigger)` (`Finalize/State.hs:404–413`)
+  while Phase F resets the Essence via `collapseEssenceAt` in the
+  same turn (`:735–743`); `computeEssenceValidation` (`:208–217`)
+  then yields `Left` and `Commit.hs:93–96` throws `EssenceRupture`,
+  losing both the turn and the `EssenceResetEvent`.
+- **Rule (locked)**: when the pentagon collapse fires this turn
+  (`mCollapse = Just`), the canonical reset (`collapseEssenceAt`,
+  BD2 single branch) is applied exactly once to the witnessed
+  'Essence' and the raw commitment outcome is dropped before it
+  reaches precommit/validation, so the runtime can never surface
+  `(Just trigger, reset Uncommitted)` — the ordering conflict that
+  used to throw `EssenceRupture` is impossible by construction.
+  Calibration keeps reading the witnessed trajectory (adaptation is
+  a property of the trajectory, not of the reset ordering), and the
+  post-turn Essence is the reset trajectory. `computeEssenceValidation`
+  remains fail-closed for a genuine `(Just trigger,
+  EssenceUncommitted)` with no same-turn reset event. The reset
+  remains visible via `selfLastEssenceResetEvent` →
+  `trcEssenceResetEvent` (BD2 single-branch rule unchanged).
+- **Bar**: new `EssenceCollapse` pin — pre-turn Uncommitted + angst
+  ≥ 0.75 (or the full sub-floor witness window) + `StanceDoubted`
+  defense + conatus below floor → turn completes with no
+  `EssenceRupture`, next Essence Uncommitted with a reset event,
+  response rendered; control pin — a directly constructed
+  `(Just trigger, Uncommitted)` without a same-turn reset still
+  fails closed (`Left`). Existing `SelfEssenceCommit` /
+  `EssenceCollapse` suites green; zero new failures in
+  unit/fast/core.
+- **Out of scope**: threshold changes (`emAngstCommitmentThreshold`,
+  `emConatusStructuralFloor`); B2 `caDisableEssence` ablation hook.
+
+## (3) Self-referential subject matching: whole tokens (audit p.3)
+
+- **Defect (re-verified)**: `selfReferentialCollapse` matches the
+  8 subjects as substrings (`Anomaly.hs:63`); «философия» contains
+  «я», any English word with «i» matches, and angst > 0.9 makes
+  this detector first in priority.
+- **Rule (locked)**: match whole normalized tokens of the
+  lowercased subject against the 8 subjects (`я`, `ты`, `qxfx0`,
+  `система`, `i`, `you`, `myself`, `yourself`) — tokenization on
+  non-alphanumerics; no substring matches. «философия», «identity»,
+  «моя» no longer fire; standalone tokens still do.
+- **Bar**: Anomaly-suite pins — «что такое философия?» at
+  angst > 0.9 → no collapse; `identity` → no; standalone «я»/«ты»/
+  «qxfx0» frames → collapse; «моя» → no. Existing anomaly tests and
+  crisis slow controls green; zero new failures in unit/fast/core.
+- **Out of scope**: inflected forms of «система» (whole-token
+  equality only; morphology-based matching is a separate
+  proposal); detector priority order.
+
+## (4) Persistence batch: step ordering, load catch, session row (audit p.6/7/8)
+
+- **Defects (re-verified)**: `stepOrFail` finalizes before
+  inspecting `stepResult` (`TxStatement.hs:74–82`) — no stage in
+  `PersistenceTxError`, no explicit ROLLBACK; `loadStateDirect`
+  catches only `UnicodeException` (`Bridge/StatePersistence.hs:255`)
+  while DB errors escape `loadStateWithVersion`; bootstrap
+  `INSERT OR IGNORE` does not verify the session row
+  (`Bootstrap.hs:571–573`), so a missing row degrades into an
+  `expected == actual` conflict on save.
+- **Rule (locked)**: (a) `stepOrFail` inspects `stepResult` first,
+  finalizes in every branch, issues explicit ROLLBACK and throws the
+  stage-mapped `PersistenceTxError` on failure; (b) `loadStateDirect`
+  catches structured SQLite errors (not only `UnicodeException`) and
+  Bootstrap routes a failing `loadStateWithVersion` into the
+  `LoadStateCorrupt → RecoveredCorruptOrigin` branch; (c) bootstrap
+  guarantees the `runtime_sessions` row exists (upsert + row
+  verification) and fails init loudly with a distinct stage if it
+  cannot — the save path never reports `expected == actual` for a
+  missing row.
+- **Bar**: pins — (a) failing step (NOT NULL/CHECK violation)
+  yields `PersistenceTxError` with the mapped stage and leaves no
+  open transaction; (b) a corrupted DB file bootstraps into
+  `RecoveredCorruptOrigin` (degraded mode) instead of throwing out
+  of `loadStateWithVersion`; (c) a deleted `runtime_sessions` row is
+  repaired by bootstrap (row present after init, first save
+  succeeds) or init fails loudly with the distinct stage; the old
+  misleading `expected == actual` conflict is unreachable in tests.
+  All persistence suites green; `qxfx0-test-unit` state group green.
+- **Out of scope**: connection pooling / FFI safety (audit p.19,
+  separate performance front); BEGIN IMMEDIATE read semantics
+  (audit p.20, separate small fix).
