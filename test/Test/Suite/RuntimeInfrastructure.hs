@@ -178,6 +178,9 @@ runtimeInfrastructureTests =
   , testWriteAgdaWitnessReportsActualOutcome
   , testWhitelistRemovalRoutesSmertThroughEval
   , testWhitelistRemovalAllowsSmertUnderFakeNixOk
+  , testOverlongCrisisInputStillGetsResources
+  , testStrictGateFailureKeepsCrisisResources
+  , testCliCrisisPreflightChecksRawInputBeforeTruncation
   ]
 
 runtimeLifecycleTests :: [Test]
@@ -1317,6 +1320,61 @@ testRunTurnInSessionStrictBlocksWhenBackendUnavailable = TestCase $
     assertEqual "blocked strict turn should keep turn counter unchanged"
       turns0
       (ssTurnCount (Runtime.sessSystemState session1))
+
+-- | Audit 2026-10-16 (p.5): the length gate is a bypass path — an
+-- over-long input carrying an acute marker must still receive the
+-- bounded resource surface, never the length template.
+testOverlongCrisisInputStillGetsResources :: Test
+testOverlongCrisisInputStillGetsResources = TestCase $ do
+  withRuntimeEnv "qxfx0_test_runtime_overlong_crisis.db" $ do
+    session0 <- Runtime.bootstrapSession True "test_runtime_overlong_crisis"
+    let overlong = T.replicate 10001 "а" <> " я не хочу жить"
+        turns0 = ssTurnCount (Runtime.sessSystemState session0)
+    (session1, response) <- Runtime.runTurnInSession session0 overlong
+    assertBool "over-long crisis input must still carry resources"
+      ("112" `T.isInfixOf` response)
+    assertBool "over-long crisis input must not hit the length template"
+      (not ("слишком длинный" `T.isInfixOf` response))
+    assertEqual "refused over-long turn keeps the turn counter unchanged"
+      turns0
+      (ssTurnCount (Runtime.sessSystemState session1))
+
+-- | Audit 2026-10-16 (p.5): a strict-runtime gate failure must not mask
+-- a crisis input — the bounded resource surface wins over "Turn blocked".
+testStrictGateFailureKeepsCrisisResources :: Test
+testStrictGateFailureKeepsCrisisResources = TestCase $
+  withStrictRuntimeEnv "qxfx0_test_strict_turn_crisis.db" $ do
+    session0 <- Runtime.bootstrapSession True "test_runtime_strict_turn_crisis"
+    let turns0 = ssTurnCount (Runtime.sessSystemState session0)
+    (session1, response) <-
+      withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "remote-http") $
+        withEnvVar "EMBEDDING_API_URL" Nothing $
+          Runtime.runTurnInSession session0 "я не хочу жить"
+    assertBool "crisis input must keep resources when the strict gate fails"
+      ("112" `T.isInfixOf` response)
+    assertBool "strict gate failure must not mask the crisis surface"
+      (not ("Turn blocked" `T.isInfixOf` response))
+    assertEqual "gate-refused crisis turn keeps the turn counter unchanged"
+      turns0
+      (ssTurnCount (Runtime.sessSystemState session1))
+
+-- | Audit 2026-10-16 (p.5): the CLI checks the RAW input for the hard
+-- crisis gate before truncating to 'maxInputLength', so a marker beyond
+-- the truncation point cannot be cut away.  Short inputs (crisis or
+-- not) are left to the normal pipeline.
+testCliCrisisPreflightChecksRawInputBeforeTruncation :: Test
+testCliCrisisPreflightChecksRawInputBeforeTruncation = TestCase $ do
+  let overlong tailText = T.replicate 10001 "а" <> tailText
+  assertBool "marker beyond the truncation point still fires the preflight"
+    (case Runtime.cliCrisisPreflight (overlong " я не хочу жить") of
+       Just surface -> "112" `T.isInfixOf` surface
+       Nothing -> False)
+  assertEqual "over-long calm input keeps the truncate-and-process path"
+    Nothing (Runtime.cliCrisisPreflight (overlong ""))
+  assertEqual "short calm input has no preflight surface"
+    Nothing (Runtime.cliCrisisPreflight "привет")
+  assertEqual "short crisis input goes through the normal pipeline"
+    Nothing (Runtime.cliCrisisPreflight "я не хочу жить")
 
 testDatalogShadowRespectsAtomSignals :: Test
 testDatalogShadowRespectsAtomSignals = TestCase $

@@ -31,6 +31,7 @@ module QxFx0.Runtime
   , runTurn
   , runTurnInSession
   , loop
+  , cliCrisisPreflight
   ) where
 
 import QxFx0.Bridge.SQLite (ensureSchemaMigrations)
@@ -55,6 +56,7 @@ import QxFx0.Runtime.Engine
   ( runTurn
   , runTurnInSession
   , loop
+  , cliCrisisPreflight
   )
 import QxFx0.Runtime.Session
   ( RuntimeOutputMode(..)

@@ -25,6 +25,7 @@ import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import QxFx0.Safety.CrisisGuard
   ( acuteCrisisMarkers
+  , crisisPreflightSurface
   , crisisResourceVersion
   , crisisResourcesRu
   , decideProtocol
@@ -131,6 +132,23 @@ crisisGuardTests =
   , TestLabel "category tags are stable snake_case" $ TestCase $ do
       assertEqual "suicidal tag" "suicidal_ideation" (crisisCategoryTag CrisisSuicidalIdeation)
       assertEqual "self-harm tag" "self_harm" (crisisCategoryTag CrisisSelfHarm)
+  , TestLabel "engine preflight fires on bypass paths (audit p.5)" $ TestCase $ do
+      let Just trigger = detectCrisisTrigger "я не хочу жить"
+          Just surface = crisisPreflightSurface "я не хочу жить"
+      assertEqual "preflight surface is the canonical Protocol B surface"
+        (renderCrisisSurface crisisResourcesRu (CrisisHardTrigger trigger))
+        surface
+      assertBool "preflight surface carries the emergency number"
+        ("112" `T.isInfixOf` surface)
+      assertEqual "calm input has no preflight surface"
+        Nothing (crisisPreflightSurface "что такое философия?")
+      let overlongCalm = T.replicate 10001 "а"
+      assertEqual "over-long calm input has no preflight surface"
+        Nothing (crisisPreflightSurface overlongCalm)
+      assertBool "marker beyond the length limit still fires the preflight"
+        (case crisisPreflightSurface (overlongCalm <> " я не хочу жить") of
+           Just s -> "112" `T.isInfixOf` s
+           Nothing -> False)
   , TestLabel "CrisisGuardTrace JSON roundtrip" $ TestCase $ do
       let trace = CrisisGuardTrace
             { cgtProtocolB = True

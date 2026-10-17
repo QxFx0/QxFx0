@@ -3,6 +3,7 @@ module QxFx0.Runtime.Engine
   ( runTurn
   , runTurnInSession
   , loop
+  , cliCrisisPreflight
   ) where
 
 import QxFx0.Types
@@ -11,6 +12,7 @@ import QxFx0.Resources (ReadinessMode(..))
 import QxFx0.Core.PipelineIO (PipelineIO, resolveTurnEffect)
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult(..))
 import QxFx0.Runtime.Health (checkHealth)
+import QxFx0.Safety.CrisisGuard (crisisPreflightSurface)
 import QxFx0.Runtime.Gate
   ( evaluateBootstrapReadiness
   , evaluateStrictHealth
@@ -40,6 +42,7 @@ import qualified QxFx0.Observability.Metrics as Metrics
 
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
@@ -63,7 +66,16 @@ runTurnWithVersion ctx ss input sessionId expectedVersion
       Log.logWarn "Input exceeds maximum length"
         (Log.addContext "input_length" (T.pack $ show $ T.length input) $
          Log.addContext "max_length" (T.pack $ show maxInputLength) Log.emptyContext)
-      return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
+      -- Audit 2026-10-16 (p.5): the hard crisis gate is a preflight — an
+      -- over-long input carrying an acute marker must still receive the
+      -- bounded resource surface, never the length template.
+      case crisisPreflightSurface input of
+        Just surface -> do
+          Log.logWarn "Crisis preflight fired on over-long input; returning bounded resource surface"
+            (Log.addContext "session_id" sessionId Log.emptyContext)
+          pure (ss, surface)
+        Nothing ->
+          return (ss, "\1054\1096\1080\1073\1082\1072: \1090\1077\1082\1089\1090 \1089\1083\1080\1096\1082\1086\1084 \1076\1083\1080\1085\1085\1099\1081.")
   | otherwise = withRuntimeSession ctx sessionId $ do
       startTime <- getCurrentTime
       turnResult <- try (runTurnBody ctx ss input sessionId expectedVersion) :: IO (Either QxFx0Exception (SystemState, Text))
@@ -80,14 +92,16 @@ runTurnWithVersion ctx ss input sessionId expectedVersion
           Metrics.recordCounter metricsRegistry "turn.error" 1.0
             (M.singleton "error_type" "essence_rupture")
           Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
-          pure (ss, "Turn blocked: essence rupture [" <> detail <> "]")
+          -- Audit 2026-10-16 (p.5): crisis preflight — a degraded turn on
+          -- a crisis input still hands over the real resource pack.
+          pure (ss, fromMaybe ("Turn blocked: essence rupture [" <> detail <> "]") (crisisPreflightSurface input))
         Left (EmbeddingError detail) -> do
           Log.logError "Turn blocked by embedding error"
             (Log.addContext "detail" detail Log.emptyContext)
           Metrics.recordCounter metricsRegistry "turn.error" 1.0
             (M.singleton "error_type" "embedding_error")
           Metrics.recordTiming metricsRegistry "turn.duration" duration M.empty
-          pure (ss, "Turn blocked: embedding backend [" <> detail <> "]")
+          pure (ss, fromMaybe ("Turn blocked: embedding backend [" <> detail <> "]") (crisisPreflightSurface input))
         Left err -> do
           Log.logException err
             (Log.addContext "session_id" sessionId Log.emptyContext)
@@ -160,9 +174,10 @@ runTurnInSession session text = do
   let strictMode = isStrictRuntimeMode runtimeMode
   case evaluateBootstrapReadiness runtimeMode readiness of
     Left failure ->
+      -- Audit 2026-10-16 (p.5): gate failures must not mask a crisis input.
       pure
         ( session { sessReadinessMode = readiness }
-        , renderTurnGateFailure failure
+        , fromMaybe (renderTurnGateFailure failure) (crisisPreflightSurface text)
         )
     Right _ ->
       case readiness of
@@ -186,7 +201,7 @@ runTurnInSession session text = do
             Left failure ->
               pure
                 ( s { sessReadinessMode = readiness }
-                , renderTurnGateFailure failure
+                , fromMaybe (renderTurnGateFailure failure) (crisisPreflightSurface text)
                 )
             Right _ ->
               continueTurn s readiness ss runtime sid expectedVersion
@@ -199,17 +214,17 @@ runTurnInSession session text = do
         Left (AgdaGateError detail) ->
           pure
             ( s { sessReadinessMode = readiness }
-            , "Turn blocked: strict runtime requires Agda verification [" <> detail <> "]"
+            , fromMaybe ("Turn blocked: strict runtime requires Agda verification [" <> detail <> "]") (crisisPreflightSurface text)
             )
         Left (EmbeddingError detail) ->
           pure
             ( s { sessReadinessMode = readiness }
-            , "Turn blocked: embedding backend [" <> detail <> "]"
+            , fromMaybe ("Turn blocked: embedding backend [" <> detail <> "]") (crisisPreflightSurface text)
             )
         Left (EssenceRupture detail) ->
           pure
             ( s { sessReadinessMode = readiness }
-            , "Turn blocked: essence rupture [" <> detail <> "]"
+            , fromMaybe ("Turn blocked: essence rupture [" <> detail <> "]") (crisisPreflightSurface text)
             )
         Left err ->
           throwQxFx0 err
@@ -247,6 +262,18 @@ runTurnInSession session text = do
                 }
           pure (session', response)
 
+-- | Audit 2026-10-16 (p.5): CLI truncation is itself a bypass path —
+-- truncating raw input to 'maxInputLength' can silently cut an acute
+-- marker away.  This preflight runs the hard crisis gate on the RAW
+-- input BEFORE truncation; 'Just' means the turn is answered with the
+-- bounded resource surface and the session does not advance (the
+-- utterance is never silently dropped).  Over-long non-crisis input
+-- keeps today's truncate-and-process behavior.
+cliCrisisPreflight :: Text -> Maybe Text
+cliCrisisPreflight input
+  | T.length input > maxInputLength = crisisPreflightSurface input
+  | otherwise = Nothing
+
 loop :: Session -> IO ()
 loop session = do
   T.putStr $ "\n[" <> promptMode (sessOutputMode session) <> "] [QxFx0] > "
@@ -258,23 +285,28 @@ loop session = do
       case inputResult of
         Left e -> hPutStrLn stderr ("[engine] stdin read error: " <> show e)
         Right input ->
-          let boundedInput = T.take maxInputLength input
-          in case T.strip boundedInput of
-            ":quit" -> do
-              T.putStrLn "State saved. Bye."
-              exitSuccess
-            ":help" -> printHelp >> loop session
-            ":dialogue" ->
-              T.putStrLn "Output mode: DIALOGUE" >> loop (setOutputMode DialogueMode session)
-            ":semantic" ->
-              T.putStrLn "Output mode: SEMANTIC" >> loop (setOutputMode SemanticIntrospectionMode session)
-            ":state" -> printStateSummary session >> loop session
-            text
-              | not (T.null text) -> do
-                  (session', safeResponse) <- runTurnInSession session text
-                  T.putStrLn safeResponse
-                  loop session'
-            _ -> loop session
+          case cliCrisisPreflight input of
+            Just surface -> do
+              T.putStrLn surface
+              loop session
+            Nothing ->
+              let boundedInput = T.take maxInputLength input
+              in case T.strip boundedInput of
+                ":quit" -> do
+                  T.putStrLn "State saved. Bye."
+                  exitSuccess
+                ":help" -> printHelp >> loop session
+                ":dialogue" ->
+                  T.putStrLn "Output mode: DIALOGUE" >> loop (setOutputMode DialogueMode session)
+                ":semantic" ->
+                  T.putStrLn "Output mode: SEMANTIC" >> loop (setOutputMode SemanticIntrospectionMode session)
+                ":state" -> printStateSummary session >> loop session
+                text
+                  | not (T.null text) -> do
+                      (session', safeResponse) <- runTurnInSession session text
+                      T.putStrLn safeResponse
+                      loop session'
+                _ -> loop session
   where
     promptMode DialogueMode = "DIALOGUE"
     promptMode SemanticIntrospectionMode = "SEMANTIC"

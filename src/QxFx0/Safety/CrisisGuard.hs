@@ -40,6 +40,8 @@ module QxFx0.Safety.CrisisGuard
   , detectCrisisTrigger
     -- * Protocol resolution
   , decideProtocol
+    -- * Engine preflight (bypass protection)
+  , crisisPreflightSurface
     -- * Resources and bounded surface
   , crisisResourcesRu
   , crisisResourceVersion
@@ -159,6 +161,19 @@ decideProtocol Nothing (Just exitScore) =
   ProtocolB (CrisisContourExit exitScore)
 decideProtocol Nothing Nothing =
   ProtocolA
+
+-- | Audit 2026-10-16 (p.5): hard-gate preflight for callers that can
+-- bypass the turn pipeline ('QxFx0.Runtime.Engine' early-return paths —
+-- length gate, CLI truncation, readiness/strict-health gates,
+-- post-pipeline Left handlers).  Runs 'detectCrisisTrigger' on the raw
+-- (untruncated) text and, when the gate fires, materializes the bounded
+-- Protocol B surface with the real resource pack.  'Nothing' = the
+-- caller handles the input with its normal logic.  Pure and total; the
+-- in-pipeline detection and persistence stay untouched.
+crisisPreflightSurface :: Text -> Maybe Text
+crisisPreflightSurface raw =
+  renderCrisisSurface crisisResourcesRu . CrisisHardTrigger
+    <$> detectCrisisTrigger raw
 
 -- | Real crisis-service lines for the RU region.  Both entries are
 -- nationwide, free, and 24/7:
