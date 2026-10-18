@@ -17,10 +17,12 @@ module QxFx0.Policy.Metacognition
   ) where
 
 import qualified Data.Sequence as Seq
+import Data.Maybe (isJust)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Prelude (Bool(..), Double, Eq(..), Int, Maybe(..), Num(..), Ord(..), Show, (&&), ($), (.), (++), (+), (==), (||), any, maybe, not, null, otherwise, pure)
 
+import QxFx0.Types.Recovery (LocalRecoveryCause)
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
 import QxFx0.Types.Policy.Metacognition
 
@@ -80,15 +82,16 @@ ignoreMarkers =
   ]
 
 -- | Self-evaluate a decision given the observed outcome.
--- Uses deliberation agreement and recovery status to produce
--- a calibrated evaluation.
+-- Uses deliberation agreement and the turn's local-recovery cause
+-- to produce a calibrated evaluation.
 selfEvaluate
-  :: Double          -- ^ deliberation agreement (0=disagree, 1=agree)
-  -> Bool            -- ^ was the turn in recovery?
+  :: Double                    -- ^ deliberation agreement (0=disagree, 1=agree)
+  -> Maybe LocalRecoveryCause  -- ^ the turn's local-recovery cause ('Nothing' = not in recovery)
   -> Outcome
   -> Evaluation
-selfEvaluate agreement inRecovery outcome =
-  case outcome of
+selfEvaluate agreement mRecoveryCause outcome =
+  let inRecovery = isJust mRecoveryCause
+  in case outcome of
     OutcomeAccepted
       | inRecovery -> EvaluationAmbiguous
       | otherwise  -> EvaluationAligned
@@ -122,11 +125,11 @@ runMetacognitionLoop
   -> TurnSeq
   -> Text               -- ^ user input (for outcome observation)
   -> Double             -- ^ deliberation agreement
-  -> Bool               -- ^ in recovery
+  -> Maybe LocalRecoveryCause  -- ^ the turn's local-recovery cause
   -> MetacognitionContour
-runMetacognitionLoop contour turnSeq rawText agreement inRecovery =
+runMetacognitionLoop contour turnSeq rawText agreement mRecoveryCause =
   let outcome = observeResponse rawText
-      evaluation = selfEvaluate agreement inRecovery outcome
+      evaluation = selfEvaluate agreement mRecoveryCause outcome
       correction = boundedCorrection evaluation
       window = Seq.take 100 (mcRecentEvaluations contour Seq.|> (turnSeq, evaluation, correction))
   in MetacognitionContour

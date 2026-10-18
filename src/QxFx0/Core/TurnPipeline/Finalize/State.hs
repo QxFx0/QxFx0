@@ -825,16 +825,19 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       agreement = case tpDeliberation tp of
         Just d  -> agreementToDouble (dtAgreement (delibTrace d))
         Nothing -> 0.5
-      inRecovery = maybe False (const True)
-        (tpDeliberation tp >>= \d ->
-           planRecoveryCause (delibReconciled d))
+      -- Audit 2026-10-16 п.15: metacognition sees the turn's actual
+      -- local-recovery cause — the merged value the replay trace stamps
+      -- ('trcRecoveryCause') — instead of the deliberation-only
+      -- 'planRecoveryCause' (which could only ever be
+      -- 'Just RecoveryConatusGate').
+      mRecoveryCause = taLocalRecoveryCause ta
       nextWithMeta = nextWithCommitments
         { ssMetacognition = runMetacognitionLoop
             <$> mContour
             <*> pure turnSeq
             <*> pure rawText
             <*> pure agreement
-            <*> pure inRecovery
+            <*> pure mRecoveryCause
         }
       -- P7: episodic memory encoding (WP-B R-B4: store is always Just after explicit init).
       -- The invariant is guaranteed by construction, but a deterministic empty-store

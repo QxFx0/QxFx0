@@ -283,6 +283,7 @@ import QxFx0.Types.ShadowDivergence
   , ShadowVetoState(..)
   , emptyShadowDivergence
   )
+import QxFx0.Types.Policy.Metacognition (Evaluation(..), MetacognitionContour(..))
 import QxFx0.Semantic.Proposition (parseProposition, parsePropositionWithFrame, PropositionType(..))
 import QxFx0.Types.Domain.Atoms (ProvisionalAtom(..), MorphologyData(..))
 import QxFx0.Core.Guard (SafetyStatus(..))
@@ -465,6 +466,15 @@ turnPipelineProtocolTests =
      , testLowLegitimacyUsesLocalRecoveryWithoutExternalCall
      , testRuntimeDegradedUsesVisibleLocalRecovery
       , testParserLowConfidenceUsesDistinguishCandidates
+      , testRuntimeDegradedOutranksShadowDivergence
+      , testRuntimeDegradedOutranksParserLowConfidence
+      , testUnknownTopicOutranksLowLegitimacy
+      , testUnknownTopicOutranksParserLowConfidence
+      , testLowLegitimacyOutranksParserLowConfidence
+      , testMetacognitionSeesLocalRecoveryOnAcceptedOutcome
+      , testMetacognitionAlignedWithoutRecoveryOnAcceptedOutcome
+      , testMetacognitionSeesLocalRecoveryOnIgnoredOutcome
+      , testMetacognitionAmbiguousWithoutRecoveryOnIgnoredOutcome
        , testRenderBlockedPersistsSafeRecoveryTrace
        , testResponsePlanGfEffectUsesCanonicalSurface
        , testResponsePlanGfDefaultsOnWhenEnvMissing
@@ -2179,6 +2189,12 @@ testParserLowConfidenceUsesDistinguishCandidates = TestCase $
           ti0
             { tiFrame = frame
             , tiRecommendedFamily = CMDescribe
+            , -- Audit 2026-10-16 п.16: the unknown-topic guard (severity
+              -- 40) now outranks parser low confidence (20); pin the
+              -- derived topic away so this pin keeps exercising the
+              -- parser branch. The unknown-vs-parser combination is
+              -- pinned separately.
+              tiBestTopic = ""
             }
         tp =
           tp0
@@ -2204,6 +2220,250 @@ testParserLowConfidenceUsesDistinguishCandidates = TestCase $
           (lrpStrategy recoveryPlan)
         assertBool "recovery evidence should include candidate family set"
           (any ("candidate_families=" `T.isPrefixOf`) (lrpEvidence recoveryPlan))
+
+-- | Audit 2026-10-16 п.16: the local-recovery guard chain is strictly
+-- severity-descending ('recoveryCauseSeverity'); runtime degraded (70)
+-- outranks shadow diverged (60) when both fire on the same turn.
+testRuntimeDegradedOutranksShadowDivergence :: Test
+testRuntimeDegradedOutranksShadowDivergence = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp0) <- buildPlannedFixture "что такое свобода"
+    let tp =
+          tp0
+            { tpShadowStatus = ShadowDiverged
+            , tpShadowDivergence = True
+            , tpShadowDivergenceSeverity = ShadowSeveritySafety
+            }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeDegraded LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "runtime-degraded with shadow divergence must still plan local recovery"
+      Just recoveryPlan ->
+        assertEqual "runtime-degraded (70) must outrank shadow-diverged (60)"
+          RecoveryRuntimeDegraded
+          (lrpCause recoveryPlan)
+
+-- | Audit 2026-10-16 п.16: runtime degraded (70) outranks parser low
+-- confidence (20) on a combined turn (was: parser first).
+testRuntimeDegradedOutranksParserLowConfidence :: Test
+testRuntimeDegradedOutranksParserLowConfidence = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp0) <- buildPlannedFixture "свобода или ответственность"
+    let ti =
+          ti0
+            { tiFrame = (tiFrame ti0) { ipfConfidence = parserLowConfidenceThreshold / 2.0 }
+            , tiBestTopic = ""
+            }
+        tp =
+          tp0
+            { tpShadowStatus = ShadowMatch
+            , tpShadowDivergence = False
+            }
+        renderPlan =
+          planRenderEffectsForRuntime RuntimeDegraded LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "runtime-degraded with low parser confidence must still plan local recovery"
+      Just recoveryPlan ->
+        assertEqual "runtime-degraded (70) must outrank parser low confidence (20)"
+          RecoveryRuntimeDegraded
+          (lrpCause recoveryPlan)
+
+-- | Audit 2026-10-16 п.16: the unknown-topic fallback (40) outranks
+-- legitimacy (30) on a non-structured turn (was: the terminal
+-- fallback).
+testUnknownTopicOutranksLowLegitimacy :: Test
+testUnknownTopicOutranksLowLegitimacy = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp0) <- buildPlannedFixture "свобода или ответственность"
+    let ti =
+          ti0
+            { tiFrame = (tiFrame ti0) { ipfPropositionType = PlainAssert } }
+        tp =
+          tp0
+            { tpLegitScore = 0.0
+            , tpShadowStatus = ShadowMatch
+            , tpShadowDivergence = False
+            }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "unknown topic with low legitimacy must still plan local recovery"
+      Just recoveryPlan -> do
+        assertEqual "unknown topic (40) must outrank low legitimacy (30)"
+          RecoveryUnknownTopic
+          (lrpCause recoveryPlan)
+        assertEqual "unknown topic recovery must define known terms"
+          StrategyDefineKnownTerms
+          (lrpStrategy recoveryPlan)
+
+-- | Audit 2026-10-16 п.16: the unknown-topic fallback (40) outranks
+-- parser low confidence (20) on a non-structured turn (was: parser
+-- first).
+testUnknownTopicOutranksParserLowConfidence :: Test
+testUnknownTopicOutranksParserLowConfidence = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp0) <- buildPlannedFixture "свобода или ответственность"
+    let ti =
+          ti0
+            { tiFrame = (tiFrame ti0) { ipfConfidence = parserLowConfidenceThreshold / 2.0 } }
+        tp =
+          tp0
+            { tpShadowStatus = ShadowMatch
+            , tpShadowDivergence = False
+            }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "unknown topic with low parser confidence must still plan local recovery"
+      Just recoveryPlan -> do
+        assertEqual "unknown topic (40) must outrank parser low confidence (20)"
+          RecoveryUnknownTopic
+          (lrpCause recoveryPlan)
+        assertBool "unknown topic evidence must carry the topic"
+          (any ("unknown_topic=" `T.isPrefixOf`) (lrpEvidence recoveryPlan))
+
+-- | Audit 2026-10-16 п.16: legitimacy (30) outranks parser low
+-- confidence (20) on a combined turn (was: parser first).
+testLowLegitimacyOutranksParserLowConfidence :: Test
+testLowLegitimacyOutranksParserLowConfidence = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti0, ts, tp0) <- buildPlannedFixture "свобода или ответственность"
+    let ti =
+          ti0
+            { tiFrame = (tiFrame ti0) { ipfConfidence = parserLowConfidenceThreshold / 2.0 }
+            , tiBestTopic = ""
+            }
+        tp =
+          tp0
+            { tpLegitScore = 0.0
+            , tpShadowStatus = ShadowMatch
+            , tpShadowDivergence = False
+            }
+        renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    case repLocalRecoveryPlan renderPlan of
+      Nothing ->
+        assertFailure "low legitimacy with low parser confidence must still plan local recovery"
+      Just recoveryPlan ->
+        assertEqual "low legitimacy (30) must outrank parser low confidence (20)"
+          RecoveryLowLegitimacy
+          (lrpCause recoveryPlan)
+
+-- | Audit 2026-10-16 п.15: metacognition must see the turn's actual
+-- local-recovery cause (the trace-visible 'taLocalRecoveryCause'), not
+-- only the deliberation Conatus override. Accepted outcome + local
+-- recovery → the contour records 'EvaluationAmbiguous'.
+testMetacognitionSeesLocalRecoveryOnAcceptedOutcome :: Test
+testMetacognitionSeesLocalRecoveryOnAcceptedOutcome = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "да, это верно"
+    let renderPlan =
+          planRenderEffectsForRuntime RuntimeDegraded LocalRecoveryEnabled ss ti ts tp
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "scenario setup: recovery turn must carry the runtime-degraded cause"
+      (Just RecoveryRuntimeDegraded)
+      (taLocalRecoveryCause turnArtifacts)
+    bundle <- finalizeBundleForMetacognition ss ti ts tp turnArtifacts
+    case lastEvaluationOf bundle of
+      Nothing ->
+        assertFailure "metacognition contour must record an evaluation"
+      Just evaluation ->
+        assertEqual "recovery turn with accepted outcome must evaluate as ambiguous"
+          EvaluationAmbiguous
+          evaluation
+
+-- | Audit 2026-10-16 п.15 contrast: the same accepted outcome without a
+-- local-recovery cause keeps the aligned evaluation.
+testMetacognitionAlignedWithoutRecoveryOnAcceptedOutcome :: Test
+testMetacognitionAlignedWithoutRecoveryOnAcceptedOutcome = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "да, это верно"
+    let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "scenario setup: clean turn must carry no local-recovery cause"
+      Nothing
+      (taLocalRecoveryCause turnArtifacts)
+    bundle <- finalizeBundleForMetacognition ss ti ts tp turnArtifacts
+    case lastEvaluationOf bundle of
+      Nothing ->
+        assertFailure "metacognition contour must record an evaluation"
+      Just evaluation ->
+        assertEqual "clean turn with accepted outcome must evaluate as aligned"
+          EvaluationAligned
+          evaluation
+
+-- | Audit 2026-10-16 п.15: ignored outcome + local recovery → the
+-- contour records 'EvaluationAligned' (recovery acknowledged).
+testMetacognitionSeesLocalRecoveryOnIgnoredOutcome :: Test
+testMetacognitionSeesLocalRecoveryOnIgnoredOutcome = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "следующий вопрос"
+    let renderPlan =
+          planRenderEffectsForRuntime RuntimeDegraded LocalRecoveryEnabled ss ti ts tp
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "scenario setup: recovery turn must carry the runtime-degraded cause"
+      (Just RecoveryRuntimeDegraded)
+      (taLocalRecoveryCause turnArtifacts)
+    bundle <- finalizeBundleForMetacognition ss ti ts tp turnArtifacts
+    case lastEvaluationOf bundle of
+      Nothing ->
+        assertFailure "metacognition contour must record an evaluation"
+      Just evaluation ->
+        assertEqual "recovery turn with ignored outcome must evaluate as aligned"
+          EvaluationAligned
+          evaluation
+
+-- | Audit 2026-10-16 п.15 contrast: the same ignored outcome without a
+-- local-recovery cause keeps the ambiguous evaluation.
+testMetacognitionAmbiguousWithoutRecoveryOnIgnoredOutcome :: Test
+testMetacognitionAmbiguousWithoutRecoveryOnIgnoredOutcome = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "следующий вопрос"
+    let renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "scenario setup: clean turn must carry no local-recovery cause"
+      Nothing
+      (taLocalRecoveryCause turnArtifacts)
+    bundle <- finalizeBundleForMetacognition ss ti ts tp turnArtifacts
+    case lastEvaluationOf bundle of
+      Nothing ->
+        assertFailure "metacognition contour must record an evaluation"
+      Just evaluation ->
+        assertEqual "clean turn with ignored outcome must evaluate as ambiguous"
+          EvaluationAmbiguous
+          evaluation
+
+-- | Audit 2026-10-16 п.15 helper: run the finalize-precommit stage for an
+-- already-resolved turn and return the bundle (mirrors the runtime
+-- local-recovery test's flow).
+finalizeBundleForMetacognition :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> IO FinalizePrecommitBundle
+finalizeBundleForMetacognition ss ti ts tp turnArtifacts = do
+  let precommitPlan = planFinalizePrecommit ss ti ts tp turnArtifacts
+  precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+  buildFinalizePrecommit
+    (pipelineUpdateHistory testProtocolPipelineIO)
+    (pipelineParseAuthoritySurface testProtocolPipelineIO)
+    defaultControlAAblation
+    ss
+    ti
+    ts
+    tp
+    turnArtifacts
+    precommitPlan
+    precommitResults
+
+-- | Audit 2026-10-16 п.15 helper: the evaluation recorded by the last
+-- metacognition step of the finalized turn.
+lastEvaluationOf :: FinalizePrecommitBundle -> Maybe Evaluation
+lastEvaluationOf bundle =
+  case Seq.viewr (maybe Seq.empty mcRecentEvaluations (ssMetacognition (fpbNextSs bundle))) of
+    Seq.EmptyR -> Nothing
+    _ Seq.:> (_, evaluation, _) -> Just evaluation
 
 testRenderBlockedPersistsSafeRecoveryTrace :: Test
 testRenderBlockedPersistsSafeRecoveryTrace = TestCase $

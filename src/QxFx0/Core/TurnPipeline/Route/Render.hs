@@ -1345,6 +1345,20 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                        , strategy
                        , evidence
                        )
+            -- Audit 2026-10-16 п.16: the guard chain is strictly
+            -- severity-descending against 'recoveryCauseSeverity'
+            -- (Self/Deliberation) — runtime degraded (70) above the
+            -- shadow signals (60/50), the unknown-topic fallback (40)
+            -- above legitimacy (30), legitimacy above parser (20).
+            -- The unknown-topic guard keeps the structured-surface gate
+            -- attached to it (a structured dialogue surface never
+            -- produces it and still falls through to parser/legitimacy).
+            | runtimeMode == RuntimeDegraded ->
+                Just
+                  ( RecoveryRuntimeDegraded
+                  , StrategyNarrowScope
+                  , ["runtime_mode=degraded"]
+                  )
             | tpShadowStatus tp == ShadowDiverged
                 && tpShadowDivergenceSeverity tp /= ShadowSeverityAdvisory ->
                 Just
@@ -1363,11 +1377,12 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                     , "shadow_snapshot=" <> T.pack (show (tpShadowSnapshotId tp))
                     ]
                   )
-            | parserConfidence < parserLowConfidenceThreshold ->
+            | Just topic <- morphologyWarning
+            , not (hasStructuredDialogueSurface (tiFrame ti)) ->
                 Just
-                  ( RecoveryParserLowConfidence
-                  , parserStrategy
-                  , parserEvidence
+                  ( RecoveryUnknownTopic
+                  , StrategyDefineKnownTerms
+                  , ["unknown_topic=" <> topic]
                   )
             | legitScore < lowLegitThreshold ->
                 Just
@@ -1375,24 +1390,14 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
                   , StrategyExposeUncertainty
                   , ["legitimacy_score=" <> T.pack (show legitScore)]
                   )
-            | runtimeMode == RuntimeDegraded ->
+            | parserConfidence < parserLowConfidenceThreshold ->
                 Just
-                  ( RecoveryRuntimeDegraded
-                  , StrategyNarrowScope
-                  , ["runtime_mode=degraded"]
+                  ( RecoveryParserLowConfidence
+                  , parserStrategy
+                  , parserEvidence
                   )
-            | hasStructuredDialogueSurface (tiFrame ti) ->
-                Nothing
             | otherwise ->
-                case morphologyWarning of
-                  Just topic ->
-                    Just
-                      ( RecoveryUnknownTopic
-                      , StrategyDefineKnownTerms
-                      , ["unknown_topic=" <> topic]
-                      )
-                  Nothing ->
-                    Nothing
+                Nothing
    in fmap
         (\(cause, strategy, evidence) ->
           let preferredLang = detectInputGfLang (ipfRawText (tiFrame ti))
