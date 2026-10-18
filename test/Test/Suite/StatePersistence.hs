@@ -62,7 +62,9 @@ import QxFx0.Types.ShadowDivergence
   ( ShadowDivergenceKind(..)
   , ShadowDivergenceSeverity(..)
   , ShadowSnapshotId(..)
+  , ShadowVetoState(..)
   )
+import QxFx0.Types.User.R5 (UserR5ContourState(..))
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
@@ -112,6 +114,7 @@ statePersistenceFastTests =
   , testBootstrapRepairsDeletedSessionRow
   , testBootstrapRefusesSilentlyMissingSessionRow
   , testStepOrFailKeepsStageMappedErrorAndRollsBack
+  , testLoadedStateSanitizesCorruptedFields
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
   , testSaveStateReturnsRightOnSuccess
@@ -850,6 +853,54 @@ testStepOrFailKeepsStageMappedErrorAndRollsBack = TestCase $ do
       Right _ -> pure ()
     _ <- NSQL.execSql db "ROLLBACK;"
     NSQL.close db
+
+-- | Audit 2026-10-16 (p.11): a doctored persisted blob must not drive the
+-- runtime — the loader clamps the named value invariants on decode (logging
+-- every adjustment); the reloaded state carries the sanitized values.
+testLoadedStateSanitizesCorruptedFields :: Test
+testLoadedStateSanitizesCorruptedFields = TestCase $
+  withRuntimeEnv "qxfx0_test_state_sanitization.db" $ do
+    let sessionId = "test_state_sanitization"
+        turnCount = 5
+    session0 <- Runtime.bootstrapSession True sessionId
+    let ss0 = Runtime.sessSystemState session0
+        ssBad = StatePersistence.canonicalizePersistedState ss0
+          { ssDialogue = (ssDialogue ss0) { dsTurnCount = turnCount }
+          , ssShadowVetoState = ShadowVetoState (-5) 999999
+          , ssSelfState =
+              (ssSelfState ss0)
+                { selfDivergenceWindow =
+                    [0.1, 0 / 0, 0.2, 1 / 0, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+                }
+          , ssUserR5Contour = (ssUserR5Contour ss0) { u5Baseline = Just 1.7 }
+          }
+        blob = TE.decodeUtf8 (BL.toStrict (Aeson.encode ssBad))
+    Runtime.withRuntimeDb (Runtime.sessRuntime session0) $ \db -> do
+      mStmt <- NSQL.prepare db "INSERT OR REPLACE INTO dialogue_state(session_id, key, value, updated_at) VALUES(?, ?, ?, datetime('now'))"
+      stmt <- case mStmt of
+        Left err -> assertFailure ("fixture: prepare failed: " <> T.unpack err) >> fail "unreachable"
+        Right s -> pure s
+      _ <- NSQL.bindText stmt 1 sessionId
+      _ <- NSQL.bindText stmt 2 "__system_state__"
+      _ <- NSQL.bindText stmt 3 blob
+      _ <- NSQL.stepRow stmt
+      NSQL.finalize stmt
+      pure ()
+    Runtime.closeSession session0
+    restored <- Runtime.bootstrapSession True sessionId
+    let ss1 = Runtime.sessSystemState restored
+        veto = ssShadowVetoState ss1
+        selfWindow = selfDivergenceWindow (ssSelfState ss1)
+        mBaseline = u5Baseline (ssUserR5Contour ss1)
+    assertEqual "svsCount must be clamped to zero" 0 (svsCount veto)
+    assertEqual "svsWindowStart must be clamped to the loaded turn count"
+      turnCount (svsWindowStart veto)
+    assertEqual "the divergence window must be truncated to the newest sdtWindow"
+      8 (length selfWindow)
+    assertBool "no non-finite sample may survive the load"
+      (all (\x -> not (isNaN x) && not (isInfinite x)) selfWindow)
+    assertEqual "u5Baseline must be clamped to the score bound"
+      (Just 1.0) mBaseline
 
 requireDbPath :: IO FilePath
 requireDbPath = do

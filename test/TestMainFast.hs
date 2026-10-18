@@ -104,6 +104,7 @@ import Test.Suite.RuntimeProjection (runtimeProjectionTests)
 import Test.Suite.PromotionRuntime (promotionRuntimeTests)
 import Test.Suite.Anomaly (anomalyTests)
 import Test.Suite.StatePersistence (replayTraceCompatibilityTests)
+import Test.Suite.StateSanitization (stateSanitizationTests)
 
 fastSuites :: [(String, [Test])]
 fastSuites =
@@ -153,6 +154,7 @@ fastSuites =
   , ("PgfErrorHandling", pgfErrorHandlingTests)
   , ("StructuredErrors", structuredErrorsTests)
   , ("EpisodicMemory", episodicMemoryTests)
+  , ("StateSanitization", stateSanitizationTests)
   , ("UserModel", userModelTests)
   , ("CognitiveSignals", cognitiveSignalsTests)
   , ("DoubtLoop", doubtLoopTests)

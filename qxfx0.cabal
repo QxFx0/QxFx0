@@ -298,6 +298,7 @@ library
     QxFx0.Bridge.Datalog
     QxFx0.Bridge.Datalog.Support
     QxFx0.Bridge.StatePersistence
+    QxFx0.Bridge.StateSanitization
     QxFx0.Bridge.SemanticNetwork.RuntimeProjection
     QxFx0.Bridge.SQLite.Bootstrap
     QxFx0.Bridge.TxStatement
@@ -671,6 +672,7 @@ common test-common
     Test.Suite.TurnPipelineProtocol
     Test.Suite.RuntimeInfrastructure
     Test.Suite.StatePersistence
+    Test.Suite.StateSanitization
     Test.Suite.HttpRuntime
     Test.Suite.SemanticCorpus
     Test.Suite.LexiconTests

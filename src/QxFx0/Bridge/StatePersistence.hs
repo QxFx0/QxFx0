@@ -50,6 +50,7 @@ import QxFx0.Learning.Guardrails (GuardrailState(..))
 import QxFx0.Types.Domain.Atoms (MorphologyData(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, bindIntOrFail, bindInt64OrFail, bindDoubleOrFail, stepOrFail)
+import QxFx0.Bridge.StateSanitization (sanitizePersistedState)
 import QxFx0.Governance.Replay (rebuildGovernedSystemState)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -266,8 +267,20 @@ loadStateDirect db sessionId = do
       case mBlob of
         Just blob ->
           decodePersistedState blob >>= \case
-            Right ss ->
-              case rebuildDerivedViewsAfterLoad ss of
+            Right ss -> do
+              -- Audit 2026-10-16 (p.11): persisted JSON is a trust boundary.
+              -- Clamp the named value invariants before the state is used and
+              -- log every adjustment — visible, never silent.
+              let (ssSanitized, sanitizeNotes) = sanitizePersistedState ss
+              mapM_
+                (\note ->
+                  hPutStrLn stderr $
+                    "[persistence_debug] state_sanitized session="
+                      <> T.unpack sessionId
+                      <> " detail="
+                      <> T.unpack note)
+                sanitizeNotes
+              case rebuildDerivedViewsAfterLoad ssSanitized of
                 Right rebuilt -> do
                   -- SLICE-013 truth-contract policy: a non-authoritative persisted
                   -- state is a valid compatibility/provenance state, NOT corruption.

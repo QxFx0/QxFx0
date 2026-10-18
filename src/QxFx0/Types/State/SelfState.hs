@@ -75,7 +75,8 @@ data SelfState = SelfState
     --   prediction anchor yet.
   , selfDivergenceWindow :: ![Double]
     -- ^ A-slice: bounded sliding window of recent total divergence
-    --   samples (most recent last).  Bounded by 'sdtWindow'.
+    --   samples (newest first — 'QxFx0.Self.SelfDivergence.pushDivergenceSample'
+    --   prepends and keeps the @sdtWindow@ most recent).  Bounded by 'sdtWindow'.
   , selfLastEssenceResetEvent :: !(Maybe EssenceResetEvent)
     -- ^ B-slice: the 'EssenceResetEvent' of the previous runtime
     --   soft-rupture (BD2 single branch).  @Just@ only on the turn a

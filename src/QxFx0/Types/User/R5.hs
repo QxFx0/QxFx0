@@ -66,6 +66,7 @@ module QxFx0.Types.User.R5
   , defaultViabilityContour
   , outsideViabilityContour
   , updateUserBaseline
+  , clampScore
     -- * Residual audit (predict -> witness -> diff)
   , r5Distance
   , pushR5Sample
@@ -321,5 +322,8 @@ data UserR5Trace = UserR5Trace
 clamp01 :: Double -> Double
 clamp01 = max 0.0 . min 1.0
 
+-- | The runtime's score clamp; exported so the persisted-JSON
+-- boundary (audit 2026-10-16 p.11) can apply the /same/ clamp to a
+-- decoded 'u5Baseline' instead of duplicating the bounds.
 clampScore :: Double -> Double
 clampScore = max (-1.0) . min 1.0
