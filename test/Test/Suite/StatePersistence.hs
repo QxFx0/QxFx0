@@ -16,6 +16,7 @@ import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import Control.Exception (try)
 import Control.Monad (forM_)
+import System.Environment (lookupEnv)
 import qualified Data.Aeson as Aeson
 import Data.Aeson (Value(..), eitherDecodeStrict')
 import qualified Data.Aeson.Key as Key
@@ -51,6 +52,7 @@ import QxFx0.Types.Persistence
   ( LoadStateResult(..)
   , PersistenceDiagnostic(..)
   , PersistenceEnvelope(..)
+  , PersistenceStage(..)
   , currentPersistenceEnvelopeVersion
   , renderPersistenceDiagnostics
   )
@@ -62,7 +64,8 @@ import QxFx0.Types.ShadowDivergence
 import QxFx0.Types.Thresholds (LegitimacyStatus(..), ScenePressure(..))
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.StatePersistence as StatePersistence
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..))
+import QxFx0.Bridge.TxStatement (bindNullOrFail, prepareTx, stepOrFail)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..), tryQxFx0)
 import qualified Test.Support.Runtime as Runtime
 import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection
@@ -103,6 +106,7 @@ statePersistenceFastTests =
   , testLoadStateCorruptUtf8BlobIsReported
   , testLoadStateLegacyNumericTrajectoryHashRestores
   , testBootstrapSessionMarksRecoveredCorruption
+  , testStepOrFailKeepsStageMappedErrorAndRollsBack
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
   , testSaveStateReturnsRightOnSuccess
@@ -727,6 +731,46 @@ testBootstrapSessionMarksRecoveredCorruption = TestCase $ do
       "corrupt persisted state should not masquerade as fresh bootstrap"
       Runtime.RecoveredCorruptOrigin
       (Runtime.sessStateOrigin recovered)
+
+-- | Audit 2026-10-16 (p.6): a failing step must surface as the stage-mapped
+-- 'PersistenceTxError' (not as a generic SQLite error thrown by the strict
+-- finalize, whose rc mirrors the failed step) and must leave no open
+-- transaction behind.
+testStepOrFailKeepsStageMappedErrorAndRollsBack :: Test
+testStepOrFailKeepsStageMappedErrorAndRollsBack = TestCase $ do
+  withRuntimeEnv "qxfx0_test_step_or_fail.db" $ do
+    dbPath <- requireDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("fixture: cannot open db: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    assertExec db "fixture: probe table" "CREATE TABLE probe(x INTEGER NOT NULL)"
+    assertExec db "fixture: open transaction" "BEGIN IMMEDIATE;"
+    stepResult <- tryQxFx0 $ do
+      ts <- prepareTx db "saveKV:audit_p6_probe" "INSERT INTO probe(x) VALUES(?)"
+      bindNullOrFail ts 1
+      stepOrFail ts
+    case stepResult of
+      Left (PersistenceTxError stage detail) -> do
+        assertEqual "failing step must keep the context-mapped stage"
+          StageStateBlobUpsert stage
+        assertBool "failing step must carry the sqlite step detail" (not (T.null detail))
+      Left other -> assertFailure
+        ("expected stage-mapped PersistenceTxError, got masking error: " <> show other)
+      Right _ -> assertFailure "NOT NULL violation must fail the step"
+    beginAgain <- NSQL.execSql db "BEGIN IMMEDIATE;"
+    case beginAgain of
+      Left err -> assertFailure ("failed step left an open transaction: " <> T.unpack err)
+      Right _ -> pure ()
+    _ <- NSQL.execSql db "ROLLBACK;"
+    NSQL.close db
+
+requireDbPath :: IO FilePath
+requireDbPath = do
+  mPath <- lookupEnv "QXFX0_DB"
+  case mPath of
+    Just path -> pure path
+    Nothing -> assertFailure "QXFX0_DB must be set by withRuntimeEnv" >> fail "unreachable"
 
 testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
 testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do

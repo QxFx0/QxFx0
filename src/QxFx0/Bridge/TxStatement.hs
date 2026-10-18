@@ -14,7 +14,7 @@ module QxFx0.Bridge.TxStatement
 
 import Data.Int (Int64)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
-import QxFx0.ExceptionPolicy (throwQxFx0, QxFx0Exception(PersistenceTxError))
+import QxFx0.ExceptionPolicy (throwQxFx0, tryQxFx0, QxFx0Exception(PersistenceTxError))
 import QxFx0.Types.Persistence (PersistenceStage(..))
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -74,12 +74,18 @@ bindNullOrFail ts ix =
 stepOrFail :: TxStmt -> IO ()
 stepOrFail ts = do
   stepResult <- NSQL.step (txsStmt ts)
-  NSQL.finalize (txsStmt ts)
   case stepResult of
+    Right _ -> NSQL.finalize (txsStmt ts)
     Left err -> do
+      -- Audit 2026-10-16 (p.6): 'sqlite3_finalize' reports the error code of
+      -- the most recent 'sqlite3_step', so a strict finalize on this branch
+      -- would throw a generic SQLite error and mask both the stage-mapped
+      -- 'PersistenceTxError' and the explicit ROLLBACK below.  Finalize
+      -- tolerantly here: the captured step error is the diagnosis worth
+      -- keeping.
+      _ <- tryQxFx0 (NSQL.finalize (txsStmt ts))
       _ <- NSQL.execSql (txsDb ts) "ROLLBACK;"
       throwQxFx0 (PersistenceTxError (stageFromContext (txsCtx ts)) err)
-    Right _ -> pure ()
 
 stageFromContext :: Text -> PersistenceStage
 stageFromContext ctx
