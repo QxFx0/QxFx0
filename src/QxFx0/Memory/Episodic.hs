@@ -122,18 +122,23 @@ forget :: EpisodicId -> ForgettingReason -> EpisodicStore -> EpisodicStore
 forget eid _reason store =
   store { esForgotten = HS.insert eid (esForgotten store) }
 
+-- | Audit 2026-10-16 (p.10): trim ALL excess in one pass.  Finalize appends
+-- two events per turn (user input + system decision) but calls this once, so
+-- dropping a single event per call let the store grow by +1 event per turn
+-- past 'episodicCapacity' without bound.  The capacity is a hard invariant
+-- after every call: @length esEvents <= episodicCapacity@.
 enforceCapacity :: EpisodicStore -> EpisodicStore
 enforceCapacity store
-  | Seq.length (esEvents store) <= episodicCapacity = store
+  | excess <= 0 = store
   | otherwise =
-    let (removed, remaining) = Seq.splitAt 1 (esEvents store)
-        mids = case Seq.viewl removed of
-          Seq.EmptyL -> HS.empty
-          ev Seq.:< _ -> HS.singleton (eeId ev)
+    let (removed, remaining) = Seq.splitAt excess (esEvents store)
+        mids = HS.fromList (map eeId (foldr (:) [] removed))
     in store { esEvents    = remaining
              , esIndex     = rebuildIndex remaining
              , esForgotten = esForgotten store `HS.difference` mids
              }
+  where
+    excess = Seq.length (esEvents store) - episodicCapacity
 
 rebuildIndex :: Seq EpisodicEvent -> EpisodicIndex
 rebuildIndex events = foldl' indexEvent emptyIndex (foldr (:) [] events)

@@ -14,6 +14,11 @@ WP-B R-B3: Retrieved episodes suppress doubt-driven CMClarify when recent
 system decision exists (don't re-ask established facts).
 WP-B R-B4: ssEpisodic explicitly initialized (not lazy Nothing).
 
+Audit 2026-10-16 p.10 (2026-10-18): the capacity is a hard invariant —
+'enforceCapacity' trims ALL excess in one pass (finalize appends 2 events
+per turn but enforces once), so the store cannot drift past
+'episodicCapacity'.
+
 Anti-rot tests verify that removing the consumer breaks observable behavior.
 -}
 module Test.Suite.MemoryEpisodic
@@ -31,6 +36,9 @@ import QxFx0.Memory.Episodic
   , EpisodicId(..)
   , EpisodicContent(..)
   , emptyIndex
+  , encode
+  , enforceCapacity
+  , episodicCapacity
   , episodicRecallActive
   , rebuildIndex
   , retrieve
@@ -127,5 +135,76 @@ episodicMemoryTests =
         -- Finalize/State.hs no longer throws on a Nothing; it recovers with an
         -- empty store. The fallback is tested in TurnPipelineProtocol.
         assertBool "R-B4 contract: ssEpisodic always Just after init" True
+
+  , -- Audit 2026-10-16 (p.10) pin (a): enforceCapacity trims ALL excess in
+    -- one pass. Old code dropped exactly one event, leaving capacity + 1 here.
+    TestLabel "Audit p.10: enforceCapacity trims all excess in one pass" $
+      TestCase $ do
+        let n = episodicCapacity + 2
+            store = mkStore [mkEvent i EpisodicUserInput | i <- [1..n]]
+            trimmed = enforceCapacity store
+        assertEqual "length must land exactly at capacity"
+          episodicCapacity (Seq.length (esEvents trimmed))
+        assertEqual "oldest events must be the ones evicted"
+          (EpisodicId 3) (eeId (Seq.index (esEvents trimmed) 0))
+
+  , -- Audit 2026-10-16 (p.10) pin (b): the finalize shape (2 appends + 1
+    -- enforce per turn) holds the capacity every turn, not capacity + K.
+    TestLabel "Audit p.10: capacity holds across turns (finalize shape)" $
+      TestCase $ do
+        let cap = episodicCapacity
+            start = mkStore [mkEvent i EpisodicUserInput | i <- [1..cap]]
+            step s t =
+              let s1 = encode (TurnSeq t) EpisodicUserInput (EpisodicUserText "user") [] s
+                  s2 = encode (TurnSeq t) EpisodicSystemDecision (EpisodicContentUnresolved "decision") [] s1
+              in enforceCapacity s2
+            finals = scanl step start [cap + 1 .. cap + 5]
+            lengths = map (Seq.length . esEvents) finals
+        assertBool ("capacity must hold on every turn, got: " <> show lengths)
+          (all (== cap) lengths)
+
+  , -- Audit 2026-10-16 (p.10) pin (c): the rebuilt index after multi-eviction
+    -- sees retained events and cannot reach evicted ones.
+    TestLabel "Audit p.10: index consistency after multi-eviction" $
+      TestCase $ do
+        let n = episodicCapacity + 2
+            store = mkStore [mkEvent i EpisodicUserInput | i <- [1..n]]
+            trimmed = enforceCapacity store
+            byKind = retrieve (ByKind EpisodicUserInput) trimmed
+            byRange = retrieve (ByTurnRange (TurnSeq 1, TurnSeq n)) trimmed
+        assertEqual "by-kind must see exactly the retained events"
+          episodicCapacity (length byKind)
+        assertEqual "by-turn-range must see exactly the retained events"
+          episodicCapacity (length byRange)
+        assertBool "evicted ids must be unreachable by kind"
+          (all (\e -> unEpisodicId (eeId e) >= 3) byKind)
+        assertEqual "evicted turns must return nothing" 0
+          (length (retrieve (ByTurnRange (TurnSeq 1, TurnSeq 2)) trimmed))
+
+  , -- Audit 2026-10-16 (p.10) pin (d): ALL evicted ids leave esForgotten;
+    -- ids of retained events stay forgotten.
+    TestLabel "Audit p.10: forgotten-set hygiene on eviction" $
+      TestCase $ do
+        let n = episodicCapacity + 2
+            base = mkStore [mkEvent i EpisodicUserInput | i <- [1..n]]
+            store = base { esForgotten = HS.fromList [EpisodicId 1, EpisodicId 2, EpisodicId 3] }
+            trimmed = enforceCapacity store
+        assertBool "evicted id 1 must leave esForgotten"
+          (not (HS.member (EpisodicId 1) (esForgotten trimmed)))
+        assertBool "evicted id 2 must leave esForgotten"
+          (not (HS.member (EpisodicId 2) (esForgotten trimmed)))
+        assertBool "retained forgotten id must stay"
+          (HS.member (EpisodicId 3) (esForgotten trimmed))
+
+  , -- Audit 2026-10-16 (p.10) pin (e): within capacity the function is the
+    -- identity (value-unchanged, no rebuild, no eviction).
+    TestLabel "Audit p.10: identity within capacity" $
+      TestCase $ do
+        let atCap = mkStore [mkEvent i EpisodicUserInput | i <- [1..episodicCapacity]]
+            below = mkStore [mkEvent i EpisodicUserInput | i <- [1..5]]
+        assertEqual "at capacity must be value-unchanged"
+          atCap (enforceCapacity atCap)
+        assertEqual "below capacity must be value-unchanged"
+          below (enforceCapacity below)
   ]
 
