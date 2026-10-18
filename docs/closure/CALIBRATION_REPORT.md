@@ -4230,3 +4230,92 @@ http 23/23 exit 0, lifecycle 11/11 exit 0 (`CHAIN-DONE`). Full
 - The slow chain ran as one systemd unit, groups sequentially
   (state needs `-M10G`; `-M8G` heap-exhausts and `-M12G` invites the
   OOM killer); heavy suites are not run in parallel (box memory).
+
+---
+
+# Audit 2026-10-16 fix batch 2 — landing (2026-10-18)
+
+Status: landed; the pre-registered bars (4) above were registered
+BEFORE any behavior change and held. Commits: p.6 `5007bee`, p.7
+`1fbc0de`, p.8 `c49a491`. Register statuses:
+`docs/closure/AUDIT_2026-10-16.md`. Commits were staged: each one was
+built and its own pins ran green before the next was committed.
+
+## (4a) p.6 stepOrFail stage mapping — landed (`5007bee`)
+
+Bars held. `stepOrFail` inspects `stepResult` first and finalizes in
+every branch; the failure branch finalizes tolerantly — the captured
+step error is the diagnosis worth keeping, and a strict `finalize`
+would mask the branch with the rc of the failed step — then issues
+the explicit ROLLBACK and throws the stage-mapped
+`PersistenceTxError`. Pin
+`testStepOrFailKeepsStageMappedErrorAndRollsBack`: a NOT NULL
+violation under `BEGIN IMMEDIATE` yields
+`PersistenceTxError StageStateBlobUpsert` (not a masking generic
+`SQLiteError` from `finalize`) and leaves no transaction open — a
+second `BEGIN IMMEDIATE` on the same connection succeeds.
+
+## (4b) p.7 corrupt-load routing — landed (`1fbc0de`)
+
+Bars held. `loadStateDirect` guards the read with `tryQxFx0` (the old
+`UnicodeException` catch could never fire — the read goes through
+`columnTextLenient`) and reports `LoadStateCorrupt [PdCorruptDecode,
+PdSchemaMissingFields ["load_state_failed:" <> rendered]]`; Bootstrap
+wraps `loadStateWithVersion` and routes a throw into the same contour
+with `StateVersion 0 0`. The `LoadStateCorrupt → RecoveredCorruptOrigin`
+branch is reachable. Pin
+`testCorruptDbFileBootstrapsIntoDegradedRecovery`: the pages dbstat
+reports for `dialogue_state` and both its indexes are rewritten with
+0xFF (schema catalog and `runtime_sessions` intact) → degraded
+bootstrap comes up `RecoveredCorruptOrigin` with
+`GrfRecoveredCorruptBootstrap` rendering `load_state_failed`.
+
+## (4c) p.8 session-row verification — landed (`c49a491`)
+
+Bars held. Bootstrap verifies the `runtime_sessions` row right after
+the `INSERT OR IGNORE` upsert (`runtimeSessionRowPresent`); a missing
+row fails init loudly with the distinct stage (`mkRuntimeInitError
+"Bootstrap" "session_row" "SESSION_ROW_MISSING"`), outside the
+schema-init wrapper, so the diagnosis is not masked as
+`SCHEMA_INIT_EXCEPTION`; a failing verification query maps to
+`SESSION_ROW_QUERY_FAILED`. Pins:
+`testBootstrapRepairsDeletedSessionRow` (row deleted → the next
+bootstrap re-establishes it → the first save succeeds) and
+`testBootstrapRefusesSilentlyMissingSessionRow` (`BEFORE INSERT …
+RAISE(IGNORE)` → structured init failure, stage `session_row`, code
+`SESSION_ROW_MISSING`). The old misleading `expected == actual`
+conflict is unreachable in tests.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-18, verdicts read from logs, all exit 0:
+slow state 49/49 (45 batch-1 cases + the 4 new pins), slow lifecycle
+11/11, integration 47/47, property 227/227, unit 1739/1739, fast
+1841/1841, slow runtime 100/100 (single process), slow http 23/23 —
+`CHAIN-DONE`. Full `qxfx0-test` and the core slice were not re-run in
+this landing.
+
+Red-sensitivity of the pins is analytical, not revert-cycled: the old
+code gives a masking `SQLiteError` on the p.6 path, an exception out
+of the loader on the p.7 fixture (the old catch admits no throw on
+this path) and a silently missing session row for p.8.
+
+## Ops notes (batch 2)
+
+- **Runtime stall, self-recovered.** The runtime group stalled on
+  test #57 `testPersistedReplayTraceDeterministicWithFixedTimeProperty`
+  from ~00:43 to 10:24 UTC (~9 h 41 min of log silence) and then
+  resumed by itself; all 100 cases passed, exit 0. This is the known
+  isolation-wart class ("hangs after N others, passes solo"; cf.
+  `testComputeReadinessModeReady` #60) — pre-existing and
+  environment-shaped: the batch-2 changes live in cold
+  persistence-error branches and add no waits. A stall watchdog (kill
+  after 30 min of log silence) is now standard for these chains; it
+  did not need to fire.
+- **Fixture lesson.** The p.7 fixture must rewrite pages with strict
+  `BS.readFile`/`BS.writeFile`: a lazy `BL.readFile` keeps the read
+  handle open, and writing the same path from the same process fails
+  with `resource busy (file is locked)`.
+- State group runs as one process at `-M10G`; staged commits were each
+  built and pin-run before committing (p.6 1/1, p.7 2/2, p.8 4/4
+  green).

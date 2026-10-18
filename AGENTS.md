@@ -660,10 +660,12 @@ unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-unit | 1739 |
 | qxfx0-test-property | 227 |
 | qxfx0-test-integration | 47 |
-| qxfx0-test-slow | 179 (runtime 100 + state 45 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-10-17 (batch-1 landing), all exit 0 —
-runtime 100 ran as ONE process on 2026-10-17 (the "by parts" wart of
-2026-10-15 did not reproduce); unbuffered output required to judge
+| qxfx0-test-slow | 183 (runtime 100 + state 49 + http 23 + lifecycle 11;
+per-group green on HEAD 2026-10-18 (batch-2 landing), all exit 0 —
+runtime 100 ran as ONE process on both 2026-10-17 and 2026-10-18 (the
+"by parts" wart of 2026-10-15 did not reproduce; on 2026-10-18 the
+group self-recovered from a ~9.7 h stall at test #57 — known wart
+class, see batch-2 ops notes); unbuffered output required to judge
 the long runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
@@ -673,6 +675,12 @@ property/integration re-verified green on HEAD 2026-10-11
 Batch-1 landing (2026-10-17, tree = landing commits): unit 1739,
 fast 1841, property 227, integration 47, slow 179 (100+45+23+11) —
 all exit 0; full `qxfx0-test` and the core slice were not re-run.
+Batch-2 landing (2026-10-18, tree = landing commits `5007bee` /
+`1fbc0de` / `c49a491`): unit 1739, fast 1841, property 227,
+integration 47, slow 183 (runtime 100 + state 49 — the 45 batch-1
+cases plus 4 audit pins + http 23 + lifecycle 11) — all exit 0; the
+chain ran detached; full `qxfx0-test` and the core slice were not
+re-run.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -734,8 +742,14 @@ re-observe before treating as real).
   п.1 коллапс супервенит коммитмент `911151c` (внутри — фикс петли
   `<<loop>>` в `store0`), п.3 токенный self-ref `035127b`; пороговый
   реестр — `Types/Thresholds/{Anomaly,Conatus,Selection}` + заметки
-  лендинга. **Далее пакет 2** — п.6 → п.7 → п.8 (пре-регистрация на
-  входе).
+  лендинга. **Батч 2 завершён 2026-10-18** (матрица зелёная: unit
+  1739, fast 1841, property 227, integration 47, slow 183 = runtime
+  100 + state 49 + http 23 + lifecycle 11, все exit 0; ops-пауза
+  runtime #57 — известный класс, батч ни при чём): п.6 стадийный
+  сбой шага `5007bee` → п.7 повреждённый стор `1fbc0de` → п.8 строка
+  `runtime_sessions` `c49a491`; пре-регистрация (4) + лендинг —
+  CALIBRATION_REPORT. **Далее батч 3** — п.10 → п.11 → п.17 → …
+  (пре-регистрация на входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
