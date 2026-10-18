@@ -4264,6 +4264,106 @@ pre-registered on entry.
   Both follow the majority semantics already in force on the semantic
   path.
 
+## (8) Local-recovery branch order follows the severity ladder (audit п.16)
+
+- **Defect (re-verified)**: `buildLocalRecoveryPlan` consulted its
+  guards in the order conatus (100) → self-divergence (90) → learning
+  (85) → shadow diverged (60) → shadow unavailable (50) → parser (20)
+  → legitimacy (30) → runtime degraded (70) → [structured-surface
+  gate] → unknown topic (40). First match wins, so parser low
+  confidence (20) preempted legitimacy (30) and runtime degraded (70),
+  and runtime degraded (70) was consulted after the shadow signals
+  (60/50). The chain contradicted `recoveryCauseSeverity`
+  (`Self/Deliberation`), the ladder that already governs the
+  `pickHigherSeverity` merges.
+- **Rule (locked)**: the guard chain is strictly severity-descending;
+  the first matching signal wins in ladder order: conatus (100) →
+  self-divergence (90) → learning (85) → runtime degraded (70) →
+  shadow diverged (60) → shadow unavailable (50) → unknown topic (40)
+  → legitimacy (30) → parser (20) → otherwise `Nothing`. The
+  unknown-topic guard keeps the structured-surface gate attached to
+  it verbatim: a structured dialogue surface never produces
+  `RecoveryUnknownTopic` and still falls through to
+  parser/legitimacy exactly as before (those guards stay below the
+  gate's old position, so structured turns remain reachable), and to
+  `Nothing` when nothing fires.
+- **Acknowledged behavior deltas** (the matrix is the gate):
+  (a) runtime degraded now outranks shadow diverged, shadow
+      unavailable, parser and legitimacy on combined turns (was: last
+      of that group);
+  (b) unknown topic now outranks legitimacy and parser on
+      non-structured turns (was: the terminal fallback);
+  (c) legitimacy now outranks parser (was: parser first).
+  Single-signal turns are unchanged.
+- **Bar (pins)**: new `TurnPipelineProtocol` cases pin the reordered
+  pairs on prepared fixtures — runtime×shadow-diverged (70 vs 60),
+  runtime×parser (70 vs 20), unknown×legitimacy (40 vs 30),
+  unknown×parser (40 vs 20), legitimacy×parser (30 vs 20). Existing
+  single-signal pins (conatus/self-divergence/learning/shadow/
+  parser/legitimacy/runtime) and the `Nothing` pins must stay green.
+  `testParserLowConfidenceUsesDistinguishCandidates` is rebased: the
+  fixture now pins `tiBestTopic = ""` so the unknown-topic branch
+  cannot preempt the branch under test (the unknown-vs-parser
+  combination keeps its own pin with the topic left in place). Red
+  check: revert the chain to the old order → exactly the five new
+  pins fail (first assertion); the rest, including the rebased
+  parser pin, stay green. Full matrix at the batch landing.
+- **Not touched**: the `recoveryCauseSeverity` numbers, the
+  `pickHigherSeverity` merge, the structured-surface gate's meaning,
+  the `morphologyWarning` computation.
+- **Deferred (recorded)**: the same severity discipline for
+  `RecoveryRenderBlocked` (80) — it is produced by the render-blocked
+  path in `Route/Render.hs` and already merges via
+  `pickHigherSeverity`; no chain reordering applies there.
+
+## (9) Metacognition sees the actual local-recovery cause (audit п.15)
+
+- **Defect (re-verified)**: `buildNextSystemState` derived `inRecovery`
+  from `tpDeliberation >>= planRecoveryCause . delibReconciled`. The
+  reconciled plan's `planRecoveryCause` is only ever `Just` via the
+  Conatus rule (`RuleConatusOverride` → `Just RecoveryConatusGate`);
+  every other local recovery (parser, legitimacy, unknown topic, shadow
+  diverged/unavailable, runtime degraded, learning need,
+  self-divergence) is invisible there. `selfEvaluate` therefore never
+  selected its recovery branches for them: an accepted outcome scored
+  `EvaluationAligned` instead of `EvaluationAmbiguous`; an ignored
+  outcome scored `EvaluationAmbiguous` instead of `EvaluationAligned`.
+- **Rule (locked)**: `selfEvaluate` and `runMetacognitionLoop` take
+  `Maybe LocalRecoveryCause` — the turn's actual local-recovery cause —
+  instead of a `Bool`; `buildNextSystemState` passes
+  `taLocalRecoveryCause ta`, the same merged value the replay trace
+  stamps as `trcRecoveryCause` (`pickHigherSeverity` of the
+  deliberation and render causes). "In recovery" means the cause is
+  `Just`, for every cause — not only the Conatus gate. The evaluation
+  table itself is unchanged.
+- **Acknowledged behavior deltas** (the matrix is the gate): on turns
+  with any local-recovery cause and an accepted or ignored observed
+  outcome, the metacognition contour records the recovery-side
+  evaluation. `boundedCorrection` is unaffected in effect — `Aligned`
+  and `Ambiguous` both map to no correction — so only the recorded
+  classification (`mcRecentEvaluations`) changes on these turns;
+  `mcMisalignCount` is untouched (misalignment only arises from
+  rejected/contradicted with agreement ≥ 0.7, outside this change).
+- **Bar (pins)**: new `TurnPipelineProtocol` cases drive real finalized
+  turns (accepted-marker input «да, это верно», ignore-marker input
+  «следующий вопрос») through `buildFinalizePrecommit` and assert the
+  last recorded evaluation in `mcRecentEvaluations`: recovery
+  (runtime-degraded plan) × accepted → `EvaluationAmbiguous`; no
+  recovery × accepted → `EvaluationAligned`; recovery × ignored →
+  `EvaluationAligned`; no recovery × ignored → `EvaluationAmbiguous`.
+  Each case also pins the scenario: `taLocalRecoveryCause` is
+  `Just RecoveryRuntimeDegraded` / `Nothing` respectively. Red check:
+  restore the deliberation-only derivation → the two recovery cases
+  fail; the two contrast cases stay green. Full matrix at the batch
+  landing.
+- **Not touched**: the metacognition evaluation table and markers
+  (`observeResponse`), the 100-entry window, `mcMisalignCount`
+  accounting, the deliberation machinery.
+- **Recorded**: `Policy.Metacognition` stays a hidden module (the
+  `Policy.*` subtree is `other-modules` by convention); the bar is
+  pinned at the exposed boundaries (`fpbNextSs`, `ssMetacognition`,
+  `mcRecentEvaluations`), matching the п.17 detector-pin discipline.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
