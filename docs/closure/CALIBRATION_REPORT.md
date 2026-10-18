@@ -4158,6 +4158,61 @@ pre-registered on entry.
   the age-window policy (`enforceAgeWindow`) — untouched; tombstones
   counting toward raw length (current semantics preserved).
 
+## (6) Persisted-JSON validation batch: fail-closed clamps on decode (audit p.11)
+
+- **Defect (re-verified)**: persisted JSON decodes into behavior-driving
+  state without validating value invariants, so a corrupted or
+  hand-edited store is silently trusted.  Named vectors:
+  `ssShadowVetoState.svsWindowStart` far in the future never expires
+  (`currentTurn - start > 10` stays false, `Route/Build.hs:127`), so the
+  shadow veto stays bypassed (`vetoCount >= 3` forever, the window never
+  resets); a non-finite or out-of-range `u5Baseline` silently degenerates
+  the relative contour branch (`Types/User/R5.hs:195–231`); a non-finite
+  or over-long `selfDivergenceWindow` poisons `windowMeanDivergence` /
+  the `RecoverySelfDivergence` trigger and breaks the `sdtWindow` bound;
+  `ConatusEnergy.ceScalar` is trusted on decode, so a persisted
+  inconsistency violates the documented `ceScalar == sum of all five
+  components` invariant in every consumer (replay traces, corpus
+  extraction, promotion).
+- **Rule (locked)**:
+  (a) a pure `sanitizePersistedState :: SystemState -> (SystemState,
+      [Text])` runs on every successful state decode in
+      `loadStateDirect`, before derived views are rebuilt: `svsCount`
+      clamped to `>= 0`; `svsWindowStart` clamped to `[0, ssTurnCount]`
+      (the future start is the unbounded vector; a count above the veto
+      budget self-heals once the window expires, so no upper clamp);
+      `selfDivergenceWindow` and `u5DivergenceWindow` drop non-finite
+      samples and truncate to `sdtWindow` (8) / `vcDivergenceWindow` (8),
+      keeping the newest-first head (`pushDivergenceSample` /
+      `pushR5Sample` convention); `u5Baseline` non-finite → `Nothing`,
+      otherwise clamped by the runtime's own `clampScore` (`[-1, 1]`,
+      exported from `Types/User/R5`);
+  (b) every adjustment is logged at load
+      (`[persistence_debug] state_sanitized ...`, one line per note) —
+      clamps are visible, never silent;
+  (c) `ConatusEnergy` re-derives `ceScalar` as the component sum on every
+      decode (custom `FromJSON`; `ceScalar` stays a mandatory key but its
+      value is not trusted) — backward compatible: pre-A2 blobs default
+      the fifth component to 0.0, where the old scalar already equaled the
+      four-component sum.
+- **Bar**: pins — pure suite `Test.Suite.StateSanitization` (unit +
+  fast): shadow-veto clamps with notes; both windows' drop / trim /
+  stable cases with notes; `u5Baseline` non-finite → `Nothing`,
+  out-of-range → clamp, valid unchanged; a clean state is the identity
+  (no notes); `ceScalar` derived on decode (inconsistent 99.0 → the
+  component sum; consistent unchanged; legacy four-component blob
+  unchanged).  Slow pin `testLoadedStateSanitizesCorruptedFields` (state
+  group): a saved state is doctored in the DB (`svsCount = -5`, future
+  `svsWindowStart`, a 10-sample `selfDivergenceWindow` with NaN/±Inf,
+  `u5Baseline = 1.7`), reloaded, and comes back clamped; the
+  `state_sanitized` log lines are visible in the run log.  Unit and fast
+  slices green; the slow pin green solo; full matrix at the batch
+  landing.
+- **Out of scope**: `u5LastState` / `u5PredictedNext` axis-level
+  validation (same mechanism, separate follow-up); validating the
+  components themselves (the named item is the scalar invariant);
+  `ssTurnCount` sanity.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
