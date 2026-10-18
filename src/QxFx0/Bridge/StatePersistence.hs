@@ -65,8 +65,6 @@ import Data.List (intersect)
 import QxFx0.ExceptionPolicy (renderQxFx0ExceptionForLog, tryQxFx0, throwQxFx0, QxFx0Exception(..))
 import System.Environment (lookupEnv)
 import Control.Exception (finally, mask, onException)
-import Control.Exception (try)
-import Data.Text.Encoding.Error (UnicodeException, lenientDecode)
 import Control.Monad (when)
 import System.IO (hPutStrLn, stderr)
 
@@ -252,11 +250,18 @@ loadStateWithVersion withDb sessionId = withDb $ \db -> withImmediateTransaction
 
 loadStateDirect :: NSQL.Database -> Text -> IO LoadStateResult
 loadStateDirect db sessionId = do
-  mBlobResult <- try (loadKV db sessionId "__system_state__") :: IO (Either UnicodeException (Maybe Text))
+  mBlobResult <- tryQxFx0 (loadKV db sessionId "__system_state__")
   case mBlobResult of
     Left err -> do
-      hPutStrLn stderr $ "[persistence_debug] load_unicode_exception session=" <> T.unpack sessionId <> " detail=" <> show err
-      pure (LoadStateCorrupt [PdCorruptDecode])
+      -- Audit 2026-10-16 (p.7): the old guard caught only UnicodeException,
+      -- which this path cannot throw (the read goes through columnTextLenient);
+      -- a structurally broken store surfaces 'QxFx0Exception' (prepare/step/
+      -- column failures) and used to escape the loader entirely.  Route it
+      -- into the corrupt diagnostics contour that degraded bootstrap turns
+      -- into RecoveredCorruptOrigin.
+      let rendered = renderQxFx0ExceptionForLog err
+      hPutStrLn stderr $ "[persistence_debug] load_state_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack rendered
+      pure (LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["load_state_failed:" <> rendered]])
     Right mBlob ->
       case mBlob of
         Just blob ->

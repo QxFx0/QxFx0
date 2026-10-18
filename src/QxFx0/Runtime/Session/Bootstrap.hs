@@ -48,7 +48,7 @@ import QxFx0.Bridge.SQLite
   )
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Bridge.TxStatement (prepareTx, bindTextOrFail, stepOrFail)
-import QxFx0.Types.Persistence (LoadStateResult(..), renderPersistenceDiagnostics)
+import QxFx0.Types.Persistence (LoadStateResult(..), PersistenceDiagnostic(..), renderPersistenceDiagnostics)
 import QxFx0.Bridge.StatePersistence (loadStateWithVersion)
 import QxFx0.Types.Persistence (StateVersion(..))
 import QxFx0.ExceptionPolicy
@@ -772,8 +772,23 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
 
 
 
+  -- Audit 2026-10-16 (p.7): a structurally broken store can make the loader
+  -- throw before it reports LoadStateCorrupt (transaction start, revision
+  -- read).  Route such failures into the same corrupt contour so degraded
+  -- bootstrap still recovers and strict bootstrap still fails loudly.
+  loadResult <- tryQxFx0 (loadStateWithVersion (withRuntimeDb runtime) sessionId)
   (loadedState, observedVersion) <-
-    loadStateWithVersion (withRuntimeDb runtime) sessionId
+    case loadResult of
+      Right pair -> pure pair
+      Left err -> do
+        let rendered = renderQxFx0ExceptionForLog err
+        unless quiet $
+          hPutStrLn stderr $
+            "[runtime_init_debug] persisted_state_load_failed session=" <> T.unpack sessionId <> " detail=" <> T.unpack rendered
+        -- No revision was observed; the recovery contour starts from zero.
+        pure ( LoadStateCorrupt [PdCorruptDecode, PdSchemaMissingFields ["load_state_failed:" <> rendered]]
+             , StateVersion 0 0
+             )
   let observedRevision = stateRevision observedVersion
   (stateOrigin, restored) <- do
     case loadedState of

@@ -15,12 +15,14 @@ import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..)
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import Control.Exception (try)
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
+import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
 import qualified Data.Aeson as Aeson
 import Data.Aeson (Value(..), eitherDecodeStrict')
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.Map.Strict as M
 import qualified Data.Text as T
@@ -106,6 +108,7 @@ statePersistenceFastTests =
   , testLoadStateCorruptUtf8BlobIsReported
   , testLoadStateLegacyNumericTrajectoryHashRestores
   , testBootstrapSessionMarksRecoveredCorruption
+  , testCorruptDbFileBootstrapsIntoDegradedRecovery
   , testStepOrFailKeepsStageMappedErrorAndRollsBack
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
@@ -732,6 +735,36 @@ testBootstrapSessionMarksRecoveredCorruption = TestCase $ do
       Runtime.RecoveredCorruptOrigin
       (Runtime.sessStateOrigin recovered)
 
+-- | Audit 2026-10-16 (p.7): a structurally broken store (the pages holding
+-- dialogue_state are unrecoverable) must not throw out of the loader.
+-- Degraded bootstrap must come up as RecoveredCorruptOrigin with the load
+-- failure rendered into the corrupt-recovery governance fault.
+testCorruptDbFileBootstrapsIntoDegradedRecovery :: Test
+testCorruptDbFileBootstrapsIntoDegradedRecovery = TestCase $ do
+  withRuntimeEnv "qxfx0_test_corrupt_db_file.db" $ do
+    let sessionId = "test_corrupt_db_file"
+    Runtime.withBootstrappedSession True sessionId $ \session0 -> do
+      saved <- saveSessionState session0 (Runtime.sessSystemState session0) sessionId
+      case saved of
+        Right _ -> pure ()
+        Left err -> assertFailure
+          ("fixture: initial state save failed: " <> T.unpack (renderPersistenceDiagnostics [err]))
+    dbPath <- requireDbPath
+    flushWalAfterClose dbPath
+    corruptDialogueStatePages dbPath
+    restored <- Runtime.bootstrapSession True sessionId
+    assertEqual
+      "corrupted DB file must recover in degraded mode, not throw out of the loader"
+      Runtime.RecoveredCorruptOrigin
+      (Runtime.sessStateOrigin restored)
+    case ssGovernanceRuntimeFault (Runtime.sessSystemState restored) of
+      Just (GrfRecoveredCorruptBootstrap rendered) ->
+        assertBool
+          ("corrupt-recovery fault must render the load failure, got: " <> T.unpack rendered)
+          ("load_state_failed" `T.isInfixOf` rendered)
+      other ->
+        assertFailure ("expected GrfRecoveredCorruptBootstrap, got: " <> show other)
+
 -- | Audit 2026-10-16 (p.6): a failing step must surface as the stage-mapped
 -- 'PersistenceTxError' (not as a generic SQLite error thrown by the strict
 -- finalize, whose rc mirrors the failed step) and must leave no open
@@ -771,6 +804,80 @@ requireDbPath = do
   case mPath of
     Just path -> pure path
     Nothing -> assertFailure "QXFX0_DB must be set by withRuntimeEnv" >> fail "unreachable"
+
+-- | Audit 2026-10-16 (p.7) fixture: after a clean close the WAL normally
+-- holds nothing; if a -wal file survived, checkpoint it so the main file is
+-- the single source of truth before the corruption is injected.
+flushWalAfterClose :: FilePath -> IO ()
+flushWalAfterClose dbPath = do
+  hasWal <- doesFileExist (dbPath <> "-wal")
+  when hasWal $ do
+    mDb <- NSQL.open dbPath
+    case mDb of
+      Left _ -> pure ()
+      Right db -> do
+        _ <- NSQL.execSql db "PRAGMA wal_checkpoint(TRUNCATE);"
+        NSQL.close db
+
+-- | Audit 2026-10-16 (p.7) fixture: overwrite exactly the pages SQLite
+-- reports for dialogue_state and its indexes (dbstat), leaving the schema
+-- catalog and runtime_sessions pages intact so that schema bootstrap and the
+-- session-row upsert still succeed and the failure lands in the state read.
+corruptDialogueStatePages :: FilePath -> IO ()
+corruptDialogueStatePages dbPath = do
+  mDb <- NSQL.open dbPath
+  db <- case mDb of
+    Left err -> assertFailure ("fixture: cannot open db for dbstat: " <> T.unpack err) >> fail "unreachable"
+    Right d -> pure d
+  pageSize <- queryScalarInt db "PRAGMA page_size;"
+  pageLists <- mapM (queryIntList db)
+    [ "SELECT pageno FROM dbstat WHERE name = 'dialogue_state';"
+    , "SELECT pageno FROM dbstat WHERE name = 'sqlite_autoindex_dialogue_state_1';"
+    , "SELECT pageno FROM dbstat WHERE name = 'idx_dialogue_state_session';"
+    ]
+  NSQL.close db
+  let pages = filter (> 1) (concat pageLists)
+  assertBool "fixture: dbstat reported no dialogue_state pages" (not (null pages))
+  -- Strict read: the lazy variant would keep the read handle open across the
+  -- write below and GHC's file locking rejects write-while-open-read.
+  bytes <- BS.readFile dbPath
+  BS.writeFile dbPath (foldl (\bs pageno -> corruptPage pageSize pageno bs) bytes pages)
+  where
+    corruptPage pageSize pageno bs =
+      let start = (pageno - 1) * pageSize
+          available = BS.length bs - start
+          len = max 0 (min pageSize available)
+          (prefix, rest) = BS.splitAt start bs
+      in prefix <> BS.replicate len 0xFF <> BS.drop len rest
+
+queryScalarInt :: NSQL.Database -> T.Text -> IO Int
+queryScalarInt db sql = do
+  prepared <- NSQL.prepare db sql
+  stmt <- case prepared of
+    Left err -> assertFailure ("fixture query failed to prepare: " <> T.unpack err) >> fail "unreachable"
+    Right s -> pure s
+  hasRow <- NSQL.stepRow stmt
+  value <- if hasRow then NSQL.columnInt stmt 0 else pure 0
+  NSQL.finalize stmt
+  pure value
+
+queryIntList :: NSQL.Database -> T.Text -> IO [Int]
+queryIntList db sql = do
+  prepared <- NSQL.prepare db sql
+  stmt <- case prepared of
+    Left err -> assertFailure ("fixture query failed to prepare: " <> T.unpack err) >> fail "unreachable"
+    Right s -> pure s
+  collect stmt []
+  where
+    collect stmt acc = do
+      hasRow <- NSQL.stepRow stmt
+      if hasRow
+        then do
+          value <- NSQL.columnInt stmt 0
+          collect stmt (value : acc)
+        else do
+          NSQL.finalize stmt
+          pure (reverse acc)
 
 testStateBlobDiagnosticsDetectsMissingOptionalFields :: Test
 testStateBlobDiagnosticsDetectsMissingOptionalFields = TestCase $ do
