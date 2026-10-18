@@ -109,6 +109,8 @@ statePersistenceFastTests =
   , testLoadStateLegacyNumericTrajectoryHashRestores
   , testBootstrapSessionMarksRecoveredCorruption
   , testCorruptDbFileBootstrapsIntoDegradedRecovery
+  , testBootstrapRepairsDeletedSessionRow
+  , testBootstrapRefusesSilentlyMissingSessionRow
   , testStepOrFailKeepsStageMappedErrorAndRollsBack
   , testStateBlobDiagnosticsDetectsMissingOptionalFields
   , testLoadStateMissingRequiredTopLevelFieldsFailsDecode
@@ -764,6 +766,57 @@ testCorruptDbFileBootstrapsIntoDegradedRecovery = TestCase $ do
           ("load_state_failed" `T.isInfixOf` rendered)
       other ->
         assertFailure ("expected GrfRecoveredCorruptBootstrap, got: " <> show other)
+
+-- | Audit 2026-10-16 (p.8): bootstrap must guarantee the runtime_sessions
+-- row; a deleted row is re-established and the first save succeeds instead
+-- of degrading into a misleading expected==actual conflict.
+testBootstrapRepairsDeletedSessionRow :: Test
+testBootstrapRepairsDeletedSessionRow = TestCase $ do
+  withRuntimeEnv "qxfx0_test_missing_session_row_repair.db" $ do
+    let sessionId = "test_missing_session_row_repair"
+    session0 <- Runtime.bootstrapSession True sessionId
+    Runtime.withRuntimeDb (Runtime.sessRuntime session0) $ \db -> do
+      assertExec db "fixture: delete dialogue_state rows"
+        "DELETE FROM dialogue_state WHERE session_id = 'test_missing_session_row_repair'"
+      assertExec db "fixture: delete runtime_sessions row"
+        "DELETE FROM runtime_sessions WHERE id = 'test_missing_session_row_repair'"
+    Runtime.closeSession session0
+    repaired <- Runtime.bootstrapSession True sessionId
+    rows <- Runtime.withRuntimeDb (Runtime.sessRuntime repaired) $ \db ->
+      queryCount db "SELECT COUNT(*) FROM runtime_sessions WHERE id = 'test_missing_session_row_repair'"
+    assertEqual "bootstrap must re-establish the runtime_sessions row" 1 rows
+    saved <- saveSessionState repaired (Runtime.sessSystemState repaired) sessionId
+    case saved of
+      Right _ -> pure ()
+      Left err -> assertFailure
+        ("first save after row repair must succeed, got: " <> T.unpack (renderPersistenceDiagnostics [err]))
+
+-- | Audit 2026-10-16 (p.8): when the row cannot be established (a BEFORE
+-- INSERT trigger silently ignores it, the same silent shape as an OR IGNORE
+-- conflict), bootstrap must fail loudly with the distinct session_row stage
+-- instead of letting a rowless session come up.
+testBootstrapRefusesSilentlyMissingSessionRow :: Test
+testBootstrapRefusesSilentlyMissingSessionRow = TestCase $ do
+  withRuntimeEnv "qxfx0_test_session_row_rejected.db" $ do
+    dbPath <- requireDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("fixture: cannot open db: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    assertExec db "fixture: create runtime_sessions"
+      "CREATE TABLE runtime_sessions (id TEXT PRIMARY KEY, started_at TEXT NOT NULL DEFAULT (datetime('now')), last_active TEXT NOT NULL DEFAULT (datetime('now')), agency REAL NOT NULL DEFAULT 0.5, tension REAL NOT NULL DEFAULT 0.3, status TEXT NOT NULL DEFAULT 'active', state_revision INTEGER NOT NULL DEFAULT 0)"
+    assertExec db "fixture: silently ignore session row inserts"
+      "CREATE TRIGGER bootstrap_row_probe BEFORE INSERT ON runtime_sessions BEGIN SELECT RAISE(IGNORE); END"
+    NSQL.close db
+    result <- tryQxFx0 (Runtime.bootstrapSession True "test_session_row_rejected")
+    case result of
+      Left (RuntimeInitErrorStructured details) -> do
+        assertEqual "bootstrap must use the distinct session_row stage"
+          "session_row" (riedOperation details)
+        assertEqual "bootstrap must fail loudly with SESSION_ROW_MISSING"
+          "SESSION_ROW_MISSING" (riedErrorCode details)
+      Left other -> assertFailure ("expected structured init failure, got: " <> show other)
+      Right _ -> assertFailure "bootstrap must not accept a session without its runtime_sessions row"
 
 -- | Audit 2026-10-16 (p.6): a failing step must surface as the stage-mapped
 -- 'PersistenceTxError' (not as a generic SQLite error thrown by the strict

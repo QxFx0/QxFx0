@@ -571,8 +571,11 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
     ts <- prepareTx db "bootstrap_runtime_session" "INSERT OR IGNORE INTO runtime_sessions(id, agency, tension, status) VALUES(?, 0.5, 0.3, 'active')"
     bindTextOrFail ts 1 sessionId
     stepOrFail ts
-    pure ()
-    ) :: IO (Either QxFx0Exception (Either Text ()))
+    -- Audit 2026-10-16 (p.8): 'INSERT OR IGNORE' is silent on conflicts, so
+    -- verify the row; a silently missing row later degrades the save path
+    -- into a misleading expected==actual conflict.
+    runtimeSessionRowPresent db sessionId
+    ) :: IO (Either QxFx0Exception (Either Text Bool))
   case schemaInitResult of
     Left err -> do
       Log.logException err
@@ -588,10 +591,17 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
       hPutStrLn stderr $ "[runtime_init_debug] schema_init_sql_error db=" <> dbPath <> " detail=" <> T.unpack err
       throwQxFx0 $ mkRuntimeInitError "Bootstrap" "schema_init" "SCHEMA_INIT_SQL_ERROR"
         (M.fromList [("db_path", T.pack dbPath), ("detail", err)])
-    Right (Right _) -> do
+    Right (Right True) -> do
       Log.logInfo "Schema initialization complete"
         (Log.addContext "db_path" (T.pack dbPath) Log.emptyContext)
       pure ()
+    Right (Right False) -> do
+      Log.logError "Runtime session row missing after bootstrap upsert"
+        (Log.addContext "db_path" (T.pack dbPath) $
+         Log.addContext "session_id" sessionId Log.emptyContext)
+      hPutStrLn stderr $ "[runtime_init_debug] session_row_missing db=" <> dbPath <> " session=" <> T.unpack sessionId
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "session_row" "SESSION_ROW_MISSING"
+        (M.fromList [("db_path", T.pack dbPath), ("session_id", sessionId)])
 
   morphologyResult <- tryQxFx0 loadMorphologyData
   morphology <- case morphologyResult of
@@ -942,6 +952,29 @@ mergeMorphology resource persisted = MorphologyData
   , mdNominative    = M.union (mdNominative resource)    (mdNominative persisted)
     , mdFormsBySurface = M.union (mdFormsBySurface resource) (mdFormsBySurface persisted)
     }
+
+-- | Audit 2026-10-16 (p.8): verify that the bootstrap upsert really left the
+-- session row in place.  'INSERT OR IGNORE' skips silently on any constraint
+-- conflict; without this check a session without its runtime_sessions row
+-- comes up and only fails on the first save, as a confusing
+-- @expected == actual@ 'PersistenceConflict'.
+runtimeSessionRowPresent :: NSQL.Database -> Text -> IO Bool
+runtimeSessionRowPresent db sessionId = do
+  prepared <- NSQL.prepare db "SELECT 1 FROM runtime_sessions WHERE id = ? LIMIT 1"
+  case prepared of
+    Left err -> rowLookupFailed err
+    Right stmt -> do
+      bound <- NSQL.bindText stmt 1 sessionId
+      case bound of
+        Left err -> rowLookupFailed err
+        Right () -> do
+          found <- NSQL.stepRow stmt
+          NSQL.finalize stmt
+          pure found
+  where
+    rowLookupFailed err =
+      throwQxFx0 $ mkRuntimeInitError "Bootstrap" "session_row" "SESSION_ROW_QUERY_FAILED"
+        (M.fromList [("session_id", sessionId), ("detail", err)])
 
 runtimeInitDetail :: QxFx0Exception -> Text
 runtimeInitDetail ex =
