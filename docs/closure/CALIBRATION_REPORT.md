@@ -4129,6 +4129,35 @@ pre-registered on entry.
   separate performance front); BEGIN IMMEDIATE read semantics
   (audit p.20, separate small fix).
 
+## (5) Episodic capacity batch: trim all excess (audit p.10)
+
+- **Defect (re-verified)**: finalize appends TWO events per turn
+  (`Finalize/State.hs:844–847`: user input + system decision) and calls
+  `enforceCapacity` once (`:848`); `enforceCapacity`
+  (`Memory/Episodic.hs:125–136`) removes exactly ONE event when over
+  capacity. At capacity 1000 the store therefore grows by +1 event per
+  turn without bound — `esForgotten` holds only tombstones, so nothing
+  else caps the sequence.
+- **Rule (locked)**: `enforceCapacity` trims ALL excess in a single
+  pass: `excess = length esEvents - episodicCapacity`, `Seq.splitAt
+  excess`, one `rebuildIndex` over the remainder; the evicted ids are
+  dropped from `esForgotten` (no id leaks for events no longer
+  present). The capacity becomes a hard invariant after every call:
+  `length esEvents <= episodicCapacity`.
+- **Bar**: pins in `Test.Suite.MemoryEpisodic` — (a) a store with
+  `capacity + 2` events trims to exactly capacity (old code: capacity
+  + 1); (b) a K-turn simulation of the finalize shape (2 appends + 1
+  enforce per turn, starting at capacity) stays at capacity every turn
+  instead of capacity + K; (c) index consistency after multi-eviction:
+  `retrieve` by kind / by turn finds retained events and evicted ids
+  are unreachable; (d) forgotten-set hygiene: ids of evicted events
+  leave `esForgotten`, ids of retained events stay; (e) `length <=
+  capacity` is identity (value-unchanged, no rebuild). Unit and fast
+  EpisodicMemory suites green.
+- **Out of scope**: capacity/window parameter values (calibration);
+  the age-window policy (`enforceAgeWindow`) — untouched; tombstones
+  counting toward raw length (current semantics preserved).
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
