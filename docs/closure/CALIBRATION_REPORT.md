@@ -4213,6 +4213,57 @@ pre-registered on entry.
   components themselves (the named item is the scalar invariant);
   `ssTurnCount` sanity.
 
+## (7) Single canonical challenge-marker lexicon (audit п.17)
+
+- **Defect (re-verified)**: five sites carried five divergent copies —
+  `Core.TurnPipeline.Effects.hasChallengeMarker` (20),
+  `Core.TurnPipeline.Route.Build` / `Route.Render` /
+  `Core.TurnRouting.Cascade` (the same 17: the M6-FELT evidential trio
+  «контрпример»/«докажи»/«что если» never reached them), and
+  `Route.Anomaly.detectUnclassifiableInput` (11: carries «считаю иначе»
+  and the connective «но », lacks the softening and evidential groups).
+  The same turn got different family decisions stage to stage.
+- **Rule (locked)**: `QxFx0.Semantic.Markers` (the P1-6 canonical
+  source) carries the challenge lexicons; the five sites keep no private
+  lists:
+  (a) `challengeMarkers` = the union of the five sets — the 20 from
+      Effects plus «считаю иначе» (21 entries), in the order
+      disagreement / courtesy / softening / evidential.  Sites gain
+      markers, none lose: Build/Render/Cascade gain the trio and
+      «считаю иначе»; Effects gains «считаю иначе»;
+  (b) `unclassifiableSuppressionMarkers = «но » : challengeMarkers` —
+      the Anomaly gate only; the connective is admissible there
+      because that list only suppresses an anomaly, it never flips a
+      family.  Anomaly gains exactly the 11 markers it lacked and
+      loses none;
+  (c) one shared matching rule `containsAnyOf` (substring containment
+      over the already-lowered input); the per-site predicates stay as
+      thin named wrappers reading the canonical list.
+- **Out of scope (recorded)**: `Semantic.Intent.Features.extractHasChallengeMark`
+  (19; distinctive «я думаю по-другому», «а если посмотреть», «не
+  совсем так», «не точн») stays separate — the P1-6 module note already
+  names folding intent lexicons in as a separate, riskier change (M4
+  classifier coupling).  `Network.Feedback.Detect`'s `challengeMarkers`
+  and `PropositionParser`'s local stripping list are different tools
+  (token-subsequence feedback classification, text cleaning) and stay
+  out.
+- **Bar**: pins — new suite `Test.Suite.ChallengeMarkers` (unit + fast):
+  the canonical union content (sorted equality, 21 entries); the
+  suppression-list invariant `«но » : challengeMarkers`; `containsAnyOf`
+  matching (a representative per group; negatives «нет»/«но»/«да»); and
+  a detector pin on the exposed `detectUnclassifiableInput` over a
+  prepared fixture with an unknown topic — no marker fires the anomaly,
+  «контрпример» / «что если» / «но » suppress it (the old Anomaly list
+  knew none of the trio).  Red checks: drop the trio from the canonical
+  union → the canonical pin fails; revert Anomaly to its private list →
+  the detector pin fails.  Focused slices green; M6FeltGate and
+  TurnPipelineProtocol green; full matrix at the batch landing.
+- **Acknowledged behavior deltas** (accepted; the matrix is the gate):
+  more CMConfront on evidential and «считаю иначе» inputs at the four
+  routing sites; slightly more Unclassifiable suppression in Anomaly.
+  Both follow the majority semantics already in force on the semantic
+  path.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
