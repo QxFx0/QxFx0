@@ -30,6 +30,7 @@ import QxFx0.Semantic.MeaningAtoms
   , updateTrace
   , extractObjectFromAtom
   )
+import QxFx0.Semantic.Markers (challengeMarkers, containsAnyOf)
 import QxFx0.Semantic.Logic (runSemanticLogic)
 import QxFx0.Semantic.Intent.GeometricClassifier
   ( IntentClassifier(..)
@@ -907,17 +908,10 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
 useGeometricIntent :: Bool
 useGeometricIntent = True
 
+-- | Audit 2026-10-16 (п.17): the challenge lexicon lives in
+-- 'QxFx0.Semantic.Markers' — one source for every routing site.
 hasChallengeMarker :: Text -> Bool
-hasChallengeMarker input =
-  let lowered = T.toLower input
-  in any (`T.isInfixOf` lowered)
-       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
-       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
-       , "ты говоришь", "оспариваю"
-       , "это просто", "не более чем", "сводится к"
-       , "всего лишь", "это лишь"
-       , "контрпример", "докажи", "что если"
-       ]
+hasChallengeMarker input = containsAnyOf challengeMarkers (T.toLower input)
 
 buildGeometricClassifier :: Ontology -> Map Text Text -> SemanticSpace -> Maybe IntentClassifier
 buildGeometricClassifier ontology lemmaMap space

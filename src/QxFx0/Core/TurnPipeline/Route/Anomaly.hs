@@ -20,6 +20,7 @@ import Data.Char (isAlphaNum)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified QxFx0.Semantic.Content as Content
+import QxFx0.Semantic.Markers (containsAnyOf, unclassifiableSuppressionMarkers)
 import Data.Foldable (toList)
 
 import QxFx0.Types.Anomaly
@@ -158,12 +159,12 @@ detectUnclassifiableInput ss ti =
       -- Do not trigger Unclassifiable for covered topics — even if atoms are sparse,
       -- the topic is known and IntentClassifier should handle it.
       isCovered = bestTopic `elem` Content.coveredTopics
-      -- Do not trigger if input contains challenge markers (разве, но, не согласен, etc.)
-      -- These are challenge turns, not unclassifiable input.
+      -- Do not trigger if the input carries a challenge marker — audit
+      -- 2026-10-16 (п.17): the lexicon lives in QxFx0.Semantic.Markers
+      -- (challenge list plus the contrastive connective «но »).  These
+      -- are challenge turns, not unclassifiable input.
       rawLower = T.toLower (ipfRawText (tiFrame ti))
-      hasChallengeMarker = any (`T.isInfixOf` rawLower)
-        [ "разве", "но ", "не согласен", "не согласна", "противореч", "неверно"
-        , "ошибаешься", "не прав", "спорю", "возраж", "считаю иначе" ]
+      hasChallengeMarker = containsAnyOf unclassifiableSuppressionMarkers rawLower
       knownDialogueMove = ipfPropositionType (tiFrame ti) `elem`
         [ ConfrontQ, MisunderstandingReport, RepairSignal ]
       knownStructuredMove = ipfPropositionType (tiFrame ti) /= PlainAssert

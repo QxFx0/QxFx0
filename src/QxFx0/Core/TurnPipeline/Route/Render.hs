@@ -98,6 +98,7 @@ import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSe
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
+import QxFx0.Semantic.Markers (challengeMarkers, containsAnyOf)
 import QxFx0.Semantic.Content (SemanticPredicate(..), coveredTopics, normalizeTopic, isFallbackTopic)
 import QxFx0.Semantic.ContentSelector (buildSelectorActivationArtifact)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
@@ -1228,16 +1229,10 @@ safeExecutedTurnOutcome decision authorityClass contractProv surfaceProv assembl
             , etoTransitionWon = False
             }
 
+-- | Audit 2026-10-16 (п.17): the challenge lexicon lives in
+-- 'QxFx0.Semantic.Markers' — one source for every routing site.
 hasChallengeMarkerForDecision :: Text -> Bool
-hasChallengeMarkerForDecision input =
-  let lowered = T.toLower input
-  in any (`T.isInfixOf` lowered)
-       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
-       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
-       , "ты говоришь", "оспариваю"
-       , "это просто", "не более чем", "сводится к"
-       , "всего лишь", "это лишь"
-       ]
+hasChallengeMarkerForDecision input = containsAnyOf challengeMarkers (T.toLower input)
 
 buildLocalRecoveryPlan :: PipelineRuntimeMode -> LocalRecoveryPolicy -> SystemState -> TurnInput -> TurnPlan -> Maybe Text -> Maybe LocalRecoveryPlan
 buildLocalRecoveryPlan _ LocalRecoveryDisabled _ _ _ _ = Nothing

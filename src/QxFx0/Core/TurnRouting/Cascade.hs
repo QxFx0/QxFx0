@@ -33,6 +33,7 @@ import QxFx0.Core.TurnRouting.Types
   , RoutingPhase(..)
   )
 import QxFx0.Self.Conatus (ConatusEnergy(..), lowEnergyThreshold)
+import QxFx0.Semantic.Markers (challengeMarkers, containsAnyOf)
 import QxFx0.Self.Salience
   ( Salience(..)
   , SalienceDriver(..)
@@ -230,13 +231,7 @@ buildGuardReport lastGuard oldEgo newEgo =
     in buildIdentityGuardReportSimple defaultIdentityGuardCalibration
          baseAgency (egoAgency newEgo) baseTension (egoTension newEgo)
 
+-- | Audit 2026-10-16 (п.17): the challenge lexicon lives in
+-- 'QxFx0.Semantic.Markers' — one source for every routing site.
 hasChallengeMarker :: Text -> Bool
-hasChallengeMarker input =
-  let lowered = T.toLower input
-  in any (`T.isInfixOf` lowered) (map T.pack
-       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
-       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
-       , "ты говоришь", "оспариваю"
-       , "это просто", "не более чем", "сводится к"
-       , "всего лишь", "это лишь"
-       ])
+hasChallengeMarker input = containsAnyOf challengeMarkers (T.toLower input)

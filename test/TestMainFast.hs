@@ -103,6 +103,7 @@ import Test.Suite.RuntimeLLMFeedback (runtimeLLMFeedbackTests)
 import Test.Suite.RuntimeProjection (runtimeProjectionTests)
 import Test.Suite.PromotionRuntime (promotionRuntimeTests)
 import Test.Suite.Anomaly (anomalyTests)
+import Test.Suite.ChallengeMarkers (challengeMarkersTests)
 import Test.Suite.StatePersistence (replayTraceCompatibilityTests)
 import Test.Suite.StateSanitization (stateSanitizationTests)
 
@@ -205,6 +206,7 @@ fastSuites =
   , ("RuntimeProjection", runtimeProjectionTests)
   , ("PromotionRuntime", promotionRuntimeTests)
   , ("Anomaly", [anomalyTests])
+  , ("ChallengeMarkers", challengeMarkersTests)
   , ("ReplayTraceCompatibility", replayTraceCompatibilityTests)
   , ("SemanticSlice", semanticSliceTests)
   ]

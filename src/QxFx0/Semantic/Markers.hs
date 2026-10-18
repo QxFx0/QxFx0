@@ -2,7 +2,7 @@
 
 {-|
 Module      : QxFx0.Semantic.Markers
-Description : canonical — the single source of marker lexicons for the user-R5 encoder and the ontological classifier (audit P1-6).
+Description : canonical — the single source of marker lexicons (user-R5 encoder, ontological classifier, challenge markers; audits P1-6 and 2026-10-16 п.17).
 
 Before this module the same words lived in three unsynchronized
 lists with three different behavioural effects (\"надоело\" was
@@ -10,17 +10,22 @@ simultaneously a distress signal, an agency-negative signal, and a
 striving-negative signal, each in its own copy).  This module is
 the /only place* marker lexicons are defined for the concept-v3
 regime; 'QxFx0.User.R5' and 'QxFx0.Semantic.Ontological' re-export
-from here so existing imports keep working.
+from here so existing imports keep working.  The challenge-marker
+lexicons (audit 2026-10-16 п.17) live here too: five routing sites
+used to carry five divergent copies, and every one of them now
+reads the lists below through 'containsAnyOf'.
 
 (*) 'QxFx0.Semantic.Intent.Features' keeps its own pre-existing
 intent lexicons — folding those in is a separate, riskier change
 (M4 classifier coupling) and stays out of scope here.
 
-All lists are matched as substrings of a normalized (lowercase,
-ё→е, collapsed whitespace) copy of the input; negative-before-
-positive blanking is the caller's discipline (see 'User.R5' and
-'Semantic.Ontological').  Lists are frozen v1 with the rest of the
-regime; editing them is a 'currentMathVersion' bump.
+The R5/ontological lists are matched as substrings of a normalized
+(lowercase, ё→е, collapsed whitespace) copy of the input;
+negative-before-positive blanking is the caller's discipline (see
+'User.R5' and 'Semantic.Ontological').  The challenge consumers
+lower the input and call 'containsAnyOf'.  Lists are frozen v1 with
+the rest of the regime; editing them is a 'currentMathVersion'
+bump.
 -}
 module QxFx0.Semantic.Markers
   ( -- * User-R5 encoder lexicons
@@ -37,9 +42,14 @@ module QxFx0.Semantic.Markers
   , strivingNegativeMarkers
   , affirmationPositiveMarkers
   , affirmationNegativeMarkers
+    -- * Challenge-marker lexicons (audit 2026-10-16, п.17)
+  , challengeMarkers
+  , unclassifiableSuppressionMarkers
+  , containsAnyOf
   ) where
 
 import Data.Text (Text)
+import qualified Data.Text as T
 
 -- | Tension/pressure signals for the user atmosphere axis.
 r5DistressMarkers :: [Text]
@@ -131,3 +141,33 @@ affirmationNegativeMarkers =
   [ "разрушаю", "уничтож", "ломаю", "рушу", "ненавижу", "топчу"
   , "стираю", "сжигаю"
   ]
+
+-- | Challenge markers — the single lexicon behind every "the user is
+-- challenging a claim" decision (family overrides in Effects / Build /
+-- Render / Cascade, the Anomaly Unclassifiable gate).  Before the
+-- audit-2026-10-16 п.17 unification five sites carried five divergent
+-- copies: Effects had 20, Build/Render/Cascade the same 17 (the
+-- M6-FELT evidential trio «контрпример»/«докажи»/«что если» never
+-- reached them), Anomaly had 11 of its own.  This list is their
+-- union: every site gained markers, none lost any.
+challengeMarkers :: [Text]
+challengeMarkers =
+  [ "разве", "не согласен", "не согласна", "противореч", "неверно"
+  , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
+  , "ты говоришь", "оспариваю", "считаю иначе"
+  , "это просто", "не более чем", "сводится к"
+  , "всего лишь", "это лишь"
+  , "контрпример", "докажи", "что если"
+  ]
+
+-- | 'challengeMarkers' plus the contrastive connective «но » — the
+-- Anomaly Unclassifiable gate only.  A connective is admissible in
+-- this list because suppression never flips a family: it only keeps a
+-- contrast turn out of the unclassifiable contour.
+unclassifiableSuppressionMarkers :: [Text]
+unclassifiableSuppressionMarkers = "но " : challengeMarkers
+
+-- | The single matching rule every challenge-marker consumer shares:
+-- substring containment over the caller-lowered input.
+containsAnyOf :: [Text] -> Text -> Bool
+containsAnyOf markers input = any (`T.isInfixOf` input) markers

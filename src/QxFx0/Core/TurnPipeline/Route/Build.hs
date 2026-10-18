@@ -83,6 +83,7 @@ import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (adjustRenderStyleForSpeechPolicy)
 import QxFx0.Core.TurnPolicy
 import QxFx0.Semantic.SemanticScene (defaultScenes, inferActiveScene)
+import QxFx0.Semantic.Markers (challengeMarkers, containsAnyOf)
 import QxFx0.Semantic.Proposition (diagnosticPropositionFamily, diagnosticPropositionFamilyTyped)
 import QxFx0.Semantic.Retrieve (detectCommitmentEngagement, engagementTopicFor)
 import QxFx0.Semantic.Morphology (extractContentNouns)
@@ -387,16 +388,10 @@ fieldDelta target current =
         (unCounterfactual (fieldCounterfactual target) - unCounterfactual (fieldCounterfactual current))
     }
 
+-- | Audit 2026-10-16 (п.17): the challenge lexicon lives in
+-- 'QxFx0.Semantic.Markers' — one source for every routing site.
 hasChallengeMarker :: Text -> Bool
-hasChallengeMarker input =
-  let lowered = T.toLower input
-  in any (`T.isInfixOf` lowered)
-       [ "разве", "не согласен", "не согласна", "противореч", "неверно"
-       , "ошибаешься", "не прав", "спорю", "возраж", "сомневаюсь"
-       , "ты говоришь", "оспариваю"
-       , "это просто", "не более чем", "сводится к"
-       , "всего лишь", "это лишь"
-       ]
+hasChallengeMarker input = containsAnyOf challengeMarkers (T.toLower input)
 
 -- renderTurnOutput :: PipelineIO -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> IO TurnArtifacts
 -- renderTurnOutput pio ss ti ts tp = do

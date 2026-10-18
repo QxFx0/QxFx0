@@ -758,6 +758,7 @@ common test-common
     Test.Suite.Rescue
     Test.Suite.MorphologicalNormalization
     Test.Suite.Anomaly
+    Test.Suite.ChallengeMarkers
     Test.Suite.PathFinder
     Test.Suite.DialogueSemanticSelection
     Test.Suite.Ontology
