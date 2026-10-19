@@ -49,10 +49,16 @@ import QxFx0.Types.TurnProjection
   , decodePersistedReplayTrace
   )
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..), emptyCommitmentEngagement)
+import QxFx0.Types.Memory.Episodic (EpisodicTurnDelta(..))
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
 import QxFx0.Core.TurnPipeline (TurnSignals(..))
 import Test.Support.TurnPipelineFixtures (buildRenderedFixture)
+
+-- | Audit 2026-10-16 п.14: these fixtures project a turn with no episodic
+-- change at the projection boundary, so the honest delta is the empty one.
+noEpisodicDelta :: EpisodicTurnDelta
+noEpisodicDelta = EpisodicTurnDelta [] 0 Nothing
 
 -- | A minimal 'TurnReplayTrace' with only 'trcEffectSnapshot' set.
 -- All other fields use safe defaults so the record's strict fields
@@ -88,7 +94,6 @@ minimalReplayTrace apiHealthy =
     , trcParserBackend = "test"
     , trcParserStatus = PsOk
     , trcParserDegradationReason = Nothing
-    , trcParserLatencyMs = 0
     , trcEmbeddingQuality = "heuristic"
     , trcClaimAst = Nothing
     , trcPreSafetyRenderedRaw = "test"
@@ -285,7 +290,7 @@ testRecordedEqualsConsumed =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
+                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
         recorded proj = esApiHealthy <$> trcEffectSnapshot (tqpReplayTrace proj)
     assertEqual "projection records True when consumed value is True"
                (Just True) (recorded (projOf True))
@@ -309,7 +314,7 @@ testSnapshotSurvivesSerialization =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
-                     ss ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
+                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
         decodeSnapshot proj =
           (eitherDecode (encode (tqpReplayTrace proj))
              >>= parseEither (withObject "trace" (\o -> o .:? "trcEffectSnapshot")))
@@ -332,7 +337,7 @@ testFullTraceRoundTrips =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
-                  (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
+                  (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss noEpisodicDelta ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
     assertEqual "persisted envelope decode must reproduce the trace exactly"
       (Right trace)
       (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace trace)))

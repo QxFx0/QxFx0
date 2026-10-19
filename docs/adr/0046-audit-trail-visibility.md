@@ -123,7 +123,7 @@ Existing golden fixtures in `test/fixtures/` will need re-blessing with new fiel
 ### Negative
 - **Trace size growth**: 10 new fields increase JSON payload (~200 bytes per turn)
 - **Golden fixture churn**: All fixtures need re-blessing (one-time cost)
-- **Placeholder logic**: `trcContentSaliencyDominantCluster` uses placeholder `Just 0` (needs Phase II refinement)
+- **~~Placeholder logic~~ — closed 2026-10-19 (audit 2026-10-16 п.14)**: `trcContentSaliencyDominantCluster` used to stamp the placeholder `Just 0` with no data behind it; it now carries the dominant of the actual spectral split (`dominantClusterIndex`, `QxFx0.Core.ContentCluster`) — `Nothing` when there is no split or the split is degenerate.
 
 ### Neutral
 - **Flag discipline maintained**: All new fields respect existing flag state
@@ -136,10 +136,15 @@ Existing golden fixtures in `test/fixtures/` will need re-blessing with new fiel
    - `QxFx0.Core.Bayesian`: `dominantIntent`, `userModelActive`
    - `QxFx0.Semantic.Logic`: `derivedInferenceActive`, `deriveAtoms`
 
-2. **Placeholder refinement** (deferred to Phase II):
-   - `trcContentSaliencyDominantCluster` currently returns `Just 0`
-   - Should extract actual dominant cluster ID from `csContentSaliency`
-   - Requires spectral clustering result structure inspection
+2. **Placeholder refinement — landed 2026-10-19 (audit 2026-10-16 п.14)**:
+   - `trcContentSaliencyDominantCluster` now derives the dominant cluster
+     from the post-turn meaning graph's actual spectral split
+     (`dominantClusterIndex`, `QxFx0.Core.ContentCluster`)
+   - Observation from п.14: the spectral splitter currently returns a
+     degenerate split for every graph (one side empty), so the honest
+     value today is `Nothing` rather than a cluster index; the
+     index-selection logic (`dominantClusterOf`) is pinned synthetically
+     until the numerics produce real splits
 
 3. **Test coverage**:
    - 10 compile-time field checks

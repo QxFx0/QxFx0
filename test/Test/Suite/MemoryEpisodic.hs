@@ -35,11 +35,14 @@ import QxFx0.Memory.Episodic
   , EpisodicStore(..)
   , EpisodicId(..)
   , EpisodicContent(..)
+  , EpisodicTurnDelta(..)
   , emptyIndex
   , encode
   , enforceCapacity
+  , enforceAgeWindow
   , episodicCapacity
   , episodicRecallActive
+  , episodicTurnDelta
   , rebuildIndex
   , retrieve
   )
@@ -206,5 +209,84 @@ episodicMemoryTests =
           atCap (enforceCapacity atCap)
         assertEqual "below capacity must be value-unchanged"
           below (enforceCapacity below)
+
+  , -- Audit 2026-10-16 (p.14): the trace's encoding field is fed by the
+    -- honest delta — the ids appended this turn are exactly the ids new to
+    -- the store, in store order. The old projection read the two OLDEST
+    -- records in reverse order ([2, 1] on this store).
+    TestLabel "Audit p.14: turn delta names the appended events" $
+      TestCase $ do
+        let prev = mkStore [ mkEvent 1 EpisodicUserInput
+                           , mkEvent 2 EpisodicSystemDecision
+                           , mkEvent 3 EpisodicUserInput
+                           ]
+            next = encode (TurnSeq 4) EpisodicUserInput (EpisodicUserText "u") []
+                     (encode (TurnSeq 4) EpisodicSystemDecision
+                        (EpisodicUserText "d") [] prev)
+            delta = episodicTurnDelta (Just prev) (Just next)
+        assertEqual "encoded ids must be the two appended events"
+          [EpisodicId 4, EpisodicId 5] (etdEncodedIds delta)
+        assertEqual "no forgetting on a small store"
+          0 (etdForgottenCount delta)
+        assertEqual "no forgotten id"
+          Nothing (etdLastForgottenId delta)
+
+  , -- Audit 2026-10-16 (p.14): the forgetting count is the number of events
+    -- that BECAME forgotten this turn — freshly tombstoned by the age window
+    -- (linked events are exempt), not the whole tombstone set.
+    TestLabel "Audit p.14: turn delta counts age-window tombstones" $
+      TestCase $ do
+        let prev = mkStore [ mkEvent 1 EpisodicUserInput
+                           , mkEvent 2 EpisodicUserInput
+                           , mkEvent 3 EpisodicUserInput
+                           ]
+            next = enforceAgeWindow (TurnSeq 60) prev  -- window is 50 turns
+            delta = episodicTurnDelta (Just prev) (Just next)
+        assertEqual "no new events encoded" [] (etdEncodedIds delta)
+        assertEqual "all three aged events count once"
+          3 (etdForgottenCount delta)
+        assertEqual "the last forgotten id is the largest tombstoned"
+          (Just (EpisodicId 3)) (etdLastForgottenId delta)
+
+  , -- Audit 2026-10-16 (p.14): physical evictions by capacity count as
+    -- forgotten this turn, with the largest evicted id reported. The old
+    -- projection hardcoded (0, Nothing).
+    TestLabel "Audit p.14: turn delta counts capacity evictions" $
+      TestCase $ do
+        let prev = mkStore [mkEvent i EpisodicUserInput | i <- [1..episodicCapacity]]
+            next = enforceCapacity
+                     (encode (TurnSeq 1) EpisodicUserInput (EpisodicUserText "u") []
+                       (encode (TurnSeq 1) EpisodicSystemDecision
+                          (EpisodicUserText "d") [] prev))
+            delta = episodicTurnDelta (Just prev) (Just next)
+        assertEqual "the two appends are the new ids"
+          [EpisodicId 1001, EpisodicId 1002] (etdEncodedIds delta)
+        assertEqual "the two oldest events were evicted"
+          2 (etdForgottenCount delta)
+        assertEqual "eviction reports the largest evicted id"
+          (Just (EpisodicId 2)) (etdLastForgottenId delta)
+
+  , -- Audit 2026-10-16 (p.14): events already forgotten on an earlier turn
+    -- are not re-counted when capacity finally evicts them.
+    TestLabel "Audit p.14: already-forgotten evictions are not re-counted" $
+      TestCase $ do
+        let prev = (mkStore [mkEvent i EpisodicUserInput | i <- [1..episodicCapacity + 2]])
+                     { esForgotten = HS.fromList [EpisodicId 1, EpisodicId 2] }
+            next = enforceCapacity prev
+            delta = episodicTurnDelta (Just prev) (Just next)
+        assertEqual "nothing new was encoded" [] (etdEncodedIds delta)
+        assertEqual "already-forgotten events are not re-counted"
+          0 (etdForgottenCount delta)
+        assertEqual "no last forgotten id" Nothing (etdLastForgottenId delta)
+
+  , -- Audit 2026-10-16 (p.14): an identity turn (and a missing store side)
+    -- yields the empty delta — total and deterministic.
+    TestLabel "Audit p.14: turn delta is empty on identity and Nothing" $
+      TestCase $ do
+        let store = mkStore [mkEvent 1 EpisodicUserInput, mkEvent 2 EpisodicSystemDecision]
+        assertEqual "identity turn => empty delta"
+          (EpisodicTurnDelta [] 0 Nothing) (episodicTurnDelta (Just store) (Just store))
+        assertEqual "Nothing sides => empty delta"
+          (EpisodicTurnDelta [] 0 Nothing) (episodicTurnDelta Nothing Nothing)
   ]
 

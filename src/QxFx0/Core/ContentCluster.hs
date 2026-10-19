@@ -19,6 +19,8 @@ module QxFx0.Core.ContentCluster
   , fiedlerValue
   , fiedlerVector
   , detectClusters
+  , dominantClusterIndex
+  , dominantClusterOf
   , ClusterInsight(..)
   , contentSalienceActive
   , computeContentSaliency
@@ -203,6 +205,38 @@ detectClusters mg =
 -- in the flag-off discipline.
 contentSalienceActive :: Bool
 contentSalienceActive = True
+
+-- | Audit 2026-10-16 п.14: the dominant of the two detected spectral
+-- clusters, as the index @0@ or @1@ of 'detectClusters'' split
+-- (@0@ = the side with the positive Fiedler entries, @1@ = the other).
+--
+-- The index is derived by 'dominantClusterOf' from the split; returns
+-- 'Nothing' when there is no split at all ('NoClusters') or when the split
+-- is degenerate (either side empty — also the case for empty and
+-- single-node graphs). This replaced the unconditional @Just 0@
+-- placeholder in the replay trace.
+dominantClusterIndex :: MeaningGraph -> Maybe Int
+dominantClusterIndex = dominantClusterOf . detectClusters
+
+-- | Audit 2026-10-16 п.14: the dominant of a 'ClusterInsight' split, as the
+-- index @0@ or @1@ (@0@ = the side with the positive Fiedler entries, @1@ =
+-- the other).
+--
+-- \"Dominant\" is defined as the larger side by membership count; a tie
+-- resolves to @0@. Returns 'Nothing' when there is no split ('NoClusters')
+-- or when the split is degenerate: one empty side carries no dominance to
+-- report.
+--
+-- Exported separately from 'dominantClusterIndex' so the selection logic
+-- stays directly testable even while the spectral splitter itself can
+-- return degenerate splits.
+dominantClusterOf :: ClusterInsight -> Maybe Int
+dominantClusterOf insight =
+  case insight of
+    TwoClusters c1 c2 _
+      | not (null c1) && not (null c2) ->
+          Just (if length c1 >= length c2 then 0 else 1)
+    _ -> Nothing
 
 -- | WP-C: compute a content-saliency signal from the meaning graph by counting
 -- distinct spectral clusters. Returns @0.0@ when there are too few nodes to

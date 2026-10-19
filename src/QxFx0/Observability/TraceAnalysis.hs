@@ -263,6 +263,11 @@ detectRecoveryAnomaly _policy cause strategy evidenceCount
       Just "recovery_triggered_without_evidence"
   | Nothing <- cause, Just _ <- strategy =
       Just "strategy_without_cause"
+  -- Audit 2026-10-16 п.14: evidence is only meaningful together with a
+  -- cause; the old projection emitted ["runtime_mode=degraded"] without
+  -- one. The guard makes that regression visible to analysis.
+  | Nothing <- cause, evidenceCount > 0 =
+      Just "evidence_without_cause"
   | otherwise = Nothing
 
 -- | Analyze Conatus dynamics from trace

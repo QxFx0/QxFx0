@@ -13,6 +13,7 @@ module QxFx0.Types.Memory.Episodic
   , EpisodicQuery(..)
   , ForgettingReason(..)
   , ReuseAnnotation(..)
+  , EpisodicTurnDelta(..)
   ) where
 
 import Control.DeepSeq (NFData)
@@ -104,6 +105,23 @@ data ForgettingReason = ForgetByCapacity | ForgetByAge | ForgetByUser | ForgetBy
 data ReuseAnnotation = ReuseAsContext | ReuseAsConstraint | ReuseAsTrigger | ReuseAsEvidence
   deriving stock (Eq, Show, Generic)
   deriving anyclass (FromJSON, ToJSON)
+
+-- | Audit 2026-10-16 п.14: what one finalized turn did to the episodic
+-- store, computed by diffing the pre-turn and post-turn stores
+-- ('QxFx0.Memory.Episodic.episodicTurnDelta'). This is the honest source
+-- of the @trcEpisodicEncoding@ / @trcEpisodicForgetting@ trace fields —
+-- the placeholders they replaced never consulted the transition at all.
+data EpisodicTurnDelta = EpisodicTurnDelta
+  { etdEncodedIds :: ![EpisodicId]
+    -- ^ Events appended this turn (ids new to the store), in store order.
+  , etdForgottenCount :: !Int
+    -- ^ Events that became forgotten this turn: newly tombstoned by the
+    --   age window or physically dropped by the capacity trim. Events
+    --   already forgotten on earlier turns are not re-counted.
+  , etdLastForgottenId :: !(Maybe EpisodicId)
+    -- ^ The largest id among those events (the most recently created
+    --   one), 'Nothing' when none.
+  } deriving stock (Eq, Show)
 
 instance ToJSONKey EpisodicId where
   toJSONKey = ToJSONKeyValue (toJSON . unEpisodicId) (toEncoding . unEpisodicId)

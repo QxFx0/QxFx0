@@ -43,6 +43,7 @@ traceAnalysisTests =
   [ TestLabel "Recovery enums JSON round-trip (cause/strategy)" testRecoveryEnumsRoundTrip
   , TestLabel "TraceAnalysis: Recovery no trigger" testRecoveryNoTrigger
   , TestLabel "TraceAnalysis: Recovery with cause" testRecoveryWithCause
+  , TestLabel "TraceAnalysis: evidence without cause flags anomaly" testRecoveryEvidenceWithoutCause
   , TestLabel "TraceAnalysis: Conatus healthy" testConatusHealthy
   , TestLabel "TraceAnalysis: Conatus degraded" testConatusDegraded
   , TestLabel "TraceAnalysis: Conatus production scale no false excessive" testConatusProductionScaleNoFalseExcessive
@@ -105,7 +106,6 @@ minimalTrace = TurnReplayTrace
   , trcParserBackend = "test"
   , trcParserStatus = PsOk
   , trcParserDegradationReason = Nothing
-  , trcParserLatencyMs = 10
   , trcEmbeddingQuality = "high"
   , trcClaimAst = Nothing
   , trcPreSafetyRenderedRaw = "test"
@@ -258,6 +258,17 @@ testRecoveryWithCause = TestCase $ do
   let analysis = analyzeRecoveryPattern trace
   assertEqual "Recovery triggered" True (raTriggered analysis)
   assertEqual "Evidence count" 1 (raEvidenceCount analysis)
+
+-- | Audit 2026-10-16 п.14: evidence without a cause used to be produced by
+-- the removed degraded-runtime placeholder (["runtime_mode=degraded"] on
+-- every turn). The projection no longer emits it; this guard keeps a
+-- regression visible to the analysis instead of only to the eyes.
+testRecoveryEvidenceWithoutCause :: Test
+testRecoveryEvidenceWithoutCause = TestCase $ do
+  let trace = minimalTrace { trcRecoveryEvidence = ["x"] }
+      analysis = analyzeRecoveryPattern trace
+  assertEqual "evidence without a cause must be flagged"
+    (Just "evidence_without_cause") (raAnomaly analysis)
 
 testConatusHealthy :: Test
 testConatusHealthy = TestCase $ do

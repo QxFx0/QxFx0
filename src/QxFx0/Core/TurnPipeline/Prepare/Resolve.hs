@@ -39,13 +39,22 @@ import QxFx0.Types
 
 import Control.Exception (evaluate)
 import Data.Maybe (fromMaybe)
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, addUTCTime, diffUTCTime, getCurrentTime)
 
 resolvePrepareEffects :: PipelineIO -> PrepareEffectPlan -> IO PrepareEffectResults
 resolvePrepareEffects pio effectPlan = do
   let t0 = pepCapturedCurrentTime effectPlan
+  -- Audit 2026-10-16 п.14: the prepare timeline used to stamp every
+  -- window as t0/t0 — zero durations for all five effect phases. Measure
+  -- the real windows instead, anchored at the turn's captured time t0
+  -- (production t0 arrives through 'TurnReqCurrentTime'; tests fix it),
+  -- so the timeline keeps the turn's single clock source while the
+  -- durations become real.
+  base <- getCurrentTime
   _ <- evaluate (pepStatic effectPlan)
-  let tStatic1 = t0
+  staticDone <- getCurrentTime
+  let anchored stamp = addUTCTime (diffUTCTime stamp base) t0
+      tStatic1 = anchored staticDone
       requestPairs :: [(PipelineEffectLabel, Maybe TurnEffectRequest)]
       requestPairs =
         [ (PelEmbedding, prepareRequestToTurnEffect (pepEmbeddingRequest effectPlan))
@@ -61,37 +70,52 @@ resolvePrepareEffects pio effectPlan = do
           | (label, Just request) <- requestPairs
           ]
   resolved <- forConcurrently scheduledPairs $ \(label, turnRequest) -> do
+    started <- getCurrentTime
     result <- resolveTurnEffect pio turnRequest
-    pure (label, result)
+    ended <- getCurrentTime
+    pure (label, result, started, ended)
+  let results = [ (label, result) | (label, result, _, _) <- resolved ]
+      timing label =
+        case [ (anchored started, anchored ended)
+             | (l, _, started, ended) <- resolved
+             , l == label
+             ] of
+          (window : _) -> window
+          []            -> (t0, t0)
   -- Prepare-stage missing or unexpected effect results are intentionally
   -- classified as degraded continuation rather than fail-closed termination:
   -- local embedding, nix-blocked, default intuition/consciousness, and
   -- apiHealthy=False keep the turn moving while reducing epistemic strength.
   let embeddingResult =
         fromMaybe fallbackEmbeddingResult $ do
-          TurnResEmbedding value <- lookup PelEmbedding (filter (isEmbeddingResult . snd) resolved)
+          TurnResEmbedding value <- lookup PelEmbedding (filter (isEmbeddingResult . snd) results)
           Just value
       nixStatus =
         fromMaybe (Blocked "nix_guard_missing_request") $ do
-          TurnResNixGuard value <- lookup PelNix (filter (isNixResult . snd) resolved)
+          TurnResNixGuard value <- lookup PelNix (filter (isNixResult . snd) results)
           Just value
       consciousnessResult =
         fromMaybe (initialLoop, Nothing, Nothing) $ do
-          TurnResConsciousness loop narrative fragment <- lookup PelConsciousness (filter (isConsciousnessResult . snd) resolved)
+          TurnResConsciousness loop narrative fragment <- lookup PelConsciousness (filter (isConsciousnessResult . snd) results)
           Just (loop, narrative, fragment)
       intuitionResult =
         fromMaybe (Nothing, defaultPosterior, defaultIntuitiveState) $ do
-          TurnResIntuition flash posterior state <- lookup PelIntuition (filter (isIntuitionResult . snd) resolved)
+          TurnResIntuition flash posterior state <- lookup PelIntuition (filter (isIntuitionResult . snd) results)
           Just (flash, posterior, state)
       apiHealthy =
         fromMaybe False $ do
-          TurnResApiHealth value <- lookup PelApiHealth (filter (isApiHealthResult . snd) resolved)
+          TurnResApiHealth value <- lookup PelApiHealth (filter (isApiHealthResult . snd) results)
           Just value
-      timedEmb = TimedResult t0 t0 embeddingResult
-      timedNix = TimedResult t0 t0 nixStatus
-      timedConsciousness = TimedResult t0 t0 consciousnessResult
-      timedIntuition = TimedResult t0 t0 intuitionResult
-      timedApiHealth = TimedResult t0 t0 apiHealthy
+      (tEmbStart, tEmbEnd) = timing PelEmbedding
+      (tNixStart, tNixEnd) = timing PelNix
+      (tConsciousnessStart, tConsciousnessEnd) = timing PelConsciousness
+      (tIntuitionStart, tIntuitionEnd) = timing PelIntuition
+      (tApiHealthStart, tApiHealthEnd) = timing PelApiHealth
+      timedEmb = TimedResult tEmbStart tEmbEnd embeddingResult
+      timedNix = TimedResult tNixStart tNixEnd nixStatus
+      timedConsciousness = TimedResult tConsciousnessStart tConsciousnessEnd consciousnessResult
+      timedIntuition = TimedResult tIntuitionStart tIntuitionEnd intuitionResult
+      timedApiHealth = TimedResult tApiHealthStart tApiHealthEnd apiHealthy
       (consciousLoop', currentNarrative, narrativeFragment') = consciousnessResult
       (mFlash, intuitPosterior, intuitionState) = intuitionResult
   pure PrepareEffectResults

@@ -42,6 +42,7 @@ import QxFx0.Core.TurnPipeline.Finalize.State
   , computeEssenceValidation
   )
 import QxFx0.Learning.Loop (applyExternalLearning)
+import QxFx0.Memory.Episodic (episodicTurnDelta)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
@@ -184,7 +185,12 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
     throwIO (EvidenceInadmissibleFailure $
       "governed-evidence mode: guard Unavailable, evidence inadmissible. Guard reason: "
       <> T.pack (show guardStatus))
-  let projection =
+  -- Audit 2026-10-16 п.14: the honest episodic turn delta — what the
+  -- finalize actually encoded and forgot this turn, computed where both
+  -- the pre-turn and post-turn stores are in scope.
+  let episodicDelta =
+        episodicTurnDelta (ssEpisodic systemState) (ssEpisodic nextSystemState)
+      projection =
         buildTurnProjection
           (fprRuntimeMode precommitResults)
           (fprShadowPolicy precommitResults)
@@ -193,6 +199,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
           (fprWarnMorphologyFallbackEnabled precommitResults)
           (fprFmarMode precommitResults)
           nextSystemState
+          episodicDelta
           turnInput
           turnSignals
           turnPlan

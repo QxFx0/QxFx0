@@ -71,7 +71,7 @@ import QxFx0.Self.Essence
   , renderCommitmentTrigger
   , renderEssenceMode
   )
-import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicEvent(..), EpisodicQuery, EpisodicId, ReuseAnnotation, episodicRecallActive, recallForTrace)
+import QxFx0.Memory.Episodic (EpisodicStore(..), EpisodicEvent(..), EpisodicTurnDelta(..), EpisodicQuery, EpisodicId, ReuseAnnotation, episodicRecallActive, recallForTrace)
 import QxFx0.Self.Perspective (buildActivePerspectiveProjections)
 import QxFx0.Self.Salience (Salience(..), renderSalienceDriver, svSalience)
 import QxFx0.Self.Field
@@ -79,7 +79,7 @@ import QxFx0.Self.Field
   , fieldAtmosphere, atmosphereValence, atmosphereArousal, affectDecoupledActive )
 import QxFx0.Core.Bayesian (maxBelief, dominantIntent, userModelActive)
 import QxFx0.Semantic.Logic (derivedInferenceActive, deriveAtoms)
-import QxFx0.Core.ContentCluster (computeContentSaliency, contentSalienceActive)
+import QxFx0.Core.ContentCluster (computeContentSaliency, contentSalienceActive, dominantClusterIndex)
 import QxFx0.Types.CognitiveSignals (CognitiveSignals)
 import qualified QxFx0.Types.CognitiveSignals as CS
 import QxFx0.Types
@@ -165,6 +165,7 @@ buildTurnProjection
   -> Bool
   -> FmarMode
   -> SystemState
+  -> EpisodicTurnDelta
   -> TurnInput
   -> TurnSignals
   -> TurnPlan
@@ -174,7 +175,7 @@ buildTurnProjection
   -> CommitmentEngagement
   -> EvidenceAdmissibility
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs ti ts tp ta commitDecision promotedCount commitmentEngagement evidenceAdmissibility =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs episodicDelta ti ts tp ta commitDecision promotedCount commitmentEngagement evidenceAdmissibility =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -193,7 +194,6 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           PsOk -> Nothing
           PsConstitutionAdmitted -> Just "constitution_interpretation_admission"
           PsDegraded _ -> Just "frame_runtime_mismatch"
-      parserLatencyMs = 0
       scenePressure
         | asLoad (tiAtomSet ti) <= scenePressureLowThreshold = PressureLow
         | asLoad (tiAtomSet ti) <= scenePressureMediumThreshold = PressureMedium
@@ -219,9 +219,10 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
         case taLocalRecoveryCause ta of
           Just cause ->
             (Just cause, taLocalRecoveryStrategy ta, taLocalRecoveryEvidence ta)
-          Nothing
-            | DegradedRuntime <- runtimeMode ->
-                (Nothing, Nothing, ["runtime_mode=degraded"])
+          -- Audit 2026-10-16 п.14: no cause → no recovery, so no
+          -- evidence either. The old degraded-runtime branch stamped
+          -- ["runtime_mode=degraded"] here without any cause; the
+          -- runtime mode is already visible in 'trcRuntimeMode'.
           Nothing ->
             (Nothing, Nothing, [])
       traceSalience = turnInputSalience ti
@@ -229,12 +230,17 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
       perspectiveProjections = buildActivePerspectiveProjections (selfPerspectiveRegistry (ssSelfState nextSs))
       learningVerdict = deriveLearningReplayVerdict nextSs ta
       -- P8: Audit trail visibility fields
-      doubtScore = if tiDoubtScore ti > 0 then Just (tiDoubtScore ti) else Nothing
+      -- Audit 2026-10-16 п.14: doubt is computed unconditionally (WP-D),
+      -- so the trace carries the honest value — including an honest 0.0.
+      doubtScore = Just (tiDoubtScore ti)
       episodicRetrievalCount = if episodicRecallActive && not (null (tiRetrievedEpisodes ti))
                                  then Just (length (tiRetrievedEpisodes ti))
                                  else Nothing
+      -- Audit 2026-10-16 п.14: the dominant cluster is derived from the
+      -- actual spectral split of the post-turn meaning graph (the old
+      -- unconditional Just 0 was a placeholder with no data behind it).
       contentSaliencyDominantCluster = if contentSalienceActive
-                                         then Just 0  -- Placeholder: dominant cluster from csContentSaliency
+                                         then dominantClusterIndex (ssMeaningGraph nextSs)
                                          else Nothing
       moodValence = Just (atmosphereValence (fieldAtmosphere (tiField ti)))
       moodArousal = Just (atmosphereArousal (fieldAtmosphere (tiField ti)))
@@ -321,7 +327,6 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcParserBackend = parserBackend
           , trcParserStatus = parserStatus
           , trcParserDegradationReason = parserDegradationReason
-          , trcParserLatencyMs = parserLatencyMs
           , trcEmbeddingQuality = embeddingQualityText (tiEmbeddingQuality ti)
           , trcClaimAst = taClaimAst ta
           , trcPreSafetyRenderedRaw = taPreSafetyRendered ta
@@ -412,14 +417,13 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcConatusGateFired = tiConatusGateFired ti
           , trcField = tiField ti
           , trcIdentityClaims = ssIdentityClaims nextSs
-          , trcEpisodicEncoding = case ssEpisodic nextSs of
-              Just store -> map eeId (foldr (:) [] (Seq.reverse (Seq.take 2 (esEvents store))))
-              Nothing    -> []
+          , trcEpisodicEncoding = etdEncodedIds episodicDelta
           , trcEpisodicRetrieval =
               if episodicRecallActive
                 then recallForTrace (ssEpisodic nextSs)
                 else Nothing
-          , trcEpisodicForgetting = (0, Nothing)
+          , trcEpisodicForgetting =
+              (etdForgottenCount episodicDelta, etdLastForgottenId episodicDelta)
           , trcRegimeVersion = rrMathVersion liveRegime
           , trcFamilyDivergenceActive = rrFamilyDivergenceActive liveRegime
            , trcSemanticCommitmentCount = case ssSemanticCommitments nextSs of

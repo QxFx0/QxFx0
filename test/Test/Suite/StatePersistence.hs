@@ -1578,7 +1578,6 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcParserBackend = "local_rule_based"
     , trcParserStatus = parserStatus
     , trcParserDegradationReason = parserDegradationReason
-    , trcParserLatencyMs = 0
     , trcEmbeddingQuality = "heuristic"
     , trcClaimAst = Nothing
     , trcPreSafetyRenderedRaw = "fixture_pre_safety"

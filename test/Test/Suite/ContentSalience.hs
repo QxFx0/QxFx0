@@ -27,7 +27,27 @@ import QxFx0.Self.Salience
   )
 import QxFx0.Self.Field (Field, emptyField, fieldResonance, mkResonance)
 import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
-import QxFx0.Core.ContentCluster (contentSalienceActive)
+import QxFx0.Core.ContentCluster
+  ( ClusterInsight(..)
+  , contentSalienceActive
+  , dominantClusterIndex
+  , dominantClusterOf
+  )
+import QxFx0.Core.MeaningGraph
+  ( ConvMove(..)
+  , DensityBand(..)
+  , DepthBand(..)
+  , MeaningEdge(..)
+  , MeaningGraph(..)
+  , MeaningState(..)
+  , PressureBand(..)
+  , ResonanceBand(..)
+  , ResponseDepth(..)
+  , ResponseStance(..)
+  , ResponseStrategy(..)
+  , emptyMeaningGraph
+  )
+import qualified Data.Set as S
 
 contentSalienceTests :: [Test]
 contentSalienceTests =
@@ -109,5 +129,52 @@ contentSalienceTests =
         -- Confidence should change with content saliency
         assertBool "confidence must account for content saliency"
           (confLow /= confHigh)
+
+    -- Audit 2026-10-16 (p.14) pins: 'dominantClusterOf' selects the larger
+    -- side of a detected split; its index is the value carried by
+    -- 'trcContentSaliencyDominantCluster' (the old field was an
+    -- unconditional 'Just 0' placeholder). The spectral splitter can return
+    -- degenerate splits, so the selection logic is pinned directly on
+    -- 'ClusterInsight' values.
+  , TestLabel "Audit p.14: dominantClusterOf picks the larger side" $
+      TestCase $ do
+        assertEqual "larger first side => 0"
+          (Just 0) (dominantClusterOf (TwoClusters ["a", "b"] ["c"] 0.5))
+        assertEqual "larger second side => 1"
+          (Just 1) (dominantClusterOf (TwoClusters ["a"] ["b", "c"] 0.5))
+        assertEqual "equal sides tie-break to 0"
+          (Just 0) (dominantClusterOf (TwoClusters ["a"] ["b"] 0.5))
+
+  , TestLabel "Audit p.14: dominantClusterOf refuses degenerate splits" $
+      TestCase $ do
+        assertEqual "no split => Nothing"
+          Nothing (dominantClusterOf NoClusters)
+        assertEqual "empty first side => Nothing"
+          Nothing (dominantClusterOf (TwoClusters [] ["b"] 0.5))
+        assertEqual "empty second side => Nothing"
+          Nothing (dominantClusterOf (TwoClusters ["a"] [] 0.5))
+
+  , TestLabel "Audit p.14: dominantClusterIndex is honest on graph shapes" $
+      TestCase $ do
+        let state = MeaningState ResonanceMed PressNone DepthShallow
+            strategy = ResponseStrategy ShallowResp OpenStance ValidateMove DensityLow
+            edge fromId toId =
+              MeaningEdge fromId toId state state strategy 1 1 0.0 Nothing S.empty
+            graph edges = MeaningGraph edges 1
+            twoIslands = graph
+              [ edge "a" "b", edge "b" "a"
+              , edge "c" "d", edge "d" "c"
+              , edge "d" "e", edge "e" "d"
+              ]
+        assertEqual "empty graph => Nothing"
+          Nothing (dominantClusterIndex emptyMeaningGraph)
+        assertEqual "single edge => Nothing"
+          Nothing (dominantClusterIndex (graph [edge "a" "b"]))
+        -- The spectral splitter currently returns a degenerate split for
+        -- every graph (one side empty — the п.14 landing notes record the
+        -- finding), so the honest dominant of a real two-island graph is
+        -- Nothing today; the placeholder stamped 'Just 0' on every turn.
+        assertEqual "two-island graph => Nothing"
+          Nothing (dominantClusterIndex twoIslands)
   ]
 

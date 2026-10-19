@@ -149,7 +149,6 @@ data TurnReplayTrace = TurnReplayTrace
   , trcParserBackend :: !Text
   , trcParserStatus :: !ParserStatus
   , trcParserDegradationReason :: !(Maybe Text)
-  , trcParserLatencyMs :: !Int
   , trcEmbeddingQuality :: !Text
   , trcClaimAst :: !(Maybe ClaimAst)
   , trcPreSafetyRenderedRaw :: !Text
@@ -303,12 +302,20 @@ data TurnReplayTrace = TurnReplayTrace
     --   of which identity claims were in play.
   , trcEpisodicEncoding :: ![EpisodicId]
     -- ^ P7: EpisodicIds encoded on this turn, empty if no encode was
-    --   performed. Enables replay-time explanation of what was recorded.
+    --   performed. Audit 2026-10-16 п.14: computed as the turn delta
+    --   between the pre-turn and post-turn episodic stores
+    --   ('QxFx0.Memory.Episodic.episodicTurnDelta'), so it lists exactly
+    --   the events this turn appended. Enables replay-time explanation
+    --   of what was recorded.
   , trcEpisodicRetrieval :: !(Maybe (EpisodicQuery, Int))
     -- ^ P7: the query and result count for any episodic retrieval this
     --   turn. @Nothing@ if no retrieval was performed.
   , trcEpisodicForgetting :: !(Int, Maybe EpisodicId)
     -- ^ P7: (count of forgotten events, maybe the last forgotten id).
+    --   Audit 2026-10-16 п.14: from the same turn delta — events newly
+    --   tombstoned by the age window or physically dropped by the
+    --   capacity trim this turn; events already forgotten on earlier
+    --   turns are not re-counted. The id is the largest of them.
     --   Enables replay-time explanation of forgetting that occurred.
   , trcRegimeVersion :: !Int
     -- ^ M5: math version active during this turn (from
@@ -357,16 +364,22 @@ data TurnReplayTrace = TurnReplayTrace
   , trcDoubtScore :: !(Maybe Double)
     -- ^ P8 (WP-D): doubt score in @[0,1]@ from 'tiDoubtScore'. High doubt
     --   (≥ 0.75, doubtSuppressionThreshold) signals uncertainty and can drive routing toward clarifying
-    --   moves or reduce explicitness. @Nothing@ when doubt computation is
-    --   disabled or unavailable.
+    --   moves or reduce explicitness. Audit 2026-10-16 п.14: always
+    --   @Just@ the computed score — the WP-D computation is
+    --   unconditional, including an honest @0.0@; the 'Maybe' remains
+    --   only for backward-compatible decoding of persisted traces
+    --   recorded without the key.
   , trcEpisodicRetrievalCount :: !(Maybe Int)
     -- ^ P8 (WP-B): count of episodes retrieved from 'tiRetrievedEpisodes'.
     --   Enables replay-time inspection of episodic memory influence on
     --   routing decisions. @Nothing@ when episodic recall is inactive.
   , trcContentSaliencyDominantCluster :: !(Maybe Int)
-    -- ^ P8 (WP-C): dominant cluster ID from spectral clustering of the
-    --   meaning graph. Derived from 'csContentSaliency' in 'trcCognitiveSignals'.
-    --   @Nothing@ when content saliency is inactive or no clusters exist.
+    -- ^ P8 (WP-C): the dominant of the two spectral clusters detected on
+    --   the meaning graph ('QxFx0.Core.ContentCluster.dominantClusterIndex'):
+    --   the index of the larger side of the Fiedler split, @Nothing@ when
+    --   there is no non-degenerate split. Audit 2026-10-16 п.14: this
+    --   replaced an unconditional @Just 0@ placeholder; @Nothing@ when
+    --   content saliency is inactive.
   , trcMoodValence :: !(Maybe Double)
     -- ^ P8 (WP-E): mood valence in @[-1,1]@ from 'atmosphereValence' of
     --   'tiField'. Negative = negative affect, positive = positive affect.
@@ -667,7 +680,6 @@ instance FromJSON TurnReplayTrace where
       <*> o .: "trcParserBackend"
       <*> o .: "trcParserStatus"
       <*> o .:? "trcParserDegradationReason"
-      <*> o .: "trcParserLatencyMs"
       <*> o .: "trcEmbeddingQuality"
       <*> o .:? "trcClaimAst"
       <*> o .: "trcPreSafetyRenderedRaw"

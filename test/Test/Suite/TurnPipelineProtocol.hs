@@ -14,7 +14,7 @@ import Control.Monad (foldM, unless)
 import Data.Aeson (encode, decode)
 import Data.IORef (IORef, atomicModifyIORef', newIORef, readIORef)
 import Data.List (sort)
-import Data.Time.Clock (UTCTime(..))
+import Data.Time.Clock (UTCTime(..), diffUTCTime)
 import Data.Time.Calendar (Day(ModifiedJulianDay))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq
@@ -31,6 +31,7 @@ import Test.QuickCheck
   )
 
 import QxFx0.Core.FMAR (FmarMode(..))
+import QxFx0.Core.ContentCluster (dominantClusterIndex)
 import QxFx0.Types
 import QxFx0.Runtime.StateDefaults (emptySelfState, emptySystemState)
 import QxFx0.Types.PropositionType (PropositionType(..))
@@ -110,6 +111,7 @@ import QxFx0.Types.Semantic.ResponsePlan
   )
 import QxFx0.Core.Observability (PhaseTiming(..), TurnMetrics(..))
 import QxFx0.Memory.Episodic (EpisodicStore(..))
+import qualified QxFx0.Memory.Episodic as Episodic
 import QxFx0.Core.InterpretationAdmission
   ( InterpretationAdmissionInput(..)
   , InterpretationAdmissionDecision(..)
@@ -251,7 +253,7 @@ import QxFx0.Self.Deliberation
   , ReconcileRule(..)
   , defaultPlan
   )
-import QxFx0.Self.Salience (Salience(..), SelfVerdict(..), SalienceDriver(..), SalienceVerdict(..))
+import QxFx0.Self.Salience (Salience(..), SelfVerdict(..), SalienceDriver(..), SalienceVerdict(..), SalienceWeights(..), defaultSalienceWeights)
 import qualified QxFx0.Semantic.Embedding as Emb
 import qualified QxFx0.Semantic.Morphology as Morph
 import QxFx0.Semantic.MeaningAtoms
@@ -589,6 +591,13 @@ turnPipelineProtocolTests =
         , testSelfReferentialCollapseDetection
         , testAntiConatusChoiceDetection
         , testAnomalyRenderedInArtifacts
+        -- Audit 2026-10-16 п.14: trace-truthfulness pins
+        , testEpisodicTraceEncodingNamesAppendedEvents
+        , testEpisodicTraceForgettingNamesCapacityEvictions
+        , testDoubtTraceCarriesHonestZero
+        , testRecoveryEvidenceEmptyWithoutCause
+        , testContentSaliencyClusterMatchesDerivedDominant
+        , testPrepareTimelineCarriesMeasuredWindows
         ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
@@ -5331,3 +5340,167 @@ testAnomalyRenderedInArtifacts = TestCase $
       (case tpAnomalyTrace tp of
          Just _ -> True
          Nothing -> False)
+
+-- ---------------------------------------------------------------------------
+-- Audit 2026-10-16 п.14 pins: trace truthfulness
+-- ---------------------------------------------------------------------------
+
+-- | Audit 2026-10-16 п.14: shared minimal state for the trace-truthfulness
+-- pins — the same blanket-satisfying shape 'buildPreparedFixture' assembles
+-- (non-empty session id and morphology).
+tracePinFixtureState :: SystemState
+tracePinFixtureState =
+  emptySystemState
+    { ssSessionId = "fixture-session"
+    , ssMorphology = MorphologyData
+        (Map.singleton "о" "preposition")
+        Map.empty
+        Map.empty
+        Map.empty
+    }
+
+-- | Audit 2026-10-16 п.14: deterministic episodic seed built through the
+-- public 'Episodic.encode' path (ids grow by one per event, starting at 1).
+seedEpisodicStore :: SystemState -> Int -> EpisodicStore
+seedEpisodicStore ss n =
+  case ssEpisodic ss of
+    Nothing ->
+      error "tracePinFixtureState must carry the R-B4 episodic store"
+    Just store ->
+      foldl
+        (\acc i ->
+           Episodic.encode
+             (TurnSeq 0)
+             Episodic.EpisodicUserInput
+             (Episodic.EpisodicUserText (T.pack ("seed-" ++ show i)))
+             []
+             acc)
+        store
+        [1 .. n]
+
+-- | Audit 2026-10-16 п.14: 'trcEpisodicEncoding' must name the events
+-- appended this turn ([4, 5] on a three-event store), not the two OLDEST
+-- records of the store in reverse order ([2, 1] — the old placeholder).
+testEpisodicTraceEncodingNamesAppendedEvents :: Test
+testEpisodicTraceEncodingNamesAppendedEvents = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = tracePinFixtureState
+          { ssEpisodic = Just (seedEpisodicStore tracePinFixtureState 3) }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "да, это верно"
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+    assertEqual "the trace must name the two events this turn appended"
+      [Episodic.EpisodicId 4, Episodic.EpisodicId 5] (trcEpisodicEncoding replayTrace)
+    assertEqual "a small store forgets nothing"
+      (0, Nothing) (trcEpisodicForgetting replayTrace)
+
+-- | Audit 2026-10-16 п.14: capacity evictions are reported as forgotten —
+-- the old placeholder hardcoded (0, Nothing) forever.
+testEpisodicTraceForgettingNamesCapacityEvictions :: Test
+testEpisodicTraceForgettingNamesCapacityEvictions = TestCase $
+  withDeterministicEmbedding $ do
+    let ss0 = tracePinFixtureState
+          { ssEpisodic = Just (seedEpisodicStore tracePinFixtureState 1000) }
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "да, это верно"
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+    assertEqual "the trace must name the two appended events"
+      [Episodic.EpisodicId 1001, Episodic.EpisodicId 1002] (trcEpisodicEncoding replayTrace)
+    assertEqual "the two evicted oldest events must be reported as forgotten"
+      (2, Just (Episodic.EpisodicId 2)) (trcEpisodicForgetting replayTrace)
+
+-- | Audit 2026-10-16 п.14: 'trcDoubtScore' must carry the honest value of
+-- 'tiDoubtScore' — including an honest zero. The old projection returned
+-- 'Nothing' for zero doubt, making a genuinely zero-doubt turn
+-- indistinguishable from a disabled contour. Suppressing all six salience
+-- contribution weights is the natural reachable state that makes the score
+-- exactly 0.0 (all contributions zero, confidence 1.0, driver default).
+testDoubtTraceCarriesHonestZero :: Test
+testDoubtTraceCarriesHonestZero = TestCase $
+  withDeterministicEmbedding $ do
+    let suppressedWeights = defaultSalienceWeights
+          { weightResonance = 0.0
+          , weightAtmosphere = 0.0
+          , weightConsolidation = 0.0
+          , weightCounterfactual = 0.0
+          , weightFieldConfidence = 0.0
+          , weightContentSaliency = 0.0
+          }
+        ss0 = tracePinFixtureState
+          { ssSelfState =
+              (ssSelfState tracePinFixtureState)
+                { selfSalienceWeights = suppressedWeights }
+          }
+    (_ss, ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "да, это верно"
+    assertEqual "scenario setup: the Conatus gate must stay unfired"
+      False (tiConatusGateFired ti)
+    assertEqual "scenario setup: suppressed weights make the honest doubt zero"
+      0.0 (tiDoubtScore ti)
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+    assertEqual "an honest zero doubt must be carried, not dropped"
+      (Just (tiDoubtScore ti)) (trcDoubtScore replayTrace)
+
+-- | Audit 2026-10-16 п.14: without a recovery cause there is no recovery
+-- evidence. The removed placeholder stamped ["runtime_mode=degraded"] on
+-- every degraded-runtime turn that had no cause.
+testRecoveryEvidenceEmptyWithoutCause :: Test
+testRecoveryEvidenceEmptyWithoutCause = TestCase $
+  withDeterministicEmbedding $ do
+    (ss, ti, ts, tp) <- buildPlannedFixture "да, это верно"
+    let renderPlan = planRenderEffectsForRuntime RuntimeDegraded LocalRecoveryDisabled ss ti ts tp
+    renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
+    let turnArtifacts = buildTurnArtifacts ss ti ts tp renderPlan renderResults
+    assertEqual "scenario setup: disabled recovery must not raise a cause"
+      Nothing (taLocalRecoveryCause turnArtifacts)
+    bundle <- finalizeBundleForMetacognition ss ti ts tp turnArtifacts
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+    assertEqual "the cause must stay Nothing" Nothing (trcRecoveryCause replayTrace)
+    assertEqual "no cause means no evidence"
+      [] (trcRecoveryEvidence replayTrace)
+
+-- | Audit 2026-10-16 п.14: 'trcContentSaliencyDominantCluster' must equal
+-- the derived dominant of the post-turn meaning graph (the old field was an
+-- unconditional 'Just 0' placeholder). The fixture graph carries no
+-- non-degenerate spectral split, so the honest value is 'Nothing'.
+testContentSaliencyClusterMatchesDerivedDominant :: Test
+testContentSaliencyClusterMatchesDerivedDominant = TestCase $
+  withDeterministicEmbedding $ do
+    (_ss, _ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState tracePinFixtureState "что такое свобода"
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+        derived = dominantClusterIndex (ssMeaningGraph (fpbNextSs bundle))
+    assertEqual "the field must equal the derived dominant of the post-turn graph"
+      derived (trcContentSaliencyDominantCluster replayTrace)
+    assertEqual "scenario setup: this fixture carries no non-degenerate spectral split"
+      Nothing derived
+
+-- | Audit 2026-10-16 п.14: the prepare-timeline phases must be real anchored
+-- measurements. The old implementation stamped the turn's t0 into every
+-- start/end (all windows zero); with a 15ms delaying interpreter every
+-- effect window must be at least 10ms wide.
+testPrepareTimelineCarriesMeasuredWindows :: Test
+testPrepareTimelineCarriesMeasuredWindows = TestCase $
+  withDeterministicEmbedding $ do
+    let delayingPio =
+          mkTestPipelineIO
+            defaultTestPipelineConfig
+              { tpcInterpreter =
+                  \request -> threadDelay 15000 >> testProtocolInterpreter request
+              }
+        preparePlan = planPrepareEffects False tracePinFixtureState "что такое свобода" testEpochZero
+    prepareResults <- resolvePrepareEffects delayingPio preparePlan
+    let ti = buildTurnInput tracePinFixtureState "request-timeline" "session-timeline" preparePlan prepareResults
+        phases = tmPhases (tiMetrics ti)
+        effectNames = ["embedding", "nix_check", "consciousness", "intuition", "api_health"]
+        windows =
+          [ diffUTCTime (ptEnd p) (ptStart p)
+          | name <- effectNames
+          , p <- phases
+          , ptPhase p == name
+          ]
+        anchoredStarts = [ptStart p | p <- phases, ptPhase p == "prepare_static"]
+    assertEqual "the timeline must anchor at the turn's captured t0"
+      [testEpochZero] anchoredStarts
+    assertEqual "all five effect windows must be present exactly once"
+      (length effectNames) (length windows)
+    assertBool
+      ("every effect window must be a real measurement (>= 10ms with a 15ms interpreter): "
+        ++ show windows)
+      (all (>= 0.010) windows)

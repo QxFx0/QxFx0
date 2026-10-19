@@ -236,7 +236,6 @@ passingTrace = TurnReplayTrace
   , trcParserBackend = "gf"
   , trcParserStatus = PsOk
   , trcParserDegradationReason = Nothing
-  , trcParserLatencyMs = 10
   , trcEmbeddingQuality = "high"
   , trcClaimAst = Nothing
   , trcPreSafetyRenderedRaw = "Свобода предполагает выбор."

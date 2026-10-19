@@ -12,6 +12,7 @@ module QxFx0.Memory.Episodic
   , EpisodicQuery (..)
   , ForgettingReason (..)
   , ReuseAnnotation (..)
+  , EpisodicTurnDelta(..)
   , emptyIndex
   , rebuildIndex
   , encode
@@ -21,6 +22,7 @@ module QxFx0.Memory.Episodic
   , forget
   , enforceCapacity
   , enforceAgeWindow
+  , episodicTurnDelta
   , episodicCapacity
   , episodicWindow
   ) where
@@ -152,3 +154,47 @@ enforceAgeWindow currentTurn store =
                             && null (eeLinked e))
                         (foldr (:) [] (esEvents store))
   in foldl' (\s e -> forget (eeId e) ForgetByAge s) store toForget
+
+-- | Audit 2026-10-16 п.14: diff two episodic stores across one turn.
+--
+-- This is the honest source of the @trcEpisodicEncoding@ and
+-- @trcEpisodicForgetting@ trace fields (the previous implementation read
+-- the two OLDEST events and a hardcoded @(0, Nothing)@ instead).
+--
+-- * encoded ids = events present in the next store whose ids were absent
+--   from the previous store (exactly what this turn's @encode@ calls
+--   appended), in store order;
+-- * forgotten = events that became forgotten this turn — newly tombstoned
+--   by 'enforceAgeWindow' (in @esForgotten@ now, not before) plus events
+--   physically dropped from @esEvents@ by 'enforceCapacity', minus events
+--   already forgotten on earlier turns (they are not re-counted);
+-- * last forgotten id = the largest 'EpisodicId' among them.
+--
+-- Total and deterministic; a 'Nothing' side yields an empty delta.
+episodicTurnDelta :: Maybe EpisodicStore -> Maybe EpisodicStore -> EpisodicTurnDelta
+episodicTurnDelta prev next =
+  case (prev, next) of
+    (Just p, Just n) ->
+      let prevEvents = foldr (:) [] (esEvents p)
+          nextEvents = foldr (:) [] (esEvents n)
+          prevIds = HS.fromList (map eeId prevEvents)
+          nextIds = HS.fromList (map eeId nextEvents)
+          encoded = [ eeId e | e <- nextEvents, not (HS.member (eeId e) prevIds) ]
+          dropped = [ eeId e | e <- prevEvents, not (HS.member (eeId e) nextIds) ]
+          newlyTombstoned = HS.toList (esForgotten n `HS.difference` esForgotten p)
+          counted =
+            HS.toList
+              (HS.fromList (newlyTombstoned ++ dropped) `HS.difference` esForgotten p)
+      in EpisodicTurnDelta
+           { etdEncodedIds = encoded
+           , etdForgottenCount = length counted
+           , etdLastForgottenId =
+               case counted of
+                 [] -> Nothing
+                 _  -> Just (maximum counted)
+           }
+    _ -> EpisodicTurnDelta
+           { etdEncodedIds = []
+           , etdForgottenCount = 0
+           , etdLastForgottenId = Nothing
+           }
