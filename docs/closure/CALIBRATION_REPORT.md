@@ -4364,6 +4364,106 @@ pre-registered on entry.
   pinned at the exposed boundaries (`fpbNextSs`, `ssMetacognition`,
   `mcRecentEvaluations`), matching the п.17 detector-pin discipline.
 
+## (10) Trace truthfulness: каждое поле — честно или удалено (аудит п.14)
+
+- **Defect (re-verified)**: семь мест ставили заполнители без данных:
+  `trcEpisodicEncoding` возвращал две САМЫЕ СТАРЫЕ записи стора в
+  обратном порядке; `trcEpisodicForgetting` был захардкожен
+  `(0, Nothing)`; `trcContentSaliencyDominantCluster` — `Just 0` (сам
+  ADR-0046 помечал это как placeholder, «deferred to Phase II»);
+  `trcParserLatencyMs` — литерал `0`; prepare-таймлайн
+  (`PrepareTimeline`) штамповал все пять эффект-окон как `t0/t0`;
+  `trcDoubtScore` давал `Nothing` при честном нуле;
+  `trcRecoveryEvidence` показывал `["runtime_mode=degraded"]` без
+  cause.
+- **Rule (locked)**: поле либо честно вычисляется, либо удаляется;
+  заполнитель без данных не ставится. Ниже — вердикт по каждому из
+  семи; реплей-конверт не бампается (удаляемый ключ безопасен для
+  старых конвертов: ручной парсер игнорирует неизвестные ключи).
+- **`trcEpisodicEncoding` — честно вычисляется**. Новый чистый
+  дельта-морфизм `episodicTurnDelta :: Maybe EpisodicStore -> Maybe
+  EpisodicStore -> EpisodicTurnDelta` (`QxFx0.Memory.Episodic`; тип —
+  в `QxFx0.Types.Memory.Episodic`): ids = события, появившиеся в
+  next-сторе и отсутствующие в prev-сторе, в порядке стора (ровно те
+  записи, что закодированы на этом ходу). `buildTurnProjection`
+  получает дельту аргументом; вычисляется в единственном месте, где
+  обе стороны в области видимости, — `buildFinalizePrecommit`
+  (prev = `systemState`, next = `nextSystemState` после всех
+  post-steps).
+- **`trcEpisodicForgetting` — честно вычисляется** из той же дельты:
+  count = события, забытые на этом ходу = новые tombstone-ы окна
+  возраста ∪ физически вытесненные ёмкостью, минус уже забытые ранее
+  (повторно не считаются); «last» = максимальный `EpisodicId` из них.
+  В нормальном режиме это tombstone-ы окна 50 ходов; при переполнении
+  — вытеснение ёмкостью.
+- **`trcContentSaliencyDominantCluster` — честно вычисляется**. Новый
+  чистый `dominantClusterIndex :: MeaningGraph -> Maybe Int`
+  (`QxFx0.Core.ContentCluster`): индекс большей из двух
+  детектированных спектральных клад («dominant = большая по
+  составу»; ничья → 0; `NoClusters`, пустой граф и вырожденный сплит
+  с пустой стороной → `Nothing`). Projection читает
+  `ssMeaningGraph nextSs`. Placeholder-пометка в ADR-0046 амендируется
+  строкой о закрытии.
+- **`trcParserLatencyMs` — удаляется**. Честного источника нет:
+  парсер — чистая стадия внутри `buildPrepareEffectPlan`; отдельного
+  окна измерения не существует, а граница всего plan-build — это не
+  «latency парсера» (это была бы новая ложь). Обязательный JSON-ключ
+  убирается из ручного `FromJSON`; generic `ToJSON` перестаёт его
+  писать; старые конверты с ключом декодируются. Шесть фикстур
+  обновляются (StatePersistence, ReplayDeterminism, TraceAnalysis,
+  RuntimeInfrastructure ×2, M6FeltGate).
+- **prepare-таймлайн — честно измеряется**. `resolvePrepareEffects`
+  измеряет реальные окна (форсирование `pepStatic` и каждую из пяти
+  конкурентных эффект-резолюций) и штампует `t0 + измеренная_дельта`,
+  где `t0 = pepCapturedCurrentTime` — единственный часовой источник
+  хода (продакшн-`t0` приходит через `TurnReqCurrentTime`; в тестах
+  он фиксирован); `ptlStartTime` остаётся `t0`. Прежнее поведение
+  давало нулевые длительности всех пяти фаз в метриках.
+- **`trcDoubtScore` — честно вычисляется**: всегда
+  `Just (tiDoubtScore ti)` (дозор WP-D не флаг-гейтед; состояние
+  «disabled or unavailable» из доки не существует). Тип остаётся
+  `Maybe` ради декодирования старых конвертов без ключа; doc-блок
+  поля обновляется.
+- **`trcRecoveryEvidence` — честно вычисляется**: ветка
+  `DegradedRuntime → ["runtime_mode=degraded"]` удаляется; без cause —
+  `(Nothing, Nothing, [])`. Дополнительно (живой потребитель):
+  `detectRecoveryAnomaly` (`TraceAnalysis`) получает guard
+  `evidence_without_cause` — регрессия становится видимой анализу, а
+  не только глазам.
+- **Bar (pins)**: чистые пины `episodicTurnDelta` в
+  `Test.Suite.MemoryEpisodic` (кодирование = новые ids; окно возраста
+  → `(3, Just 3)`; ёмкость: стор на 1000 + 2 записи → `(2, Just 2)`;
+  вытесненное-уже-забытое повторно не считается; нулевой ход →
+  `(0, Nothing)`); пины `dominantClusterIndex` в
+  `Test.Suite.ContentSalience` (крафченые двух-островные графы с
+  зафиксированными значениями; пустой/вырожденный граф → `Nothing`);
+  сквозные пины в `Test.Suite.TurnPipelineProtocol`: стор из 3
+  сид-событий → `trcEpisodicEncoding = [4, 5]` (старый код давал
+  `[2, 1]`), стор на 1000 → `trcEpisodicForgetting = (2, Just 2)`
+  (старый — `(0, Nothing)`), чистый фиксчер → `trcDoubtScore =
+  Just (tiDoubtScore ti)`, локальное восстановление выключено под
+  degraded-режимом → evidence `[]` при cause `Nothing` (старый —
+  `["runtime_mode=degraded"]`), поле кластера согласовано с
+  `dominantClusterIndex (ssMeaningGraph nextSs)`; таймлайн-пин с
+  задерживающим интерпретатором (15 мс на эффект) — все пять
+  длительностей ≥ 10 мс, `ptlStartTime == t0` (старый код — нули);
+  пины `TraceAnalysis`: cause `Nothing` + evidence `["x"]` →
+  аномалия `evidence_without_cause` (старый анализ — `Nothing`).
+- **Red checks**: заглушка каждого фикса ломает соответствующий пин
+  (ожидаемые «старые» значения перечислены выше); полный прогон
+  красных чеков — до коммита кода.
+- **Not touched**: типы P8-полей и их флаговая семантика сверх
+  перечисленного; источник `t0` (`TurnReqCurrentTime`); API и
+  константы `enforceCapacity`/`enforceAgeWindow`/`episodicWindow`;
+  семантика парсера (`parserStatus` и пороги); формат метрик-лога;
+  версия реплей-конверта.
+- **Acknowledged behavior deltas** (матрица — гейт): в новых трассах
+  нет ключа `trcParserLatencyMs`; пять prepare-фаз получают ненулевые
+  длительности; `trcDoubtScore`/`trcEpisodicEncoding`/
+  `trcEpisodicForgetting`/`trcContentSaliencyDominantCluster`/
+  `trcRecoveryEvidence` меняют значения на честные; фикстуры шести
+  сайтов обновлены. Полная матрица — на лендинге батча 3.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
