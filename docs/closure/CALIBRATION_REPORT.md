@@ -4464,6 +4464,79 @@ pre-registered on entry.
   `trcRecoveryEvidence` меняют значения на честные; фикстуры шести
   сайтов обновлены. Полная матрица — на лендинге батча 3.
 
+## (11) Phantom `CommitmentId 0` и леджер противоречий (аудит п.18)
+
+- **Defect (re-verified)**: `Finalize/State.hs` (актуальные строки
+  ~722 и ~739; ревизия аудитора — 678/695) дважды строил new-side id
+  как `fromMaybe (CommitmentId 0) mAnchorCid`. В `store3` это
+  ЗАПИСЫВАЛО в леджер `scsContradictions` по паре `(engagedCid,
+  CommitmentId 0)` на каждый engaged-коммитмент, когда ни
+  поверхностный коммитмент, ни якорь не закоммичены (suppress → claim
+  в карантине, якоря нет): правая сторона пары ссылается на id,
+  которого в сторе не существует (ids начинаются с 1). Во втором
+  сайте (фильтр `(/= newCid)` перед revision-решениями) sentinel не
+  писал, но был тем же фантомным литералом; де-факто фильтр — no-op
+  (retrieval видит стор ДО коммита этого хода, новый cid не может
+  попасть в `ceEngaged`), т.е. это гигиена без изменения семантики.
+  Леджер `scsContradictions` — write-only: ни одна рантайм-ветвь его
+  не читает (только сериализация и тесты).
+- **Проба (до фикса)**: в юнит-фикстурах TPP `ceContradicted` не
+  достигается естественно (урезанная морфология фикстур не рождает
+  Contradiction-атомы; челлендж-фразы М6 дают `EngagedOnly` +
+  `CsaSuppress`). Поэтому сквозные пины строятся оверрайдом
+  `tpCommitmentEngagement` (+ засеянный стор), а не подбором фразы.
+- **Пропуск вместо фантома (решение)**. Логика пар выносится в
+  чистый морфизм `recordContradictionPairs :: Maybe CommitmentId ->
+  Maybe CommitmentId -> ContradictionKind -> TurnSeq -> [CommitmentId]
+  -> SemanticCommitmentStore -> (SemanticCommitmentStore, Int)`
+  (`Semantic/Commitment.hs`): `newCid = mSurfaceCid <|> mAnchorCid`;
+  `Nothing` → стор value-unchanged, счётчик 0 («пропуск с
+  трейс-пометкой» — первая опция регистра); `Just c` → пары
+  `(engaged \ {c}, c)`, счётчик = число записанных пар. `State.hs`
+  вызывает морфизм ровно один раз; `buildNextSystemState` возвращает
+  счётчик наружу (5-й элемент кортежа).
+- **Честный фильтр**. Строка 739: `maybe` по `mSurfaceCid <|>
+  mAnchorCid` вместо sentinel-литерала. Семантика идентична (см.
+  выше); пина, различающего до/после, не существует — отмечено
+  честно; путь ревизий покрывают существующие тесты.
+- **Трейс-пометка**. Новое поле `trcContradictionPairs :: !Int` в
+  `TurnReplayTrace` (рядом с `trcCommitmentContradicted`; ручной
+  `FromJSON` — `.!= 0`, старые конверты декодируются; бамп версии
+  конверта не нужен). Семантика: число ПАР, реально записанных в
+  леджер этим ходом; ревизионные self-события `(cid, cid)` не
+  считаются (haddock). Инвариант: contradicted=True и нет new-side id
+  ⇒ 0 — пропуск виден; старый код молча писал |engaged| пар.
+- **Леджер — документированная write-only диагностика** (вторая
+  опция регистра): haddock на `scsContradictions` фиксирует
+  append-only форензик-назначение, писателей (`contradict` →
+  engaged↔new-пары; `applyRevisionDecision` → self-события ревизий),
+  отсутствие рантайм-читателей по дизайну и наблюдаемость per-turn
+  записи через `trcContradictionPairs`. Рантайм-ветку-читателя не
+  изобретаем.
+- **Пины**:
+  - чистые (`CommitmentQuarantine`; морфизм): нет new-side id ⇒ стор
+    value-unchanged + 0 (ред-чек: старый путь писал |engaged| пар с
+    `ceRight = CommitmentId 0`); surface-id ⇒ все engaged ≠ newCid;
+    anchor-fallback; приоритет surface над anchor; `engaged = [newCid]`
+    ⇒ 0 пар;
+  - сквозные (`TurnPipelineProtocol`): (f) contradicted + поверхность
+    без claim/anchor ⇒ леджер без новых событий,
+    `trcContradictionPairs == 0`, `trcCommitmentContradicted == True`;
+    (g) contradicted + закоммиченный claim ⇒ пары с существующим
+    new-side id, id 0 в леджере отсутствует, счётчик трейса == числу
+    новых пар;
+  - JSON: конверт без ключа `trcContradictionPairs` декодируется в 0.
+- **Red checks**: реверт морфизма к `fromMaybe (CommitmentId 0)` даёт
+  ровно ожидаемые падения skip-пинов с фантомными парами; до коммита
+  кода.
+- **Not touched**: семантика ревизионных self-событий; детекция
+  engagement (`detectCommitmentEngagement`) и admission; формат
+  `ContradictionEvent`; версия реплей-конверта; пороги.
+- **Acknowledged behavior deltas** (матрица — гейт): на skip-ходах
+  леджер больше не растёт на фантомные пары; в трассах появляется
+  ключ `trcContradictionPairs`; шесть фикстурных литералов обновлены.
+  Полная матрица — на лендинге батча 3.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
