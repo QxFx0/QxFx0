@@ -4537,6 +4537,114 @@ pre-registered on entry.
   ключ `trcContradictionPairs`; шесть фикстурных литералов обновлены.
   Полная матрица — на лендинге батча 3.
 
+## (12) State/schema малые (аудит п.21/20/23/22)
+
+Группа из четырёх малых пунктов регистра (порядок фиксов — как в
+регистре); один код-коммит на группу, пины — в
+`Test.Suite.RuntimeInfrastructure` (unit+fast, реальные файлы БД).
+
+### (12a) `geometricMetrics`: читается, не пишется (п.21)
+
+- **Defect (re-verified)**: `Runtime/StateDefaults.hs` — `FromJSON`
+  читает `"geometricMetrics"` (…:276,
+  `.!= emptyIntentClassifierMetrics`), а `ToJSON` (instance, …:125–205)
+  ключ НЕ пишет. Рантайм поле ведёт (`Finalize/State.hs:907`,
+  `recordABValidation`), но при персистенции оно теряется: после
+  save→load счётчики A/B-валидации сбрасываются в пустые.
+- **Fix**: строка `, "geometricMetrics" .= ssGeometricMetrics ss` в
+  `ToJSON SystemState`.
+- **Решения**: имя ключа совпадает с читателем; бамп схемы НЕ
+  делаем (аддитивный опциональный ключ: старые бинари игнорируют
+  незнакомый ключ, новые дефолтят отсутствующий — прецедент
+  аддитивных trace-ключей п.14/18).
+- **Pins**: (i) ненулевые метрики (собранные штатным
+  `recordABValidation`) переживают encode→decode SystemState;
+  (ii) legacy-JSON без ключа декодируется в
+  `emptyIntentClassifierMetrics`.
+- **Red check**: реверт ToJSON-строки → (i) падает (поле
+  сбрасывается в дефолт).
+- **Not touched**: читатель, `emptySystemState`,
+  `recordABValidation`.
+
+### (12b) Чтение состояния через `BEGIN IMMEDIATE` (п.20)
+
+- **Defect (re-verified)**: `Bridge/StatePersistence.hs:243` —
+  `loadStateWithVersion` оборачивает ЧТЕНИЕ в
+  `withImmediateTransaction` (`BEGIN IMMEDIATE;`, …:154–174):
+  читатель берёт write-лок и получает BUSY при любом незакоммиченном
+  писателе (перф/конкурентность-фронт — отдельно, здесь только
+  класс лока).
+- **Fix**: новый `withDeferredTransaction` (`BEGIN DEFERRED;` →
+  `COMMIT;`; rollback best-effort при исключении), используется
+  ТОЛЬКО в `loadStateWithVersion`. Записи (`saveState` :109,
+  `rollbackCommittedTurn` :141) остаются `IMMEDIATE`.
+- **Решения**: WAL-читатель в deferred-tx получает консистентный
+  снапшот (blob + revision одним чтением) — семантика чтения не
+  меняется, меняется только класс лока.
+- **Pin**: сохранённое состояние + вторая raw-коннекция держит
+  незакоммиченную `BEGIN IMMEDIATE` + INSERT → `loadState` через
+  `Runtime.withRuntimeDb` возвращает сохранённое состояние (старый
+  код: BUSY-диагностика `tx_begin_failed`).
+- **Red check**: реверт на IMMEDIATE → пин падает `tx_begin_failed`.
+- **Not touched**: CAS/revision-бампер, save/rollback-пути.
+
+### (12c) Схемные пробы сваливают ошибки в «объект отсутствует» (п.23)
+
+- **Defect (re-verified)**: `Bridge/SQLite/SchemaContract.hs` —
+  `tableExists`/`columnMissing`/`indexExists`/`triggerExists`/
+  `ftsTableExists` при prepare-failure печатают в stderr и
+  возвращают «нет» (`tableExists` :264 → `False`; `columnMissing`
+  :276 → `True`); `readSchemaVersionRow` (:229) при prepare-failure →
+  `Nothing` → «версия пуста». Следствие: битый файл БД
+  классифицируется как `SchemaContractFreshBootstrapable`,
+  `readSchemaVersion` врёт `SchemaVersionMissingTable`, и
+  bootstrap-решения строятся на ложном факте.
+- **Fix**: трёхзначный `ProbeOutcome = ProbeFound | ProbeNotFound |
+  ProbeFailed Text` во всех пробах; `readSchemaVersion` получает
+  конструктор `SchemaVersionProbeError Text`; `isV1Shape`/`isV2Shape`
+  прокидывают ошибку (`Either Text Bool`) вместо `False`;
+  `ensureSchemaMigrations` при ошибке пробы падает структурной
+  ошибкой `schema_probe_failed` ДО любых штамповок/миграций/сидинга;
+  `runMigrationStep` при ошибке пробы не выполняет `ALTER`;
+  `checkSchemaContract` мапит ошибку в существующий
+  `SchemaContractQueryFailed` (Health уже трактует non-Ok как
+  нездоровый).
+- **Pins**: (i) мусорный файл БД («not a database») →
+  `tableExists` = `ProbeFailed`, `columnMissing` = `ProbeFailed`,
+  `readSchemaVersion` = `SchemaVersionProbeError` (старое:
+  `False`/`True`/`MissingTable` — ложные факты); (ii)
+  `checkSchemaContract` на мусорном файле = `SchemaContractQueryFailed`
+  (старое: `FreshBootstrapable` — «повреждение = свежая БД»);
+  (iii) bootstrap на БД с несовместимой таблицей `schema_version`
+  (нет колонки `version`) → `schema_probe_failed`, до штампа/сидинга
+  (старое: падение позже с `schema_version_insert`); в обеих версиях
+  проверяется, что строка версии не появилась и сид-таблицы пусты.
+- **Red check**: реверт проб → (i)/(ii) падают ложными фактами.
+- **Not touched**: списки таблиц/колонок/индексов контракта; текст
+  `renderSchemaContractResult` для старых конструкторов.
+
+### (12d) `insertSchemaVersion` глотает ошибки; rollback после commit (п.22)
+
+- **Defect (re-verified)**: `Bootstrap.hs:192–202` — результаты
+  `bindInt`/`bindText`/`step` отбрасываются (`_ <-`), `finalize` под
+  `tryQxFx0`: INSERT может не состояться, функция «успешна».
+  `runPendingMigrations` (:221) держит `finally (rollbackOnException
+  db)` — ROLLBACK выполняется и после успешного COMMIT.
+- **Fix**: проверка bind/step; при любой ошибке —
+  `schema_version_insert` с деталью; finalize best-effort ровно один
+  раз; rollback — только при незакоммиченной транзакции (флаг
+  `committedRef`).
+- **Pins**: (i) прямая: таблица `schema_version` с неудовлетворимой
+  NOT NULL-колонкой → `insertSchemaVersion` бросает
+  `schema_version_insert` (старое: молчаливый «успех», строки нет);
+  (ii) миграционная атомарность: v1-БД + та же ловушка →
+  `ensureSchemaMigrations` падает И ALTER'ы откатаны
+  (`turn_quality.warranted_mode` отсутствует) — старое: COMMIT
+  сохранял ALTER'ы.
+- **Red check**: реверт — (i) не бросает, (ii) колонка остаётся.
+- **Not touched**: `resolveMigrationSteps`, sequence-пути
+  `ensureSchemaMigrations`, конструкторы `SchemaContractResult`.
+
 ---
 
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
