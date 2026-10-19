@@ -5,8 +5,10 @@ module QxFx0.Semantic.Commitment
   , promoteMatchingQuarantine
   , revise
   , contradict
+  , recordContradictionPairs
   ) where
 
+import Control.Applicative ((<|>))
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import Data.Text (Text)
@@ -114,3 +116,33 @@ contradict
 contradict left right kind ts store =
   let event = ContradictionEvent left right kind ts
   in store { scsContradictions = event : scsContradictions store }
+
+-- | Audit 2026-10-16 (п.18): record the contradiction pairs of a
+-- contradicted turn.
+--
+-- The new side of every pair must be a commitment that actually exists in
+-- the store: the surface commitment when the turn's claim was admitted,
+-- else the committed anchor observation.  When neither exists there is
+-- nothing to pair against — the turn is skipped (store unchanged, count
+-- 0) instead of writing the old phantom pair against the non-existent
+-- 'CommitmentId 0'.
+--
+-- Returns the updated store and the number of pairs appended; the replay
+-- trace surfaces the count, so the designed skip is visible as
+-- contradicted = True with a count of 0.
+recordContradictionPairs
+  :: Maybe CommitmentId  -- ^ admitted surface commitment, if any
+  -> Maybe CommitmentId  -- ^ committed anchor observation, if any
+  -> ContradictionKind
+  -> TurnSeq
+  -> [CommitmentId]      -- ^ engaged commitments of the turn
+  -> SemanticCommitmentStore
+  -> (SemanticCommitmentStore, Int)
+recordContradictionPairs mSurface mAnchor kind ts engaged store =
+  case mSurface <|> mAnchor of
+    Nothing -> (store, 0)
+    Just newCid ->
+      let recorded = filter (/= newCid) engaged
+      in ( foldr (\engagedCid s -> contradict engagedCid newCid kind ts s) store recorded
+         , length recorded
+         )

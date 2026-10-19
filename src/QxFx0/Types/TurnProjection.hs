@@ -350,6 +350,14 @@ data TurnReplayTrace = TurnReplayTrace
    , trcCommitmentContradicted :: !Bool
     -- ^ SUBJECT-SEAM-1: True when the turn both engaged a held commitment
     --   AND carried a Contradiction atom.
+   , trcContradictionPairs :: !Int
+    -- ^ Audit 2026-10-16 (п.18): number of (engaged ↔ new-side)
+    --   contradiction pairs appended to the store's contradiction
+    --   ledger this turn.  Zero when no pair was recorded — including
+    --   a contradicted turn with no existing new-side commitment id,
+    --   where the old code wrote a phantom pair against
+    --   'CommitmentId 0' (the skip is visible here).  Revision
+    --   self-events are not counted.
     , trcCommitmentFamilyHint :: !(Maybe CanonicalMoveFamily)
      -- ^ SUBJECT-SEAM-1: family hint derived from commitment engagement
      --   (e.g. CMReflect when contradicted). Nothing when no engagement.
@@ -764,6 +772,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .: "trcCommitmentStoreDecision"
       <*> o .: "trcCommitmentEngaged"
       <*> o .: "trcCommitmentContradicted"
+      <*> o .:? "trcContradictionPairs" .!= 0
       <*> o .:? "trcCommitmentFamilyHint"
       <*> o .: "trcCommitmentMatchKind"
       <*> o .: "trcCognitiveSignals"

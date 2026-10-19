@@ -156,6 +156,7 @@ replayTraceCompatibilityTests =
   , testReplayTraceLegacyBareRoundTripPreservesDreamLists
   , testReplayTraceRejectsUnknownEnvelopeVersion
   , testReplayTraceLegacyBareRequiresMandatoryFields
+  , testReplayTraceLegacyBareDefaultsContradictionPairs
   ]
 
 statePersistenceProductionBoundaryTests :: [Test]
@@ -378,6 +379,19 @@ testReplayTraceLegacyBareRequiresMandatoryFields = TestCase $ do
   case decodePersistedReplayTrace bytes of
     Left _ -> pure ()
     Right _ -> assertFailure "legacy compatibility must not default mandatory trace fields"
+
+testReplayTraceLegacyBareDefaultsContradictionPairs :: Test
+testReplayTraceLegacyBareDefaultsContradictionPairs = TestCase $ do
+  let trace = fixtureReplayTrace "legacy_contradiction_pairs" 0.6 PsOk Nothing
+      withoutPairs = case Aeson.toJSON trace of
+        Object objectValue -> Object (KeyMap.delete "trcContradictionPairs" objectValue)
+        value -> value
+      bytes = BL.toStrict (Aeson.encode withoutPairs)
+  case decodePersistedReplayTrace bytes of
+    Left err -> assertFailure ("legacy bare replay trace must decode: " <> err)
+    Right decoded ->
+      assertEqual "audit п.18: the pair count must default to 0 on legacy envelopes"
+        0 (trcContradictionPairs decoded)
 
 assertDreamListsPreserved :: TurnReplayTrace -> TurnReplayTrace -> Assertion
 assertDreamListsPreserved expected actual = do
@@ -1663,6 +1677,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
    , trcCommitmentStoreDecision = CsaAdmitCanonical
     , trcCommitmentEngaged = 0
     , trcCommitmentContradicted = False
+    , trcContradictionPairs = 0
     , trcCommitmentMatchKind = NoMatch
     , trcCommitmentFamilyHint = Nothing
    , trcCognitiveSignals = emptyCognitiveSignals

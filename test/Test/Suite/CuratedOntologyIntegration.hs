@@ -43,7 +43,7 @@ testCuratedAndOntologyPersistence = TestLabel "Curated and ontology persistence 
         consec = 0
         feedback = False
 
-    let (nextSs, _, _, _) = buildNextSystemState
+    let (nextSs, _, _, _, _) = buildNextSystemState
                               (\_ h -> h) -- history
                               Nothing      -- claim
                               defaultControlAAblation

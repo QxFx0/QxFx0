@@ -327,6 +327,7 @@ passingTrace = TurnReplayTrace
   , trcCommitmentStoreDecision = CsaAdmitCanonical
   , trcCommitmentEngaged = 0
   , trcCommitmentContradicted = False
+  , trcContradictionPairs = 0
   , trcCommitmentMatchKind = NoMatch
   , trcCommitmentFamilyHint = Nothing
   , trcCognitiveSignals = emptyCognitiveSignals

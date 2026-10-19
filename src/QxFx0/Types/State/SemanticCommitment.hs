@@ -117,6 +117,17 @@ data SemanticCommitmentStore = SemanticCommitmentStore
   , scsQuarantine :: !(HashMap CommitmentId (FactualClaimPayload, TurnSeq))
   , scsLineage    :: !(HashMap CommitmentId [LineageEvent])
   , scsContradictions :: ![ContradictionEvent]
+    -- ^ Append-only forensic ledger of contradiction events.
+    --
+    --   Audit 2026-10-16 (п.18): write-only by design — no runtime
+    --   branch reads it; it exists for forensics (persistence,
+    --   serialization, tests).  Writers: 'contradict' via
+    --   'recordContradictionPairs' records engaged ↔ new-side pairs
+    --   (only against ids that exist in the store — never the old
+    --   phantom 'CommitmentId 0'), and 'applyRevisionDecision'
+    --   records revised-commitment self-events.  Per-turn pair
+    --   recording is observable in the replay trace via
+    --   'trcContradictionPairs'.
   , scsNextId     :: !Int
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)

@@ -171,7 +171,20 @@ import QxFx0.Types.Anomaly
   , AnomalySurface(..)
   , AnomalyTrace(..)
   )
-import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
+import QxFx0.Types.State.SemanticCommitment
+  ( TurnSeq(..)
+  , FactualClaimPayload(..)
+  , CommitmentOrigin(..)
+  , CommitmentId(..)
+  , CommitmentEngagement(..)
+  , MatchKind(..)
+  , ContradictionEvent(..)
+  , SemanticCommitmentStore(..)
+  , emptySemanticCommitmentStore
+  )
+import QxFx0.Semantic.Commitment (commitObservation)
+import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
+import qualified Data.HashMap.Strict as HashMap
 import QxFx0.Core.TurnPipeline.Route.Anomaly
   ( detectAnomaly
   , detectAntiConatusChoice
@@ -353,7 +366,7 @@ import QxFx0.Learning.Guardrails
 import Test.Support (withEnvVar)
 -- Authoritative-turn finalize fixture (forces canonical artifacts) for the
 -- governed perspective-commit path; the other fixtures here are local copies.
-import Test.Support.TurnPipelineFixtures (buildAuthoritativePerspectiveFinalizeFixture)
+import Test.Support.TurnPipelineFixtures (buildAuthoritativePerspectiveFinalizeFixture, forceAuthoritativeTurnArtifacts)
 import Test.Support.QuickCheckConfig (qcArgs)
 
 -- | Match both plain and structured PersistenceError variants.
@@ -598,6 +611,9 @@ turnPipelineProtocolTests =
         , testRecoveryEvidenceEmptyWithoutCause
         , testContentSaliencyClusterMatchesDerivedDominant
         , testPrepareTimelineCarriesMeasuredWindows
+        -- Audit 2026-10-16 п.18: commitment-ledger pins
+        , testContradictionSkipLeavesNoPhantomPair
+        , testContradictionPairRecordedAgainstExistingId
         ]
 
 testPrepareEffectPlanDeterministicProperty :: Test
@@ -5504,3 +5520,86 @@ testPrepareTimelineCarriesMeasuredWindows = TestCase $
       ("every effect window must be a real measurement (>= 10ms with a 15ms interpreter): "
         ++ show windows)
       (all (>= 0.010) windows)
+
+-- | Audit 2026-10-16 (п.18): a contradicted turn with no existing
+-- new-side commitment id (claim suppressed, no anchor) must skip the
+-- ledger pair — the old code wrote a phantom pair against the
+-- non-existent 'CommitmentId 0'. The designed skip stays visible as
+-- contradicted = True with a pair count of 0.
+testContradictionSkipLeavesNoPhantomPair :: Test
+testContradictionSkipLeavesNoPhantomPair = TestLabel "п.18: suppressed challenge skips the pair (no phantom CommitmentId 0)" $ TestCase $
+  withDeterministicEmbedding $ do
+    let (storeSeed, seedCid) = commitObservation p18SeedClaim emptySemanticCommitmentStore
+        startSs = tracePinFixtureState { ssSemanticCommitments = Just storeSeed }
+    (ss, ti, ts, tp0, ta) <- buildRenderedFixtureWithState startSs "а что если свобода — это иллюзия?"
+    let tp = tp0 { tpCommitmentEngagement = CommitmentEngagement [seedCid] True ContradictedStrong }
+        precommitPlan = planFinalizePrecommit ss ti ts tp ta
+    precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+    bundle <- buildFinalizePrecommit
+                (pipelineUpdateHistory testProtocolPipelineIO)
+                (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                defaultControlAAblation
+                ss ti ts tp ta precommitPlan precommitResults
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+        storeAfter = maybe emptySemanticCommitmentStore id (ssSemanticCommitments (fpbNextSs bundle))
+    assertEqual "scenario setup: the challenge surface suppresses the claim"
+      CsaSuppress (trcCommitmentStoreDecision replayTrace)
+    assertEqual "the engagement is stamped"
+      1 (trcCommitmentEngaged replayTrace)
+    assertEqual "the contradiction flag is stamped"
+      True (trcCommitmentContradicted replayTrace)
+    assertEqual "the designed skip makes the pair count zero"
+      0 (trcContradictionPairs replayTrace)
+    assertEqual "the ledger must not grow a phantom pair"
+      (scsContradictions storeSeed) (scsContradictions storeAfter)
+
+-- | Audit 2026-10-16 (п.18): with an admitted claim the pair is
+-- recorded against the real new-side id; the trace count equals the
+-- recorded pairs and 'CommitmentId 0' never appears.
+testContradictionPairRecordedAgainstExistingId :: Test
+testContradictionPairRecordedAgainstExistingId = TestLabel "п.18: admitted claim records the pair against a real id" $ TestCase $
+  withDeterministicEmbedding $ do
+    let (storeSeed, seedCid) = commitObservation p18SeedClaim emptySemanticCommitmentStore
+        startSs = tracePinFixtureState { ssSemanticCommitments = Just storeSeed }
+    (ss, ti, ts, tp0, ta0) <- buildRenderedFixtureWithState startSs "что такое свобода?"
+    let ta = forceAuthoritativeTurnArtifacts ta0
+        tp = tp0 { tpCommitmentEngagement = CommitmentEngagement [seedCid] True ContradictedStrong }
+        precommitPlan = planFinalizePrecommit ss ti ts tp ta
+    precommitResults <- resolveFinalizePrecommit testProtocolPipelineIO precommitPlan
+    bundle <- buildFinalizePrecommit
+                (pipelineUpdateHistory testProtocolPipelineIO)
+                (pipelineParseAuthoritySurface testProtocolPipelineIO)
+                defaultControlAAblation
+                ss ti ts tp ta precommitPlan precommitResults
+    let replayTrace = tqpReplayTrace (fpbProjection bundle)
+        storeAfter = maybe emptySemanticCommitmentStore id (ssSemanticCommitments (fpbNextSs bundle))
+        newEvents = take (length (scsContradictions storeAfter) - length (scsContradictions storeSeed))
+                        (scsContradictions storeAfter)
+        newPairs = [e | e <- newEvents, ceLeft e /= ceRight e]
+        existingIds =
+          Set.fromList $
+            HashMap.keys (scsActive storeAfter)
+              ++ HashMap.keys (scsQuarantine storeAfter)
+              ++ HashMap.keys (scsLineage storeAfter)
+    assertEqual "scenario setup: the claim must be admitted"
+      CsaAdmitCanonical (trcCommitmentStoreDecision replayTrace)
+    assertEqual "the engagement is stamped"
+      1 (trcCommitmentEngaged replayTrace)
+    assertEqual "exactly one pair is recorded in the ledger"
+      1 (length newPairs)
+    assertEqual "the trace count equals the recorded pairs"
+      (length newPairs) (trcContradictionPairs replayTrace)
+    assertBool "the pair references the engaged seed commitment"
+      (all (\e -> ceLeft e == seedCid) newPairs)
+    assertBool "the new side must be an existing store id (never the phantom 0)"
+      (all (\e -> Set.member (ceRight e) existingIds) newPairs)
+
+p18SeedClaim :: FactualClaimPayload
+p18SeedClaim = FactualClaimPayload
+  { fcpStatement = "свобода предполагает возможность выбора"
+  , fcpConfidence = 0.9
+  , fcpOrigin = OriginParser "p18-pin"
+  , fcpTurnSeq = TurnSeq 0
+  , fcpDeps = []
+  , fcpTopic = "свобода"
+  }

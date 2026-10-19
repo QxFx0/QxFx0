@@ -153,7 +153,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
           turnArtifacts
           (fsMeaningGraphBase static)
   mClaimPayload <- parseAuthSurface (AuthoritySurface (taFinalRendered turnArtifacts))
-  let (nextSystemState0, commitmentTrigger, commitDecision, promotedCount) =
+  let (nextSystemState0, commitmentTrigger, commitDecision, promotedCount, contradictionPairs) =
         buildNextSystemState
           updateHistory
           mClaimPayload
@@ -206,6 +206,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
           turnArtifacts
           commitDecision
           promotedCount
+          contradictionPairs
           (tpCommitmentEngagement turnPlan)
           evidenceAdmissibility
       wantIntrospection =

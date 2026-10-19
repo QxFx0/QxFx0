@@ -179,6 +179,7 @@ minimalReplayTrace apiHealthy =
    , trcCommitmentStoreDecision = CsaAdmitCanonical
     , trcCommitmentEngaged = 0
     , trcCommitmentContradicted = False
+    , trcContradictionPairs = 0
     , trcCommitmentMatchKind = NoMatch
     , trcCommitmentFamilyHint = Nothing
    , trcCognitiveSignals = emptyCognitiveSignals
@@ -290,7 +291,7 @@ testRecordedEqualsConsumed =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
-                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
+                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 0 emptyCommitmentEngagement EvidenceGoverned
         recorded proj = esApiHealthy <$> trcEffectSnapshot (tqpReplayTrace proj)
     assertEqual "projection records True when consumed value is True"
                (Just True) (recorded (projOf True))
@@ -314,7 +315,7 @@ testSnapshotSurvivesSerialization =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "привет"
     let projOf h = buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff
-                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned
+                     ss noEpisodicDelta ti (ts { tsApiHealthy = h }) tp ta CsaAdmitCanonical 0 0 emptyCommitmentEngagement EvidenceGoverned
         decodeSnapshot proj =
           (eitherDecode (encode (tqpReplayTrace proj))
              >>= parseEither (withObject "trace" (\o -> o .:? "trcEffectSnapshot")))
@@ -337,7 +338,7 @@ testFullTraceRoundTrips =
   TestCase $ do
     (ss, ti, ts, tp, ta) <- buildRenderedFixture "это помогло"
     let trace = tqpReplayTrace
-                  (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss noEpisodicDelta ti ts tp ta CsaAdmitCanonical 0 emptyCommitmentEngagement EvidenceGoverned)
+                  (buildTurnProjection StrictRuntime "observe" "enabled" False False FmarOff ss noEpisodicDelta ti ts tp ta CsaAdmitCanonical 0 0 emptyCommitmentEngagement EvidenceGoverned)
     assertEqual "persisted envelope decode must reproduce the trace exactly"
       (Right trace)
       (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace trace)))

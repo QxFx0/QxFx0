@@ -172,10 +172,11 @@ buildTurnProjection
   -> TurnArtifacts
   -> CommitmentStoreAdmissionDecision
   -> Int
+  -> Int
   -> CommitmentEngagement
   -> EvidenceAdmissibility
   -> TurnProjection
-buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs episodicDelta ti ts tp ta commitDecision promotedCount commitmentEngagement evidenceAdmissibility =
+buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrospectionEnabled warnMorphologyFallbackEnabled fmarMode nextSs episodicDelta ti ts tp ta commitDecision promotedCount contradictionPairs commitmentEngagement evidenceAdmissibility =
   let decision = taDecision ta
       dreamOutcome = buildDreamOutcome defaultDreamPressureRegime ti ts tp ta
       executedOutcome = taExecutedOutcome ta
@@ -436,6 +437,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
            , trcCommitmentStoreDecision = commitDecision
            , trcCommitmentEngaged = length (ceEngaged commitmentEngagement)
            , trcCommitmentContradicted = ceContradicted commitmentEngagement
+           , trcContradictionPairs = contradictionPairs
            , trcCommitmentMatchKind = ceMatchKind commitmentEngagement
            , trcCommitmentFamilyHint = commitmentFamilyHint commitmentEngagement
            , trcCognitiveSignals = buildCognitiveSignals ti tp nextSs

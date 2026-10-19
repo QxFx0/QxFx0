@@ -225,8 +225,8 @@ testAdmissionAblation = TestLabel "Control-A admission ablation bypasses CTS-42"
       family = tpFamily tp
       verdict = mkVerdict family
       run ab = buildNextSystemState (\_ h -> h) Nothing ab ss ti ts tp ta dream graph family verdict 0 False
-      (_, _, bypassDecision, _) = run (defaultControlAAblation { caDisableAdmission = True })
-      (_, _, liveDecision, _) = run defaultControlAAblation
+      (_, _, bypassDecision, _, _) = run (defaultControlAAblation { caDisableAdmission = True })
+      (_, _, liveDecision, _, _) = run defaultControlAAblation
   assertEqual "admission bypass: every claim admitted as canonical"
     CsaAdmitCanonical bypassDecision
   assertBool "unablated decision stays in the CTS-42 decision set"

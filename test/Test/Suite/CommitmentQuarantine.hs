@@ -28,9 +28,11 @@ import QxFx0.Types.State.SemanticCommitment
   , CommitmentId (..)
   , CommitmentOrigin (..)
   , TurnSeq (..)
+  , ContradictionEvent (..)
+  , ContradictionKind (..)
   , quarantinedClaims
   )
-import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, recordContradictionPairs)
 import QxFx0.Types.State.SemanticCommitment (LineageEvent(..))
 import QxFx0.Semantic.Retrieve (retrieve)
 import QxFx0.Types.State.System (ssSemanticCommitments, ssTruthContractStatus)
@@ -285,4 +287,74 @@ commitmentQuarantineTests =
   , unitPromoteNormalizedMatch
   , unitPromoteNoMatch
   , unitPromoteEmptyQuarantine
+  , unitRecordPairsSkipsWithoutNewSideId
+  , unitRecordPairsAgainstSurfaceId
+  , unitRecordPairsAnchorFallback
+  , unitRecordPairsSurfaceWinsOverAnchor
+  , unitRecordPairsSelfEngagementOnly
   ]
+
+-- ---------------------------------------------------------------------------
+-- Audit 2026-10-16 (п.18): contradiction-pair recording
+-- ---------------------------------------------------------------------------
+
+unitRecordPairsSkipsWithoutNewSideId :: Test
+unitRecordPairsSkipsWithoutNewSideId =
+  TestLabel "п.18: no new-side id → no pair, value-unchanged (no phantom CommitmentId 0)" $
+  TestCase $ do
+    let (s1, cid1) = commitObservation samplePayload emptySemanticCommitmentStore
+        (s2, cid2) = commitObservation (samplePayload { fcpStatement = "second" }) s1
+        (store', count) =
+          recordContradictionPairs Nothing Nothing ContradictionStatement (TurnSeq 7) [cid1, cid2] s2
+    assertEqual "store must be value-unchanged" s2 store'
+    assertEqual "count must be 0" 0 count
+    assertEqual "ledger must stay empty" [] (scsContradictions store')
+
+unitRecordPairsAgainstSurfaceId :: Test
+unitRecordPairsAgainstSurfaceId =
+  TestLabel "п.18: surface id → one pair per engaged commitment ≠ new id" $
+  TestCase $ do
+    let (s1, cid1) = commitObservation samplePayload emptySemanticCommitmentStore
+        (s2, cid2) = commitObservation (samplePayload { fcpStatement = "second" }) s1
+        (store', count) =
+          recordContradictionPairs (Just cid2) Nothing ContradictionStatement (TurnSeq 7) [cid1, cid2] s2
+    assertEqual "exactly one pair (the self engagement is filtered)" 1 count
+    assertEqual "the pair is (engaged, new)"
+      [ContradictionEvent cid1 cid2 ContradictionStatement (TurnSeq 7)]
+      (scsContradictions store')
+
+unitRecordPairsAnchorFallback :: Test
+unitRecordPairsAnchorFallback =
+  TestLabel "п.18: anchor id is used when no surface id exists" $
+  TestCase $ do
+    let (s1, cid1) = commitObservation samplePayload emptySemanticCommitmentStore
+        (s2, cid2) = commitObservation (samplePayload { fcpStatement = "second" }) s1
+        (store', count) =
+          recordContradictionPairs Nothing (Just cid2) ContradictionStatement (TurnSeq 7) [cid1] s2
+    assertEqual "one pair against the anchor" 1 count
+    assertEqual "the pair is (engaged, anchor)"
+      [ContradictionEvent cid1 cid2 ContradictionStatement (TurnSeq 7)]
+      (scsContradictions store')
+
+unitRecordPairsSurfaceWinsOverAnchor :: Test
+unitRecordPairsSurfaceWinsOverAnchor =
+  TestLabel "п.18: the surface id wins over the anchor id" $
+  TestCase $ do
+    let (s1, cid1) = commitObservation samplePayload emptySemanticCommitmentStore
+        (s2, cid2) = commitObservation (samplePayload { fcpStatement = "second" }) s1
+        (store', count) =
+          recordContradictionPairs (Just cid1) (Just cid2) ContradictionStatement (TurnSeq 7) [cid1, cid2] s2
+    assertEqual "exactly one pair (against the surface id)" 1 count
+    assertEqual "the surface id is the new side"
+      [ContradictionEvent cid2 cid1 ContradictionStatement (TurnSeq 7)]
+      (scsContradictions store')
+
+unitRecordPairsSelfEngagementOnly :: Test
+unitRecordPairsSelfEngagementOnly =
+  TestLabel "п.18: engagement equal to the new id records nothing" $
+  TestCase $ do
+    let (s1, cid1) = commitObservation samplePayload emptySemanticCommitmentStore
+        (store', count) =
+          recordContradictionPairs (Just cid1) Nothing ContradictionStatement (TurnSeq 7) [cid1] s1
+    assertEqual "count 0" 0 count
+    assertEqual "ledger unchanged" [] (scsContradictions store')

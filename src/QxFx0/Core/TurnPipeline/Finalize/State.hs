@@ -25,7 +25,7 @@ import QxFx0.Types
 import QxFx0.Types.State.System (appendAdaptiveMutationRecords)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Types.Decision.Enums.Render (dominantChannelText)
-import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, contradict)
+import QxFx0.Semantic.Commitment (commitObservation, quarantineObservation, promoteMatchingQuarantine, recordContradictionPairs)
 import qualified QxFx0.Semantic.Content as Content
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..), CommitmentOrigin(..), TurnSeq(..), emptySemanticCommitmentStore, CommitmentEngagement(..), CommitmentId(..), ContradictionKind(..))
 import QxFx0.Semantic.Revision (RevisedCommitment(..), applyRevisionDecision)
@@ -446,7 +446,7 @@ supersedeCommitmentOnCollapse collapsed turn (essence, trigger)
       in ((resetEssence, Nothing), Just resetEvent)
   | otherwise = ((essence, trigger), Nothing)
 
-buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int)
+buildNextSystemState :: (Text -> Seq Text -> Seq Text) -> Maybe FactualClaimPayload -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> DreamState -> MeaningGraph -> CanonicalMoveFamily -> R5Verdict -> Int -> Bool -> (SystemState, Maybe CommitmentTrigger, CommitmentStoreAdmissionDecision, Int, Int)
 buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDreamState newMeaningGraph outcomeFamily outcomeVerdict consecReflect feedbackLoopActive =
   let !newHumanHistory = updateHistory (ipfRawText (tiFrame ti)) (ssHistory ss)
       updatedNixCache = updateStateNixCache (tiConceptToCheck ti) (tiNixStatus ti) (obsNixCache (ssObservability ss))
@@ -714,19 +714,14 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
         _ -> (store1, 0, Nothing)
       -- SUBJECT-SEAM-1: if the turn contradicted held commitments, record each
       -- contradiction pair (new claim ↔ engaged commitment) in the ledger.
-      -- Phase E: apply revision decisions based on angst/conatus thresholds.
-      store3 =
+      -- Audit 2026-10-16 (п.18): only against an existing new-side id — a
+      -- contradicted turn without one is skipped (no phantom CommitmentId 0);
+      -- the recorded-pair count is surfaced in the replay trace.
+      (store3, contradictionPairs) =
         let ce = tpCommitmentEngagement tp
         in if ceContradicted ce
-             then
-               let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
-                   engaged = ceEngaged ce
-               in foldr (\engagedCid s ->
-                    if engagedCid == newCid
-                      then s
-                      else contradict engagedCid newCid ContradictionStatement turnSeq s
-                  ) store2 engaged
-              else store2
+             then recordContradictionPairs mSurfaceCid mAnchorCid ContradictionStatement turnSeq (ceEngaged ce) store2
+             else (store2, 0)
       -- Phase E: revision decisions for contradicted commitments (v3.0 pentagon)
       (revisionDecisions, mCollapse, mChallengedStanceDefense) =
         let ce = tpCommitmentEngagement tp
@@ -736,8 +731,10 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
             challengeAtoms = S.fromList $ map maText $ asAtoms $ tiAtomSet ti
         in if ceContradicted ce
               then
-                let newCid = case mSurfaceCid of Just c -> c; Nothing -> fromMaybe (CommitmentId 0) mAnchorCid
-                    engaged = filter (/= newCid) (ceEngaged ce)
+                let engaged =
+                      case mSurfaceCid <|> mAnchorCid of
+                        Nothing -> ceEngaged ce
+                        Just newCid -> filter (/= newCid) (ceEngaged ce)
                 in case engaged of
                      [] -> ([], Nothing, Nothing)
                      _ ->
@@ -921,6 +918,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
     , commitmentTrigger
     , commitDecision
     , promotedCount
+    , contradictionPairs
     )
 
 maxProvisionalAtoms :: Int
