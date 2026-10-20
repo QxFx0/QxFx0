@@ -151,9 +151,21 @@ rollbackCommittedTurn withDb previousState sessionId expectedVersion stableTurn 
     Left other -> pure (Left (PdRollbackFailed StageUnknown Nothing (Just (renderQxFx0ExceptionForLog other))))
     Right () -> pure (Right ())
 
+-- | Write transaction: takes the write lock immediately (single-writer
+-- discipline for load-modify-save cycles).
 withImmediateTransaction :: NSQL.Database -> IO a -> IO a
-withImmediateTransaction db action = mask $ \restore -> do
-  beginResult <- NSQL.execSql db "BEGIN IMMEDIATE;"
+withImmediateTransaction = withTransaction "BEGIN IMMEDIATE;"
+
+-- | Read transaction (audit 2026-10-16 п.20): a read-only load must not
+-- take the write lock, or every reader fails with SQLITE_BUSY while any
+-- writer holds an uncommitted transaction.  A deferred transaction still
+-- yields a consistent snapshot (blob + revision read atomically).
+withDeferredTransaction :: NSQL.Database -> IO a -> IO a
+withDeferredTransaction = withTransaction "BEGIN DEFERRED;"
+
+withTransaction :: Text -> NSQL.Database -> IO a -> IO a
+withTransaction beginSql db action = mask $ \restore -> do
+  beginResult <- NSQL.execSql db beginSql
   case beginResult of
     Left err ->
       throwQxFx0 (PersistenceTxError StageTxBegin ("tx_begin_failed: " <> err))
@@ -240,7 +252,7 @@ loadState withDb sessionId = fst <$> loadStateWithVersion withDb sessionId
 -- | Load the state and its write version from one SQLite snapshot.  Callers
 -- that intend to write the loaded state must retain and present this version.
 loadStateWithVersion :: DbRunner -> Text -> IO (LoadStateResult, StateVersion)
-loadStateWithVersion withDb sessionId = withDb $ \db -> withImmediateTransaction db $ do
+loadStateWithVersion withDb sessionId = withDb $ \db -> withDeferredTransaction db $ do
   loaded <- loadStateDirect db sessionId
   revision <- loadStateRevisionDirect db sessionId
   let turn = case loaded of

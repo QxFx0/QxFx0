@@ -8,6 +8,7 @@ module QxFx0.Bridge.SQLite.Bootstrap
   ) where
 
 import Control.Exception (IOException, finally)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -20,8 +21,9 @@ import QxFx0.Bridge.SQLite.SchemaContract
   , readSchemaVersion
   , SchemaContractResult(..)
   , SchemaVersionStatus(..)
+  , ProbeOutcome(..)
   , renderSchemaContractResult
-  , columnMissing
+  , columnExists
   , isV1Shape
   , isV2Shape
   )
@@ -49,41 +51,33 @@ ensureSchemaMigrations db = do
   sqlSet <- loadBootstrapSqlSet
   -- 1. Run canonical schema (IF NOT EXISTS — safe for old and new DBs)
   execBootstrapSql db ("schema.sql", bootstrapSchema sqlSet)
-  -- 2. Determine current version state and act accordingly
-  versionStatus <- readSchemaVersion db
-  case versionStatus of
-    SchemaVersionMissingTable -> do
-      isV1 <- isV1Shape db
-      if isV1
-        then do
-          runPendingMigrations db 1
-          seedAfterMigration sqlSet db
-        else do
-          isV2 <- isV2Shape db
-          if isV2
-            then do
-              insertSchemaVersion db currentSchemaVersion currentSchemaDescription
-              seedAfterMigration sqlSet db
-            else do
-              -- Fresh DB: no tables and no schema_version
-              insertSchemaVersion db currentSchemaVersion currentSchemaDescription
-              seedAfterMigration sqlSet db
-    SchemaVersionEmpty -> do
-      isV1 <- isV1Shape db
-      if isV1
-        then do
-          runPendingMigrations db 1
-          seedAfterMigration sqlSet db
-        else do
-          isV2 <- isV2Shape db
-          if isV2
-            then do
-              insertSchemaVersion db currentSchemaVersion currentSchemaDescription
-              seedAfterMigration sqlSet db
-            else
-              do
+  -- 2. Determine current version state and act accordingly.
+  -- A failed probe (audit 2026-10-16 п.23) is an error, never a
+  -- version fact: it must not stamp a version, migrate, or seed.
+  let throwProbeError probeErr =
+        throwQxFx0 (mkSQLiteError "schema_probe_failed" probeErr Map.empty)
+      resolveUnversioned = do
+        isV1 <- isV1Shape db
+        case isV1 of
+          Left probeErr -> throwProbeError probeErr
+          Right True -> do
+            runPendingMigrations db 1
+            seedAfterMigration sqlSet db
+          Right False -> do
+            isV2 <- isV2Shape db
+            case isV2 of
+              Left probeErr -> throwProbeError probeErr
+              Right _ -> do
+                -- v2-complete database missing its marker, or a fresh
+                -- database: stamp the current version and seed.
                 insertSchemaVersion db currentSchemaVersion currentSchemaDescription
                 seedAfterMigration sqlSet db
+  versionStatus <- readSchemaVersion db
+  case versionStatus of
+    SchemaVersionProbeError probeErr ->
+      throwProbeError probeErr
+    SchemaVersionMissingTable -> resolveUnversioned
+    SchemaVersionEmpty -> resolveUnversioned
     SchemaVersionPresent 1 -> do
       runPendingMigrations db 1
       seedAfterMigration sqlSet db
@@ -189,17 +183,32 @@ allowEmbeddedSqlFallback reason fallbackValue = do
           "FALLBACK_DISABLED"
           (Map.singleton "reason" reason))
 
+-- | Stamp the version marker.  Audit 2026-10-16 п.22: bind/step/finalize
+-- results are checked — a failed INSERT is an error, not a silent success
+-- with no version row.
 insertSchemaVersion :: NSQL.Database -> Int -> Text -> IO ()
 insertSchemaVersion db version description = do
   mStmt <- NSQL.prepare db "INSERT OR REPLACE INTO schema_version(version, description) VALUES(?, ?)"
   case mStmt of
     Left err -> throwQxFx0 (mkSQLiteError "schema_version_insert" err Map.empty)
     Right stmt -> do
-      _ <- NSQL.bindInt stmt 1 version
-      _ <- NSQL.bindText stmt 2 description
-      _ <- NSQL.step stmt
-      _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure ()
+      bindVersion <- NSQL.bindInt stmt 1 version
+      bindDescription <- NSQL.bindText stmt 2 description
+      stepResult <- NSQL.step stmt
+      finalizeResult <- tryQxFx0 (NSQL.finalize stmt)
+      let firstFailure =
+            case bindVersion of
+              Left err -> Just err
+              Right () -> case bindDescription of
+                Left err -> Just err
+                Right () -> case stepResult of
+                  Left err -> Just err
+                  Right _ -> Nothing
+      case firstFailure of
+        Just err -> throwQxFx0 (mkSQLiteError "schema_version_insert" err Map.empty)
+        Nothing -> case finalizeResult of
+          Left err -> throwQxFx0 err
+          Right () -> pure ()
 
 -- | Explicit, idempotent migration step.
 data MigrationStep
@@ -217,8 +226,11 @@ runPendingMigrations db currentVersion = do
       throwQxFx0 (mkSQLiteError "migration_tx_begin" err Map.empty)
     Right _ ->
       pure ()
-  -- Run migration steps
-  flip finally (rollbackOnException db) $ do
+  -- Audit 2026-10-16 п.22: rollback only while the transaction is still
+  -- open — never after a successful COMMIT.
+  txClosedRef <- newIORef False
+  flip finally (rollbackIfOpen txClosedRef db) $ do
+    -- Run migration steps
     mapM_ (runMigrationStep db) steps
     -- Validate before committing
     contractResult <- validateSchemaContractTablesAndColumns db
@@ -230,7 +242,7 @@ runPendingMigrations db currentVersion = do
           Left err ->
             throwQxFx0 (mkSQLiteError "migration_tx_commit" err Map.empty)
           Right _ ->
-            pure ()
+            writeIORef txClosedRef True
       other -> do
         rollbackResult <- NSQL.execSql db "ROLLBACK;"
         case rollbackResult of
@@ -242,16 +254,23 @@ runPendingMigrations db currentVersion = do
                 [ ("validation_error", renderSchemaContractResult other)
                 , ("rollback_error", rbErr)
                 ]))
-          Right _ ->
+          Right _ -> do
+            writeIORef txClosedRef True
             throwQxFx0 (mkSQLiteError
               "migration_validation"
               "VALIDATION_FAILED"
               (Map.singleton "error" (renderSchemaContractResult other)))
 
-rollbackOnException :: NSQL.Database -> IO ()
-rollbackOnException db = do
-  _ <- NSQL.execSql db "ROLLBACK;"
-  pure ()
+-- | Best-effort rollback for the exception path; skipped when the
+-- transaction has already been committed or explicitly rolled back.
+rollbackIfOpen :: IORef Bool -> NSQL.Database -> IO ()
+rollbackIfOpen txClosedRef db = do
+  txClosed <- readIORef txClosedRef
+  if txClosed
+    then pure ()
+    else do
+      _ <- NSQL.execSql db "ROLLBACK;"
+      pure ()
 
 resolveMigrationSteps :: Int -> [MigrationStep]
 resolveMigrationSteps fromVersion
@@ -281,9 +300,16 @@ resolveMigrationSteps fromVersion
 runMigrationStep :: NSQL.Database -> MigrationStep -> IO ()
 runMigrationStep db step = case step of
   EnsureColumn table col def -> do
-    missing <- columnMissing db table col
-    if missing
-      then do
+    probe <- columnExists db table col
+    case probe of
+      ProbeFound -> pure ()
+      ProbeFailed probeErr ->
+        throwQxFx0
+          (mkSQLiteError
+            "schema_probe_failed"
+            probeErr
+            (Map.fromList [("table", table), ("column", col)]))
+      ProbeNotFound -> do
         let sql = "ALTER TABLE " <> table <> " ADD COLUMN " <> col <> " " <> def
         result <- NSQL.execSql db sql
         case result of
@@ -294,7 +320,6 @@ runMigrationStep db step = case step of
                 err
                 (Map.fromList [("table", table), ("column", col)]))
           Right _ -> pure ()
-      else pure ()
 
 execBootstrapSql :: NSQL.Database -> (FilePath, Text) -> IO ()
 execBootstrapSql db (label, sqlText) = do

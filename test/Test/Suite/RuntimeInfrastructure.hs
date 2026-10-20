@@ -11,7 +11,7 @@ import qualified Data.Sequence as Seq
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
-import Data.Aeson (Value(..), eitherDecodeStrict', encode)
+import Data.Aeson (Value(..), decode, eitherDecode, eitherDecodeStrict', encode)
 import qualified Data.Aeson.KeyMap as KeyMap
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
@@ -63,6 +63,17 @@ import qualified QxFx0.Bridge.StatePersistence as StatePersistence
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified QxFx0.Bridge.EmbeddedSQL as EmbeddedSQL
 import qualified QxFx0.Bridge.SQLite as SQLite
+import QxFx0.Bridge.SQLite.SchemaContract
+  ( ProbeOutcome(..)
+  , SchemaContractResult(..)
+  , SchemaVersionStatus(..)
+  , checkSchemaContract
+  , columnExists
+  , readSchemaVersion
+  , tableExists
+  )
+import QxFx0.Semantic.Intent.GeometricClassifier (ClassificationResult(..), recordABValidation)
+import QxFx0.Semantic.Intent.Metrics (emptyIntentClassifierMetrics)
 import qualified QxFx0.Bridge.AgdaR5 as AgdaR5
 import qualified QxFx0.Bridge.Datalog as Datalog
 import qualified QxFx0.Bridge.NixGuard as NixGuard
@@ -90,6 +101,12 @@ runtimeInfrastructureTests =
   , testLegacyV1WithoutSchemaVersionMigrates
   , testLegacyV1WithEmptySchemaVersionMigrates
   , testMigrationAtomicityRollbackOnFailure
+  , testGeometricMetricsSurvivesStateRoundTrip
+  , testGeometricMetricsLegacyJsonDefaultsToEmpty
+  , testLoadStateReadsWhileWriterHoldsUncommittedTransaction
+  , testSchemaProbesReportProbeFailureOnCorruptFile
+  , testBootstrapFailsFastWhenVersionProbeFails
+  , testMigrationFailsAndRollsBackWhenVersionInsertFails
   , testCorruptV2SchemaWithMissingColumnsFailsBootstrap
   , testReadinessStrictInvariantSchemaV1Behind
   , testReadinessStrictInvariantFreshDbOk
@@ -461,6 +478,149 @@ testMigrationAtomicityRollbackOnFailure = TestCase $ do
     colCount <- Runtime.withRuntimeDb rt $ \conn ->
       queryCount conn "SELECT count(*) FROM pragma_table_info('turn_quality') WHERE name IN ('warranted_mode','decision_disposition','shadow_snapshot_id','shadow_divergence_kind','replay_trace_json')"
     assertEqual "all v2 columns should exist after atomic migration" 5 colCount
+
+-- Audit 2026-10-16 п.21: ssGeometricMetrics was decoded but never encoded —
+-- every persisted save silently dropped the A/B-validation counters.
+testGeometricMetricsSurvivesStateRoundTrip :: Test
+testGeometricMetricsSurvivesStateRoundTrip = TestCase $ do
+  let metrics =
+        recordABValidation
+          (recordABValidation emptyIntentClassifierMetrics Unclassified CMDefine)
+          Unclassified CMConfront
+      ss = (emptySystemState :: SystemState) { ssGeometricMetrics = metrics }
+  case eitherDecode (encode ss) :: Either String SystemState of
+    Left err -> assertFailure ("SystemState round-trip decode failed: " <> err)
+    Right ss' ->
+      assertEqual "geometricMetrics must survive encode→decode" metrics (ssGeometricMetrics ss')
+
+testGeometricMetricsLegacyJsonDefaultsToEmpty :: Test
+testGeometricMetricsLegacyJsonDefaultsToEmpty = TestCase $ do
+  let ss =
+        (emptySystemState :: SystemState)
+          { ssGeometricMetrics = recordABValidation emptyIntentClassifierMetrics Unclassified CMDefine
+          }
+  case decode (encode ss) :: Maybe Value of
+    Just (Object obj) -> do
+      let legacy = KeyMap.delete "geometricMetrics" obj
+      case eitherDecode (encode legacy) :: Either String SystemState of
+        Left err -> assertFailure ("legacy SystemState decode failed: " <> err)
+        Right ss' ->
+          assertEqual
+            "a legacy envelope without geometricMetrics must decode to the default counters"
+            emptyIntentClassifierMetrics
+            (ssGeometricMetrics ss')
+    other -> assertFailure ("expected a JSON object, got: " <> show other)
+
+-- Audit 2026-10-16 п.20: state loads used BEGIN IMMEDIATE, so any reader
+-- failed with SQLITE_BUSY while a writer held an uncommitted transaction.
+testLoadStateReadsWhileWriterHoldsUncommittedTransaction :: Test
+testLoadStateReadsWhileWriterHoldsUncommittedTransaction = TestCase $ do
+  withRuntimeEnv "qxfx0_test_load_deferred_read.db" $ do
+    session0 <- Runtime.bootstrapSession True "load_deferred_read"
+    let rt = Runtime.sessRuntime session0
+        ss0 = Runtime.sessSystemState session0
+    saveResult <- saveSessionState session0 ss0 "load_deferred_read"
+    case saveResult of
+      Left err -> assertFailure ("failed to persist fixture state: " <> T.unpack (renderPersistenceDiagnostics [err]))
+      Right _ -> pure ()
+    dbPath <- Runtime.resolveDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("Cannot open DB: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    assertExec db "hold uncommitted writer transaction" "BEGIN IMMEDIATE;"
+    assertExec db "write uncommitted row" "INSERT INTO dialogue_state(session_id, key, value, updated_at) VALUES('p20_writer', 'k', 'v', datetime('now'));"
+    loaded <- try (StatePersistence.loadState (Runtime.withRuntimeDb rt) "load_deferred_read") :: IO (Either QxFx0Exception LoadStateResult)
+    _ <- NSQL.execSql db "ROLLBACK;"
+    NSQL.close db
+    case loaded of
+      Left ex ->
+        assertFailure ("loadState must not fail while a writer holds an uncommitted transaction; got: " <> show ex)
+      Right (LoadStateRestored restored) ->
+        assertEqual "loadState must return the last committed snapshot" (ssTurnCount ss0) (ssTurnCount restored)
+      Right other ->
+        assertFailure ("expected LoadStateRestored, got: " <> show other)
+
+-- Audit 2026-10-16 п.23: a probe that cannot run must be reported as a
+-- probe failure, never as "the object is absent".
+testSchemaProbesReportProbeFailureOnCorruptFile :: Test
+testSchemaProbesReportProbeFailureOnCorruptFile = TestCase $ do
+  withRuntimeEnv "qxfx0_test_schema_probe_corrupt.db" $ do
+    dbPath <- Runtime.resolveDbPath
+    TIO.writeFile dbPath "this is not a sqlite database"
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("Cannot open corrupt DB: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    tableProbe <- tableExists db "turn_quality"
+    columnProbe <- columnExists db "turn_quality" "warranted_mode"
+    versionStatus <- readSchemaVersion db
+    contractResult <- checkSchemaContract db
+    NSQL.close db
+    assertBool "tableExists on a corrupt file must be ProbeFailed"
+      (case tableProbe of ProbeFailed _ -> True; _ -> False)
+    assertBool "columnExists on a corrupt file must be ProbeFailed"
+      (case columnProbe of ProbeFailed _ -> True; _ -> False)
+    assertBool "readSchemaVersion on a corrupt file must be SchemaVersionProbeError"
+      (case versionStatus of SchemaVersionProbeError _ -> True; _ -> False)
+    assertBool "checkSchemaContract on a corrupt file must be SchemaContractQueryFailed"
+      (case contractResult of SchemaContractQueryFailed _ -> True; _ -> False)
+
+-- Audit 2026-10-16 п.23 bar: a failed version probe must fail the
+-- bootstrap (schema_probe_failed) before any stamp, migration, or seed.
+testBootstrapFailsFastWhenVersionProbeFails :: Test
+testBootstrapFailsFastWhenVersionProbeFails = TestCase $ do
+  withRuntimeEnv "qxfx0_test_probe_broken_version.db" $ do
+    dbPath <- Runtime.resolveDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("Cannot open DB: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    assertExec db "incompatible schema_version table" "CREATE TABLE schema_version (unrelated INTEGER);"
+    result <- try (SQLite.ensureSchemaMigrations db) :: IO (Either QxFx0Exception ())
+    versionRows <- queryCount db "SELECT COUNT(*) FROM schema_version"
+    seededClaims <- queryCount db "SELECT COUNT(*) FROM identity_claims"
+    NSQL.close db
+    case result of
+      Left (SQLiteErrorStructured details) -> do
+        assertEqual "probe failure must be reported as schema_probe_failed"
+          "schema_probe_failed" (sedOperation details)
+        assertBool "probe failure should carry the SQLite detail"
+          (not (T.null (sedErrorCode details)))
+      Left other -> assertFailure ("expected structured SQLiteError, got: " <> show other)
+      Right _ -> assertFailure "bootstrap must fail when the version probe fails"
+    assertEqual "no version row may be stamped on a failed probe" 0 versionRows
+    assertEqual "no seed rows may be written on a failed probe" 0 seededClaims
+
+-- Audit 2026-10-16 п.22: insertSchemaVersion used to ignore bind/step
+-- failures; the migration then committed ALTERs without a version row.
+testMigrationFailsAndRollsBackWhenVersionInsertFails :: Test
+testMigrationFailsAndRollsBackWhenVersionInsertFails = TestCase $ do
+  withRuntimeEnv "qxfx0_test_version_insert_trap.db" $ do
+    dbPath <- Runtime.resolveDbPath
+    mDb <- NSQL.open dbPath
+    db <- case mDb of
+      Left err -> assertFailure ("Cannot open DB: " <> T.unpack err) >> fail "unreachable"
+      Right d -> pure d
+    root <- getCurrentDirectory
+    v1Sql <- TIO.readFile (root </> "migrations" </> "001_initial_schema.sql")
+    _ <- NSQL.execSql db v1Sql
+    -- A legacy v1 database whose schema_version table cannot accept the
+    -- INSERT: the extra NOT NULL column is never bound.
+    assertExec db "trap schema_version table"
+      "DROP TABLE schema_version; CREATE TABLE schema_version (version INTEGER PRIMARY KEY, description TEXT NOT NULL, extra TEXT NOT NULL);"
+    result <- try (SQLite.ensureSchemaMigrations db) :: IO (Either QxFx0Exception ())
+    warrantedCols <- queryCount db "SELECT COUNT(*) FROM pragma_table_info('turn_quality') WHERE name = 'warranted_mode'"
+    versionRows <- queryCount db "SELECT COUNT(*) FROM schema_version"
+    NSQL.close db
+    case result of
+      Left (SQLiteErrorStructured details) -> do
+        assertEqual "version insert failure must surface as schema_version_insert"
+          "schema_version_insert" (sedOperation details)
+      Left other -> assertFailure ("expected structured SQLiteError, got: " <> show other)
+      Right _ -> assertFailure "bootstrap must fail when the version insert fails"
+    assertEqual "failed migration must not persist the ALTERs" 0 warrantedCols
+    assertEqual "no version row may remain after the failure" 0 versionRows
 
 testCorruptV2SchemaWithMissingColumnsFailsBootstrap :: Test
 testCorruptV2SchemaWithMissingColumnsFailsBootstrap = TestCase $ do

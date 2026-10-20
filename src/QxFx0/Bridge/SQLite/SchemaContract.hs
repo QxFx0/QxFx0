@@ -13,25 +13,24 @@ module QxFx0.Bridge.SQLite.SchemaContract
   , schemaContractFTS
   , SchemaContractResult(..)
   , SchemaVersionStatus(..)
+  , ProbeOutcome(..)
   , checkSchemaContract
   , validateSchemaContractTablesAndColumns
   , readSchemaVersion
   , renderSchemaContractResult
   , tableExists
-  , columnMissing
+  , columnExists
   , isV1Shape
   , isV2Shape
   ) where
 
-import Control.Monad (filterM, foldM)
+import Control.Monad (forM)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (mapMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.ExceptionPolicy (tryQxFx0)
-import System.IO (hPutStrLn, stderr)
 
 currentSchemaVersion :: Int
 currentSchemaVersion = 4
@@ -124,6 +123,16 @@ data SchemaVersionStatus
   = SchemaVersionMissingTable
   | SchemaVersionEmpty
   | SchemaVersionPresent !Int
+  | SchemaVersionProbeError !Text
+  deriving stock (Eq, Show)
+
+-- | Three-valued outcome of a schema probe (audit 2026-10-16 п.23).
+-- A failed probe must never be reported as \"the object is absent\":
+-- callers decide differently for absence and for a broken probe.
+data ProbeOutcome
+  = ProbeFound
+  | ProbeNotFound
+  | ProbeFailed !Text
   deriving stock (Eq, Show)
 
 renderSchemaContractResult :: SchemaContractResult -> Text
@@ -155,24 +164,30 @@ checkSchemaContract :: NSQL.Database -> IO SchemaContractResult
 checkSchemaContract db = do
   versionStatus <- readSchemaVersion db
   case versionStatus of
+    SchemaVersionProbeError msg -> pure (SchemaContractQueryFailed msg)
     SchemaVersionMissingTable -> do
-      anyTableExists <- anyM (tableExists db) schemaContractTables
-      if not anyTableExists
-        then pure SchemaContractFreshBootstrapable
-        else do
-          v1 <- isV1Shape db
-          if v1
-            then pure (SchemaContractVersionBehind currentSchemaVersion 1)
-            else pure (SchemaContractInconsistent "tables exist but schema_version missing and shape not v1")
+      tableProbes <- probeAll (tableExists db) schemaContractTables
+      case tableProbes of
+        Left e -> pure (SchemaContractQueryFailed e)
+        Right probes
+          | not (ProbeFound `elem` probes) -> pure SchemaContractFreshBootstrapable
+          | otherwise -> do
+              v1 <- isV1Shape db
+              case v1 of
+                Left e -> pure (SchemaContractQueryFailed e)
+                Right True -> pure (SchemaContractVersionBehind currentSchemaVersion 1)
+                Right False -> pure (SchemaContractInconsistent "tables exist but schema_version missing and shape not v1")
     SchemaVersionEmpty -> do
       v1 <- isV1Shape db
-      if v1
-        then pure (SchemaContractVersionBehind currentSchemaVersion 1)
-        else do
+      case v1 of
+        Left e -> pure (SchemaContractQueryFailed e)
+        Right True -> pure (SchemaContractVersionBehind currentSchemaVersion 1)
+        Right False -> do
           v2 <- isV2Shape db
-          if v2
-            then pure (SchemaContractOk currentSchemaVersion)
-            else pure (SchemaContractInconsistent "schema_version empty and shape not v1 or v2")
+          case v2 of
+            Left e -> pure (SchemaContractQueryFailed e)
+            Right True -> pure (SchemaContractOk currentSchemaVersion)
+            Right False -> pure (SchemaContractInconsistent "schema_version empty and shape not v1 or v2")
     SchemaVersionPresent v
       | v < currentSchemaVersion ->
           pure (SchemaContractVersionBehind currentSchemaVersion v)
@@ -184,137 +199,161 @@ validateSchemaContractTablesAndColumns :: NSQL.Database -> IO SchemaContractResu
 validateSchemaContractTablesAndColumns db = checkTablesAndColumns db
 
 -- | Check that all required tables exist, then required columns, indexes,
---   triggers, and FTS virtual tables.
+--   triggers, and FTS virtual tables.  Probe failures surface as
+--   'SchemaContractQueryFailed' and never masquerade as a missing object.
 checkTablesAndColumns :: NSQL.Database -> IO SchemaContractResult
 checkTablesAndColumns db = do
-  missingTables <- filterM (fmap not . tableExists db) schemaContractTables
-  case missingTables of
-    (t:_) -> pure (SchemaContractMissingTable t)
-    [] -> do
-      let checkOne (tbl, cols) = do
-            missing <- filterM (columnMissing db tbl) cols
-            pure (if null missing then Nothing else Just (tbl, missing))
-      badCols <- mapMaybe id <$> mapM checkOne (Map.toList schemaContractColumns)
-      case badCols of
-        ((tbl, cols):_) -> pure (SchemaContractMissingColumns tbl cols)
+  tableProbes <- probeAll (tableExists db) schemaContractTables
+  case tableProbes of
+    Left e -> pure (SchemaContractQueryFailed e)
+    Right tableResults ->
+      case [t | (t, ProbeNotFound) <- zip schemaContractTables tableResults] of
+        (t:_) -> pure (SchemaContractMissingTable t)
         [] -> do
-          missingIndexes <- filterM (fmap not . indexExists db) schemaContractIndexes
-          case missingIndexes of
-            (ix:_) -> pure (SchemaContractMissingIndex ix)
-            [] -> do
-              missingTriggers <- filterM (fmap not . triggerExists db) schemaContractTriggers
-              case missingTriggers of
-                (tr:_) -> pure (SchemaContractMissingTrigger tr)
+          columnProbes <- forM (Map.toList schemaContractColumns) $ \(tbl, cols) -> do
+            colResults <- probeAll (columnExists db tbl) cols
+            pure (tbl, cols, colResults)
+          case [e | (_, _, Left e) <- columnProbes] of
+            (e:_) -> pure (SchemaContractQueryFailed e)
+            [] ->
+              case [ (tbl, [c | (c, ProbeNotFound) <- zip cols colResults])
+                   | (tbl, cols, Right colResults) <- columnProbes
+                   , ProbeNotFound `elem` colResults
+                   ] of
+                ((tbl, cols):_) -> pure (SchemaContractMissingColumns tbl cols)
                 [] -> do
-                  missingFTS <- filterM (fmap not . ftsTableExists db) schemaContractFTS
-                  case missingFTS of
-                    (fts:_) -> pure (SchemaContractMissingFTS fts)
-                    [] -> pure (SchemaContractOk currentSchemaVersion)
+                  indexProbes <- probeAll (indexExists db) schemaContractIndexes
+                  case indexProbes of
+                    Left e -> pure (SchemaContractQueryFailed e)
+                    Right indexResults ->
+                      case [ix | (ix, ProbeNotFound) <- zip schemaContractIndexes indexResults] of
+                        (ix:_) -> pure (SchemaContractMissingIndex ix)
+                        [] -> do
+                          triggerProbes <- probeAll (triggerExists db) schemaContractTriggers
+                          case triggerProbes of
+                            Left e -> pure (SchemaContractQueryFailed e)
+                            Right triggerResults ->
+                              case [tr | (tr, ProbeNotFound) <- zip schemaContractTriggers triggerResults] of
+                                (tr:_) -> pure (SchemaContractMissingTrigger tr)
+                                [] -> do
+                                  ftsProbes <- probeAll (ftsTableExists db) schemaContractFTS
+                                  case ftsProbes of
+                                    Left e -> pure (SchemaContractQueryFailed e)
+                                    Right ftsResults ->
+                                      case [fts | (fts, ProbeNotFound) <- zip schemaContractFTS ftsResults] of
+                                        (fts:_) -> pure (SchemaContractMissingFTS fts)
+                                        [] -> pure (SchemaContractOk currentSchemaVersion)
 
 readSchemaVersion :: NSQL.Database -> IO SchemaVersionStatus
 readSchemaVersion db = do
-  schemaVersionTableExists <- tableExists db "schema_version"
-  if not schemaVersionTableExists
-    then pure SchemaVersionMissingTable
-    else do
-      mVersion <- readSchemaVersionRow db
-      case mVersion of
-        Nothing -> pure SchemaVersionEmpty
-        Just v  -> pure (SchemaVersionPresent v)
+  schemaVersionTableProbe <- tableExists db "schema_version"
+  case schemaVersionTableProbe of
+    ProbeFailed e -> pure (SchemaVersionProbeError e)
+    ProbeNotFound -> pure SchemaVersionMissingTable
+    ProbeFound -> do
+      rowResult <- readSchemaVersionRow db
+      case rowResult of
+        Left e -> pure (SchemaVersionProbeError e)
+        Right Nothing -> pure SchemaVersionEmpty
+        Right (Just v)  -> pure (SchemaVersionPresent v)
 
-readSchemaVersionRow :: NSQL.Database -> IO (Maybe Int)
+-- | Read the highest version row: 'Right Nothing' = the probe ran and the
+-- table is empty; 'Left' = the probe itself failed.
+readSchemaVersionRow :: NSQL.Database -> IO (Either Text (Maybe Int))
 readSchemaVersionRow db = do
   mStmt <- NSQL.prepare db "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
   case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (readSchemaVersionRow): " <> show e) >> pure Nothing
+    Left e -> pure (Left ("readSchemaVersionRow: " <> e))
     Right stmt -> do
-      hasRow <- NSQL.stepRow stmt
-      version <- if hasRow then NSQL.columnInt stmt 0 else pure 0
+      rowResult <- NSQL.stepHasRow stmt
+      versionResult <- case rowResult of
+        Left e -> pure (Left ("readSchemaVersionRow: " <> e))
+        Right False -> pure (Right Nothing)
+        Right True -> do
+          version <- NSQL.columnInt stmt 0
+          pure (Right (if version > 0 then Just version else Nothing))
       _ <- tryQxFx0 (NSQL.finalize stmt)
-      if hasRow && version > 0
-        then pure (Just version)
-        else pure Nothing
+      pure versionResult
 
 -- | True if the database has the turn_quality table but is missing any v2 column.
 --   Used to infer a v1-shaped legacy database when the schema_version marker
---   is missing or empty.
-isV1Shape :: NSQL.Database -> IO Bool
+--   is missing or empty.  'Left' = the shape could not be established.
+isV1Shape :: NSQL.Database -> IO (Either Text Bool)
 isV1Shape db = do
-  tqExists <- tableExists db "turn_quality"
-  if not tqExists
-    then pure False
-    else do
-      missing <- filterM (columnMissing db "turn_quality") v2TurnQualityColumns
-      pure (not (null missing))
+  tqProbe <- tableExists db "turn_quality"
+  case tqProbe of
+    ProbeFailed e -> pure (Left e)
+    ProbeNotFound -> pure (Right False)
+    ProbeFound -> do
+      columnProbes <- probeAll (columnExists db "turn_quality") v2TurnQualityColumns
+      pure (fmap (ProbeNotFound `elem`) columnProbes)
 
 -- | True if the database has all required tables and all required columns.
---   Used to recognise a v2-complete database that may be missing its version marker.
-isV2Shape :: NSQL.Database -> IO Bool
+--   Used to recognise a v2-complete database that may be missing its version
+--   marker.  'Left' = the probe failed (never treat that as \"not v2\").
+isV2Shape :: NSQL.Database -> IO (Either Text Bool)
 isV2Shape db = do
   result <- checkTablesAndColumns db
   pure $ case result of
-    SchemaContractOk _ -> True
-    _ -> False
+    SchemaContractOk _ -> Right True
+    SchemaContractQueryFailed msg -> Left msg
+    _ -> Right False
 
-tableExists :: NSQL.Database -> Text -> IO Bool
+-- | Probe for a named object in sqlite_master.  A probe that cannot run
+-- reports 'ProbeFailed' with the SQLite error, never a silent absence.
+tableExists :: NSQL.Database -> Text -> IO ProbeOutcome
 tableExists db tableName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
-  mStmt <- NSQL.prepare db sql
-  case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (tableExists): " <> show e) >> pure False
-    Right stmt -> do
-      _ <- NSQL.bindText stmt 1 tableName
-      hasRow <- NSQL.stepRow stmt
-      _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure hasRow
+  probeOne db "tableExists" sql tableName
 
-columnMissing :: NSQL.Database -> Text -> Text -> IO Bool
-columnMissing db tableName columnName = do
+columnExists :: NSQL.Database -> Text -> Text -> IO ProbeOutcome
+columnExists db tableName columnName = do
   let sql = "SELECT 1 FROM pragma_table_info('" <> tableName <> "') WHERE name = ? LIMIT 1"
-  mStmt <- NSQL.prepare db sql
-  case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (columnMissing): " <> show e) >> pure True
-    Right stmt -> do
-      _ <- NSQL.bindText stmt 1 columnName
-      hasRow <- NSQL.stepRow stmt
-      _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure (not hasRow)
+  probeOne db "columnExists" sql columnName
 
-indexExists :: NSQL.Database -> Text -> IO Bool
+indexExists :: NSQL.Database -> Text -> IO ProbeOutcome
 indexExists db indexName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ? LIMIT 1"
-  mStmt <- NSQL.prepare db sql
-  case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (indexExists): " <> show e) >> pure False
-    Right stmt -> do
-      _ <- NSQL.bindText stmt 1 indexName
-      hasRow <- NSQL.stepRow stmt
-      _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure hasRow
+  probeOne db "indexExists" sql indexName
 
-triggerExists :: NSQL.Database -> Text -> IO Bool
+triggerExists :: NSQL.Database -> Text -> IO ProbeOutcome
 triggerExists db triggerName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'trigger' AND name = ? LIMIT 1"
-  mStmt <- NSQL.prepare db sql
-  case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (triggerExists): " <> show e) >> pure False
-    Right stmt -> do
-      _ <- NSQL.bindText stmt 1 triggerName
-      hasRow <- NSQL.stepRow stmt
-      _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure hasRow
+  probeOne db "triggerExists" sql triggerName
 
-ftsTableExists :: NSQL.Database -> Text -> IO Bool
+ftsTableExists :: NSQL.Database -> Text -> IO ProbeOutcome
 ftsTableExists db ftsName = do
   let sql = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ? LIMIT 1"
+  probeOne db "ftsTableExists" sql ftsName
+
+-- | Run a single-value existence probe.  Prepare/bind/step failures are
+-- returned as 'ProbeFailed'; finalize stays best-effort (resource release
+-- is not part of the probe answer).
+probeOne :: NSQL.Database -> Text -> Text -> Text -> IO ProbeOutcome
+probeOne db label sql value = do
   mStmt <- NSQL.prepare db sql
   case mStmt of
-    Left e -> hPutStrLn stderr ("[schema_contract] prepare failed (ftsTableExists): " <> show e) >> pure False
+    Left e -> pure (ProbeFailed (label <> ": " <> e))
     Right stmt -> do
-      _ <- NSQL.bindText stmt 1 ftsName
-      hasRow <- NSQL.stepRow stmt
+      bindResult <- NSQL.bindText stmt 1 value
+      outcome <- case bindResult of
+        Left e -> pure (ProbeFailed (label <> ": " <> e))
+        Right () -> do
+          rowResult <- NSQL.stepHasRow stmt
+          pure $ case rowResult of
+            Left e -> ProbeFailed (label <> ": " <> e)
+            Right True -> ProbeFound
+            Right False -> ProbeNotFound
       _ <- tryQxFx0 (NSQL.finalize stmt)
-      pure hasRow
+      pure outcome
 
-anyM :: Monad m => (a -> m Bool) -> [a] -> m Bool
-anyM p = foldM (\acc x -> if acc then pure True else p x) False
+-- | Run a homogeneous probe list, aborting on the first probe failure.
+probeAll :: (a -> IO ProbeOutcome) -> [a] -> IO (Either Text [ProbeOutcome])
+probeAll probe = go []
+  where
+    go acc [] = pure (Right (reverse acc))
+    go acc (x:xs) = do
+      outcome <- probe x
+      case outcome of
+        ProbeFailed e -> pure (Left e)
+        other -> go (other : acc) xs

@@ -202,6 +202,9 @@ instance ToJSON SystemState where
     , "ownershipJournal" .= ssOwnershipJournal ss
     , "emittedPredicates" .= ssEmittedPredicates ss
     , "userR5Contour" .= ssUserR5Contour ss
+    -- Audit 2026-10-16 п.21: the field was decoded but never encoded, so
+    -- runtime A/B-validation counters were silently dropped on save.
+    , "geometricMetrics" .= ssGeometricMetrics ss
     ]
 
 instance FromJSON SystemState where

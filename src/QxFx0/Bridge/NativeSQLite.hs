@@ -10,6 +10,7 @@ module QxFx0.Bridge.NativeSQLite
   , prepare
   , step
   , stepRow
+  , stepHasRow
   , bindText
   , bindInt
   , bindInt64
@@ -185,6 +186,12 @@ stepRow stmt = do
       throwQxFx0 (mkSQLiteError "step" ("unexpected_code=" <> T.pack (show rc)) Map.empty)
     Left err ->
       throwQxFx0 (mkSQLiteError "step" err Map.empty)
+
+-- | Non-throwing row probe: 'Right True' = a row is available,
+-- 'Right False' = statement exhausted, 'Left' = the step itself failed.
+-- Schema probes need this three-valued form (audit 2026-10-16 п.23).
+stepHasRow :: Statement -> IO (Either Text Bool)
+stepHasRow stmt = fmap (fmap (== sqlRow)) (step stmt)
 
 bindText :: Statement -> CInt -> Text -> IO (Either Text ())
 bindText stmt idx val = do
