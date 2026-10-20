@@ -656,17 +656,16 @@ available list); unset = byte-identical full run. Slow keeps its
 |---|---|
 | qxfx0-test | 1322 (core 1202 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1841 |
-| qxfx0-test-unit | 1739 |
-| qxfx0-test-property | 227 |
+| qxfx0-test-fast | 1884 |
+| qxfx0-test-unit | 1787 |
+| qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
-| qxfx0-test-slow | 183 (runtime 100 + state 49 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-10-18 (batch-2 landing), all exit 0 —
-runtime 100 ran as ONE process on both 2026-10-17 and 2026-10-18 (the
-"by parts" wart of 2026-10-15 did not reproduce; on 2026-10-18 the
-group self-recovered from a ~9.7 h stall at test #57 — known wart
-class, see batch-2 ops notes); unbuffered output required to judge
-the long runtime test) |
+| qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
+per-group green on HEAD 2026-10-20 (batch-3 landing), all exit 0 —
+runtime 106 ran as ONE process (no stall); the 2026-10-18 batch-2 run
+had self-recovered from a ~9.7 h stall at test #57 — known wart class,
+see batch-2 ops notes; unbuffered output required to judge the long
+runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
 after 59 others but passes solo — run it standalone on stall.
@@ -681,6 +680,14 @@ integration 47, slow 183 (runtime 100 + state 49 — the 45 batch-1
 cases plus 4 audit pins + http 23 + lifecycle 11) — all exit 0; the
 chain ran detached; full `qxfx0-test` and the core slice were not
 re-run.
+Batch-3 landing (2026-10-20, tree = landing commits `4935f8b` /
+`b11b1e6` / `6a4b9a4` / `7f6becd` / `7166457` / `7f8d62f` /
+`606dca0`): unit 1787, fast 1884, property 244, integration 47, slow
+190 (runtime 106 + state 50 + http 23 + lifecycle 11) — all exit 0;
+the chain ran detached; full `qxfx0-test` and the core slice were not
+re-run. The first unit run caught one stale п.18 expectation in
+`CommitmentAwareRouting` (skip-turn ledger), fixed and re-run solo
+before the landing.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -748,8 +755,14 @@ re-observe before treating as real).
   runtime #57 — известный класс, батч ни при чём): п.6 стадийный
   сбой шага `5007bee` → п.7 повреждённый стор `1fbc0de` → п.8 строка
   `runtime_sessions` `c49a491`; пре-регистрация (4) + лендинг —
-  CALIBRATION_REPORT. **Далее батч 3** — п.10 → п.11 → п.17 → …
-  (пре-регистрация на входе).
+  CALIBRATION_REPORT. **Батч 3 завершён 2026-10-20** (матрица
+  зелёная: unit 1787, fast 1884, property 244, integration 47, slow
+  190 = runtime 106 + state 50 + http 23 + lifecycle 11, все exit 0):
+  п.10 `4935f8b` → п.11 `b11b1e6` → п.17 `6a4b9a4` → п.16/15
+  `7f6becd` → п.14 `7166457` → п.18 `7f8d62f` → п.21/20/23/22
+  `606dca0`; пре-регистрации (5)–(12) + лендинг — CALIBRATION_REPORT.
+  **Далее батч 4** — п.12/26 → п.9 → п.25 → п.27 → п.19 → п.13 →
+  п.24 (пре-регистрация на входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

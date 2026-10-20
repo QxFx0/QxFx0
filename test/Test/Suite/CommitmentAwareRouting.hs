@@ -28,6 +28,7 @@ import QxFx0.Types.State.SemanticCommitment
   ( CommitmentEngagement(..)
   , CommitmentId(..)
   , CommitmentOrigin(..)
+  , ContradictionEvent(..)
   , FactualClaimPayload(..)
   , LineageEvent(..)
   , MatchKind(..)
@@ -44,6 +45,7 @@ import QxFx0.Types.TurnProjection
   , trcCommitmentContradicted
   , trcCommitmentMatchKind
   , trcCommitmentFamilyHint
+  , trcContradictionPairs
   )
 import QxFx0.Core.TurnPipeline.Protocol
   ( FinalizePrecommitBundle(..)
@@ -290,13 +292,20 @@ integrationContradictionTraceAndLedger = TestLabel "contradiction trace and ledg
     assertEqual "trcCommitmentMatchKind should be ContradictedStrong"
       ContradictedStrong (trcCommitmentMatchKind trace)
 
-    -- Ledger assertion
+    -- Ledger assertion (audit 2026-10-16 п.18): this fixture is the skip
+    -- case — neither a committed surface claim nor an anchor gives the
+    -- new side an id — so no pair may be written. The old code recorded
+    -- phantom (engaged, CommitmentId 0) pairs here.
     let mStore = ssSemanticCommitments nextSs
     assertBool "store should be present"
       (isJust mStore)
     let store' = fromJust mStore
-    assertBool "scsContradictions should be non-empty"
-      (not (null (scsContradictions store')))
+    assertEqual "a skip turn must not write ledger pairs"
+      0 (trcContradictionPairs trace)
+    assertBool "no ledger event may reference CommitmentId 0"
+      (all
+        (\ev -> ceLeft ev /= CommitmentId 0 && ceRight ev /= CommitmentId 0)
+        (scsContradictions store'))
 
     -- Ensure the engagement is still recorded
     assertEqual "trcCommitmentEngaged should be 1"

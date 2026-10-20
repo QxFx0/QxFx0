@@ -4835,3 +4835,188 @@ this path) and a silently missing session row for p.8.
 - State group runs as one process at `-M10G`; staged commits were each
   built and pin-run before committing (p.6 1/1, p.7 2/2, p.8 4/4
   green).
+
+---
+
+# Audit 2026-10-16 fix batch 3 — landing (2026-10-20)
+
+Status: landed; the pre-registered bars (5)–(12) above were registered
+BEFORE any behavior change and held. Commits: p.10 `4935f8b`, p.11
+`b11b1e6`, p.17 `6a4b9a4`, p.16/15 `7f6becd`, p.14 `7166457`, p.18
+`7f8d62f`, p.21/20/23/22 `606dca0`; the matching pre-registrations are
+`ae0f813`, `95a22f0`, `57a0b13`, `f3cd43f`, `7204382`, `2d5b5b8`,
+`63aa454`. Register statuses: `docs/closure/AUDIT_2026-10-16.md`.
+Each group was built and its own pins ran green before the next was
+committed.
+
+## (5) Episodic capacity — landed (`4935f8b`)
+
+Bars held. `enforceCapacity` trims all excess in one pass (single
+`Seq.splitAt` + one `rebuildIndex`), evicted ids leave `esForgotten`,
+and `length esEvents <= episodicCapacity` is a hard invariant after
+every call. Pins in `Test.Suite.MemoryEpisodic`: capacity+2 → exactly
+capacity; a 5-turn finalize-shape simulation holds capacity every turn
+(old code: 1000→1005); the rebuilt index cannot reach evicted events;
+forgotten-set hygiene; identity within capacity. Red check on the
+reverted fix produced exactly the four expected failures with the
+identity pin green.
+
+## (6) Persisted-JSON clamps — landed (`b11b1e6`)
+
+Bars held. `sanitizePersistedState` runs on every successful state
+decode in `loadStateDirect`: `svsCount >= 0`, `svsWindowStart ∈
+[0, ssTurnCount]`, both divergence windows drop non-finite samples and
+trim to their documented bounds (newest-first), `u5Baseline` non-finite
+→ `Nothing` / finite → `clampScore`. Every adjustment is logged
+(`[persistence_debug] state_sanitized ...`) — visible, never silent;
+clean state is the identity. `ConatusEnergy.FromJSON` re-derives
+`ceScalar` as the component sum on every decode (key stays mandatory,
+value not trusted; legacy four-component blobs unchanged). Pins:
+`Test.Suite.StateSanitization` (8 cases, unit+fast) plus the slow-state
+pin `testLoadedStateSanitizesCorruptedFields` (doctor a saved blob →
+clamped state + log lines). Red checks: wiring off → slow pin red;
+derivation off → unit pin red.
+
+## (7) Canonical challenge lexicon — landed (`6a4b9a4`)
+
+Bars held. `QxFx0.Semantic.Markers.challengeMarkers` is the union of
+the five former copies (21 entries; every site gained markers, none
+lost any); `unclassifiableSuppressionMarkers` («но » : challenge) is
+Anomaly-only; `containsAnyOf` is the shared matching rule. No private
+copies remain. Pre-registered deltas (more CMConfront on evidential and
+«считаю иначе» inputs; slightly more Unclassifiable suppression) are
+the majority semantics already in force on the semantic path. Pins:
+`Test.Suite.ChallengeMarkers` (4 cases, unit+fast) incl. a detector pin
+on `detectUnclassifiableInput` (pre-unification Anomaly copy knew none
+of «контрпример»/«что если»/«но »). Red checks: shrink the union to 17
+→ 3 pins red; revert Anomaly to its private list → detector pin red.
+
+## (8)/(9) Recovery severity order + honest metacognition cause — landed (`7f6becd`)
+
+Bars held. `buildLocalRecoveryPlan` is ordered strictly by
+`recoveryCauseSeverity` (runtime 70 > shadow signals 60/50 > unknown
+topic 40 > legitimacy 30 > parser 20); the unknown-topic guard keeps its
+structured-surface gate. Pre-registered deltas: combined turns select
+the higher-severity cause; single-signal turns unchanged.
+`selfEvaluate` / `runMetacognitionLoop` take the turn's actual
+`Maybe LocalRecoveryCause` (the same merged value the trace stamps as
+`trcRecoveryCause`) instead of the deliberation-only
+`planRecoveryCause`. Pins: TurnPipelineProtocol +5 order pins and +4
+metacognition pins (accepted/ignored × recovery/clean, through
+`buildFinalizePrecommit`); the parser fixture is rebased with
+`tiBestTopic = ""`. Red checks: old chain order → exactly the five
+order pins red; old `inRecovery` derivation → exactly the two recovery
+pins red.
+
+## (10) Trace truthfulness — landed (`7166457`)
+
+Bars held. Seven fields are now honest or removed:
+`trcEpisodicEncoding` = ids appended this turn in store order
+(`episodicTurnDelta`); `trcEpisodicForgetting` = newly tombstoned +
+capacity-dropped, no re-count; `trcContentSaliencyDominantCluster` =
+derived from the post-turn meaning graph (`dominantClusterOf .
+detectClusters`) — honest `Nothing` today because the spectral splitter
+is degenerate on every graph (documented on the pin; index selection is
+pinned synthetically until the numerics produce real splits);
+`trcParserLatencyMs` removed (was a literal 0; old envelopes decode);
+the five prepare-timeline windows are measured and anchored at the
+turn's captured `t0` (no more t0/t0); `trcDoubtScore` always carries an
+honest `0.0`; the degraded-runtime `trcRecoveryEvidence` placeholder
+branch is gone and `TraceAnalysis` gains `evidence_without_cause`.
+Pins: MemoryEpisodic 5 pure, ContentSalience 3, TurnPipelineProtocol 6
+end-to-end, TraceAnalysis 1. Red check: combined revert → exactly 12
+failures, all new pins, no pre-existing test moved.
+
+## (11) Commitment ledger — landed (`7f8d62f`)
+
+Bars held. `recordContradictionPairs` (`Semantic/Commitment.hs`) is the
+single pure morphism: `newCid = surface <|> anchor`; `Nothing` → the
+store is value-unchanged with counter 0 (the pre-registered “skip with
+a trace mark” option); `Just c` → pairs `(engaged \ {c}, c)` and the
+counter is the number of recorded pairs. The revision filter uses the
+same `maybe` over the real id (sentinel removed; semantics identical —
+no discriminating pin exists, noted honestly). `trcContradictionPairs`
+is the per-turn trace mark (`FromJSON` defaults to 0, envelope version
+not bumped); the ledger haddock documents the append-only write-only
+forensic role and its per-turn observability through that field. Pins:
+CommitmentQuarantine pure cases (skip / surface / anchor / priority /
+`engaged = [newCid]`) and TurnPipelineProtocol (f)/(g) end-to-end
+(contradicted + no new-side id ⇒ no ledger growth, `pairs == 0`,
+`contradicted == True`; committed claim ⇒ real-id pairs, no id 0,
+counter == new pairs). Red check on the phantom morphism: exactly the
+skip pins fell with `(engaged, CommitmentId 0)` pairs.
+
+Matrix catch (fixed at this landing): the pre-existing
+`CommitmentAwareRouting` integration pin still asserted a non-empty
+ledger for the skip fixture — the very case the pre-registered bar
+declares empty. It now asserts `trcContradictionPairs == 0` and that no
+ledger event references `CommitmentId 0`. The unit suite is re-run at
+this landing, so the check is green here.
+
+## (12) State/schema smalls — landed (`606dca0`)
+
+Bars held. п.21: `ToJSON SystemState` writes `geometricMetrics`
+(additive optional key, no schema bump). п.20: `loadStateWithVersion`
+reads through `BEGIN DEFERRED`; writes stay `BEGIN IMMEDIATE`; a reader
+no longer takes the write lock. п.23: probes are three-valued
+(`ProbeOutcome = ProbeFound | ProbeNotFound | ProbeFailed Text`);
+`readSchemaVersion` gains `SchemaVersionProbeError`;
+`isV1Shape`/`isV2Shape` return `Either`; `checkSchemaContract` maps a
+failure to `SchemaContractQueryFailed`; `ensureSchemaMigrations` fails
+with `schema_probe_failed` before any stamp, migration or seed;
+`columnMissing` → `columnExists`; `NSQL.stepHasRow` is the non-throwing
+row probe. п.22: `insertSchemaVersion` checks bind/step/finalize and
+throws `schema_version_insert`; `runPendingMigrations` rolls back only
+while the transaction is still open (`txClosedRef`), never after COMMIT.
+
+Deviations from the pre-registration, recorded honestly:
+
+- (12d)(i) direct `insertSchemaVersion` pin was dropped: the function is
+  not exported. The bar is covered by (ii) — the migration trap yields
+  the same `schema_version_insert` operation identity plus the rollback
+  assertions (no ALTER persists, no version row remains).
+- The pre-registration said the pins live in “unit+fast”. They live in
+  `Test.Suite.RuntimeInfrastructure`, which unit/fast only compile; the
+  suite runs in the slow runtime group (and the full `TestMain`). Actual
+  indices in `runtimeInfrastructureTests` (106 entries) are 10–15, run
+  at `-M12G`.
+
+Pins: metrics round-trip (`recordABValidation` values survive
+encode→decode) + legacy JSON default; deferred read while a raw
+connection holds an uncommitted `BEGIN IMMEDIATE` writer; corrupt-file
+probes (`ProbeFailed`, `SchemaVersionProbeError`,
+`SchemaContractQueryFailed`); fail-fast bootstrap on an incompatible
+`schema_version` table (`schema_probe_failed`, no stamp, no seed);
+migration insert trap (`schema_version_insert`, ALTERs rolled back, no
+version row). Red check reverted all four behaviors at once — exactly
+five intended pins failed (round-trip, deferred read with
+`tx_begin_failed`, corrupt probes, fail-fast probe identity, insert
+trap) and the legacy-default pin stayed green. Green after restore:
+pins 6/6, slow lifecycle 11/11, fast slice
+`CorpusTuning,BootstrapRecovery` 17/17.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-20, verdicts read from logs, all exit 0:
+slow runtime 106/106 (100 batch-2 cases + 6 state/schema pins), slow
+state 50/50 (49 + the п.11 sanitization pin), slow http 23/23, slow
+lifecycle 11/11, integration 47/47, property 244/244 (227 + 17 new
+batch-3 properties), fast 1884/1884 (1841 + 43), unit 1787/1787
+(1739 + 48) — `CHAIN-DONE`. The first unit run of the landing failed
+exactly one case (the stale п.18 expectation described in (11)); after
+the test fix the full unit suite was re-run solo, 1787/1787 exit 0.
+Full `qxfx0-test` and the core slice were not re-run in this landing.
+Slow groups were run sequentially: runtime at `-M12G` as one process
+(no stall this time), state at `-M10G`, http/lifecycle at `-M12G`.
+
+## Ops notes (batch 3)
+
+- The full unit run at the landing caught the stale п.18 expectation in
+  `CommitmentAwareRouting` (see (11)); the per-group slices had not
+  registered that suite. The lesson matches batch 2: per-group slices
+  hold their bars, the full matrix is the cross-group gate.
+- Unit case count grew 1739 → 1787 (+48: the batch-3 pins in
+  MemoryEpisodic, StateSanitization, ChallengeMarkers,
+  TurnPipelineProtocol, CommitmentQuarantine and TraceAnalysis, plus
+  the п.17/п.18 fixture updates; the six RuntimeInfrastructure pins
+  live in the slow runtime group, not unit).
