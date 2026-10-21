@@ -5126,6 +5126,111 @@ temp-файлы, без session-bootstrap) — 9 кейсов, плюс 1 кей
 
 ---
 
+## (17) SQLite: threaded RTS, safe FFI и acquire без гонки timeout/takeMVar (аудит п.19)
+
+Вход пятого пункта батча 4 — отдельный перф/конкурентность-фронт.
+Бар зарегистрирован ДО изменения поведения (2026-10-21). Timing-
+тесты по решению 2026-10-16 не пишутся как latency-бар; единственный
+timing-sensitive пин проверяет не скорость, а прогресс Haskell во
+время блокирующего FFI (функциональный инвариант).
+
+### Defect (re-verified по коду HEAD `4fcf839`)
+
+- `Bridge/NativeSQLite.hs`: все 18 `foreign import ccall unsafe`,
+  включая блокирующие `sqlite3_open/close/prepare_v2/step/exec`.
+  При `busy_timeout=5000` блокирующий step держит capability до 5 с.
+- Runtime собран **без** `-threaded`: `+RTS --info` даёт `rts_v`
+  (vanilla) у `qxfx0-main` и всех тестовых бинарников. Поэтому
+  `safe` FFI сам по себе ничего не даст: без threaded RTS нет
+  второго OS-потока, которому можно отдать capability. Фронт
+  обязан включать `-threaded` (без фиксации `-N`: default 1
+  capability; safe-вызов освобождает её на время блокировки).
+- `Bridge/SQLite/Pool.hs:withPooledDB`: `timeout 5s (takeMVar
+  poolMVar)` — асинхронное исключение `timeout` может прийти
+  после успешного `takeMVar`, но до возврата `Just`: соединение
+  вынуто и потеряно (не возвращено в пул и не закрыто). Гонка
+  timeout/takeMVar, отмеченная аудитом. Сейчас она прикрыта
+  процесс-глобальным `withDatabaseActionLock` (контеншена пула
+  внутри процесса нет), но остаётся дефектом защитного пути.
+
+### Policy (locked)
+
+1. **Threaded RTS**: `-threaded` добавляется executables и
+   `test-common` (link-time); `-N` не фиксируется. Library не
+   меняется.
+2. **safe FFI только для блокирующих**: `sqlite3_open`,
+   `sqlite3_close`, `sqlite3_prepare_v2`, `sqlite3_step`,
+   `sqlite3_exec` → `safe`. Биндинги, колонки, `errmsg`,
+   `finalize` и wrapper `bind_text_transient` остаются `unsafe`
+   (не блокируют; `safe` дал бы только overhead).
+3. **Acquire без async-исключения**: вместо `timeout` вокруг
+   `takeMVar` — polling `tryTakeMVar` с дедлайном
+   (`GHC.Clock.getMonotonicTimeNSec`) и `threadDelay 1000`; по
+   дедлайну — тот же `SQLiteErrorStructured "pool_acquire"
+   "TIMEOUT"`. `tryTakeMVar` не может «вынуть и потерять»:
+   значение либо возвращено, либо осталось в MVar.
+4. **Швы**: `withPooledDBTimeout :: Int -> WorkerDBPool -> ...`
+   (микросекунды; production `withPooledDB = withPooledDBTimeout
+   5000000`), `acquireConnectionsWithTimeout :: MVar [Database] ->
+   Int -> IO [Database]` (unit-тест таймаута на пустом MVar) и
+   `poolAvailableConnections :: WorkerDBPool -> IO Int`
+   (наблюдаемость размера пула). Все три — аддитивные,
+   документированы как тестовые.
+5. Поведение действия, транзакции, busy_timeout, WAL,
+   `withDatabaseActionLock` и формат ошибок не меняются.
+
+### Pins (bar)
+
+Новый `Test.Suite.SQLiteRuntime` (unit+fast+main):
+
+1. **blocking FFI не морозит Haskell**: соединение A держит
+   `BEGIN EXCLUSIVE`, соединение B делает INSERT с
+   `busy_timeout=1000` (блокируется ~1 с); тикер (10 мс)
+   увеличивает счётчик. Дельта за время блокирующего вызова
+   ≥ 20 — Haskell-поток прогрессировал. На vanilla RTS или при
+   `unsafe` step дельта = 0 (red). Это функциональный инвариант,
+   не latency-бар.
+2. **acquire-таймаут структурный и без потерь**: на пустом
+   `MVar` `acquireConnectionsWithTimeout` с 50 мс возвращает
+   `SQLiteErrorStructured` с кодом `TIMEOUT`; после `putMVar`
+   тот же вызов возвращает ровно положенное значение (пул не
+   потерян).
+3. **размер пула стабилен**: `newDBPool` на 2 соединения,
+   10 последовательных `withPooledDB`, затем
+   `poolAvailableConnections` = 2.
+4. существующие SQLite/пул-тесты зелёные (регрессия).
+
+### Red check
+
+- вернуть `unsafe` для `sqlite3_step`/`sqlite3_exec` (при
+  `-threaded`) → пин 1 падает (дельта 0);
+- убрать `-threaded` из `test-common` → пин 1 падает;
+- вернуть `timeout` вокруг `takeMVar` → пин 2 остаётся зелёным на
+  пустом MVar (гонка вероятностная), поэтому структурный реверт
+  фиксируется ревью и пин 1/3 не затрагивает; honest limit ниже.
+
+### Not touched
+
+- SQLite schema, транзакции, WAL, busy_timeout, `withDB`,
+  `withDatabaseActionLock`, `sanitizeForPool`;
+- `-N`/capabilities (default 1), никаких новых фоновых потоков;
+- формат ошибок: тот же `SQLiteErrorStructured`.
+
+### Honest limits
+
+- Пин 1 timing-sensitive: на сильно загруженной машине возможен
+  ложный зелёный (тикер успел до вызова), поэтому порог ≥ 20 при
+  блокировке ~1 с и сброс счётчика непосредственно перед вызовом;
+  главный контроль — структурный (`safe` + `-threaded`).
+- Гонка timeout/takeMVar на HEAD вероятностная и прикрыта
+  action-lock; пин 2 проверяет наблюдаемое поведение таймаута, а
+  не гонку. После фикса гонка структурно невозможна
+  (`tryTakeMVar`).
+- `-threaded` меняет RTS целиком: полная матрица обязательна;
+  поведенческие тесты рантайма — основной контроль.
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
