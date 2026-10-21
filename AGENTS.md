@@ -656,8 +656,8 @@ available list); unset = byte-identical full run. Slow keeps its
 |---|---|
 | qxfx0-test | 1322 (core 1202 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1894 |
-| qxfx0-test-unit | 1796 |
+| qxfx0-test-fast | 1899 |
+| qxfx0-test-unit | 1801 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -694,6 +694,14 @@ integration 47, slow 190 (runtime 106 + state 50 + http 23 +
 lifecycle 11) — all exit 0; the chain ran detached; full `qxfx0-test`
 and the core slice were not re-run. The new `BootBoundary` suite adds
 9 unit cases and the lenient `columnText` pin adds 1 fast case.
+Batch-4 group-2 landing (2026-10-21, tree = landing commits
+`82b61f2` / `4103d04`): unit 1801, fast 1899, property 244,
+integration 47, slow 190 (runtime 106 + state 50 + http 23 +
+lifecycle 11) — all exit 0; the chain ran detached; full `qxfx0-test`
+and the core slice were not re-run. The `FeedbackMirror` suite adds
+5 unit + 5 fast cases; its red check needed two cycles (reader/writer
+revert, then cleanup-only) because one pin exercises the new failure
+path.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -770,8 +778,13 @@ re-observe before treating as real).
   **Батч 4 начат 2026-10-21**: п.12/26 закрыт (`b07d805`
   пре-рег + `4603a41` код; бар (13) — `Test.Suite.BootBoundary`
   (9 кейсов) + lenient `columnText` пин; red-чек — ровно 9 падений
-  при зелёном sync-containment). **Далее** — п.9 → п.25 → п.27 →
-  п.19 → п.13 → п.24 (пре-регистрация на входе).
+  при зелёном sync-containment) → п.9 закрыт (`82b61f2` пре-рег +
+  `4103d04` код; бар (14) — `Test.Suite.FeedbackMirror` (5 кейсов):
+  самовосстановление, запрет затирания при read-ошибке, создание,
+  inode-замена, очистка temp; red-чек в два цикла, первый пин-5
+  черновик был слеп к остатку temp — исправлен шаблон `-tmp`).
+  **Далее** — п.25 → п.27 → п.19 → п.13 → п.24 (пре-регистрация на
+  входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

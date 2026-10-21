@@ -5384,3 +5384,84 @@ not re-run in this landing.
 - The loader WARNs are now path-bearing for ontology and curated
   predicates; the pre-existing self-play and brain_kb warnings already
   carried it.
+## (14) Feedback mirror: самовосстановление и атомарная перезапись — landed
+
+Pre-reg `82b61f2`, code `4103d04`; bar (14) was registered before any
+behavior change and held.
+
+### Sites (as pre-registered)
+
+- `Feedback.Persist.persistFeedbackNetwork`: the reader no longer calls
+  the throwing `loadRelations`; each line is decoded with
+  `eitherDecodeStrict` and malformed rows are skipped with one WARN
+  (`[feedback-mirror] skipped N malformed line(s) in <path>`). A missing
+  file is an empty base; any other read error returns early with a WARN
+  and leaves the file byte-identical.
+- The write goes through `writeMirrorAtomically`: unique temp file in
+  the target directory (`openTempFile`, template `<name>-tmp`, no dot so
+  the random part does not hide the marker), full write, `hClose`,
+  `renameFile` over the target; `bracketOnError` closes and removes the
+  temp on any failure. The exception still propagates to the unchanged
+  `runBestEffortPostCommit "feedback_mirror"` caller.
+- Format, merge semantics, and the mirror path in the handler are
+  unchanged; no trace fields added.
+
+### Pins
+
+`Test.Suite.FeedbackMirror` (5 cases, unit+fast+main):
+
+1. malformed line self-heals (valid rows preserved, changed rows
+   merged, bad row dropped, no exception);
+2. read failure (mode 000) does not escape and does not clobber the
+   mirror (root-skip);
+3. missing file is created with the changed relations;
+4. rewrite replaces the file via rename — the inode changes — and no
+   temp remains;
+5. a failed write (target is a directory) throws, leaves no temp, and
+   the target is intact.
+
+### Red check
+
+- Cycle A (HEAD reader + `BL.writeFile`): pins 1, 2, 4 fail exactly —
+  `RELATION_PARSE_ERROR`, `openFile: permission denied` escaping into
+  the best-effort caller, and "the rewrite must replace the file via
+  rename (inode must change)"; pins 3 and 5 stay green.
+- Cycle B (temp cleanup removed, temp+rename kept): pin 5 fails —
+  "a failed write must not leave a temp file behind".
+- The first pin-5 draft used a `.tmp` template and was blind to the
+  leftover: `openTempFile` inserts its random part before the
+  extension. The template is now `-tmp` (no dot); the same revert then
+  fails as intended. Recorded because the weak pin existed in the
+  working tree for one cycle.
+
+### Honest limits
+
+- Crash atomicity (kill -9 mid-write) is not tested in-process; pin 4
+  verifies the rename mechanics structurally and pin 5 the failure
+  cleanup.
+- The temp file is created with mode 0600 (`openTempFile`) where the
+  old `BL.writeFile` produced 0644; the mirror is local runtime data
+  with no cross-uid consumer (deliberate change).
+- Pin 2 skips under euid 0 (root ignores mode bits), same as the
+  BootBoundary permission pins.
+- `loadRelations` keeps its throwing contract for curated corpora
+  (ingest); only the runtime mirror got the resilient reader.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-21, verdicts read from logs, all exit 0:
+unit 1801/1801 (1796 + 5 FeedbackMirror), fast 1899/1899 (1894 + 5),
+property 244/244, integration 47/47, slow runtime 106/106, slow state
+50/50, slow http 23/23, slow lifecycle 11/11 — `CHAIN-DONE`. Slow
+groups were run sequentially (runtime at `-M12G` as one process, state
+at `-M10G`, http/lifecycle at `-M12G`).
+
+Full `qxfx0-test` and the core slice were not re-run.
+
+## Ops notes (batch 4, group 2)
+
+- Unit count 1796 → 1801 (+5), fast 1894 → 1899 (+5); slow counts are
+  unchanged at 190.
+- Two red-check cycles were needed (reader/writer revert; cleanup-only
+  revert) rather than one combined revert, because pin 5 exercises a
+  failure path that only exists in the new temp+rename writer.
