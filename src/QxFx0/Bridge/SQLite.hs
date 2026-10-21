@@ -7,6 +7,9 @@ module QxFx0.Bridge.SQLite
   , closeDBPool
   , withDB
   , withPooledDB
+  , withPooledDBTimeout
+  , acquireConnectionsWithTimeout
+  , poolAvailableConnections
   , queryIdentityClaimsByFocus
   , ensureSchemaMigrations
   , maybeCheckpoint
@@ -22,6 +25,9 @@ import QxFx0.Bridge.SQLite.Pool
   , newDBPool
   , withDB
   , withPooledDB
+  , withPooledDBTimeout
+  , acquireConnectionsWithTimeout
+  , poolAvailableConnections
   )
 import QxFx0.Bridge.SQLite.Queries
   ( loadClusters

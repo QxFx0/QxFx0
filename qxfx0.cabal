@@ -609,6 +609,7 @@ library
 
 executable qxfx0-main
   import:        warnings, base-deps
+  ghc-options:   -threaded
   autogen-modules:
     Paths_qxfx0
   main-is:       Main.hs
@@ -627,13 +628,14 @@ executable qxfx0-main
 
 executable qxfx0-stage1-traces
   import:        warnings, base-deps
+  ghc-options:   -threaded
   main-is:       Stage1Traces.hs
   hs-source-dirs: app
   build-depends: qxfx0, directory >=1.3 && <1.4, filepath >=1.4 && <1.5
 
 common test-common
   import:        warnings, base-deps
-  ghc-options:   -rtsopts -Wno-error=missing-deriving-strategies -Wno-error=incomplete-uni-patterns -Wno-error=overlapping-patterns -Wno-error=missing-fields
+  ghc-options:   -threaded -rtsopts -Wno-error=missing-deriving-strategies -Wno-error=incomplete-uni-patterns -Wno-error=overlapping-patterns -Wno-error=missing-fields
   hs-source-dirs: test
   build-tool-depends:
     qxfx0:qxfx0-main
@@ -665,6 +667,7 @@ common test-common
     Test.Suite.BootBoundary
     Test.Suite.FeedbackMirror
     Test.Suite.SessionLockOverflow
+    Test.Suite.SQLiteRuntime
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
     Test.Suite.PerspectiveRegistry

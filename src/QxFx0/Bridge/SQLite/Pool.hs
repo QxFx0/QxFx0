@@ -10,12 +10,16 @@ module QxFx0.Bridge.SQLite.Pool
   , closeDBPool
   , withDB
   , withPooledDB
+  , withPooledDBTimeout
+  , acquireConnectionsWithTimeout
+  , poolAvailableConnections
   , execOrThrow
   ) where
 
 import Control.Concurrent (ThreadId, myThreadId, threadDelay)
-import Control.Concurrent.MVar (MVar, modifyMVar, newMVar, putMVar, takeMVar)
+import Control.Concurrent.MVar (MVar, modifyMVar, newMVar, putMVar, takeMVar, tryReadMVar, tryTakeMVar)
 import Control.Exception (finally, mask, mask_, onException, throwIO)
+import GHC.Clock (getMonotonicTimeNSec)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map.Strict as Map
@@ -30,7 +34,6 @@ import QxFx0.ExceptionPolicy
   , tryQxFx0
   , throwQxFx0
   )
-import System.Timeout (timeout)
 import System.IO.Unsafe (unsafePerformIO)
 
 data QxFx0DB = QxFx0DB
@@ -143,23 +146,37 @@ renderDbActionFailure ex =
       "db action failed: stage=" <> T.pack (show stage) <> ": " <> msg
     _ -> "db action failed"
 
+-- | Production pool acquisition timeout (5 s).
+poolAcquireTimeoutMicros :: Int
+poolAcquireTimeoutMicros = 5000000
+
 withPooledDB :: WorkerDBPool -> (NSQL.Database -> IO a) -> IO a
-withPooledDB pool action = withDatabaseActionLock $ mask $ \restore -> do
-  mConns <- timeout poolAcquireTimeoutMicros (takeMVar (poolMVar pool))
+withPooledDB = withPooledDBTimeout poolAcquireTimeoutMicros
+
+-- | Acquire idle connections within a deadline.  The poll is deliberately
+-- built on 'tryTakeMVar' rather than @timeout . takeMVar@: an asynchronous
+-- timeout exception can land after 'takeMVar' succeeded but before its result
+-- is returned, leaving a connection that is neither in the pool nor closed.
+-- 'tryTakeMVar' either returns the value or leaves it in the MVar, so the
+-- acquisition cannot drop a connection.
+withPooledDBTimeout :: Int -> WorkerDBPool -> (NSQL.Database -> IO a) -> IO a
+withPooledDBTimeout timeoutMicros pool action = withDatabaseActionLock $ mask $ \restore -> do
+  acquired <- tryQxFx0 (acquireConnectionsWithTimeout (poolMVar pool) timeoutMicros)
   conns <-
-    case mConns of
-      Nothing ->
-        throwQxFx0
-          (mkSQLiteError
-            "pool_acquire"
-            "TIMEOUT"
-            (Map.singleton "pool_size" (T.pack (show (poolSize pool)))))
-      Just available -> pure available
+    case acquired of
+      Right available -> pure available
+      Left ex ->
+        case ex of
+          SQLiteErrorStructured details
+            | sedErrorCode details == "TIMEOUT" ->
+                throwQxFx0
+                  (mkSQLiteError
+                    "pool_acquire"
+                    "TIMEOUT"
+                    (Map.singleton "pool_size" (T.pack (show (poolSize pool)))))
+          _ -> throwQxFx0 ex
   withConnections restore conns
   where
-    poolAcquireTimeoutMicros :: Int
-    poolAcquireTimeoutMicros = 5000000
-
     withConnections restore [] = do
       db <- openInitializedConnection (poolPath pool)
       finally
@@ -192,6 +209,28 @@ withPooledDB pool action = withDatabaseActionLock $ mask $ \restore -> do
               case replacement of
                 Right freshDb -> pure (Just freshDb)
                 Left e -> hPutStrLn stderr ("[sqlite_pool] connection replacement failed: " <> show e) >> pure Nothing
+
+-- | Deadline poll on the pool slot.  Exported as a test seam; production
+-- always goes through 'withPooledDBTimeout'.
+acquireConnectionsWithTimeout :: MVar [NSQL.Database] -> Int -> IO [NSQL.Database]
+acquireConnectionsWithTimeout slot timeoutMicros = do
+  start <- getMonotonicTimeNSec
+  let deadline = start + fromIntegral timeoutMicros * 1000
+      poll = do
+        mConns <- tryTakeMVar slot
+        case mConns of
+          Just conns -> pure conns
+          Nothing -> do
+            now <- getMonotonicTimeNSec
+            if now >= deadline
+              then throwQxFx0 (mkSQLiteError "pool_acquire" "TIMEOUT" Map.empty)
+              else threadDelay 1000 >> poll
+  poll
+
+-- | Test/ops observability: idle connections currently held by the pool.
+poolAvailableConnections :: WorkerDBPool -> IO Int
+poolAvailableConnections pool =
+  maybe 0 length <$> tryReadMVar (poolMVar pool)
 
 isNoActiveTransactionError :: Text -> Bool
 isNoActiveTransactionError err =

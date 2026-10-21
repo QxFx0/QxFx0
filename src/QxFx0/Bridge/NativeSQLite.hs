@@ -50,16 +50,16 @@ data CStatement
 type Database = Ptr CDatabase
 type Statement = Ptr CStatement
 
-foreign import ccall unsafe "sqlite3_open"
+foreign import ccall safe "sqlite3_open"
   c_sqlite3_open :: CString -> Ptr Database -> IO CInt
 
-foreign import ccall unsafe "sqlite3_close"
+foreign import ccall safe "sqlite3_close"
   c_sqlite3_close :: Database -> IO CInt
 
-foreign import ccall unsafe "sqlite3_prepare_v2"
+foreign import ccall safe "sqlite3_prepare_v2"
   c_sqlite3_prepare_v2 :: Database -> CString -> CInt -> Ptr Statement -> Ptr CString -> IO CInt
 
-foreign import ccall unsafe "sqlite3_step"
+foreign import ccall safe "sqlite3_step"
   c_sqlite3_step :: Statement -> IO CInt
 
 foreign import ccall unsafe "sqlite3_finalize"
@@ -98,7 +98,7 @@ foreign import ccall unsafe "sqlite3_column_type"
 foreign import ccall unsafe "sqlite3_column_bytes"
   c_sqlite3_column_bytes :: Statement -> CInt -> IO CInt
 
-foreign import ccall unsafe "sqlite3_exec"
+foreign import ccall safe "sqlite3_exec"
   c_sqlite3_exec :: Database -> CString -> Ptr () -> Ptr () -> Ptr CString -> IO CInt
 
 foreign import ccall unsafe "sqlite3_errmsg"
