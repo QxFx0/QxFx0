@@ -662,6 +662,7 @@ common test-common
     Test.Support.QuickCheckConfig
     Test.Support.SuiteFilter
     Test.Suite.ArchitectureInvariants
+    Test.Suite.BootBoundary
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
     Test.Suite.PerspectiveRegistry

@@ -18,6 +18,7 @@ nativeSQLiteNullsTests =
   , testColumnDoubleMaybeDistinguishesNull
   , testColumnIntNullBackwardCompatibility
   , testColumnDoubleNullBackwardCompatibility
+  , testColumnTextDecodesInvalidUtf8Leniently
   ]
 
 tempDbPath :: FilePath
@@ -134,6 +135,30 @@ testColumnIntNullBackwardCompatibility = TestCase $ withTempDb $ \db -> do
   assertEqual "legacy columnInt must return 0 for NULL"
     0 intVal
   NSQL.finalize stmt
+
+-- Audit 2026-10-16 п.12: the DB text boundary decodes leniently. A
+-- text column carrying invalid UTF-8 must read as U+FFFD instead of
+-- throwing UnicodeException past the governed turn path (the Engine
+-- catches only QxFx0Exception).
+testColumnTextDecodesInvalidUtf8Leniently :: Test
+testColumnTextDecodesInvalidUtf8Leniently = TestCase $ withTempDb $ \db -> do
+  exec db "CREATE TABLE invalid_utf8_test(id INTEGER PRIMARY KEY, txt TEXT)"
+  exec db "INSERT INTO invalid_utf8_test(txt) VALUES (CAST(X'80' AS TEXT))"
+
+  mStmt <- NSQL.prepare db "SELECT txt FROM invalid_utf8_test"
+  stmt <- case mStmt of
+    Left err -> assertFailure ("prepare select failed: " <> T.unpack err) >> fail "unreachable"
+    Right s -> pure s
+  hasRow <- NSQL.stepRow stmt
+  assertBool "expected a row" hasRow
+  txt <- NSQL.columnText stmt 0
+  txtLenient <- NSQL.columnTextLenient stmt 0
+  NSQL.finalize stmt
+
+  assertBool
+    ("invalid UTF-8 must decode leniently to U+FFFD, got: " <> show txt)
+    (T.isInfixOf "\xFFFD" txt)
+  assertEqual "columnTextLenient must match columnText" txt txtLenient
 
 testColumnDoubleNullBackwardCompatibility :: Test
 testColumnDoubleNullBackwardCompatibility = TestCase $ withTempDb $ \db -> do

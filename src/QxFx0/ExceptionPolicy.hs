@@ -1,6 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables, DerivingStrategies #-}
 module QxFx0.ExceptionPolicy
   ( tryAsync
+  , tryBootResource
   , tryIO
   , tryQxFx0
   , catchIO
@@ -255,6 +256,23 @@ tryAsync action = do
       Just (_ :: AsyncException) -> throwIO se
       Nothing -> pure (Left se)
     Right v -> pure (Right v)
+
+-- | Catch the two *expected* boot-resource failure classes
+-- ('QxFx0Exception' from a loader, 'IOException' from a read) and
+-- rethrow 'AsyncException': cancellation is never swallowed at a
+-- resource boundary. Every other exception escapes as well — a
+-- programming error must stay loud instead of silently degrading a
+-- resource to its fallback. Audit 2026-10-16 п.12/26.
+tryBootResource :: IO a -> IO (Either SomeException a)
+tryBootResource action = do
+  result <- try action
+  case result of
+    Right v -> pure (Right v)
+    Left se
+      | Just (_ :: AsyncException) <- fromException se -> throwIO se
+      | Just (_ :: QxFx0Exception) <- fromException se -> pure (Left se)
+      | Just (_ :: IOException) <- fromException se -> pure (Left se)
+      | otherwise -> throwIO se
 
 tryIO :: IO a -> IO (Either IOException a)
 tryIO = try

@@ -17,6 +17,7 @@ module QxFx0.Semantic.Lexicon.RuntimeParadigms
   , RuntimeParadigms(..)
   , loadRuntimeParadigms
   , loadDefaultRuntimeParadigms
+  , loadRuntimeParadigmsFrom
    , emptyRuntimeParadigms
   , NounCase(..)
   , Number(..)
@@ -55,9 +56,10 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 import qualified Data.ByteString as BS
-import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
 import Control.DeepSeq (NFData)
+
+import QxFx0.ExceptionPolicy (tryIO)
 
 import QxFx0.Types.Lexicon.RuntimeParadigms
   ( PartOfSpeech(..)
@@ -79,19 +81,29 @@ loadRuntimeParadigms bs = do
 
 -- | Load paradigms + exceptions from default paths. Pure IO — no global cache.
 loadDefaultRuntimeParadigms :: IO RuntimeParadigms
-loadDefaultRuntimeParadigms = do
-  paradigms <- loadFile "resources/morphology/paradigms.json" "paradigms"
-  exceptions <- loadFile "resources/morphology/exceptions.json" "exceptions"
+loadDefaultRuntimeParadigms =
+  loadRuntimeParadigmsFrom
+    "resources/morphology/paradigms.json"
+    "resources/morphology/exceptions.json"
+
+-- | Load paradigms + exceptions from explicit paths. Each file degrades
+-- independently to 'mempty' on a missing/unreadable file or a parse
+-- error: the runtime morphology falls back to the JSON path, so a read
+-- error is not a bootstrap crash (audit 2026-10-16 п.12). Async
+-- cancellation propagates.
+loadRuntimeParadigmsFrom :: FilePath -> FilePath -> IO RuntimeParadigms
+loadRuntimeParadigmsFrom paradigmsPath exceptionsPath = do
+  paradigms <- loadFile paradigmsPath "paradigms"
+  exceptions <- loadFile exceptionsPath "exceptions"
   pure RuntimeParadigms { rpMap = paradigms, rpExceptions = exceptions }
   where
     loadFile path label = do
-      exists <- doesFileExist path
-      if not exists
-        then do
-          hPutStrLn stderr $ "[RuntimeParadigms] " <> label <> " file not found: " <> path
+      readResult <- tryIO (BS.readFile path)
+      case readResult of
+        Left err -> do
+          hPutStrLn stderr $ "[RuntimeParadigms] " <> label <> " read error: " <> show err
           pure mempty
-        else do
-          bs <- BS.readFile path
+        Right bs ->
           case eitherDecodeStrict bs of
             Left err -> do
               hPutStrLn stderr $ "[RuntimeParadigms] " <> label <> " parse error: " <> err

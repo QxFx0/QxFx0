@@ -19,6 +19,7 @@ import System.Directory (doesFileExist)
 import System.IO (hPutStrLn, stderr)
 import Paths_qxfx0 (getDataFileName)
 
+import QxFx0.ExceptionPolicy (tryIO)
 import QxFx0.Self.Conatus (ConatusWeights, defaultConatusWeights)
 import QxFx0.Self.FamilyTargets (FamilyTarget, familyTargets)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
@@ -52,9 +53,12 @@ resolveSelfConfigPath path = do
   if localExists
     then pure path
     else do
-      installedPath <- getDataFileName path
-      installedExists <- doesFileExist installedPath
-      pure (if installedExists then installedPath else path)
+      installedResult <- tryIO (getDataFileName path)
+      case installedResult of
+        Left _ -> pure path
+        Right installedPath -> do
+          installedExists <- doesFileExist installedPath
+          pure (if installedExists then installedPath else path)
 
 -- | Load one JSON value, falling back to the supplied pure builtin.
 loadConfigOrBuiltinIO :: FromJSON a => FilePath -> a -> IO a
@@ -73,14 +77,21 @@ loadTunedOrDefaultIO requestedTunedPath basePath builtin = do
   if not tunedExists
     then loadConfigOrBuiltinIO basePath builtin
     else do
-      bytes <- BS.readFile tunedPath
-      case eitherDecodeStrict bytes of
-        Right config -> pure config
+      readResult <- tryIO (BS.readFile tunedPath)
+      case readResult of
         Left err -> do
           hPutStrLn stderr
-            ("[config] " <> tunedPath <> " parse error: " <> err
+            ("[config] " <> tunedPath <> " read error: " <> show err
               <> "; falling back to " <> basePath)
           loadConfigOrBuiltinIO basePath builtin
+        Right bytes ->
+          case eitherDecodeStrict bytes of
+            Right config -> pure config
+            Left err -> do
+              hPutStrLn stderr
+                ("[config] " <> tunedPath <> " parse error: " <> err
+                  <> "; falling back to " <> basePath)
+              loadConfigOrBuiltinIO basePath builtin
 
 -- | Read all Self tunables exactly once for a new runtime session.
 loadSelfBootstrapConfig :: IO SelfBootstrapConfig
@@ -124,9 +135,16 @@ bootstrapSelfState _ (Just persisted) = persisted
 
 decodeOrFallback :: FromJSON a => FilePath -> a -> IO a
 decodeOrFallback path builtin = do
-  bytes <- BS.readFile path
-  case eitherDecodeStrict bytes of
-    Right config -> pure config
+  readResult <- tryIO (BS.readFile path)
+  case readResult of
     Left err -> do
-      hPutStrLn stderr ("[config] " <> path <> " parse error: " <> err)
+      hPutStrLn stderr
+        ("[config] " <> path <> " read error: " <> show err
+          <> "; using builtin")
       pure builtin
+    Right bytes ->
+      case eitherDecodeStrict bytes of
+        Right config -> pure config
+        Left err -> do
+          hPutStrLn stderr ("[config] " <> path <> " parse error: " <> err)
+          pure builtin

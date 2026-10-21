@@ -236,6 +236,11 @@ bindNull stmt idx = do
     then return (Right ())
     else return (Left $ "bindNull failed: " <> T.pack (show rc))
 
+-- | Read a text column, decoding invalid UTF-8 leniently (U+FFFD)
+-- instead of throwing 'UnicodeException'. The DB boundary carries data
+-- that an external writer may have corrupted; a raw decode exception
+-- would escape the governed turn path (the Engine catches
+-- 'QxFx0Exception' only). Audit 2026-10-16 п.12.
 columnText :: Statement -> CInt -> IO Text
 columnText stmt idx = do
   cStr <- c_sqlite3_column_text stmt idx
@@ -247,20 +252,11 @@ columnText stmt idx = do
         then throwQxFx0 (mkSQLiteError "columnText" "NEGATIVE_LENGTH" (Map.singleton "length" (T.pack (show cLen))))
         else do
           bs <- BS.packCStringLen (cStr, fromIntegral cLen)
-          pure (TE.decodeUtf8 bs)
-
-columnTextLenient :: Statement -> CInt -> IO Text
-columnTextLenient stmt idx = do
-  cStr <- c_sqlite3_column_text stmt idx
-  if cStr == nullPtr
-    then return ""
-    else do
-      cLen <- c_sqlite3_column_bytes stmt idx
-      if cLen < 0
-        then throwQxFx0 (mkSQLiteError "columnTextLenient" "NEGATIVE_LENGTH" (Map.singleton "length" (T.pack (show cLen))))
-        else do
-          bs <- BS.packCStringLen (cStr, fromIntegral cLen)
           pure (TE.decodeUtf8With lenientDecode bs)
+
+-- | Compatibility alias of 'columnText' (same lenient semantics).
+columnTextLenient :: Statement -> CInt -> IO Text
+columnTextLenient = columnText
 
 -- | Read an integer column value.
 --

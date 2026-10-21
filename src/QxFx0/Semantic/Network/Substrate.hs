@@ -35,6 +35,7 @@ module QxFx0.Semantic.Network.Substrate
 
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON(..), ToJSON(..), (.:), (.:?), (.!=), withObject)
+import QxFx0.ExceptionPolicy (tryIO)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as BL
 import Data.List (foldl')
@@ -48,7 +49,6 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.ByteString as BS
 import GHC.Generics (Generic)
-import System.Directory (doesFileExist)
 import System.Environment (lookupEnv)
 
 -- | A single brain_kb entry parsed from JSONL.
@@ -84,18 +84,19 @@ allowedLayers :: [Text]
 allowedLayers = ["ontology", "dialogue", "metaphor", "dialog_moves", "human_signals"]
 
 -- | Load brain_kb.jsonl from a file path. Parses JSONL (one JSON object
--- per line), not a JSON array. Returns empty list if file not found or
--- parse fails.
+-- per line), not a JSON array. Returns the empty list when the file is
+-- missing, unreadable, or every line fails to parse — the substrate
+-- layer is an optional enrichment (audit 2026-10-16 п.12: a read error
+-- is a degradation, not a bootstrap crash).
 loadBrainKB :: FilePath -> IO [BrainKBEntry]
 loadBrainKB path = do
-  exists <- doesFileExist path
-  if not exists
-    then pure []
-    else do
-      content <- BS.readFile path
+  readResult <- tryIO (BS.readFile path)
+  case readResult of
+    Left _ -> pure []
+    Right content ->
       let lines = filter (not . BS.null) (BS.split 10 content)
           parsed = mapMaybe parseLine lines
-      pure parsed
+      in pure parsed
   where
     parseLine :: BS.ByteString -> Maybe BrainKBEntry
     parseLine line =

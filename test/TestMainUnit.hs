@@ -8,6 +8,7 @@ import Test.Support.SuiteFilter (selectSuites)
 
 import Test.Suite.CoreBehavior (coreBehaviorTests)
 import Test.Suite.ArchitectureInvariants (architectureInvariantTests)
+import Test.Suite.BootBoundary (bootBoundaryTests)
 import Test.Suite.SelfPerspective (selfPerspectiveTests)
 import Test.Suite.PerspectiveRegistry (perspectiveRegistryTests)
 import Test.Suite.Guardrails (guardrailsTests)
@@ -87,6 +88,7 @@ unitSuites :: [(String, [Test])]
 unitSuites =
   [ ("CoreBehavior", coreBehaviorTests)
   , ("ArchitectureInvariant", architectureInvariantTests)
+  , ("BootBoundary", bootBoundaryTests)
   , ("SelfPerspective", selfPerspectiveTests)
   , ("PerspectiveRegistry", perspectiveRegistryTests)
   , ("Guardrails", guardrailsTests)

@@ -16,6 +16,10 @@ module QxFx0.Runtime.Session.Bootstrap
   , readExternalKnowledgeEnabled
   , resolveKnowledgePath
   , loadBootstrapDefinitionCorpus
+  , loadBootstrapDefinitionCorpusFrom
+  , loadOntologyForBootstrap
+  , mergeSelfPlayRelationsForBootstrap
+  , initializeAutonomousStorageWith
   , bootstrapSemanticNetwork
   , buildNetworkFromAtomGraph
   , readSelfPlayEnabled
@@ -58,6 +62,8 @@ import QxFx0.ExceptionPolicy
   , mkRuntimeInitError
   , renderQxFx0ExceptionForLog
   , throwQxFx0
+  , tryAsync
+  , tryBootResource
   , tryIO
   , tryQxFx0
   )
@@ -107,7 +113,7 @@ import QxFx0.Semantic.Content.Curated
   , loadCuratedPredicates
   , mergeCuratedIntoDefinitionCorpus
   )
-import QxFx0.Semantic.Ontology (loadOntology, emptyOntology)
+import QxFx0.Semantic.Ontology (Ontology, loadOntology, emptyOntology)
 import QxFx0.Semantic.Ontology.Dynamic (defaultLearningConfig, emptyDynamicOntologyState)
 import QxFx0.Semantic.Network (contentDensityGate, mergeSemanticNetworks)
 import QxFx0.Runtime.Session.Autonomous
@@ -407,21 +413,33 @@ startAutonomousLearningAudit handles morphology corpus initialNetwork = do
           pure started
 
 initializeAutonomousStorage :: FilePath -> IO (Either Text QxFx0DB)
-initializeAutonomousStorage dbPath = do
+initializeAutonomousStorage =
+  initializeAutonomousStorageWith $ \persistenceDb -> do
+    RuntimeProjection.ensureRuntimeProjectionSchema persistenceDb
+    ensureLearningJobSchema persistenceDb
+    ensureLearningEventsSchema persistenceDb
+    ensureCorroborationTaskSchema persistenceDb
+    ensureQuarantineSchema persistenceDb
+
+-- | Boundary of 'initializeAutonomousStorage' with an injectable
+-- schema-init action (exported for the audit п.26 pin). Synchronous
+-- failures stay contained as a 'Left Text' with the connection closed;
+-- async cancellation propagates (and still closes the connection).
+initializeAutonomousStorageWith
+  :: (QxFx0DB -> IO ())
+  -> FilePath
+  -> IO (Either Text QxFx0DB)
+initializeAutonomousStorageWith initAction dbPath = do
   opened <- NSQL.open dbPath
   case opened of
     Left err -> pure (Left err)
     Right conn -> do
       let persistenceDb = QxFx0DB dbPath conn
-      initialized <- try $ do
-        RuntimeProjection.ensureRuntimeProjectionSchema persistenceDb
-        ensureLearningJobSchema persistenceDb
-        ensureLearningEventsSchema persistenceDb
-        ensureCorroborationTaskSchema persistenceDb
-        ensureQuarantineSchema persistenceDb
+          closeConn = NSQL.close conn
+      initialized <- tryAsync (initAction persistenceDb) `onException` closeConn
       case initialized of
-        Left (err :: SomeException) -> do
-          NSQL.close conn
+        Left err -> do
+          closeConn
           pure (Left (T.pack (show err)))
         Right () -> pure (Right persistenceDb)
 
@@ -468,6 +486,14 @@ loadOwnershipLibraryAtBoot = do
 loadBootstrapDefinitionCorpus :: IO (M.Map Text DefinitionContent)
 loadBootstrapDefinitionCorpus = do
   curatedPath <- resolveKnowledgePath curatedPredicatesPath
+  loadBootstrapDefinitionCorpusFrom curatedPath
+
+-- | Load curated predicates from one path. A malformed (parser
+-- 'QxFx0Exception') or unreadable ('IOException') file falls back to
+-- the seed corpus; async cancellation and programming errors
+-- propagate. Audit 2026-10-16 п.12.
+loadBootstrapDefinitionCorpusFrom :: FilePath -> IO (M.Map Text DefinitionContent)
+loadBootstrapDefinitionCorpusFrom curatedPath = do
   curatedExists <- doesFileExist curatedPath
   if not curatedExists
     then do
@@ -475,11 +501,12 @@ loadBootstrapDefinitionCorpus = do
         (Log.addContext "path" (T.pack curatedPath) Log.emptyContext)
       pure definitionCorpus
     else do
-      curatedResult <- try @IOException (loadCuratedPredicates curatedPath)
+      curatedResult <- tryBootResource (loadCuratedPredicates curatedPath)
       case curatedResult of
         Left err -> do
           Log.logWarn "Curated predicates load failed; using seed corpus only"
-            (Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+            (Log.addContext "path" (T.pack curatedPath) $
+             Log.addContext "error" (T.pack (show err)) Log.emptyContext)
           pure definitionCorpus
         Right curated -> do
           Log.logInfo "Curated predicates loaded"
@@ -517,7 +544,42 @@ bootstrapSemanticNetwork morphology brainKBEntries useExternal =
           selfPlayExists <- doesFileExist selfPlayPath
           if not selfPlayExists
             then pure withExternal
-            else mergeSelfPlayRelations selfPlayPath withExternal
+            else mergeSelfPlayRelationsForBootstrap selfPlayPath withExternal
+
+-- | Merge self-play relations at boot. The enrichment is optional: a
+-- malformed (parser 'QxFx0Exception') or unreadable ('IOException')
+-- file leaves the base network unchanged; async cancellation and
+-- programming errors propagate. Audit 2026-10-16 п.12.
+mergeSelfPlayRelationsForBootstrap
+  :: FilePath
+  -> SemanticNetwork
+  -> IO SemanticNetwork
+mergeSelfPlayRelationsForBootstrap selfPlayPath baseNetwork = do
+  merged <- tryBootResource (mergeSelfPlayRelations selfPlayPath baseNetwork)
+  case merged of
+    Left err -> do
+      Log.logWarn "Self-play relations load failed; using base semantic network"
+        (Log.addContext "path" (T.pack selfPlayPath) $
+         Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+      pure baseNetwork
+    Right network -> pure network
+
+-- | Load the category-classification ontology at boot. A malformed or
+-- unreadable resource is non-fatal: the classifier falls back to
+-- lexical markers. Expected failure classes only; async cancellation
+-- and programming errors propagate. Audit 2026-10-16 п.12.
+loadOntologyForBootstrap :: FilePath -> IO Ontology
+loadOntologyForBootstrap ontologyPath = do
+  ontologyResult <- tryBootResource (loadOntology ontologyPath)
+  case ontologyResult of
+    Left err -> do
+      Log.logWarn "Ontology load failed; category classifier will fall back to lexical markers"
+        (Log.addContext "path" (T.pack ontologyPath) $
+         Log.addContext "error" (T.pack (show err)) Log.emptyContext)
+      pure emptyOntology
+    Right ot -> do
+      Log.logInfo "Ontology loaded" Log.emptyContext
+      pure ot
 
 bootstrapSession :: Bool -> Text -> IO Session
 bootstrapSession quiet sessionId = mask $ \restore -> do
@@ -682,15 +744,7 @@ bootstrapSessionTracked cleanupRef quiet sessionId = do
   -- ADR-0052 Phase IV: load ontology once for category classification.
   -- Failure is non-fatal: the classifier falls back to lexical markers.
   ontologyPath <- resolveKnowledgePath "resources/knowledge/ontology.jsonl"
-  ontologyResult <- try @IOException (loadOntology ontologyPath)
-  ontology <- case ontologyResult of
-    Left err -> do
-      Log.logWarn "Ontology load failed; category classifier will fall back to lexical markers"
-        (Log.addContext "error" (T.pack (show err)) Log.emptyContext)
-      pure emptyOntology
-    Right ot -> do
-      Log.logInfo "Ontology loaded" Log.emptyContext
-      pure ot
+  ontology <- loadOntologyForBootstrap ontologyPath
 
   externalEnabled <- readExternalKnowledgeEnabled
   seededNetwork <- bootstrapSemanticNetwork morphology brainKBEntries externalEnabled
