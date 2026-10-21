@@ -24,10 +24,11 @@ The guard implements the /hard/ half of the two-protocol law:
   The surface is /not/ an ontological move and carries no advice —
   it names the limit and hands over the resources.
 
-Determinism: marker matching is pure substring matching over a fixed
-ordered lexicon on a normalized (lowercase, ё→е, collapsed
-whitespace) copy of the input; the first marker in list order wins,
-so the verdict is a total function of the input text.
+Determinism: exact whole-input markers are checked first, then pure
+substring matching over a fixed ordered lexicon, on a normalized
+(lowercase, ё→е, collapsed whitespace) copy of the input; the first
+marker in list order wins, so the verdict is a total function of the
+input text.
 
 Ops duty: the resource lines below are real services and must be
 re-verified periodically; 'crVersion' exists so staleness is
@@ -36,6 +37,7 @@ machine-visible in every trace.
 module QxFx0.Safety.CrisisGuard
   ( -- * Hard lexical gate
     acuteCrisisMarkers
+  , acuteCrisisExactMarkers
   , normalizeCrisisInput
   , detectCrisisTrigger
     -- * Protocol resolution
@@ -48,6 +50,7 @@ module QxFx0.Safety.CrisisGuard
   , renderCrisisSurface
   ) where
 
+import Data.Char (isAlphaNum)
 import Data.Text (Text)
 import qualified Data.Text as T
 
@@ -70,7 +73,6 @@ acuteCrisisMarkers =
   , ("убить себя", CrisisSuicidalIdeation)
   , ("убью себя", CrisisSuicidalIdeation)
   , ("хочу умереть", CrisisSuicidalIdeation)
-  , ("хочу покончить", CrisisSuicidalIdeation)
   , ("суицид", CrisisSuicidalIdeation)
   , ("суицидальн", CrisisSuicidalIdeation)
     -- NB: the bare stem "самоубий" is deliberately NOT a marker: its
@@ -94,6 +96,27 @@ acuteCrisisMarkers =
   , ("лучше бы меня не было", CrisisSuicidalIdeation)
   , ("вскрыть вены", CrisisSelfHarm)
   , ("вскрою вены", CrisisSelfHarm)
+    -- Object-complete suicidal acts (audit 2026-10-16 п.25): the old
+    -- object-free "хочу покончить" fired on "хочу покончить с
+    -- работой"; these entries keep every acute completion of the
+    -- phrase inside the gate while the benign objects fall back to
+    -- the R5 contour.
+  , ("покончить с жизнью", CrisisSuicidalIdeation)
+  , ("покончил с жизнью", CrisisSuicidalIdeation)
+  , ("покончить жизнь самоубийством", CrisisSuicidalIdeation)
+  , ("покончил жизнь самоубийством", CrisisSuicidalIdeation)
+  , ("покончу с собой", CrisisSuicidalIdeation)
+  , ("покончил с собой", CrisisSuicidalIdeation)
+  , ("лишить себя жизни", CrisisSuicidalIdeation)
+  , ("лишил себя жизни", CrisisSuicidalIdeation)
+  , ("расстаться с жизнью", CrisisSuicidalIdeation)
+  , ("расстался с жизнью", CrisisSuicidalIdeation)
+  , ("совершить самоубийство", CrisisSuicidalIdeation)
+  , ("совершил самоубийство", CrisisSuicidalIdeation)
+  , ("совершила самоубийство", CrisisSuicidalIdeation)
+  , ("совершу самоубийство", CrisisSuicidalIdeation)
+  , ("планирую самоубийство", CrisisSuicidalIdeation)
+  , ("планирует самоубийство", CrisisSuicidalIdeation)
     -- English acute markers: the runtime is RU-first, but the hard
     -- gate must not silently pass acute English input.
   , ("kill myself", CrisisSuicidalIdeation)
@@ -101,14 +124,50 @@ acuteCrisisMarkers =
   , ("want to die", CrisisSuicidalIdeation)
   , ("don't want to live", CrisisSuicidalIdeation)
   , ("dont want to live", CrisisSuicidalIdeation)
-  , ("suicide", CrisisSuicidalIdeation)
-  , ("suicidal", CrisisSuicidalIdeation)
     -- NOTE: written with a space, not a hyphen — 'normalizeCrisisInput'
     -- maps hyphens to spaces, so the stored form must be normalized too.
   , ("self harm", CrisisSelfHarm)
   , ("hurt myself", CrisisSelfHarm)
   , ("no reason to live", CrisisSuicidalIdeation)
   , ("end it all", CrisisSuicidalIdeation)
+    -- First-person and act-specific English forms (audit 2026-10-16
+    -- п.25): the bare infix "suicide"/"suicidal" matched topical
+    -- sentences; a terse one-word cry is preserved by
+    -- 'acuteCrisisExactMarkers'.  Third-person reports stay covered
+    -- through the act phrases, not through any mention of the word.
+  , ("i am suicidal", CrisisSuicidalIdeation)
+  , ("i'm suicidal", CrisisSuicidalIdeation)
+  , ("im suicidal", CrisisSuicidalIdeation)
+  , ("i feel suicidal", CrisisSuicidalIdeation)
+  , ("feeling suicidal", CrisisSuicidalIdeation)
+  , ("i have suicidal thoughts", CrisisSuicidalIdeation)
+  , ("i'm having suicidal thoughts", CrisisSuicidalIdeation)
+  , ("im having suicidal thoughts", CrisisSuicidalIdeation)
+  , ("thinking about suicide", CrisisSuicidalIdeation)
+  , ("thinking of suicide", CrisisSuicidalIdeation)
+  , ("want to commit suicide", CrisisSuicidalIdeation)
+  , ("wants to commit suicide", CrisisSuicidalIdeation)
+  , ("going to commit suicide", CrisisSuicidalIdeation)
+  , ("plans to commit suicide", CrisisSuicidalIdeation)
+  , ("take my own life", CrisisSuicidalIdeation)
+  , ("ending my life", CrisisSuicidalIdeation)
+  , ("do not want to live", CrisisSuicidalIdeation)
+  , ("is suicidal", CrisisSuicidalIdeation)
+  , ("are suicidal", CrisisSuicidalIdeation)
+  , ("committed suicide", CrisisSuicidalIdeation)
+  , ("suicide attempt", CrisisSuicidalIdeation)
+  , ("suicide note", CrisisSuicidalIdeation)
+  ]
+
+-- | Terse whole-input markers: a one-word cry must still fire the hard
+-- gate even though the bare words are no longer infix markers (audit
+-- 2026-10-16 п.25).  Matching trims surrounding punctuation and
+-- whitespace, so "Suicide!" and "suicidal." are triggers while
+-- "suicide is a philosophical problem" is not.
+acuteCrisisExactMarkers :: [(Text, CrisisCategory)]
+acuteCrisisExactMarkers =
+  [ ("suicide", CrisisSuicidalIdeation)
+  , ("suicidal", CrisisSuicidalIdeation)
   ]
 
 -- | Normalize input for marker matching: lowercase, ё→е, collapse
@@ -133,14 +192,22 @@ normalizeCrisisInput =
         || c == '\xFEFF' = ' '
       | otherwise = c
 
--- | Match the first acute marker (list order) on the normalized
--- input.  'Nothing' means the hard gate does not fire; the turn may
--- still reach 'ProtocolB' through the viability contour.
+-- | Match a terse whole-input marker first (surrounding punctuation
+-- ignored), then the first acute infix marker in list order.  'Nothing'
+-- means the hard gate does not fire; the turn may still reach
+-- 'ProtocolB' through the viability contour.
 detectCrisisTrigger :: Text -> Maybe CrisisTrigger
 detectCrisisTrigger raw =
   let normalized = normalizeCrisisInput raw
-  in fmap (\(marker, category) -> CrisisTrigger marker category)
-       (lookupFirst (\(marker, _) -> marker `T.isInfixOf` normalized) acuteCrisisMarkers)
+      exactInput = T.dropAround (not . isAlphaNum) normalized
+      toTrigger (marker, category) = CrisisTrigger marker category
+  in case lookupFirst (\(marker, _) -> marker == exactInput) acuteCrisisExactMarkers of
+       Just hit -> Just (toTrigger hit)
+       Nothing ->
+         toTrigger
+           <$> lookupFirst
+                 (\(marker, _) -> marker `T.isInfixOf` normalized)
+                 acuteCrisisMarkers
   where
     lookupFirst p xs = case filter p xs of
       (x:_) -> Just x

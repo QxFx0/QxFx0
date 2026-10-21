@@ -24,7 +24,8 @@ import qualified Data.Text as T
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import QxFx0.Safety.CrisisGuard
-  ( acuteCrisisMarkers
+  ( acuteCrisisExactMarkers
+  , acuteCrisisMarkers
   , crisisPreflightSurface
   , crisisResourceVersion
   , crisisResourcesRu
@@ -62,6 +63,21 @@ crisisGuardTests =
         , "мне хочется навредить себе"
         , "я думаю о суициде"
         , "иногда приходят мысли о самоубийстве"
+        -- Object-complete acute completions (audit 2026-10-16 п.25).
+        , "я хочу покончить с жизнью"
+        , "он решил покончить с жизнью"
+        , "покончить жизнь самоубийством"
+        , "покончил жизнь самоубийством"
+        , "я покончу с собой"
+        , "он покончил с собой"
+        , "я не хочу лишить себя жизни"
+        , "он лишил себя жизни"
+        , "она готова расстаться с жизнью"
+        , "он расстался с жизнью"
+        , "он совершил самоубийство"
+        , "она совершила самоубийство"
+        , "я планирую самоубийство"
+        , "он планирует самоубийство"
         ]
   , TestLabel "normalization: caps, ё, and repeated whitespace still match" $ TestCase $ do
       assertEqual "caps + punctuation must still trigger"
@@ -96,6 +112,29 @@ crisisGuardTests =
         [ "I want to die"
         , "I will kill myself"
         , "thinking about suicide"
+        -- First-person and act-specific forms replace the bare infix
+        -- words (audit 2026-10-16 п.25).
+        , "I am suicidal"
+        , "I feel suicidal"
+        , "I'm having suicidal thoughts"
+        , "I'm thinking of suicide"
+        , "I want to commit suicide"
+        , "I'm going to commit suicide"
+        , "I want to take my own life"
+        , "I am ending my life"
+        , "I do not want to live"
+        , "my friend committed suicide"
+        , "she survived a suicide attempt"
+        , "he left a suicide note"
+        , "he is suicidal"
+        ]
+  , TestLabel "terse English whole-input still fires" $ TestCase $
+      mapM_ assertDetected
+        [ "suicide"
+        , "suicidal"
+        , "Suicide!"
+        , "suicidal."
+        , "«suicide»"
         ]
   , TestLabel "decoys never fire the hard gate" $ TestCase $
       mapM_ assertNotDetected
@@ -105,10 +144,23 @@ crisisGuardTests =
         , "мне всё надоело"
         , "я устал от этой работы"
         , "камю писал о абсурде и самоубийстве как проблеме философии"
+        -- Object-free "хочу покончить" is no longer a marker: benign
+        -- objects belong to the R5 contour, not the hard gate.
+        , "хочу покончить с этой работой"
+        , "хочу покончить с проектом"
+        -- English topical/meta references no longer fire the bare
+        -- infix words (audit 2026-10-16 п.25).
+        , "suicide is a philosophical problem"
+        , "the novel discusses suicide"
+        , "suicidal thoughts are a theme in the book"
+        , "camus wrote about suicide as a philosophical question"
+        , "suicide rates have declined"
         ]
-  , TestLabel "every marker of the lexicon is non-empty" $ TestCase $
-      assertBool "lexicon must not contain empty markers"
+  , TestLabel "every marker of the lexicon is non-empty" $ TestCase $ do
+      assertBool "infix lexicon must not contain empty markers"
         (all (\(m, _) -> not (T.null m)) acuteCrisisMarkers)
+      assertBool "exact lexicon must not contain empty markers"
+        (all (\(m, _) -> not (T.null m)) acuteCrisisExactMarkers)
   , TestLabel "bounded surface carries real resources" $ TestCase $ do
       let surface = renderCrisisSurface crisisResourcesRu (CrisisHardTrigger (CrisisTrigger "не хочу жить" CrisisSuicidalIdeation))
       assertBool "surface must mention the emergency number 112"
