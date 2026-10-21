@@ -664,6 +664,7 @@ common test-common
     Test.Suite.ArchitectureInvariants
     Test.Suite.BootBoundary
     Test.Suite.FeedbackMirror
+    Test.Suite.SessionLockOverflow
     Test.Suite.CoreBehavior
     Test.Suite.SelfPerspective
     Test.Suite.PerspectiveRegistry
