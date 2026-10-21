@@ -5578,3 +5578,90 @@ Full `qxfx0-test` and the core slice were not re-run.
 - Two red-check cycles were needed (reader/writer revert; cleanup-only
   revert) rather than one combined revert, because pin 5 exercises a
   failure path that only exists in the new temp+rename writer.
+## (15) Кризисный лексикон: первое лицо для EN и объект для «хочу покончить» — landed
+
+Pre-reg `91d9800`, code `6d50cbf`; bar (15) was registered before any
+lexicon change and held. The recall-first rule is honoured: no acute
+formulation lost coverage; only topical/meta references and benign
+objects left the hard gate.
+
+### Sites (as pre-registered)
+
+- `Safety/CrisisGuard.hs`: bare `suicide`/`suicidal` removed from the
+  infix lexicon; first-person and act markers added (i am/i'm/im
+  suicidal, i feel/feeling suicidal, i have/i'm having suicidal
+  thoughts, thinking about/of suicide, want(s)/going/plans to commit
+  suicide, take my own life, ending my life, do not want to live,
+  is/are suicidal, committed suicide, suicide attempt/note).
+- New `acuteCrisisExactMarkers` (`suicide`, `suicidal`) is checked
+  before the infix pass on the normalized input with surrounding
+  punctuation and whitespace trimmed: `Suicide!`, `suicidal.` and
+  «suicide» fire; a topical sentence does not.
+- RU: object-free `хочу покончить` removed; `покончить с жизнью`,
+  `покончить жизнь самоубийством` and the missing future/past forms
+  added (покончу/покончил с собой, лишил себя жизни, расстался с
+  жизнью, совершил(а) самоубийство, планирую/планирует
+  самоубийство).
+- Resources, `crVersion`, `renderCrisisSurface`, `decideProtocol`,
+  the Engine preflight and the R5 contour are untouched; the RU
+  «самоубий» stem stays excluded (Camus trap); `normalizeCrisisInput`
+  is unchanged (the punctuation trim lives in the detector).
+
+### Pins
+
+`Test.Suite.CrisisGuard` grew by one label (terse whole-input) and
+the existing labels were extended:
+
+- EN positives: all new first-person/act forms plus the existing
+  `thinking about suicide`; third-person reports
+  (`my friend committed suicide`, `she survived a suicide attempt`,
+  `he left a suicide note`, `he is suicidal`);
+- RU positives: object-complete completions and the new past/future
+  forms;
+- terse: `suicide`, `suicidal`, `Suicide!`, `suicidal.`, «suicide»;
+- EN decoys: `suicide is a philosophical problem`, `the novel
+  discusses suicide`, `suicidal thoughts are a theme in the book`,
+  `camus wrote about suicide as a philosophical question`,
+  `suicide rates have declined`;
+- RU decoys: `хочу покончить с этой работой`, `хочу покончить с
+  проектом`;
+- the marker non-empty check covers both the infix and the exact
+  lists.
+
+### Red check
+
+- Cycle A (HEAD lexicon, new battery): exactly three labels fail —
+  RU battery, EN battery, decoys; the terse label stays green because
+  the old bare infix still matches it.
+- Cycle B (exact matching disabled on the fixed lexicon): exactly the
+  terse label fails.
+
+### Honest limits
+
+- Terse RU `самоубийство` stays outside the gate (the stem is
+  deliberately excluded); only the EN terse words are exact markers.
+- Third-person fictional descriptions can still fire through
+  `is/are suicidal` ("the protagonist is suicidal") — the accepted
+  recall-first cost of keeping real third-person reports covered.
+- Meta/topical EN references no longer fire; this is the audit's
+  intent and is pinned by the decoy battery.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-21, verdicts read from logs, all exit 0:
+unit 1802/1802 (1801 + 1 terse label), fast 1900/1900 (1899 + 1),
+property 244/244, integration 47/47, slow runtime 106/106, slow state
+50/50, slow http 23/23, slow lifecycle 11/11 — `CHAIN-DONE`. Slow
+groups were run sequentially (runtime at `-M12G` as one process, state
+at `-M10G`, http/lifecycle at `-M12G`).
+
+Full `qxfx0-test` and the core slice were not re-run.
+
+## Ops notes (batch 4, group 3)
+
+- Unit count 1801 → 1802 (+1: the terse label), fast 1899 → 1900
+  (+1), main 1322 → 1323 (core 1203); slow counts are unchanged at
+  190.
+- Two red-check cycles were needed (lexicon revert; exact-matching
+  disable) because the terse pin is masked by the old bare infix in a
+  combined revert.
