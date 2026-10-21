@@ -5176,3 +5176,111 @@ Slow groups were run sequentially: runtime at `-M12G` as one process
   TurnPipelineProtocol, CommitmentQuarantine and TraceAnalysis, plus
   the п.17/п.18 fixture updates; the six RuntimeInfrastructure pins
   live in the slow runtime group, not unit).
+
+---
+
+# Audit 2026-10-16 fix batch 4 — landing (2026-10-21)
+
+Status: first group landed; the pre-registered bar (13) was registered
+BEFORE any behavior change and held. Commits: pre-reg `b07d805`, code
+`4603a41`.
+
+## (13) Boot-загрузчики: границы catch-типов и async-отмена — landed
+
+### Sites (as pre-registered)
+
+- `ExceptionPolicy.tryBootResource` — new canonical boundary: catches
+  exactly `QxFx0Exception` and `IOException`, rethrows
+  `AsyncException` and every unexpected exception.
+- Bootstrap: ontology (`loadOntologyForBootstrap`) and curated
+  predicates (`loadBootstrapDefinitionCorpusFrom`) now catch the
+  parser's `RuntimeInitError`; self-play merges behind
+  `mergeSelfPlayRelationsForBootstrap`. All three preserve their
+  documented fallbacks (`emptyOntology`, seed corpus, base network)
+  and their WARN messages (ontology/curated now also carry `path`).
+- `loadBrainKB`, `loadRuntimeParadigmsFrom`, and the SelfConfig readers
+  guard their reads with `tryIO`: an unreadable file degrades to the
+  empty/builtin value with a WARN instead of escaping bootstrap.
+- `initializeAutonomousStorageWith` — the exported test seam; the
+  production `initializeAutonomousStorage` keeps the same schema-init
+  action. It uses `tryAsync`: async cancellation propagates (and closes
+  the connection via `onException`), synchronous failures remain
+  `Left Text` with the connection closed.
+- `columnText` decodes leniently (U+FFFD); `columnTextLenient` is the
+  compatibility alias. Checked-in resources keep their strict decode;
+  the Engine catch type is unchanged.
+
+### Pins
+
+`Test.Suite.BootBoundary` (9 cases, registered in unit+fast+main):
+async propagation, sync containment, `tryBootResource` class matrix,
+malformed ontology, malformed curated, malformed self-play, unreadable
+brain_kb, unreadable/malformed paradigms, unreadable SelfConfig.
+`Test.Suite.NativeSQLiteNulls` gained the lenient `columnText` pin
+(5 cases in that suite). BootBoundary slice 9/9; fast slice (boot +
+native) 27/27.
+
+### Red check (one combined revert of all nine behaviors)
+
+Exactly the pre-registered failure set, with these messages:
+
+- pin 1 (async): `async cancellation was swallowed into Left Text:
+  thread killed`;
+- pin 3 (classes): `a programming error must not be swallowed at a
+  boot boundary` (the catch-all variant swallowed `ErrorCall`);
+- pin 4 (ontology): `category=RuntimeInitError, component=
+  semantic_ontology, operation=load_jsonl, code=ONTOLOGY_LOAD_ERROR`
+  escaped the site;
+- pin 5 (curated): `CURATED_PREDICATE_PARSE_ERROR` escaped;
+- pin 6 (self-play): `RELATION_PARSE_ERROR` escaped;
+- pins 7–9 (brain_kb / paradigms / SelfConfig): `withBinaryFile:
+  permission denied` escaped;
+- pin 10 (columnText): `Cannot decode byte '\x80': Data.Text.Encoding:
+  Invalid UTF-8 stream`;
+- pin 2 (sync containment) stayed green: the old `try` semantics are
+  preserved for synchronous init failures.
+
+### Honest limits / deviations
+
+- The permissions-based pins (brain_kb, paradigms, SelfConfig) skip
+  themselves under euid 0, because root bypasses the mode bits; the
+  landing box runs as uid 1000. The malformed-content pins and the
+  async pin are uid-independent.
+- `initializeAutonomousStorageWith` is a test seam exported from the
+  session bootstrap module; the production entry point is unchanged in
+  behavior except for the async fix.
+- The storage-init boundary stays catch-all-minus-async (the old
+  containment semantics), while resource loaders catch only the two
+  expected classes. The asymmetry is deliberate and pinned by
+  `BootBoundary:1` (the sync-containment case).
+- `tryBootResource` is not applied to `loadBootstrapSqlSet` (it already
+  distinguishes its expected classes) or to the
+  `ingestExternalKnowledge` loader (already guarded) — out of scope as
+  pre-registered.
+- No trace fields were added; fallbacks are observable via the existing
+  WARN logs.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-21, verdicts read from logs, all exit 0:
+unit 1796/1796 (1787 + 9 BootBoundary), fast 1894/1894 (1884 + 10 =
+9 BootBoundary + 1 NativeSQLiteNulls), property 244/244, integration
+47/47, slow runtime 106/106, slow state 50/50, slow http 23/23, slow
+lifecycle 11/11 — `CHAIN-DONE`. Slow groups were run sequentially:
+runtime at `-M12G` as one process (no stall), state at `-M10G`,
+http/lifecycle at `-M12G`. Full `qxfx0-test` and the core slice were
+not re-run in this landing.
+
+## Ops notes (batch 4, group 1)
+
+- Unit count 1787 → 1796 (+9), fast 1884 → 1894 (+10). Slow counts are
+  unchanged at 190: the new suite is registered in the unit, fast and
+  main mains; `TestMainSlow` compiles it via test-common but does not
+  register it, by design.
+- The red check used one combined revert of all nine behaviors (the
+  batch-3 pattern), not nine rebuild cycles; the observed failing set
+  matched the prediction exactly, which is the strongest form this
+  bar can take.
+- The loader WARNs are now path-bearing for ontology and curated
+  predicates; the pre-existing self-play and brain_kb warnings already
+  carried it.
