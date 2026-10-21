@@ -4903,6 +4903,119 @@ temp-файлы, без session-bootstrap) — 9 кейсов, плюс 1 кей
 
 ---
 
+## (15) Кризисный лексикон: первое лицо для EN и объект для «хочу покончить» (аудит п.25)
+
+Вход третьего пункта батча 4. **Safety-бар**: зарегистрирован ДО
+изменения лексикона (2026-10-21). Действует операторское правило
+«кризисная лексика — только в сторону полноты»: ни одна острая
+формулировка не теряет срабатывание; сужение голых infix-паттернов
+допускается только с компенсацией и расширенной батареей.
+
+### Defect (re-verified по коду HEAD `4103d04`)
+
+- EN: `suicide` и `suicidal` — голые infix-маркеры
+  (`Safety/CrisisGuard.hs`), поэтому топикальная/мета-фраза
+  включает Protocol B: «suicide is a philosophical problem»,
+  «the novel discusses suicide». EN-декоя-теста нет.
+- RU: `хочу покончить` без объекта — «хочу покончить с работой»
+  включает Protocol B.
+- RU-стем «самоубий» исключён сознательно (Camus-ловушка) —
+  не трогаем.
+- Положительное EN-покрытие тонкое: при сужении без компенсации
+  потерялись бы «thinking about suicide» и первые лица.
+
+### Policy (locked, recall-first)
+
+1. **Острая покрываемость только растёт.** Текущая положительная
+   батарея (`Test.Suite.CrisisGuard`) остаётся зелёной; новые
+   маркеры добавляются вместе с сужением, а не после.
+2. **EN — первое лицо и акт**: из infix-списка убираются голые
+   `suicide` и `suicidal`. Добавляются: `i am suicidal`,
+   `i'm suicidal`, `im suicidal`, `i feel suicidal`,
+   `feeling suicidal`, `i have suicidal thoughts`,
+   `i'm having suicidal thoughts`, `im having suicidal thoughts`,
+   `thinking about suicide`, `thinking of suicide`,
+   `want to commit suicide`, `wants to commit suicide`,
+   `going to commit suicide`, `plans to commit suicide`,
+   `take my own life`, `ending my life`, `do not want to live`,
+   `is suicidal`, `are suicidal`, `committed suicide`,
+   `suicide attempt`, `suicide note`.
+3. **Терсный ввод не теряется**: новый список
+   `acuteCrisisExactMarkers` (`suicide`, `suicidal`) проверяется
+   первым по нормализованному вводу, очищенному от окружающей
+   пунктуации и пробелов; `Suicide!` и `suicidal.` срабатывают,
+   топикальная фраза — нет.
+4. **RU — объект**: `хочу покончить` убирается из infix; острые
+   завершения покрываются `покончить с собой` (уже есть) и новыми
+   `покончить с жизнью`, `покончить жизнь самоубийством`.
+   Добавляются: `покончу с собой`, `покончил с собой`,
+   `лишить себя жизни`, `расстаться с жизнью`,
+   `совершить самоубийство`, `совершу самоубийство`,
+   `планирую самоубийство`.
+5. **Ресурсы не меняются**: `crisisResourcesRu`, `crVersion`,
+   `renderCrisisSurface`, `decideProtocol`, Engine-префлайт и
+   R5-контур не трогаются; меняется только лексикон и детектор.
+6. Детерминизм: точные маркеры (в порядке списка) → infix-маркеры
+   (в порядке списка); первый матч выигрывает. `acuteCrisisMarkers`
+   остаётся экспортированным; новый `acuteCrisisExactMarkers`
+   экспортируется рядом.
+
+### Pins (bar)
+
+Расширение `Test.Suite.CrisisGuard` (новые кейсы; регистрация не
+меняется — suite уже в unit+fast+main):
+
+- EN-позитивы: все первые лица/акты из п.2, включая
+  `thinking about suicide` (существующий позитив),
+  `my friend committed suicide`, `she survived a suicide attempt`,
+  `he left a suicide note`;
+- терсный ввод: `suicide`, `suicidal`, `Suicide!`, `suicidal.`;
+- RU-позитивы: острые завершения и формы из п.4, включая
+  `он покончил с собой`;
+- EN-декои: `suicide is a philosophical problem`,
+  `the novel discusses suicide`,
+  `suicidal thoughts are a theme in the book`,
+  `camus wrote about suicide as a philosophical question`,
+  `suicide rates have declined`;
+- RU-декои: `хочу покончить с этой работой`,
+  `хочу покончить с проектом`;
+- существующие позитивы/декои/нормализация/обфускация — без
+  изменений и зелёные;
+- `every marker non-empty` расширяется на точный список.
+
+### Red check
+
+- вернуть `suicide`/`suicidal` в infix → EN-декои падают;
+- вернуть `хочу покончить` → RU-декои падают;
+- отключить точное сравнение → терсные `suicide`/`Suicide!` падают;
+- убрать новые RU/EN-маркеры → соответствующие позитивы падают.
+
+### Not touched
+
+- `crisisResourcesRu`, `crVersion`, `renderCrisisSurface`,
+  `decideProtocol`, Engine-префлайт, R5-контур;
+- RU-стем «самоубий» (остаётся исключённым);
+- `normalizeCrisisInput` (хелпер очистки пунктуации для точных
+  маркеров живёт рядом с детектором; нормализация ввода не
+  меняется);
+- `Semantic.Markers` (не кризисный лексикон).
+
+### Honest limits
+
+- Точное сравнение покрывает только терсные EN-формы
+  `suicide`/`suicidal`; терсное RU `самоубийство` остаётся
+  не-маркером (сознательное решение из-за Camus-ловушки).
+- Топикальные EN-фразы без первого лица/акта больше не запирают
+  Protocol B — это цель сужения; положительная батарея
+  компенсирует острую покрываемость.
+- Третьеличные отчёты покрываются акт-фразами
+  (`committed suicide`, `suicide attempt`, `suicide note`,
+  `is/are suicidal`), а не любым упоминанием слова; описание
+  вымышленного персонажа («the protagonist is suicidal») может
+  сработать — сознательный recall-first компромисс.
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
