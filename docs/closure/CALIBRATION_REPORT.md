@@ -5775,3 +5775,84 @@ Full `qxfx0-test` and the core slice were not re-run.
 - Two red-check cycles were needed (lexicon revert; exact-matching
   disable) because the terse pin is masked by the old bare infix in a
   combined revert.
+## (16) SessionLock: эвикция не расщепляет сессию — landed
+
+Pre-reg `779b260`, code `4fcf839`; bar (16) was registered before the
+fix and the reproduction-first order held: the deterministic scenario
+was written and observed red before the pinning landed.
+
+### Sites (as pre-registered)
+
+- `Core/SessionLock.hs`: `SessionLockEntry` gains `slePins`;
+  `acquireSessionLock` looks up/inserts and pins in one STM
+  transaction; `withSessionLockPaused` releases the pin in `finally`.
+  Eviction candidates require `slePins == 0`, the CAS re-checks pins,
+  stamp and cap, and a failed eviction retries the insertion once
+  before the overflow shard.
+- `SessionLockStats` gains `slsPinnedLocks` (sum) and `slsEvictions`
+  (successful LRU evictions); `slsTrackedLocks`/`slsOverflowActive` are
+  unchanged.
+- Test seams: `newSessionLockManagerWithCap` (explicit cap) and
+  `withSessionLockPaused` (post-registry hook). Production
+  `newSessionLockManager`/`withSessionLock` are the same paths with
+  env resolution / an empty hook.
+- Overflow shards (64), LRU stamps, `QXFX0_MAX_SESSION_LOCKS` and the
+  `Runtime/Wiring/Context.hs` call site are untouched.
+
+### Pins
+
+`Test.Suite.SessionLockOverflow` (5 cases, unit+fast+main):
+
+1. deterministic eviction scenario: with cap 1, A registers and pauses
+   before acquiring, B forces the cap pressure, A enters, C for "a"
+   must not enter within 500 ms and must enter after A releases; all
+   pins are zero at the end;
+2. stress: 4 threads × 200 iterations over two sessions at cap 1 —
+   max concurrent entries per session is 1;
+3. a throwing action propagates and releases its pin;
+4. unpinned entries keep being evicted (`slsEvictions` grows on each
+   insert above the cap; tracked stays at 1; overflow active);
+5. a held lock is visible as pinned (`slsPinnedLocks >= 1` inside, 0
+   after release).
+
+### Red check
+
+- Cycle A (eviction ignores pins: candidate filter and CAS guard
+  removed): exactly the deterministic scenario fails.
+- Cycle B (`finally` release removed): four labels fail — the
+  scenario (final pin count), exception release, eviction accounting
+  (the leaked pin makes the next insert overflow instead of evicting)
+  and pinned visibility (final count). All four are consequences of
+  the same leak.
+
+### Honest limits
+
+- The 500 ms "C did not enter" assertion is scheduling-dependent: on a
+  loaded machine the red check on the unfixed code could pass by luck;
+  it was observed red on an idle box. For the fixed code the direction
+  is safe (a slower machine cannot cause a false failure).
+- The stress test is a probabilistic net, not a proof.
+- The test seams are exported from the production module; they are
+  additive and documented as test-only.
+- The overflow shard still serializes unrelated sessions (unchanged
+  bounded degradation); the fix only closes the same-session split.
+
+## Verification matrix (landing tree)
+
+Detached chain, 2026-10-21/22, verdicts read from logs, all exit 0:
+unit 1807/1807 (1802 + 5 SessionLockOverflow), fast 1905/1905 (1900
++ 5), property 244/244, integration 47/47, slow runtime 106/106,
+slow state 50/50, slow http 23/23, slow lifecycle 11/11 —
+`CHAIN-DONE`. Slow groups were run sequentially (runtime at `-M12G`
+as one process, state at `-M10G`, http/lifecycle at `-M12G`).
+
+Full `qxfx0-test` and the core slice were not re-run.
+
+## Ops notes (batch 4, group 4)
+
+- Unit count 1802 → 1807 (+5), fast 1900 → 1905 (+5), main 1323 →
+  1328 (core 1208); slow counts are unchanged at 190.
+- The deterministic pin required the post-registry hook; red check A
+  confirms the hook exposes the real window (not a synthetic one).
+- Cycle B's collateral failures (eviction accounting) are expected:
+  eviction skips pinned entries by design.

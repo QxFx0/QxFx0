@@ -654,10 +654,10 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1323 (core 1203 + runtime 97 + http 23; full single-process
+| qxfx0-test | 1328 (core 1208 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1900 |
-| qxfx0-test-unit | 1802 |
+| qxfx0-test-fast | 1905 |
+| qxfx0-test-unit | 1807 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -709,6 +709,15 @@ lifecycle 11) — all exit 0; the chain ran detached; full `qxfx0-test`
 and the core slice were not re-run. The crisis-lexicon narrowing adds
 one CrisisGuard label (terse whole-input); red check A failed exactly
 the RU/EN/decoy labels, red check B exactly the terse label.
+Batch-4 group-4 landing (2026-10-21, tree = landing commits
+`779b260` / `4fcf839`): unit 1807, fast 1905, property 244,
+integration 47, slow 190 (runtime 106 + state 50 + http 23 +
+lifecycle 11) — all exit 0; the chain ran detached; full `qxfx0-test`
+and the core slice were not re-run. The `SessionLockOverflow` suite
+adds 5 unit + 5 fast cases; the pin was reproduced red first
+(deterministic eviction scenario), then fixed; red check A (eviction
+ignores pins) failed exactly that scenario, red check B (release
+removed) failed four labels through the leaked pin.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -792,8 +801,11 @@ re-observe before treating as real).
   черновик был слеп к остатку temp — исправлен шаблон `-tmp`) → п.25
   закрыт (`91d9800` пре-рег + `6d50cbf` код; EN — первое лицо/акт +
   терсный exact-список, RU — объектные формы; red-чек A — 3 падения,
-  B — 1). **Далее** — п.27 → п.19 → п.13 → п.24 (пре-регистрация на
-  входе).
+  B — 1) → п.27 закрыт (`779b260` пре-рег + `4fcf839` код; бар (16) —
+  `Test.Suite.SessionLockOverflow` (5 кейсов): детерминированный
+  сценарий эвикции, стресс, release при исключении, учёт эвикций,
+  видимость пина; red-чек A — 1 падение, B — 4). **Далее** — п.19 →
+  п.13 → п.24 (пре-регистрация на входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
