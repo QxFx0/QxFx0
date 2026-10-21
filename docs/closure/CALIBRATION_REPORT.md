@@ -4647,6 +4647,162 @@ pre-registered on entry.
 
 ---
 
+## (13) Boot-загрузчики: границы catch-типов и async-отмена (аудит п.12/26)
+
+Вход батча 4. Бар зарегистрирован ДО изменения поведения (2026-10-20).
+Группа объединяет п.12 (catch-типы против throw-типов в boot-загрузчиках)
+и п.26 (Async-отмена глотается): общий дефект — граница загрузки
+ресурсов не различает ожидаемые классы ошибок и отмену.
+
+### Defect (re-verified по коду HEAD `19650dc`)
+
+- **п.26**: `Runtime/Session/Bootstrap.hs` `initializeAutonomousStorage`
+  (`try` над schema-init, `Left (err :: SomeException)` → `NSQL.close` +
+  `Left Text`). `ThreadKilled`/`UserInterrupt` во время bootstrap
+  превращается в «storage initialization failed; worker disabled»
+  (`spawnAutonomousLearningHandles`), отмена не доходит. Прецедент
+  правильного поведения — `Engine.hs:236` (`try` + rethrow
+  `AsyncException`), уже вынесен в `ExceptionPolicy.tryAsync`.
+- **п.12 (catch-тип против throw-типа)**:
+  - `Semantic/Ontology.hs` `loadOntology` на битой строке бросает
+    `RuntimeInitError` (QxFx0Exception); bootstrap-сайт
+    (`Bootstrap.hs:685`) ловит только `IOException`
+    (`try @IOException`) → документированный fallback «classifier
+    falls back to lexical markers» для parse-ошибки недостижим:
+    bootstrap падает.
+  - `loadCuratedPredicates` — то же: parse-ошибка = `RuntimeInitError`,
+    сайт (`Bootstrap.hs:478`) ловит `IOException` → fallback «seed
+    corpus only» недостижим.
+  - self-play (`Bootstrap.hs:516–520` → `Ingest.mergeSelfPlayRelations`
+    → `loadRelations`): сайт не защищён вовсе; битый JSONL/чтение —
+    bootstrap падает. (`ingestExternalKnowledge` свой загрузчик уже
+    защищает `tryIO`+`tryQxFx0`; self-play — нет.)
+  - `Semantic/Network/Substrate.hs` `loadBrainKB`: `doesFileExist` →
+    `BS.readFile` без защиты; read-ошибка (EACCES и т.п.) вылетает из
+    bootstrap (задумано: «empty substrate is non-fatal»).
+  - `Semantic/Lexicon/RuntimeParadigms.hs`
+    `loadDefaultRuntimeParadigms`: `doesFileExist` → `BS.readFile` без
+    защиты; комментарий в `Bootstrap.hs` обещает «load failure is
+    non-fatal: empty set degrades to JSON», обещание покрывает parse,
+    но не чтение.
+  - `Runtime/Session/SelfConfig.hs`: `decodeOrFallback` /
+    `loadTunedOrDefaultIO` читают `BS.readFile` без защиты;
+    `resolveSelfConfigPath` вызывает `getDataFileName` без защиты →
+    read-ошибка конфига вылетает вместо builtin-fallback.
+  - `Bridge/NativeSQLite.hs` `columnText` декодирует строго
+    (`decodeUtf8`) и бросает `UnicodeException` — не
+    `QxFx0Exception`; Engine turn-boundary (`Engine.hs:81`) ловит
+    только `QxFx0Exception` → невалидный UTF-8 в текстовой колонке БД
+    вылетает из governed-пути (state-blob уже читается через
+    `columnTextLenient`).
+
+### Policy (locked)
+
+- **Граница boot-ресурсов — ожидаемые классы, не catch-all**: новый
+  канонический helper `ExceptionPolicy.tryBootResource` ловит ровно
+  `QxFx0Exception` (структурная ошибка загрузчика) и `IOException`
+  (чтение), `AsyncException` **перебрасывает**, всё остальное
+  (программная ошибка) **перебрасывает**. Catch-all не используется:
+  неожиданный класс должен оставаться громким.
+- **п.26 — отдельно catch-all-minus-async**: `initializeAutonomousStorage`
+  сохраняет прежнюю контейнмент-семантику (`Left Text` для любой
+  синхронной ошибки schema-init), но `AsyncException` перебрасывает —
+  `tryAsync`. Соединение закрывается и при async-отмене (иначе утечка).
+- **Fallback-значения не меняются**; каждый fallback логируется WARN с
+  путём/причиной (существующие сообщения сохраняются). Новых
+  trace-полей нет.
+- **DB-граница — lenient**: `columnText` = `decodeUtf8With
+  lenientDecode` (U+FFFD); `columnTextLenient` сохраняется как
+  compat-имя с той же семантикой. Строгий декод из границы убирается;
+  Engine catch-тип не меняется (дефект исчезает у источника).
+- **Разделение «ресурс vs данные»**: битый UTF-8 в checked-in
+  ресурсе остаётся громким (строгий декод внутри `loadOntology` не
+  трогаем — это ошибка репозитория/сборки), невалидный UTF-8 в БД
+  деградирует lenient (данные может испортить внешний писатель).
+
+### Sites / fix
+
+1. `initializeAutonomousStorage` → `tryAsync`; тестовый шов
+   `initializeAutonomousStorageWith :: (QxFx0DB -> IO ()) -> FilePath
+   -> IO (Either Text QxFx0DB)` (production-путь = прежний
+   schema-init), экспорт из `QxFx0.Runtime.Session.Bootstrap` для
+   детерминированного async-пина.
+2. `tryBootResource` в `ExceptionPolicy` (+ экспорт).
+3. Ontology-сайт → новый `loadOntologyForBootstrap` на
+   `tryBootResource` (fallback `emptyOntology`, WARN сохранён).
+4. Curated-сайт → `tryBootResource` + новый
+   `loadBootstrapDefinitionCorpusFrom :: FilePath -> IO (Map Text
+   DefinitionContent)`; старый no-arg wrapper резолвит путь и зовёт
+   его.
+5. Self-play-сайт → новый `mergeSelfPlayRelationsForBootstrap ::
+   FilePath -> SemanticNetwork -> IO SemanticNetwork` на
+   `tryBootResource` (fallback = базовый network, WARN).
+6. `loadBrainKB`: чтение под `tryIO`; Left → `[]` (missing-file
+   поведение то же); WARN «0 entries» уже на сайте.
+7. `loadDefaultRuntimeParadigms`: новый `loadRuntimeParadigmsFrom ::
+   FilePath -> FilePath -> IO RuntimeParadigms`; чтение под `tryIO`,
+   Left → WARN + `mempty` по файлу; дефолтный путь зовёт его.
+8. `SelfConfig`: чтение под `tryIO` (`decodeOrFallback`,
+   `loadTunedOrDefaultIO`), `getDataFileName` под `tryIO`; Left →
+   stderr-WARN + builtin/base-fallback (сообщения о parse сохранены).
+9. `columnText` → lenient; `columnTextLenient` — alias той же
+   семантики.
+
+### Pins (bar)
+
+Новый `Test.Suite.BootBoundary` (unit+fast+main; детерминированные
+temp-файлы, без session-bootstrap) — 9 кейсов, плюс 1 кейс в
+`Test.Suite.NativeSQLiteNulls` (fast):
+
+1. **async (п.26)**: `initializeAutonomousStorageWith (\_ -> throwIO
+   ThreadKilled) tmpDb` под `try @AsyncException` → `Left ThreadKilled`
+   (старое: `Right (Left ...)` — отмена съедена).
+2. **sync containment**: тот же шов с `userError "boom"` →
+   `Right (Left text)` (содержит «boom») — прежняя семантика цела.
+3. **классы `tryBootResource`**: `userError "io"` → `Left`;
+   `ErrorCall "bug"` → пробрасывается (программная ошибка громкая);
+   `ThreadKilled` → пробрасывается.
+4. **ontology parse**: temp-файл «not json» →
+   `loadOntologyForBootstrap` = `emptyOntology`, без исключения
+   (старое: QxFx0Exception вылетал из `try @IOException`).
+5. **curated parse**: temp-файл с битой строкой →
+   `loadBootstrapDefinitionCorpusFrom` = `definitionCorpus` (seed),
+   без исключения (старое: вылетал).
+6. **self-play parse**: temp-файл «not json» →
+   `mergeSelfPlayRelationsForBootstrap` = базовый network, без
+   исключения (старое: вылетал).
+7. **brain_kb read**: файл mode 000 → `loadBrainKB` = `[]`, без
+   исключения (старое: IOException). *Root-skip*: под euid 0 тест не
+   выполняется (root игнорирует mode bits) — фиксируется в лендинге.
+8. **paradigms read/parse**: mode 000 + отдельно битый JSON →
+   `loadRuntimeParadigmsFrom` = `emptyRuntimeParadigms`, без исключения
+   (старое: read-ошибка вылетала; parse уже деградировал).
+9. **SelfConfig read**: mode 000 → `loadConfigOrBuiltinIO` = builtin,
+   без исключения; `loadTunedOrDefaultIO` с нечитаемым tuned →
+   base/builtin (старое: IOException).
+10. **columnText lenient** (`Test.Suite.NativeSQLiteNulls`, fast):
+    `INSERT ... CAST(X'80' AS TEXT)` → `columnText` возвращает текст с
+    U+FFFD, без `UnicodeException` (старое: бросал);
+    `columnTextLenient` — тот же результат.
+
+### Red check
+
+По одному реверту на класс: (i) `tryAsync`→`try` в шве → пин 1
+падает; (ii) `tryBootResource`→`try @IOException` на ontology-сайте →
+пин 4 падает (исключение); тот же реверт на curated/self-play → пины
+5/6; (iii) снятие `tryIO` в `loadBrainKB`/paradigms/SelfConfig → пины
+7/8/9; (iv) `columnText`→строгий декод → пин 10. Пин 3 падает, если
+`tryBootResource` станет catch-all (ErrorCall не пробрасывается).
+
+### Not touched
+
+- Fallback-значения и существующие WARN-тексты; `loadBrainKB`
+  parse-skip; `ingestExternalKnowledge` (уже защищён);
+  `loadBootstrapSqlSet` (различает свои два класса); Engine
+  catch-тип; строгий декод checked-in ресурсов.
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
