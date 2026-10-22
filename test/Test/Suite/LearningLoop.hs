@@ -110,6 +110,7 @@ import QxFx0.Types.State
   , defaultNormativeProfile
   , defaultPerspectiveRegistry
   )
+import QxFx0.Learning.Guardrails (GuardrailState(..), emptyGuardrailState, maxProposalsPerWindow)
 import QxFx0.Learning.Loop
   ( LearningTelemetry(..)
   , applyExternalLearning
@@ -194,6 +195,7 @@ learningLoopTests =
    , testLocalAuthorityDeltasDriveSandboxVerdict
    , testLegacyLearningStepDisabled
    , testLegacyExternalLearningApplyDisabled
+   , testLegacyExternalLearningApplyDisabledPreservesGuardrails
    -- Phase 8 hardening + Phase 9 start tests
   , testExplicitConfigFallbackReason
   , testConfigRedactsApiKey
@@ -491,6 +493,33 @@ testLegacyExternalLearningApplyDisabled = TestCase $ do
   assertEqual "disabled legacy finalize application must preserve the exact SystemState" state nextState
   assertEqual "disabled legacy finalize application must preserve the semantic graph"
     (ssSemanticNetwork state) (ssSemanticNetwork nextState)
+
+-- | The disabled legacy application must leave the persisted guardrail
+-- counters untouched.  The state-equality assertion above would catch
+-- a changed counter, but this case uses a non-empty fixture so the
+-- "counters are diagnostic, not updated" claim is explicit and survives
+-- a later weakening of the whole-state comparison.
+testLegacyExternalLearningApplyDisabledPreservesGuardrails :: Test
+testLegacyExternalLearningApplyDisabledPreservesGuardrails = TestCase $ do
+  let validJson = "{\"proposition\":\"свобода требует выбора\",\"word\":\"свобода\",\"definition\":\"способность действовать по своей воле и отвечать за выбор\",\"source\":\"llm\",\"conatusDelta\":0.3,\"predictiveDelta\":0.2}"
+      response = ExternalQueryResponse validJson validJson "llm-augment" 0
+      gs = emptyGuardrailState
+        { gsLastProposalTurn = 7
+        , gsProposalsThisWindow = maxProposalsPerWindow
+        , gsWindowStart = 3
+        , gsConsecutiveRejections = 1
+        , gsCooldownExpiry = 15
+        }
+      state = emptySystemState
+        { ssLearningNeedState = emptyLearningNeedState
+            { lnsCurrentNeed = NeedLexiconExtension }
+        , ssGuardrailState = gs
+        }
+      nextState = applyExternalLearning state (Just (Right response))
+  assertEqual "disabled legacy application must not update guardrail counters"
+    gs (ssGuardrailState nextState)
+  assertEqual "disabled legacy application must preserve the exact SystemState"
+    state nextState
 
 -- | WP2: mock transport returns a deterministic success.
 testMockTransportSuccess :: Test

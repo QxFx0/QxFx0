@@ -357,7 +357,7 @@ import QxFx0.Learning.Calibration
 import QxFx0.Learning.Guardrails
   ( GuardrailState(..)
   , emptyGuardrailState
-  , canSubmitProposal
+  , proposalSubmissionGuardrailDecision
   , recordProposalSubmission
   , recordRejection
   , recordAcceptance
@@ -4257,7 +4257,7 @@ testGuardrailRateLimitBlocksAfterMax = TestCase $ do
         , gsProposalsThisWindow = 2
         }
   assertBool "must block when window is full"
-    (not (canSubmitProposal gs 5))
+    (not (proposalSubmissionGuardrailDecision gs 5))
 
 -- | WP5: rate limit resets when window expires.
 testGuardrailRateLimitResetsAfterWindow :: Test
@@ -4267,7 +4267,7 @@ testGuardrailRateLimitResetsAfterWindow = TestCase $ do
         , gsProposalsThisWindow = 2
         }
   assertBool "must allow when window expired"
-    (canSubmitProposal gs 12)
+    (proposalSubmissionGuardrailDecision gs 12)
 
 -- | WP5: circuit breaker opens after maxConsecutiveRejections.
 testGuardrailCircuitBreakerOpensAfterRejections :: Test
@@ -4275,7 +4275,7 @@ testGuardrailCircuitBreakerOpensAfterRejections = TestCase $ do
   let gs = emptyGuardrailState { gsConsecutiveRejections = 3 }
       gs' = recordRejection gs 10
   assertBool "circuit breaker must be open after 3 rejections"
-    (not (canSubmitProposal gs' 11))
+    (not (proposalSubmissionGuardrailDecision gs' 11))
 
 -- | WP5: circuit breaker closes after cooldownTurns.
 testGuardrailCircuitBreakerClosesAfterCooldown :: Test
@@ -4285,7 +4285,7 @@ testGuardrailCircuitBreakerClosesAfterCooldown = TestCase $ do
         , gsCooldownExpiry = 15
         }
   assertBool "circuit breaker must close after cooldown"
-    (canSubmitProposal gs 16)
+    (proposalSubmissionGuardrailDecision gs 16)
 
 -- | WP5: quarantine expires after minQuarantineTurns.
 testGuardrailQuarantineExpiresAfterMinTurns :: Test
@@ -4404,9 +4404,9 @@ testCooldownStateSurvivesRestartViaJson = TestCase $ do
     Nothing -> assertFailure "decode must succeed"
     Just gs' -> do
       assertBool "circuit breaker must still be open after restart"
-        (not (canSubmitProposal gs' 24))
+        (not (proposalSubmissionGuardrailDecision gs' 24))
       assertBool "circuit breaker must close after cooldown post-restart"
-        (canSubmitProposal gs' 26)
+        (proposalSubmissionGuardrailDecision gs' 26)
 
 -- | The superseded Phase 8/9 planner is inert for both request shapes.
 testLegacyExternalLearningRequestsNotPlanned :: Test

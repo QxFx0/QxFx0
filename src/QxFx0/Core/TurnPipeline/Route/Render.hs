@@ -88,7 +88,7 @@ import QxFx0.Learning.Guardrails
   , ExternalActionDecisionReason(..)
   , ExternalActionDecisionTrace(..)
   , ExternalActionKind(..)
-  , canIssueExternalAction
+  , externalActionGuardrailDecision
   )
 import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse)
 import qualified QxFx0.Learning.Guardrails as Guardrails
@@ -506,7 +506,6 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                 Just plan | isRequestStrategy (lrpStrategy plan) ->
                   let need = lnsCurrentNeed (ssLearningNeedState ss)
                   in buildExternalActionRequest
-                      RequestDrivenExternalAction
                       need
                       (buildExternalQueryText need (tiBestTopic ti))
                 _ -> Nothing
@@ -517,7 +516,7 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       --   3. Guardrails allow (rate limit, circuit breaker)
       --   4. A suitable tool is available
       exploratoryDecision =
-        canIssueExternalAction (ssGuardrailState ss) ExploratoryExternalAction (ssTurnCount ss)
+        externalActionGuardrailDecision (ssGuardrailState ss) (ssTurnCount ss)
       mExploratoryQueryRequest =
         if not legacyExternalLearningEnabled
           then Nothing
@@ -534,13 +533,12 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
                           ExternalActionDenied _ -> Nothing
                           ExternalActionAllowed ->
                             buildExternalActionRequest
-                              ExploratoryExternalAction
                               need
                               (buildExploratoryQueryText need (tiBestTopic ti))
       mExternalActionDecision
         | mExternalQueryRequest /= Nothing = Just ExternalActionAllowed
         | repLikeExploratory = Just exploratoryDecision
-        | isRequestRecovery = Just (canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss))
+        | isRequestRecovery = Just (externalActionGuardrailDecision (ssGuardrailState ss) (ssTurnCount ss))
         | otherwise = Nothing
       mExternalActionDecisionTrace
         | mExternalQueryRequest /= Nothing =
@@ -548,9 +546,9 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
         | mExploratoryQueryRequest /= Nothing =
             Just (ExternalActionDecisionTrace ExploratoryExternalAction AllowedExploratory (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
         | isRequestRecovery =
-            case canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss) of
+            case externalActionGuardrailDecision (ssGuardrailState ss) (ssTurnCount ss) of
               ExternalActionDenied _ ->
-                Just (deniedTrace RequestDrivenExternalAction (lnsCurrentNeed (ssLearningNeedState ss)) (canIssueExternalAction (ssGuardrailState ss) RequestDrivenExternalAction (ssTurnCount ss)))
+                Just (deniedTrace RequestDrivenExternalAction (lnsCurrentNeed (ssLearningNeedState ss)) (externalActionGuardrailDecision (ssGuardrailState ss) (ssTurnCount ss)))
               ExternalActionAllowed ->
                 Just (ExternalActionDecisionTrace RequestDrivenExternalAction DeniedNoExecutableTool (Just (renderNeedTag (lnsCurrentNeed (ssLearningNeedState ss)))))
         | repLikeExploratory =
@@ -639,10 +637,10 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
            NeedSalienceCalibration -> T.concat ["Explore salience calibration for ", topicText]
            NeedNone                -> ""
 
-    buildExternalActionRequest :: ExternalActionKind -> LearningNeed -> Text -> Maybe (ExternalTool, LearningNeed, Text)
-    buildExternalActionRequest actionKind need queryText =
+    buildExternalActionRequest :: LearningNeed -> Text -> Maybe (ExternalTool, LearningNeed, Text)
+    buildExternalActionRequest need queryText =
       let mTool = selectToolWithReliability need (ssToolReliability ss) defaultAvailableTools
-          decision = canIssueExternalAction (ssGuardrailState ss) actionKind (ssTurnCount ss)
+          decision = externalActionGuardrailDecision (ssGuardrailState ss) (ssTurnCount ss)
       in case (decision, mTool) of
            (ExternalActionAllowed, Just tool) | etReliability tool >= externalToolReliabilityFloor -> Just (tool, need, queryText)
            _ -> Nothing

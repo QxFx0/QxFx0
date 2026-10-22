@@ -24,6 +24,11 @@ Key functions:
   the LLM, emitting 'NetworkUpdateEvent's.
 * 'autonomousApplyLLMResponse' — extract relations from a response with
   explicit 'AtomStore' / 'MorphologyData' (no global state).
+
+This worker does not consult 'GuardrailState'
+(`QxFx0.Learning.Guardrails`): those counters belong to the superseded
+turn-time external contour, not to the autonomous queue.  Its admission
+is the explicit environment gate above plus the queue's bounded intake.
 -}
 
 module QxFx0.Learning.Autonomous

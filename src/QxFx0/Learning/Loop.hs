@@ -6,15 +6,15 @@
 
 {-|
 Module      : QxFx0.Learning.Loop
-Description : Phase 8 — End-to-end learning loop: transport -> validator -> parser -> sandbox -> graft -> telemetry.
+Description : Phase 8 — superseded external-learning loop (disabled by policy).
 
-Pure function that takes the current 'SystemState', an external query
-result, and returns the updated state plus telemetry.  This is the
-vertical-slice integration point: the runtime executes the
-'TurnReqExternalQuery' effect elsewhere and feeds the result into
-this function at finalize time.
+The Phase 8/9 external-learning contour is permanently disabled:
+`legacyExternalLearningEnabled = False`, so `runLearningStep` returns
+the state unchanged with `disabled_by_policy` telemetry and
+`applyExternalLearning` is a no-op.  The enabled body is retained for
+history/tests only; the runtime does not plan `TurnReqExternalQuery`.
 
-The loop is fail-closed:
+If the path were enabled, the loop would be fail-closed:
 - transport error   -> record telemetry, update tool reliability down
 - parse failure    -> record telemetry, reliability down
 - validation fail  -> quarantine fruit (not graft), reliability down
@@ -129,8 +129,9 @@ emptyLearningTelemetry = LearningTelemetry
   }
 
 -- | Local fail-closed policy for the superseded Phase 8/9 contour.
--- Governed autonomous learning uses 'QxFx0.Learning.Autonomous' and does not
--- consult this policy.
+-- Permanently False; there is no runtime toggle.  Governed autonomous
+-- learning uses 'QxFx0.Learning.Autonomous' and does not consult this
+-- policy.
 legacyExternalLearningEnabled :: Bool
 legacyExternalLearningEnabled = False
 
@@ -144,6 +145,9 @@ legacyExternalLearningEnabled = False
 --   * maybe external query result (Nothing = no external call attempted)
 --
 -- Returns: (updated state, telemetry)
+--
+-- With the legacy flag off (the production regime), returns the state
+-- unchanged and telemetry with @disabled_by_policy@.
 runLearningStep
   :: SystemState
   -> ExternalTool
@@ -531,6 +535,8 @@ applyLLMResponseToSemanticNetwork need resp =
 -- | Convenience wrapper: apply the learning loop to a system state
 -- when an external query result is present.
 -- If no result was carried, returns the state unchanged.
+-- With the legacy flag off (the production regime) this is always a
+-- no-op, even when a result is present.
 applyExternalLearning :: SystemState -> Maybe (Either ExternalQueryError ExternalQueryResponse) -> SystemState
 applyExternalLearning ss mResult
   | not legacyExternalLearningEnabled = ss

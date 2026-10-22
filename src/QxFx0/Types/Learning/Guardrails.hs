@@ -3,6 +3,16 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{-|
+Module      : QxFx0.Types.Learning.Guardrails
+Description : Persisted guardrail state and trace types for the superseded external-learning contour.
+
+'GuardrailState' stays in @SystemState@ for JSON compatibility; the
+live turn pipeline does not update it (`legacyExternalLearningEnabled
+= False` in `QxFx0.Learning.Loop`).  The JSON field names below are
+part of the persisted-state contract and must not be renamed without a
+state migration.
+-}
 module QxFx0.Types.Learning.Guardrails
   ( GuardrailState(..)
   , ExternalActionKind(..)

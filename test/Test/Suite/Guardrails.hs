@@ -21,6 +21,7 @@ guardrailsTests =
   , TestLabel "Guardrails quarantine prunes stale entries" testGuardrailQuarantinePrunesStaleEntries
   , TestLabel "Guardrails state round-trips through JSON" testGuardrailStateRoundTripsThroughJson
   , TestLabel "Guardrails fresh state allows submission on turn 0" testCanSubmitOnTurnZeroWithEmptyState
+  , TestLabel "Guardrails external action projection denies on limit and breaker" testExternalActionGuardrailDecision
   ]
 
 testRecordProposalSubmissionTracksQuarantine :: Test
@@ -54,7 +55,7 @@ testGuardrailRateLimitBlocksAfterMax = TestCase $ do
         , gsProposalsThisWindow = 2
         }
   assertBool "must block when window is full"
-    (not (canSubmitProposal gs 5))
+    (not (proposalSubmissionGuardrailDecision gs 5))
 
 testGuardrailCircuitBreakerOpensAfterRejections :: Test
 testGuardrailCircuitBreakerOpensAfterRejections = TestCase $ do
@@ -65,7 +66,7 @@ testGuardrailCircuitBreakerOpensAfterRejections = TestCase $ do
   assertEqual "threshold rejection must open cooldown window"
     15 (gsCooldownExpiry gs1)
   assertBool "circuit breaker must be open during cooldown"
-    (not (canSubmitProposal gs1 11))
+    (not (proposalSubmissionGuardrailDecision gs1 11))
 
 testGuardrailAcceptanceResetsRejectionStreak :: Test
 testGuardrailAcceptanceResetsRejectionStreak = TestCase $ do
@@ -113,14 +114,38 @@ testGuardrailStateRoundTripsThroughJson = TestCase $ do
 -- | Regression lock for ADR-0030 §5.2.  A previously shipped bug treated
 -- @gsCooldownExpiry = 0@ (the empty-state sentinel meaning "no active
 -- cooldown") as an open circuit on turn 0, blocking the first
--- 'canSubmitProposal' call of every fresh session.  This test pins the
+-- 'proposalSubmissionGuardrailDecision' call of every fresh session.  This test pins the
 -- contract that a fresh 'emptyGuardrailState' permits submissions on
 -- turn 0 and on any later turn while no cooldown has been recorded.
 testCanSubmitOnTurnZeroWithEmptyState :: Test
 testCanSubmitOnTurnZeroWithEmptyState = TestCase $ do
   assertBool "fresh guardrail state must allow submission on turn 0"
-    (canSubmitProposal emptyGuardrailState 0)
+    (proposalSubmissionGuardrailDecision emptyGuardrailState 0)
   assertBool "fresh guardrail state must allow submission on a later turn"
-    (canSubmitProposal emptyGuardrailState 100)
+    (proposalSubmissionGuardrailDecision emptyGuardrailState 100)
   assertBool "fresh guardrail state must allow submission far ahead in time"
-    (canSubmitProposal emptyGuardrailState 1000000)
+    (proposalSubmissionGuardrailDecision emptyGuardrailState 1000000)
+
+-- | The external-action projection is kind-agnostic by construction
+-- (no kind parameter): it must still deny on the two legacy counter
+-- conditions and allow on a fresh state.  This is a diagnostic
+-- projection, not an enforcement gate.
+testExternalActionGuardrailDecision :: Test
+testExternalActionGuardrailDecision = TestCase $ do
+  assertEqual "fresh guardrails project an allowed external action"
+    ExternalActionAllowed
+    (externalActionGuardrailDecision emptyGuardrailState 0)
+  let rateLimited = emptyGuardrailState
+        { gsWindowStart = 1
+        , gsProposalsThisWindow = maxProposalsPerWindow
+        }
+  assertEqual "a full proposal window projects a rate-limit denial"
+    (ExternalActionDenied DeniedGuardrailRateLimit)
+    (externalActionGuardrailDecision rateLimited 5)
+  let openCircuit = emptyGuardrailState
+        { gsConsecutiveRejections = maxConsecutiveRejections
+        , gsCooldownExpiry = 15
+        }
+  assertEqual "an open circuit projects a circuit-breaker denial"
+    (ExternalActionDenied DeniedGuardrailCircuitBreaker)
+    (externalActionGuardrailDecision openCircuit 10)
