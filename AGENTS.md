@@ -654,10 +654,10 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1328 (core 1208 + runtime 97 + http 23; full single-process
+| qxfx0-test | 1332 (core 1212 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1905 |
-| qxfx0-test-unit | 1807 |
+| qxfx0-test-fast | 1909 |
+| qxfx0-test-unit | 1811 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -718,6 +718,24 @@ adds 5 unit + 5 fast cases; the pin was reproduced red first
 (deterministic eviction scenario), then fixed; red check A (eviction
 ignores pins) failed exactly that scenario, red check B (release
 removed) failed four labels through the leaked pin.
+Batch-4 group-5 landing (2026-10-22, tree = landing commits
+`e63021c` / `915c736` / `92c0a7d` / `1d8b46c`): unit 1811, fast 1909,
+property 244, integration 47, slow 190 (runtime 106 + state 50 +
+http 23 + lifecycle 11) — all exit 0; the chain ran detached; full
+`qxfx0-test` and the core slice were not re-run. The `SQLiteRuntime`
+suite adds 3 unit + 3 fast cases. The runtime and every test binary
+now link the threaded RTS (`+RTS --info` reports `rts_thr`;
+previously `rts_v`), the five blocking bindings are `safe`, and the
+pool acquire is a lossless deadline poll. Red check A (step/exec
+back to unsafe, RTS still threaded) failed exactly the progress pin
+(before=9, after=9); red check B (no `-threaded`, `rts_v`) failed
+exactly the same pin. The first post-change fast run then exposed a
+real п.27 overflow split (stress pin: two concurrent entries per
+session), so the addendum registers overflow acquisitions in the
+lock registry: a sixth deterministic `SessionLockOverflow` pin
+(1 unit + 1 fast case) fails on the unfixed path and the stress pin
+passed 20/20 repetitions after the fix; the final matrix above is on
+the combined tree.
 
 The historical single numbers (1319 / 1320 / 1333 / 1370 / 1239)
 inside the dated sections above are landing-time records, not current
@@ -804,8 +822,16 @@ re-observe before treating as real).
   B — 1) → п.27 закрыт (`779b260` пре-рег + `4fcf839` код; бар (16) —
   `Test.Suite.SessionLockOverflow` (5 кейсов): детерминированный
   сценарий эвикции, стресс, release при исключении, учёт эвикций,
-  видимость пина; red-чек A — 1 падение, B — 4). **Далее** — п.19 →
-  п.13 → п.24 (пре-регистрация на входе).
+  видимость пина; red-чек A — 1 падение, B — 4) → п.19 закрыт
+  (`e63021c` пре-рег + `915c736` код; бар (17) —
+  `Test.Suite.SQLiteRuntime` (3 кейса): прогресс Haskell во время
+  блокирующего FFI, lossless acquire-таймаут, стабильный размер
+  пула; red-чек A — 1 падение (unsafe step/exec), B — 1 (без
+  `-threaded`, `rts_v`)); матрица поймала overflow-расщепление п.27
+  → addendum (`92c0a7d` пре-рег + `1d8b46c` код; 6-й
+  детерминированный кейс `SessionLockOverflow`, стресс 20/20
+  зелёный), затем финальная матрица. **Далее** — п.13 → п.24
+  (пре-регистрация на входе).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

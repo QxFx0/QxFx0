@@ -6029,3 +6029,175 @@ Full `qxfx0-test` and the core slice were not re-run.
   confirms the hook exposes the real window (not a synthetic one).
 - Cycle B's collateral failures (eviction accounting) are expected:
   eviction skips pinned entries by design.
+
+## (17) SQLite: threaded RTS, safe FFI и acquire без гонки timeout/takeMVar — landed
+
+Pre-reg `e63021c`, code `915c736`; бар (17) зарегистрирован до
+изменения поведения. Reproduction-first в форме «сначала красный
+сценарий» здесь не применим: дефект — свойство линковки (vanilla
+RTS), а не поведенческая ветка; красные прогоны выполнены ревертом
+каждого из двух условий отдельно (см. Red check).
+
+### Sites (as pre-registered)
+
+- `qxfx0.cabal`: `-threaded` для `qxfx0-main`,
+  `qxfx0-stage1-traces` и `common test-common`; `-N` не
+  фиксируется (default 1 capability), library не меняется.
+- `Bridge/NativeSQLite.hs`: `sqlite3_open`, `sqlite3_close`,
+  `sqlite3_prepare_v2`, `sqlite3_step`, `sqlite3_exec` переведены
+  в `safe`; остальные 13 биндингов остаются `unsafe`
+  (не блокируют).
+- `Bridge/SQLite/Pool.hs`: `timeout . takeMVar` заменён на
+  дедлайн-поллинг `tryTakeMVar` (`GHC.Clock.getMonotonicTimeNSec`,
+  `threadDelay 1000`); по дедлайну — тот же
+  `pool_acquire`/`TIMEOUT` с `pool_size`. Production
+  `withPooledDB = withPooledDBTimeout 5000000`; семантика действия,
+  транзакций, WAL, busy_timeout и `withDatabaseActionLock` не
+  менялась.
+- Швы `withPooledDBTimeout`, `acquireConnectionsWithTimeout`,
+  `poolAvailableConnections` проброшены через фасад
+  `Bridge/SQLite.hs`; модуль `Pool` остаётся hidden.
+
+### Pins
+
+`Test.Suite.SQLiteRuntime` (3 cases, unit+fast+main):
+
+1. blocking FFI не морозит Haskell: соединение A держит
+   `BEGIN EXCLUSIVE`, соединение B делает INSERT с
+   `busy_timeout=1000`; тикер (10 мс) за время блокирующего вызова
+   продвигается ≥ 20 раз. Это функциональный инвариант прогресса,
+   не latency-бар.
+2. acquire-таймаут структурный и без потерь: на пустом `MVar`
+   `acquireConnectionsWithTimeout` с 50 мс даёт
+   `SQLiteErrorStructured` с кодом `TIMEOUT`; после `putMVar` тот
+   же вызов возвращает ровно положенное соединение.
+3. размер пула стабилен: `newDBPool` на 2 соединения,
+   10 последовательных `withPooledDB`, затем
+   `poolAvailableConnections` = 2.
+
+### Red check
+
+- Cycle A: `sqlite3_step`/`sqlite3_exec` обратно в `unsafe` при
+  `-threaded` — ровно пин 1 падает (`before=9, after=9`);
+  остальные два зелёные.
+- Cycle B: `-threaded` убран из `test-common`
+  (`+RTS --info` → `RTS way: rts_v`) — ровно пин 1 падает
+  (`before=9, after=9`).
+- Cycle C (реверт acquire на `timeout . takeMVar`) не даёт
+  детерминированного красного: на пустом `MVar` старый и новый
+  код ведут себя одинаково, а гонка вероятностная; поэтому
+  структурный реверт фиксируется ревью, а не тестом — honest
+  limit ниже.
+
+### Honest limits
+
+- Пин 1 timing-sensitive по конструкции: он проверяет прогресс, а
+  не скорость, но на сильно загруженной машине тикер может не
+  успеть набрать 20 тиков даже с threaded RTS. Порог выбран с
+  запасом (ожидаемо ~100 тиков при блокировке ~1 с); главный
+  контроль — структурный (`safe` + `-threaded`), матрица —
+  поведенческий.
+- Гонка `timeout`/`takeMVar` на HEAD вероятностная и прикрыта
+  процесс-глобальным `withDatabaseActionLock`; пин 2 проверяет
+  наблюдаемый контракт таймаута и отсутствие потери значения, а не
+  саму гонку. После фикса гонка структурно невозможна
+  (`tryTakeMVar` либо возвращает значение, либо оставляет его в
+  `MVar`).
+- `safe` для `sqlite3_close` не защищает от use-after-free при
+  закрытии соединения, которое ещё используется: жизненный цикл
+  соединения по-прежнему обеспечивается пулом и action-lock, это
+  не менялось.
+- `-threaded` меняет RTS целиком; поведенческие тесты рантайма —
+  основной контроль, полная матрица обязательна. Первый же
+  post-change fast-прогон поймал реальный дефект п.27 (см. (18)).
+
+## (18) SessionLock: overflow-запись не расщепляет сессию — landed
+
+Pre-reg `92c0a7d`, code `1d8b46c`. Вход — красная матрица (17):
+под threaded RTS стресс-пин п.27 упал
+(`max concurrent entries per session must be 1, got: fromList [("a",2),("b",2)]`).
+Это не флак теста: overflow-путь выдавал шард, не регистрируя
+сессию, и конкурентный tracked-insert той же сессии давал две
+независимые критические секции.
+
+### Sites
+
+- `Core/SessionLock.hs`: `SessionLockEntry` получает
+  `sleOverflow`; `pinOrInsertOverflow` атомарно (в одной
+  STM-транзакции с проверкой сессии) либо пинит существующую
+  запись, либо вставляет overflow-запись с шардом в `slmLocks`
+  (выше cap). `releaseSessionLock` удаляет overflow-запись при
+  последнем пине; `insertTracked` и eviction-CAS создают обычные
+  записи (`sleOverflow = False`).
+- Все пути входа проверяют сессию в той же транзакции, что и
+  мутацию, — tracked- и overflow-вставки одной сессии не могут
+  обе succeed.
+- Cap, 64 шарда, LRU-эвикция (только `slePins == 0` и свободный
+  `MVar`), `SessionLockStats`, env-контракт не менялись;
+  `slsTrackedLocks` теперь включает активные overflow-записи
+  (транзиентные, документировано в поле).
+
+### Pins
+
+`Test.Suite.SessionLockOverflow` — 6-й детерминированный кейс
+(unit+fast+main): C держит единственный tracked-слот (cap 1,
+пин до захвата `MVar`), B входит в «a» через overflow, C
+отпускают, затем A входит в «a». На HEAD A эвиктит C и вставляет
+tracked «a» — A и B одновременно; после фикса A пинит
+overflow-запись и ждёт шард. Бар: A не входит за 500 мс, пока B
+внутри; после release B — входит. Существующие 5 кейсов зелёные.
+
+### Red check
+
+- Отключена overflow-вставка (возврат к выдаче шарда без записи в
+  реестр) → падает ровно кейс 6; остальные пять зелёные.
+- После фикса стресс-пин прогнан 20/20 раз — 0 падений (под
+  `-threaded`, где гонка и наблюдалась).
+
+### Honest limits
+
+- Карта может превысить cap на число **активных** overflow-сессий;
+  записи транзиентны и удаляются при последнем пине, но при
+  экстремальной конкурентности это больше cap. Это цена
+  инварианта «одна сессия — одна критическая секция»; overflow-
+  сессии по-прежнему делят шард (сериализация чужих сессий
+  сохранена).
+- Стресс-пин остаётся вероятностным нетом; детерминированный
+  кейс 6 — основной бар.
+- WARN `session_lock_overflow` остаётся: overflow — наблюдаемая
+  деградация, а не ошибка.
+
+## Verification matrix (landing tree)
+
+Two detached chains on the same tree (no code changes between
+them; the first was stopped at the known slow runtime test #63 and
+that group was re-run cleanly), verdicts read from logs, all exit 0:
+unit 1811/1811 (1807 + 3 SQLiteRuntime + 1 SessionLockOverflow),
+fast 1909/1909 (1905 + 4), property 244/244, integration 47/47,
+slow runtime 106/106, slow state 50/50, slow http 23/23, slow
+lifecycle 11/11 — `REST-DONE` for the slow chain. Slow groups were
+run sequentially (runtime at `-M12G` as one process, state at
+`-M10G`, http/lifecycle at `-M12G`). Test #63
+(`persisted replay trace json deterministic with fixed time source`)
+was first suspected as a stall: it passed 20/20 solo in ~25 min and
+then inside the clean 106/106 run; the first chain was stopped
+manually, not by a failure. The pre-fix post-change fast run failure
+(the п.27 stress pin) is preserved in the addendum (18) record.
+
+Full `qxfx0-test` and the core slice were not re-run.
+
+## Ops notes (batch 4, group 5)
+
+- Unit count 1807 → 1811 (+4: 3 SQLiteRuntime + 1 SessionLockOverflow),
+  fast 1905 → 1909 (+4), main 1328 → 1332 (core 1212); slow counts
+  are unchanged at 190.
+- `+RTS --info` on `qxfx0-main` and the test binaries now reports
+  `rts_thr`; on the pre-fix tree it reported `rts_v`.
+- The first post-change fast run failed the п.27 stress pin; the
+  addendum (18) fixed the real overflow split, and the final matrix
+  above is on the combined tree.
+- The three acquire/pool seams are additive facade exports; the
+  hidden `Bridge.SQLite.Pool` module is unchanged in visibility.
+- Existing SQLite-backed suites (state persistence, learning events,
+  HTTP runtime) passed inside the matrix without behavioral edits —
+  the RTS switch is link-time only.
