@@ -30,10 +30,13 @@ import System.IO (hPutStrLn, stderr)
 -- pin count must not be evicted, otherwise the evictor could remove
 -- the lock between its issuance and its acquisition and a second call
 -- for the same session would create a new, independent lock.
+-- 'sleOverflow' marks a transient entry whose lock is a shared overflow
+-- shard; the entry is removed when its last pin is released.
 data SessionLockEntry = SessionLockEntry
   { sleLock :: !(MVar ())
   , sleLastUsed :: !Int
   , slePins :: !Int
+  , sleOverflow :: !Bool
   }
 
 data SessionLockManager = SessionLockManager
@@ -46,6 +49,7 @@ data SessionLockManager = SessionLockManager
 
 data SessionLockStats = SessionLockStats
   { slsTrackedLocks :: !Int
+    -- ^ Tracked entries, including active overflow entries (transient).
   , slsMaxTrackedLocks :: !Int
   , slsOverflowActive :: !Bool
   , slsPinnedLocks :: !Int
@@ -150,7 +154,13 @@ acquireSessionLock mgr sessionId = do
                 Nothing -> do
                   hPutStrLn stderr $ "session_lock_overflow: session=" <> T.unpack sessionId <> " cap=" <> show (slmMaxTrackedLocks mgr)
                   case pickOverflowShard mgr sessionId of
-                    Just shard -> pure (shard, Nothing)
+                    Just shard -> do
+                      -- Register the overflow acquisition in the same registry:
+                      -- otherwise a concurrent caller for this session can
+                      -- insert a tracked entry (when room appears) and run in
+                      -- parallel with the shard holder (audit п.27 addendum).
+                      lock <- atomically (pinOrInsertOverflow mgr sessionId shard stamp)
+                      pure (lock, Just sessionId)
                     -- Unreachable from 'newSessionLockManagerWithCap', but a
                     -- fresh per-session lock is the safe fallback (no sharing).
                     Nothing -> do
@@ -175,13 +185,37 @@ insertTracked mgr sessionId newLock stamp = do
         then pure Nothing
         else do
           modifyTVar' (slmLocks mgr)
-            (Map.insert sessionId (SessionLockEntry newLock stamp 1))
+            (Map.insert sessionId (SessionLockEntry newLock stamp 1 False))
           pure (Just newLock)
 
+-- | Overflow acquisition: pin the session's existing entry if a
+-- concurrent caller registered it, otherwise register the shard as this
+-- session's lock (above the cap) and pin it.  The change and the session
+-- check share one STM transaction, so a tracked insert and an overflow
+-- insert for the same session cannot both succeed.
+pinOrInsertOverflow :: SessionLockManager -> Text -> MVar () -> Int -> STM (MVar ())
+pinOrInsertOverflow mgr sessionId shard stamp = do
+  locks <- readTVar (slmLocks mgr)
+  case Map.lookup sessionId locks of
+    Just entry -> do
+      modifyTVar' (slmLocks mgr) (Map.adjust (pinEntry stamp) sessionId)
+      pure (sleLock entry)
+    Nothing -> do
+      modifyTVar' (slmLocks mgr)
+        (Map.insert sessionId (SessionLockEntry shard stamp 1 True))
+      pure shard
+
 releaseSessionLock :: SessionLockManager -> Text -> IO ()
-releaseSessionLock mgr sessionId = atomically $
-  modifyTVar' (slmLocks mgr)
-    (Map.adjust (\entry -> entry { slePins = max 0 (slePins entry - 1) }) sessionId)
+releaseSessionLock mgr sessionId = atomically $ do
+  locks <- readTVar (slmLocks mgr)
+  case Map.lookup sessionId locks of
+    Just entry
+      | sleOverflow entry && slePins entry <= 1 ->
+          modifyTVar' (slmLocks mgr) (Map.delete sessionId)
+      | otherwise ->
+          modifyTVar' (slmLocks mgr)
+            (Map.adjust (\current -> current { slePins = max 0 (slePins current - 1) }) sessionId)
+    Nothing -> pure ()
 
 nextAccessStamp :: SessionLockManager -> IO Int
 nextAccessStamp mgr = atomically $ do
@@ -217,7 +251,7 @@ evictFreeTrackedLock mgr sessionId newLock stamp = do
                 , sleLastUsed currentVictim == sleLastUsed victimEntry
                 , Map.size locks >= slmMaxTrackedLocks mgr -> do
                     modifyTVar' (slmLocks mgr)
-                      (Map.insert sessionId (SessionLockEntry newLock stamp 1) . Map.delete victimId)
+                      (Map.insert sessionId (SessionLockEntry newLock stamp 1 False) . Map.delete victimId)
                     modifyTVar' (slmEvictionCount mgr) (+ 1)
                     pure (Just newLock)
               _ -> pure Nothing

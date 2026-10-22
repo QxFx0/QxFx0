@@ -46,6 +46,8 @@ sessionLockOverflowTests =
       testEvictionAccounting
   , TestLabel "a held lock is visible as pinned"
       testPinnedCountVisible
+  , TestLabel "overflow entry serializes with a later tracked insert"
+      testOverflowEntrySerializes
   ]
 
 -- | Deterministic reproduction of the eviction race:
@@ -158,3 +160,48 @@ testPinnedCountVisible = TestCase $ do
   takeMVar done
   statsAfter <- sessionLockStats mgr
   assertEqual "the pin is released" 0 (slsPinnedLocks statsAfter)
+
+-- | Deterministic reproduction of the overflow split:
+--
+-- 1. C holds the only tracked slot (cap 1), pinned before its MVar;
+-- 2. B asks for \"a\": insert, eviction and retry all fail, so B
+--    overflows;
+-- 3. C releases; A asks for \"a\": on the unfixed code it evicts C and
+--    inserts a tracked \"a\", entering while B holds the shard; with the
+--    overflow entry in the registry, A must wait for B.
+testOverflowEntrySerializes :: Test
+testOverflowEntrySerializes = TestCase $ do
+  mgr <- newSessionLockManagerWithCap 1
+  cEntered <- newEmptyMVar
+  cRelease <- newEmptyMVar
+  cDone <- newEmptyMVar
+  _ <- forkIO $ do
+    withSessionLockPaused mgr "c" (putMVar cEntered () >> takeMVar cRelease) (pure ())
+    putMVar cDone ()
+  takeMVar cEntered
+  bEntered <- newEmptyMVar
+  bRelease <- newEmptyMVar
+  bDone <- newEmptyMVar
+  _ <- forkIO $ do
+    withSessionLock mgr "a" (putMVar bEntered () >> takeMVar bRelease)
+    putMVar bDone ()
+  takeMVar bEntered
+  putMVar cRelease ()
+  takeMVar cDone
+  aEntered <- newEmptyMVar
+  aDone <- newEmptyMVar
+  _ <- forkIO $ do
+    withSessionLock mgr "a" (putMVar aEntered ())
+    putMVar aDone ()
+  premature <- timeout 500000 (takeMVar aEntered)
+  assertBool
+    "a tracked insert must not split the session while its overflow entry is held"
+    (premature == Nothing)
+  putMVar bRelease ()
+  takeMVar bDone
+  queued <- timeout 2000000 (takeMVar aEntered)
+  assertBool "the queued call must enter after the overflow holder releases"
+    (queued /= Nothing)
+  takeMVar aDone
+  stats <- sessionLockStats mgr
+  assertEqual "all pins must be released" 0 (slsPinnedLocks stats)
