@@ -6290,3 +6290,73 @@ Full `qxfx0-test` and the core slice were not re-run.
 - Existing SQLite-backed suites (state persistence, learning events,
   HTTP runtime) passed inside the matrix without behavioral edits —
   the RTS switch is link-time only.
+
+## (19) п.13. Внешние guardrails: честные имена и доки — landed
+
+Pre-reg `61e9e12`, code `78bfd65`; enforcement не возвращался
+(решение 2026-10-17 по п.13).
+
+### Sites
+
+- `Learning/Guardrails.hs`: `canIssueExternalAction` →
+  `externalActionGuardrailDecision` (параметр `ExternalActionKind`
+  удалён); `canSubmitProposal` → `proposalSubmissionGuardrailDecision`;
+  заголовок и Haddock-и переписаны: это диагностическая проекция
+  superseded-контура, а не enforcement.
+- `Learning/Loop.hs`: заголовок фиксирует инертность
+  `runLearningStep`/`applyExternalLearning` при флаге False;
+  `legacyExternalLearningEnabled` помечен как permanently False;
+  enabled-тело сохранено для истории/тестов.
+- `Learning/Autonomous.hs`: заголовок фиксирует, что worker не
+  консультируется с `GuardrailState` — это отдельный env-gated
+  контур, а не забытый вызов.
+- `Types/Learning/Guardrails.hs`: JSON-поля объявлены
+  persisted-контрактом (переименование только с миграцией).
+- `Route/Render.hs`: вызовы переименованы; `buildExternalActionRequest`
+  больше не принимает вид действия (он не влиял на решение), вид
+  остаётся в трейсе.
+- Счётчики не удалены и не оживлены; схема `GuardrailState`, пороги
+  и replay-поля не менялись.
+
+### Pins
+
+- `Guardrails`: новый кейс «external action projection denies on
+  limit and breaker» — allowed на пустом состоянии, rate-limit и
+  circuit-breaker denial (10 кейсов в suite).
+- `LearningLoop`: новый кейс
+  `testLegacyExternalLearningApplyDisabledPreservesGuardrails` —
+  непустой `GuardrailState` (last turn 7, окно 2, streak 1,
+  cooldown 15) остаётся байт-в-байт после `applyExternalLearning`
+  с валидным ответом.
+- `TurnPipelineProtocol`: только переименование вызовов (семантика
+  та же).
+
+### Red check
+
+- Убран guard `| not legacyExternalLearningEnabled = ss` в
+  `applyExternalLearning` → новый пин упал: окно стало 3,
+  rejection streak 2, появилась quarantine-запись; старый
+  apply-пин упал тем же прогоном. Restore → Guardrails+LearningLoop
+  81/81 зелёные.
+- `grep canIssueExternalAction|canSubmitProposal` по `src/` и
+  `test/` → 0.
+
+### Honest limits
+
+- Изменение не поведенческое: переименование и документация.
+  Slow-группы не перезапускались (нет runtime-семантики; unit+fast
+  компилируют и исполняют все call sites, property/integration
+  покрывают JSON/replay). Полный `qxfx0-test` и core-слайс
+  по-прежнему не перезапускались.
+- Имена больше не обещают enforcement, но сами счётчики остаются
+  мёртвыми в production — это зафиксировано в доках, а не оживлено.
+
+## Verification matrix (п.13)
+
+Detached chain on the code tree, 2026-10-23, verdicts read from
+logs: unit 1813/1813 (1811 + 2), fast 1911/1911 (1909 + 2), property
+244/244, integration 47/47 — all exit 0 (`CHAIN-DONE`). Slow groups
+were not re-run: the change is a pure rename/documentation pass with
+no runtime semantics; unit+fast compile and exercise every call site,
+property/integration cover JSON/replay. Full `qxfx0-test` and the core
+slice were not re-run.

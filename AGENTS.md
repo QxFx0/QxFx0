@@ -654,10 +654,10 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1332 (core 1212 + runtime 97 + http 23; full single-process
+| qxfx0-test | 1334 (core 1214 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1909 |
-| qxfx0-test-unit | 1811 |
+| qxfx0-test-fast | 1911 |
+| qxfx0-test-unit | 1813 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -830,8 +830,16 @@ re-observe before treating as real).
   `-threaded`, `rts_v`)); матрица поймала overflow-расщепление п.27
   → addendum (`92c0a7d` пре-рег + `1d8b46c` код; 6-й
   детерминированный кейс `SessionLockOverflow`, стресс 20/20
-  зелёный), затем финальная матрица. **Далее** — п.13 → п.24
-  (пре-регистрация на входе).
+  зелёный), затем финальная матрица. **Батч 4, группа 6** — п.13
+  закрыт (`61e9e12` пре-рег + `78bfd65` код; бар (19) —
+  `Test.Suite.Guardrails` +1 кейс проекции решения, `LearningLoop`
+  +1 кейс инертности счётчиков; red-чек — снятие guard'а выключенного
+  пути роняет новый пин (окно 3, streak 2, quarantine-запись)).
+  Матрица группы 6: unit 1813, fast 1911, property 244,
+  integration 47 — все exit 0; slow-группы не перезапускались
+  (чистое переименование/документация, runtime-семантики нет).
+  **Далее** — п.24 (условие переоткрытия — живой трейс с ростом;
+  не выполнено), P3-техдолг.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
