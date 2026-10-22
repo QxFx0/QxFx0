@@ -5231,6 +5231,74 @@ timing-sensitive пин проверяет не скорость, а прогр�
 
 ---
 
+## (18) SessionLock: overflow-шард не должен расщеплять сессию (фикс к п.27, найден п.19)
+
+Вход — по красной матрице п.19 (2026-10-22): `-threaded` изменил
+планировку, и стресс-пин п.27 упал:
+`max concurrent entries per session must be 1, got: fromList [("a",2),("b",2)]`.
+
+### Defect (re-verified по коду HEAD `915c736`)
+
+`acquireSessionLock` при переполнении cap и неудачной эвикции
+выдаёт overflow-шард, **не регистрируя сессию в `slmLocks`**.
+Конкурентный acquire той же сессии может в этот момент вставить
+tracked-запись (если место освободилось) и получить независимый
+`MVar`: две критические секции одной сессии идут параллельно —
+tracked и шардовая. Пин п.27 закрывал окно «выдача → захват» для
+tracked-записей, но не для overflow-пути; под vanilla RTS гонка
+была редкой, под `-threaded` — частая (бар поймал её в fast-прогоне).
+
+### Policy (locked)
+
+- Overflow-путь становится записью в том же реестре:
+  `SessionLockEntry` получает `sleOverflow :: Bool`; при
+  невозможности вставить tracked-запись сессия атомарно
+  вставляется в `slmLocks` с `sleLock = шард`, `slePins = 1`,
+  `sleOverflow = True` (размер карты может превысить cap на число
+  активных overflow-сессий; они транзиентны).
+- `releaseSessionLock` при `slePins == 1` и `sleOverflow` удаляет
+  запись; иначе уменьшает пин.
+- Все пути входа (lookup, insert, eviction CAS, retry, overflow)
+  проверяют сессию в одной STM-транзакции с мутацией — тотальный
+  порядок на `slmLocks` закрывает окно.
+- Эвикция по-прежнему выбирает только `slePins == 0` и свободный
+  `MVar`; overflow-записи с пином 0 эвикцируемы. Cap, 64 шарда,
+  `SessionLockStats` и env-контракт не меняются;
+  `slsTrackedLocks` теперь включает активные overflow-записи
+  (документировано).
+- `pickOverflowShard`/`sessionLockOverflowShardIndex` не меняются.
+
+### Pins (bar)
+
+`Test.Suite.SessionLockOverflow` получает 6-й детерминированный
+кейс «overflow-запись сериализуется с последующим tracked-входом»:
+
+1. cap 1; C держит tracked-запись «c» через
+   `withSessionLockPaused` (пин, до захвата `MVar`);
+2. B входит в «a»: insert/evict/retry невозможны → overflow;
+3. C отпускают; A входит в «a»: на HEAD A эвиктит C и вставляет
+   tracked «a» → A и B одновременно; после фикса A пинит
+   overflow-запись и ждёт шард;
+4. бар: A не входит за 500 мс, пока B внутри; после release B —
+   входит.
+
+Существующие 5 кейсов остаются зелёными; стресс-пин гоняется
+под `-threaded`.
+
+### Red check
+
+- Отключить overflow-вставку (вернуть выдачу шарда без записи в
+  реестр) → новый кейс 6 падает: A входит, пока B внутри.
+  Стресс-пин остаётся вероятностным нетом; его красное состояние
+  уже наблюдалось в fast-прогоне п.19 (2/2).
+
+### Not touched
+
+- Cap/эвикция/LRU/шарды/статы/env; поведение overflow-сессий во
+  времени (они по-прежнему делят шард).
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
