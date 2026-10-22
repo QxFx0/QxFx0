@@ -5299,6 +5299,95 @@ tracked-записей, но не для overflow-пути; под vanilla RTS �
 
 ---
 
+## (19) п.13. Внешние guardrails: честные имена и доки (enforcement не возвращается)
+
+Вход — решение 2026-10-17 по п.13 (`AUDIT_2026-10-16.md`): честное
+переименование и документирование, как у п.4; принуждение не
+возвращается. Объём фиксируется здесь, на входе в батч 4.
+
+### Findings (re-verified на HEAD `c5ede8d`)
+
+- `legacyExternalLearningEnabled = False` (`Learning/Loop.hs:134–135`);
+  `applyExternalLearning` и `runLearningStep` в production инертны
+  (`disabled_by_policy`, состояние не меняется).
+- Заголовок `Learning/Guardrails.hs` обещает enforcement
+  («Prevents runaway learning loops by enforcing…»), которого нет:
+  единственные вызовы `record*` — в недостижимом теле
+  `applyExternalLearning` и в тестах; счётчики `GuardrailState` не
+  обновляются ни на одном живом пути.
+- `canIssueExternalAction gs _kind turn` игнорирует вид действия, но
+  имя и сигнатура обещают kind-зависимый гейт.
+- `canSubmitProposal` не имеет production-вызовов (только
+  `Guardrails`/`TurnPipelineProtocol` тесты), но имя обещает
+  разрешение.
+- `Autonomous` не консультируется с `GuardrailState`; это отдельный
+  env-gated контур (`QXFX0_AUTONOMOUS_LEARNING`), его безопасность —
+  собственные ворота, не эти счётчики.
+- Живой трейс при выключенном флаге уже честен:
+  `mExternalActionDecisionTrace` = `DeniedNoActionSelected` в ветке
+  `otherwise`; `scheduleTurnEffects` не планирует
+  `TurnReqExternalQuery`.
+
+### Policy (locked)
+
+- Переименования:
+  - `canIssueExternalAction` → `externalActionGuardrailDecision`;
+    параметр `ExternalActionKind` удаляется: решение kind-agnostic по
+    построению (rate limit/circuit breaker общие для всех внешних
+    действий), вид остаётся в трейсе.
+  - `canSubmitProposal` → `proposalSubmissionGuardrailDecision`:
+    предикат — диагностическая проекция, не разрешение.
+- Документация:
+  - заголовок `Learning/Guardrails.hs` переписывается: контур
+    superseded Phase 8/9, enforcement не является runtime-свойством;
+  - пороги, `emptyGuardrailState`, `record*` и `quarantine*`
+    помечаются как persisted diagnostic state, обновляемый только
+    выключенным путём и тестами; счётчики **не удаляются и не
+    оживают**;
+  - заголовок `Learning/Loop.hs`: `runLearningStep` и
+    `applyExternalLearning` инертны в production при флаге False;
+    enabled-тело сохранено для истории/тестов;
+  - заголовок `Learning/Autonomous.hs`: worker не консультируется с
+    `GuardrailState`; это отдельный контур, а не забытый вызов.
+- Без изменений: `legacyExternalLearningEnabled` остаётся False;
+  никаких новых проверок в `Autonomous`/`Precommit`; JSON-схема
+  `GuardrailState` и replay-трейс не меняются; `TurnReqExternalQuery`
+  не планируется.
+
+### Pins (bar)
+
+- Существующие `LearningLoop` пины остаются:
+  `testLegacyLearningStepDisabled` (флаг + `disabled_by_policy`) и
+  `testLegacyExternalLearningApplyDisabled` (точное состояние).
+- Новый `LearningLoop` кейс: непустой `GuardrailState` в состоянии,
+  `applyExternalLearning` с валидным ответом → `ssGuardrailState`
+  байт-в-байт прежний (счётчики не двигаются) и состояние целиком
+  прежнее.
+- Новый `Guardrails` кейс: `externalActionGuardrailDecision` —
+  пустое состояние → `ExternalActionAllowed`; rate limit →
+  `DeniedGuardrailRateLimit`; открытый circuit breaker →
+  `DeniedGuardrailCircuitBreaker`.
+- Обновить имена в `Guardrails` и `TurnPipelineProtocol` тестах; без
+  изменения семантики.
+- Счётчики: +2 unit/fast/main (Guardrails 1, LearningLoop 1);
+  ожидаемо unit 1813, fast 1911, main 1334 (core 1214); slow 190.
+
+### Red check
+
+- Убрать guard `| not legacyExternalLearningEnabled = ss` в
+  `applyExternalLearning` (флаг остаётся False) → новый
+  guardrail-inert пин падает (состояние/счётчики меняются); restore.
+- `git grep canIssueExternalAction` и `git grep canSubmitProposal`
+  → 0 вхождений после переименования (компилятор + grep).
+
+### Not touched
+
+- Пороги, JSON-схема, replay-поля, `Autonomous` admission,
+  `Precommit` (по-прежнему вызывает `applyExternalLearning`, который
+  инертен), семантика `TurnPipelineProtocol`.
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
