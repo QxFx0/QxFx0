@@ -8,6 +8,7 @@ module QxFx0.Lexicon.Inflection
   , prepositionalForm
   , instrumentalForm
   , dativeForm
+  , lastCharOf
   ) where
 
 import Data.Text (Text)
@@ -30,8 +31,9 @@ import QxFx0.Lexicon.Resolver (resolveLexemeForm)
 dropLastChar :: T.Text -> T.Text
 dropLastChar w = T.take (T.length w - 1) w
 
-lastCharOf :: T.Text -> Char
-lastCharOf w = T.index w (T.length w - 1)
+-- | Total last-character projection: 'Nothing' for the empty text.
+lastCharOf :: T.Text -> Maybe Char
+lastCharOf w = if T.null w then Nothing else Just (T.last w)
 
 -- | Frozen nominative overrides (pre-registered 2026-10-04,
 -- batch-4 amendment): genuinely ambiguous bare-topic surfaces
@@ -243,4 +245,5 @@ dativeHeuristicSingle word =
 
 isConsonantEndingInf :: Text -> Bool
 isConsonantEndingInf w = case lastCharOf w of
-  c -> c `notElem` ("аеёиоуыэюяьй" :: String)
+  Just c -> c `notElem` ("аеёиоуыэюяьй" :: String)
+  Nothing -> False

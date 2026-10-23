@@ -26,7 +26,14 @@ import QxFx0.Types.Domain.Atoms
   )
 import QxFx0.Types.Lexicon.RuntimeParadigms (ParadigmEntry(..))
 import QxFx0.Resources.Morphology (loadMorphologyData, morphologyDataFromParadigms)
-import QxFx0.Lexicon.Inflection (toNominative, genitiveForm, accusativeForm, prepositionalForm)
+import QxFx0.Lexicon.Inflection
+  ( toNominative
+  , genitiveForm
+  , accusativeForm
+  , prepositionalForm
+  , dativeForm
+  , lastCharOf
+  )
 import QxFx0.Lexicon.Resolver (resolveLexemeForm, tierPriority)
 
 lexiconTests :: [Test]
@@ -46,6 +53,7 @@ lexiconTests =
   , TestLabel "candidate fallback: genitiveForm uses mdFormsBySurface" (TestCase testCandidateGenitiveFallback)
   , TestLabel "candidate fallback: accusativeForm inherits genitive fallback" (TestCase testCandidateAccusativeFallback)
   , TestLabel "accusativeForm inflects feminine a-stems" (TestCase testAccusativeFeminineAStem)
+  , TestLabel "lastCharOf is total; dative heuristic keeps its shape" (TestCase testLastCharOfIsTotal)
   , TestLabel "JSON backward compatibility: MorphologyData parses without mdFormsBySurface" (TestCase testJsonBackwardCompatibility)
   , TestLabel "canonical artifact: paradigms.json is valid and structured" (TestCase testParadigmsJsonValid)
   , TestLabel "canonical artifact: exceptions.json is valid and structured" (TestCase testExceptionsJsonValid)
@@ -269,3 +277,13 @@ testTierPriorityValues = do
   assertEqual "BrainKbReviewedTier priority should be 3" 3 (tierPriority BrainKbReviewedTier)
   assertEqual "AutoVerifiedTier priority should be 2" 2 (tierPriority AutoVerifiedTier)
   assertEqual "AutoCoverageTier priority should be 1" 1 (tierPriority AutoCoverageTier)
+
+-- | P3 tech debt: lastCharOf must be total, and the dative heuristic
+-- must keep its non-empty shape (consonant ending -> "у").
+testLastCharOfIsTotal :: Assertion
+testLastCharOfIsTotal = do
+  assertEqual "empty text has no last character" Nothing (lastCharOf "")
+  assertEqual "non-empty text keeps its last character" (Just 'л') (lastCharOf "стол")
+  let md = MorphologyData Map.empty Map.empty Map.empty Map.empty
+  assertEqual "empty input stays empty" "" (dativeForm md "")
+  assertEqual "consonant ending keeps the dative suffix" "столу" (dativeForm md "стол")

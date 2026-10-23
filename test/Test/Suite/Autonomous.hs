@@ -10,6 +10,8 @@ import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Data.Text (Text)
 import qualified Data.Text as T
+import Control.Exception (finally)
+import System.Environment (lookupEnv, setEnv, unsetEnv)
 import Test.HUnit
 
 import QxFx0.Learning.Autonomous
@@ -29,7 +31,9 @@ import QxFx0.Learning.Autonomous
   , isTruthy
   , evaluateCompetitiveUtility
   , newLearningQueue
+  , readAutonomousWorkerConfig
   , readIntWithDefault
+  , readLimit
   )
 import QxFx0.Learning.Need (LearningNeed(..))
 import QxFx0.Semantic.LLMDiscovery (buildDiscoveryPrompt, buildGapAwareDiscoveryPrompt)
@@ -79,6 +83,31 @@ testReadIntWithDefault = TestLabel "readIntWithDefault parses ints and falls bac
     assertEqual "garbage → default" 99 (readIntWithDefault (Just "abc") 99)
     assertEqual "trailing garbage → default" 11 (readIntWithDefault (Just "5xx") 11)
     assertEqual "Nothing → default" 50 (readIntWithDefault Nothing 50)
+
+testReadLimitClampsNegative :: Test
+testReadLimitClampsNegative = TestLabel "readLimit clamps negative budgets to zero" $
+  TestCase $ do
+    assertEqual "negative → 0" 0 (readLimit (Just "-3") 0)
+    assertEqual "valid value" 42 (readLimit (Just "42") 0)
+    assertEqual "default" 7 (readLimit Nothing 7)
+    assertEqual "garbage → default" 9 (readLimit (Just "abc") 9)
+    assertEqual "negative default → 0" 0 (readLimit Nothing (-5))
+
+testConfigClampsNegativeLimits :: Test
+testConfigClampsNegativeLimits =
+  TestLabel "readAutonomousWorkerConfig clamps negative env limits" $
+    TestCase $ withEnvVar "QXFX0_LEARNING_QUEUE_CAP" "-5" $ do
+      cfg <- readAutonomousWorkerConfig
+      assertEqual "negative queue cap clamps to zero" 0 (awcQueueCap cfg)
+
+withEnvVar :: String -> String -> IO a -> IO a
+withEnvVar name value action = do
+  previous <- lookupEnv name
+  setEnv name value
+  action `finally` restore previous
+  where
+    restore (Just v) = setEnv name v
+    restore Nothing = unsetEnv name
 
 testDefaultConfig :: Test
 testDefaultConfig = TestLabel "defaultAutonomousWorkerConfig is disabled" $
@@ -243,6 +272,8 @@ autonomousTests :: [Test]
 autonomousTests =
   [ testIsTruthy
   , testReadIntWithDefault
+  , testReadLimitClampsNegative
+  , testConfigClampsNegativeLimits
   , testDefaultConfig
   , testQueueEnqueueDrain
   , testBuildMorphologyFromStore

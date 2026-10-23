@@ -62,6 +62,7 @@ module QxFx0.Learning.Autonomous
   , extendAtomStoreWithTopics
   , isTruthy
   , readIntWithDefault
+  , readLimit
   , enqueueIfStarving
   , enqueueIfStarvingWithTopicAtoms
   , enqueueStarvingTopics
@@ -379,17 +380,17 @@ readAutonomousWorkerConfig = do
   pure AutonomousWorkerConfig
     { awcEnabled                  = isTruthy mEnabled
     , awcMode                     = readAutonomousMode mMode
-    , awcMaxRequestsPerMinute     = readIntWithDefault mMaxReqM 100
-    , awcMaxRequestsPerHour       = readIntWithDefault mMaxReqH 6000
-    , awcMaxRequestsPerDay        = readIntWithDefault mMaxReqD 144000
-    , awcMaxTokensPerMinute       = readIntWithDefault mMaxTokM 100000
-    , awcMaxTokensPerHour         = readIntWithDefault mMaxTokH 6000000
-    , awcMaxTokensPerDay          = readIntWithDefault mMaxTokD 144000000
-    , awcReservedCompletionTokens = readIntWithDefault mReserve 512
-    , awcMaxEdgesPerBatch         = readIntWithDefault mMaxEdge 5
-    , awcQueueCap                 = readIntWithDefault mQCap 100
+    , awcMaxRequestsPerMinute     = readLimit mMaxReqM 100
+    , awcMaxRequestsPerHour       = readLimit mMaxReqH 6000
+    , awcMaxRequestsPerDay        = readLimit mMaxReqD 144000
+    , awcMaxTokensPerMinute       = readLimit mMaxTokM 100000
+    , awcMaxTokensPerHour         = readLimit mMaxTokH 6000000
+    , awcMaxTokensPerDay          = readLimit mMaxTokD 144000000
+    , awcReservedCompletionTokens = readLimit mReserve 512
+    , awcMaxEdgesPerBatch         = readLimit mMaxEdge 5
+    , awcQueueCap                 = readLimit mQCap 100
     , awcHourResetDelaySec        = 60
-    , awcProviderTimeoutMs        = max 1000 (min 300000 (readIntWithDefault mProviderTimeout 120000))
+    , awcProviderTimeoutMs        = max 1000 (min 300000 (readLimit mProviderTimeout 120000))
     }
 
 readAutonomousMode :: Maybe String -> AutonomousMode
@@ -409,6 +410,12 @@ readIntWithDefault (Just t) d =
        [(n, "")] -> n
        _         -> d
 readIntWithDefault Nothing d = d
+
+-- | Read a non-negative budget from the environment.  Negative limits are
+-- not meaningful for the worker and are clamped to zero (fail closed);
+-- 'readIntWithDefault' itself keeps its generic parser semantics.
+readLimit :: Maybe String -> Int -> Int
+readLimit m d = max 0 (readIntWithDefault m d)
 
 -- ---------------------------------------------------------------------------
 -- Queue helpers

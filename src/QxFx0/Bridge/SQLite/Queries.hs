@@ -4,6 +4,7 @@
 module QxFx0.Bridge.SQLite.Queries
   ( queryIdentityClaimsByFocus
   , maybeCheckpoint
+  , bindTextOrFail
   , loadScenes
   , loadClusters
   ) where
@@ -13,6 +14,7 @@ import Control.Monad (when)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Char (isAlphaNum, isLetter, isSpace)
+import System.IO (hPutStrLn, stderr)
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import qualified Data.Map.Strict as Map
 import QxFx0.ExceptionPolicy (mkSQLiteError, throwQxFx0)
@@ -45,7 +47,7 @@ queryExactTrigger db keyword = do
   let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE concept = ? LIMIT 10"
   stmt <- prepareQuery db "queryExactTrigger" sql
   (do
-      _ <- NSQL.bindText stmt 1 keyword
+      bindTextOrFail "queryExactTrigger" stmt 1 keyword
       collectClaims stmt
     ) `finally` NSQL.finalize stmt
 
@@ -57,7 +59,7 @@ queryFTS5 db keyword = do
       let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE id IN (SELECT rowid FROM identity_claims_fts WHERE text MATCH ? LIMIT 10)"
       stmt <- prepareQuery db "queryFTS5" sql
       (do
-          _ <- NSQL.bindText stmt 1 phrase
+          bindTextOrFail "queryFTS5" stmt 1 phrase
           collectClaims stmt
         ) `finally` NSQL.finalize stmt
 
@@ -74,7 +76,7 @@ queryTopicFallback db topic = do
   let sql = "SELECT concept, text, confidence, source, topic FROM identity_claims WHERE topic = ? LIMIT 10"
   stmt <- prepareQuery db "queryTopicFallback" sql
   (do
-      _ <- NSQL.bindText stmt 1 topic
+      bindTextOrFail "queryTopicFallback" stmt 1 topic
       collectClaims stmt
     ) `finally` NSQL.finalize stmt
 
@@ -102,8 +104,20 @@ collectClaims stmt = go []
 maybeCheckpoint :: NSQL.Database -> Int -> IO ()
 maybeCheckpoint db turnCount =
   when (turnCount > 0 && turnCount `mod` 100 == 0) $ do
-    _ <- NSQL.execSql db "PRAGMA wal_checkpoint(TRUNCATE);"
-    pure ()
+    result <- NSQL.execSql db "PRAGMA wal_checkpoint(TRUNCATE);"
+    case result of
+      Left err ->
+        hPutStrLn stderr ("[sqlite] wal_checkpoint failed: " <> T.unpack err)
+      Right () -> pure ()
+
+-- | Checked text bind for raw query paths.  A failed bind is a query
+-- error, not a silently unbound parameter.
+bindTextOrFail :: Text -> NSQL.Statement -> Int -> Text -> IO ()
+bindTextOrFail operation stmt idx value = do
+  result <- NSQL.bindText stmt (fromIntegral idx) value
+  case result of
+    Left err -> throwQxFx0 (mkSQLiteError operation err Map.empty)
+    Right () -> pure ()
 
 loadScenes :: NSQL.Database -> IO [SemanticScene]
 loadScenes db = do

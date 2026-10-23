@@ -18,7 +18,9 @@ import Test.HUnit
 import qualified QxFx0.Bridge.NativeSQLite as NSQL
 import QxFx0.Bridge.SQLite
   ( acquireConnectionsWithTimeout
+  , bindTextOrFail
   , closeDBPool
+  , maybeCheckpoint
   , newDBPool
   , poolAvailableConnections
   , withPooledDB
@@ -34,6 +36,11 @@ sqliteRuntimeTests =
       testAcquireTimeoutIsLossless
   , TestLabel "pooled actions return every connection"
       testPoolSizeStable
+  , TestLabel "bindTextOrFail binds a value" testBindTextOrFailBinds
+  , TestLabel "bindTextOrFail rejects an out-of-range index"
+      testBindTextOrFailRejectsRange
+  , TestLabel "maybeCheckpoint gate runs on the 100th turn"
+      testMaybeCheckpointGate
   ]
 
 -- | A blocking write on one connection must not freeze unrelated Haskell
@@ -120,6 +127,61 @@ testPoolSizeStable =
         available <- poolAvailableConnections pool
         assertEqual "both pooled connections must return" 2 available
       ) `finally` cleanup
+
+testBindTextOrFailBinds :: Test
+testBindTextOrFailBinds = TestCase $ do
+  path <- freshTestPath "qxfx0_sqlite_bind_ok.db"
+  db <- openOrFail "bind ok" path
+  let cleanup = NSQL.close db >> removeSqliteFiles path
+  (do
+      mStmt <- NSQL.prepare db "SELECT ?"
+      case mStmt of
+        Left err -> assertFailure ("prepare failed: " <> T.unpack err)
+        Right stmt -> do
+          (do
+              bindTextOrFail "bindTextOrFail-pin" stmt 1 "x"
+              hasRow <- NSQL.stepRow stmt
+              assertBool "the bound SELECT must produce a row" hasRow
+              value <- NSQL.columnText stmt 0
+              assertEqual "the bound value must round-trip" "x" value
+            ) `finally` (NSQL.finalize stmt >> pure ())
+          pure ()
+    ) `finally` cleanup
+
+testBindTextOrFailRejectsRange :: Test
+testBindTextOrFailRejectsRange = TestCase $ do
+  path <- freshTestPath "qxfx0_sqlite_bind_range.db"
+  db <- openOrFail "bind range" path
+  let cleanup = NSQL.close db >> removeSqliteFiles path
+  (do
+      mStmt <- NSQL.prepare db "SELECT 1"
+      case mStmt of
+        Left err -> assertFailure ("prepare failed: " <> T.unpack err)
+        Right stmt -> do
+          (do
+              result <- tryQxFx0 (bindTextOrFail "bindTextOrFail-pin" stmt 1 "x")
+              case result of
+                Left (SQLiteErrorStructured details) -> do
+                  assertEqual "operation label" "bindTextOrFail-pin"
+                    (sedOperation details)
+                  assertBool "the bind error is surfaced"
+                    ("bindText failed" `T.isInfixOf` sedErrorCode details)
+                Left other -> assertFailure ("unexpected exception: " <> show other)
+                Right () -> assertFailure "an out-of-range bind must not succeed"
+            ) `finally` (NSQL.finalize stmt >> pure ())
+          pure ()
+    ) `finally` cleanup
+
+testMaybeCheckpointGate :: Test
+testMaybeCheckpointGate = TestCase $ do
+  path <- freshTestPath "qxfx0_sqlite_checkpoint.db"
+  db <- openOrFail "checkpoint" path
+  let cleanup = NSQL.close db >> removeSqliteFiles path
+  (do
+      assertExec db "checkpoint schema" "CREATE TABLE checkpoint_gate(x INTEGER);"
+      maybeCheckpoint db 99
+      maybeCheckpoint db 100
+    ) `finally` cleanup
 
 openOrFail :: String -> FilePath -> IO NSQL.Database
 openOrFail label path = do

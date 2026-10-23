@@ -13,6 +13,7 @@ module QxFx0.Bridge.SQLite
   , queryIdentityClaimsByFocus
   , ensureSchemaMigrations
   , maybeCheckpoint
+  , bindTextOrFail
   , loadScenes
   , loadClusters
   ) where
@@ -30,7 +31,8 @@ import QxFx0.Bridge.SQLite.Pool
   , poolAvailableConnections
   )
 import QxFx0.Bridge.SQLite.Queries
-  ( loadClusters
+  ( bindTextOrFail
+  , loadClusters
   , loadScenes
   , maybeCheckpoint
   , queryIdentityClaimsByFocus
