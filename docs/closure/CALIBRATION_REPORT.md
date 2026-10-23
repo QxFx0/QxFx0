@@ -5388,6 +5388,101 @@ tracked-записей, но не для overflow-пути; под vanilla RTS �
 
 ---
 
+## (20) P3-техдолг: четыре низкорисковых пункта + верификация WIP-порогов
+
+Вход — явное «да» пользователя 2026-10-23 на P3-батч; объём: четыре
+низкорисковых пункта (`Autonomous` env-клампы, лог `wal_checkpoint`,
+`bindText` orFail в query-путях, `lastCharOf`) плюс WIP-порогов.
+tmp-fsync и `Prepare/Resolve` fallback в этот батч не входят.
+
+### Findings (re-verified на HEAD `243fc0b`)
+
+- `readAutonomousWorkerConfig` читает девять лимитов через
+  `readIntWithDefault` без клампа: `"-3"` доходит до бюджета как -3.
+  Парсер `readIntWithDefault` сам по себе обязан сохранять негативы —
+  это пин `testReadIntWithDefault` и вызов в `Runtime/Session/Bootstrap`
+  с собственным `max 0`.
+- `maybeCheckpoint` (`Bridge/SQLite/Queries.hs:102–106`) отбрасывает
+  `Either` от `execSql`: `Left` исчезает молча.
+- Три `_ <- NSQL.bindText` в `Queries.hs` (queryExactTrigger, queryFTS5,
+  queryTopicFallback) игнорируют `Left`. `insertSchemaVersion` в
+  `Bootstrap` уже проверяет bind/step (п.22), `TxStatement` имеет
+  `bindTextOrFail` только для `TxStmt`.
+- `lastCharOf` (`Lexicon/Inflection.hs:33–34`) — `T.index` на
+  `length - 1`; пустая строка падает. Единственный вызов —
+  `isConsonantEndingInf`; публичные пути (`dativeForm ""`) сегодня до
+  него не доходят, поэтому это защитная тотализация, а не живой баг.
+- WIP-порогов: `compositionShareFloor` и `analogyFallbackFloor` уже
+  извлечены в `Types/Thresholds/Selection.hs` коммитом `e2ecd0d`;
+  `compositionShareThreshold`/`analogyDepth` не встречаются ни в
+  `src/`, ни в `test/`, ни в доках (кроме строки аудита). Строка P3
+  устарела: действие — верифицировать и закрыть, новых констант не
+  выдумывать.
+
+### Policy (locked)
+
+- (a) `Autonomous`: добавить `readLimit m d = max 0 (readIntWithDefault
+  m d)`, экспортировать, применить к девяти лимитам
+  (requests/tokens ×3, reserved tokens, edges, queue cap) и к
+  provider timeout внутри существующего `max 1000 (min 300000 …)`.
+  `readIntWithDefault` не меняется.
+- (b) `maybeCheckpoint`: `case execSql … of Left err -> hPutStrLn stderr
+  ("[sqlite] wal_checkpoint failed: " <> T.unpack err); Right () ->
+  pure ()`. Не бросать: обслуживание остаётся best-effort, период
+  (каждые 100 ходов) не меняется.
+- (c) `Queries.hs`: `bindTextOrFail :: Text -> NSQL.Statement -> Int ->
+  Text -> IO ()`, экспортировать для пина; `Left` → `throwQxFx0
+  (mkSQLiteError operation err Map.empty)`. Заменить три непроверенных
+  bind. `Bootstrap` не трогать (уже проверяет).
+- (d) `Inflection.hs`: `lastCharOf :: Text -> Maybe Char`
+  (`Nothing` для пустой), экспортировать ради прямого пина;
+  `isConsonantEndingInf` — `Nothing → False`. Для непустых слов
+  поведение не меняется.
+- (e) WIP-порогов: только запись в регистр/лендинг о верификации
+  `e2ecd0d`; кода нет.
+
+Не трогаем: значения порогов, схему БД, replay-поля, admission
+autonomous-очереди, семантику `readIntWithDefault`, tmp-fsync,
+`Prepare/Resolve`.
+
+### Pins (bar)
+
+- `Autonomous` (+2, fast-only): `readLimit` — негатив → 0, валидное
+  значение, default, мусор; config-пин с env
+  `QXFX0_LEARNING_QUEUE_CAP=-5` → `awcQueueCap == 0` (переменная
+  восстанавливается).
+- `SQLiteRuntime` (+3, main/unit/fast): bind success (`SELECT ?` →
+  значение), bind failure (`SELECT 1` + индекс 1 → `SQLiteErrorStructured`
+  с `sedOperation = "bindTextOrFail-pin"`), `maybeCheckpoint` 99 —
+  no-op, 100 — успешный проход на реальной БД.
+- `Lexicon` (+1, main/unit/fast): `lastCharOf "" == Nothing`,
+  `lastCharOf "стол" == Just 'т'`, `dativeForm emptyMorphologyData "" ==
+  ""`, `dativeForm … "стол" == "столу"` (регресс непустого пути).
+- Ожидаемые счётчики: main 1338 (core 1218), unit 1817, fast 1917;
+  property 244, integration 47, slow 190 не меняются.
+
+### Red check
+
+- `readLimit` без `max 0` → оба Autonomous-пина падают (негатив
+  остаётся отрицательным).
+- Вернуть `_ <- NSQL.bindText` → bind-failure пин падает (исключения
+  нет, параметр не привязан).
+- Вернуть `T.index` в `lastCharOf` → totality-пин падает с
+  исключением на пустой строке.
+- Для `maybeCheckpoint` инъекция `Left` через публичный DB API
+  хрупка (нужны read-only-права); честно фиксируем: гейт-пин
+  доказывает проход ветки на 100-м ходу, а `Left`-ветка — типизированный
+  one-liner без инъекционного пина.
+
+### Not touched / honest limits
+
+- `maybeCheckpoint` по-прежнему не бросает: лог — наблюдаемость, не
+  политика отказа.
+- `lastCharOf` экспортируется только ради пина; это внутренний
+  тотальный хелпер.
+
+---
+
 # Audit 2026-10-16 fix batch 1 — landing (2026-10-17)
 
 Status: landed; the pre-registered bars above were registered BEFORE
