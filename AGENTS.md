@@ -622,14 +622,14 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-09-21)
+## Test counts (updated 2026-10-23)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
 suites that run them). unit/fast/integration re-verified green on HEAD
-2026-09-21 (sequential runs; `-M10G` for fast, `-M6G` for unit/
-integration, `-M12G` for slow groups). Slow: 173 cases green BY GROUP
-(runtime 94/state 45/http 23/lifecycle 11, all re-verified WITH
-substrate on HEAD 2026-09-21); state group requires `-M10G`
+2026-10-23 (sequential runs; `-M10G` for fast, `-M6G` for unit/
+integration, `-M12G` for slow groups). Slow: 190 cases green BY GROUP
+(runtime 106/state 50/http 23/lifecycle 11, all re-verified WITH
+substrate on HEAD 2026-10-23); state group requires `-M10G`
 (`-M8G` heap-exhausts, `-M12G` invites the box OOM-killer), other
 groups run `-M12G`. Substrate is ACTIVE since 2026-09-21
 (`brain_kb.jsonl`, 53146 entries, gitignored external): full
@@ -654,14 +654,14 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1334 (core 1214 + runtime 97 + http 23; full single-process
+| qxfx0-test | 1338 (core 1218 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1911 |
-| qxfx0-test-unit | 1813 |
+| qxfx0-test-fast | 1917 |
+| qxfx0-test-unit | 1817 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-10-20 (batch-3 landing), all exit 0 —
+per-group green on HEAD 2026-10-23 (P3 batch), all exit 0 —
 runtime 106 ran as ONE process (no stall); the 2026-10-18 batch-2 run
 had self-recovered from a ~9.7 h stall at test #57 — known wart class,
 see batch-2 ops notes; unbuffered output required to judge the long
@@ -669,8 +669,8 @@ runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
 after 59 others but passes solo — run it standalone on stall.
-property/integration re-verified green on HEAD 2026-10-11
-(227/227, 46/46) after the EN-bulk surgery.
+property/integration re-verified green on HEAD 2026-10-23
+(244/244, 47/47).
 Batch-1 landing (2026-10-17, tree = landing commits): unit 1739,
 fast 1841, property 227, integration 47, slow 179 (100+45+23+11) —
 all exit 0; full `qxfx0-test` and the core slice were not re-run.
@@ -839,7 +839,19 @@ re-observe before treating as real).
   integration 47 — все exit 0; slow-группы не перезапускались
   (чистое переименование/документация, runtime-семантики нет).
   **Далее** — п.24 (условие переоткрытия — живой трейс с ростом;
-  не выполнено), P3-техдолг.
+  не выполнено).
+  **P3-техдолг (2026-10-23, батч 5)** — четыре низкорисковых пункта
+  закрыты (`d0a60a1` пре-рег + `b1e207a` код; бар (20)):
+  `readLimit`-клампы env-лимитов Autonomous, stderr-лог
+  `wal_checkpoint`, `bindTextOrFail` в трёх query-путях, тотальный
+  `lastCharOf`. WIP-порогов закрыты верификацией `e2ecd0d`
+  (`compositionShareFloor`/`analogyFallbackFloor`; «глубины
+  аналогии» в коде/доках нет). Матрица: unit 1817, fast 1917,
+  property 244, integration 47, slow 190 (runtime 106/state 50/
+  http 23/lifecycle 11) — все exit 0. Красные чеки: снятие клампа —
+  ровно 2 падения; проглатывание bind-`Left` — ровно 1; возврат
+  `T.index` — ровно 1. В техдолге остаются tmp-fsync и
+  `Prepare/Resolve` fallback.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

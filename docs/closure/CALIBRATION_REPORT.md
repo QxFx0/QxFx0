@@ -6455,3 +6455,80 @@ were not re-run: the change is a pure rename/documentation pass with
 no runtime semantics; unit+fast compile and exercise every call site,
 property/integration cover JSON/replay. Full `qxfx0-test` and the core
 slice were not re-run.
+
+## (21) P3-техдолг: четыре низкорисковых пункта + верификация WIP-порогов — landed
+
+Pre-reg `d0a60a1`, code `b1e207a`.
+
+### Sites
+
+- `Learning/Autonomous.hs`: `readLimit` клампит девять env-бюджетов
+  и provider timeout к ≥ 0; `readIntWithDefault` сохраняет свои
+  прежние семантики (негативы парсера остаются запинованными).
+- `Bridge/SQLite/Queries.hs`: `bindTextOrFail` бросает структурную
+  `SQLiteError` вместо проглатывания `Left`; три сырых query-пути
+  (`queryExactTrigger`, `queryFTS5`, `queryTopicFallback`) переведены
+  на него. Фасад `QxFx0.Bridge.SQLite` реэкспортирует хелпер.
+- `maybeCheckpoint`: ошибка `wal_checkpoint` логируется в stderr
+  (`[sqlite] wal_checkpoint failed: …`); обслуживание остаётся
+  best-effort, без throw; гейт каждые 100 ходов не менялся.
+- `Lexicon/Inflection.hs`: `lastCharOf` тотален (`Maybe Char`),
+  `isConsonantEndingInf` трактует пустую строку как не-согласную;
+  поведение непустых слов не менялось. Хелпер экспортирован ради
+  прямого пина.
+- WIP-порогов: верифицировано, что извлечение уже заленджено в
+  `e2ecd0d` (`compositionShareFloor`, `analogyFallbackFloor`);
+  `compositionShareThreshold`/`analogyDepth` в `src/`/`test/`/доках
+  отсутствуют (кроме строки аудита). Новых констант нет; пункт
+  закрыт верификацией.
+
+### Pins
+
+- `Autonomous` (+2, fast-only): `readLimit` (негатив → 0, валидное
+  значение, default, мусор, негативный default) и config-пин с env
+  `QXFX0_LEARNING_QUEUE_CAP=-5` → `awcQueueCap == 0` (переменная
+  восстанавливается).
+- `SQLiteRuntime` (+3, main/unit/fast): bind success (`SELECT ?` →
+  значение), bind failure (`SELECT 1` + индекс 1 → `SQLiteErrorStructured`
+  с `sedOperation = "bindTextOrFail-pin"`), `maybeCheckpoint` 99 —
+  no-op, 100 — проход на реальной БД.
+- `Lexicon` (+1, main/unit/fast): `lastCharOf "" == Nothing`,
+  `lastCharOf "стол" == Just 'л'`, `dativeForm emptyMorphologyData "" ==
+  ""`, `dativeForm … "стол" == "столу"`.
+
+### Red check
+
+- `readLimit` без `max 0` → ровно два Autonomous-пина падают
+  (`readLimit clamps…`, `readAutonomousWorkerConfig clamps…`).
+- Вернуть проглатывание `Left` в `bindTextOrFail` → падает ровно
+  `bindTextOrFail rejects an out-of-range index` (теперь без маскировки
+  ошибкой close: statement финализируется в `finally`).
+- Вернуть `T.index` в `lastCharOf` → падает ровно totality-пин
+  (`Data.Text…index: Negative index`).
+- `maybeCheckpoint` `Left`-ветка не инъектируется через публичный
+  DB API (read-only-инъекция хрупка); гейт-пин доказывает проход
+  ветки на 100-м ходу, `Left`-ветка — типизированный one-liner.
+
+### Matrix
+
+Detached chains on the code tree, 2026-10-23, verdicts from logs:
+unit 1817/1817 (1813 + 4: SQLiteRuntime +3, Lexicon +1), fast
+1917/1917 (1911 + 6: Autonomous +2, SQLiteRuntime +3, Lexicon +1),
+property 244/244, integration 47/47 — all exit 0 (`CHAIN1-DONE`
+4672 s). Slow groups (substrate active): runtime 106/106, state
+50/50, http 23/23, lifecycle 11/11 — all exit 0 (`CHAIN2-DONE`
+9383 s).
+
+### Ops note
+
+- Первый прогон fast-слайса дал один разовый `SQLiteError,
+  operation=close, rc=5` в `AutonomousIntegration` (закрытие БД при
+  живом worker'е). Соло-прогон 65/65 дважды и повторный слайс 117/117
+  зелёные; изменения батча не касаются жизненного цикла worker'а или
+  close. Это известный класс изоляции, не регрессия батча; в полной
+  матрице выше fast-прогон чистый (1917/1917).
+
+### Honest limits
+
+- `maybeCheckpoint` не бросает: лог — наблюдаемость, не политика
+  отказа. `lastCharOf` экспортирован только ради прямого пина.
