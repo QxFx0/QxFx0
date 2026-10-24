@@ -23,7 +23,8 @@ Two logical changesets, both verified by full runs:
   FOLLOWUPS Rule [15]; test-count table resynced (qxfx0-test 1239 was
   stale by 64 cases).
 - `docs/GAPS.md` — Summary totals 311/312 annotated as
-  curation-inventory numbers (runtime corpus is 120 topics,
+  curation-inventory numbers (runtime corpus was 120 topics at that
+  date; it is 172 topics as of 2026-10-23,
   `Semantic/Content.hs`).
 - `Runtime/Session/Bootstrap.hs` — empty substrate no longer degrades
   silently: `logWarn "brain_kb.jsonl loaded 0 entries…"` (+ `logInfo`

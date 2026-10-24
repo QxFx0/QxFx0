@@ -1,9 +1,9 @@
 # B2-EXEC-001 — Evaluation Packet
 
-- **Status**: Packet defined, not yet generated (requires intended env).
+- **Status**: Packet defined and used by EXEC-002/EXEC-003 (the historical “not yet generated” note is stale).
 - **Date**: 2026-06-17
 - **Front**: B2-EXEC-001 (packet/harness) → B2-EXEC-002 (rating run)
-- **M6-FELT**: **NOT PROVEN** — remains so until human results exist.
+- **M6-FELT**: **FORMAL CLAIM WITHHELD** — the mechanical bounded benchmark is `M6FeltProven`; the human leg is partial (EXEC-002/003), so no formal upgrade.
 - **B3 precondition**: PASS (conjunction Gates 1-5, commit `d2e0182`)
 
 ## Purpose
@@ -113,7 +113,8 @@ See `test/fixtures/b2-eval/pre-registration.md`:
 ## What this packet does NOT do
 
 - **No human rating** — that is B2-EXEC-002.
-- **No M6-FELT claim** — M6-FELT remains NOT PROVEN.
+- **No formal M6-FELT claim** — this is the harness; the mechanical
+  bounded benchmark is separate and the human leg is partial.
 - **No LLM** — System output is deterministic, no LLM involvement.
 - **No semantic content engine changes** — the content layer is fixed
   from M4-001/M4-002.
@@ -127,6 +128,6 @@ See `test/fixtures/b2-eval/pre-registration.md`:
 - [x] Control-A definition documented
 - [x] Corpus/rubric/answer-key separated
 - [x] Evidence admissibility recorded in pre-registration
-- [ ] Fast gate green (verify after commit)
-- [x] No claim upgrade (M6-FELT = NOT PROVEN)
-- [ ] Packet generated in intended env (B2-EXEC-002 prerequisite)
+- [x] Fast gate green (verified 2026-10-24)
+- [x] No formal claim upgrade (mechanical bounded benchmark separate)
+- [x] Packet generated in intended env (used by EXEC-002/EXEC-003)

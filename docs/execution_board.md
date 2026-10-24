@@ -25,20 +25,21 @@ Purpose: authoritative source for what to do next.
 
 ## Immediate next action
 
-1. **Decide the fate of the working tree.** `main` is **386 commits ahead of `origin/main`** (0 behind — clean fast-forward, clean tree) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
+1. **Decide the fate of the working tree.** `main` is **51 commits ahead of `origin/main`** (0 behind — clean fast-forward, working tree clean after this landing) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
    - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
 2. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
 3. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-4. **Gate status is GREEN as of 2026-09-19** (all six suites re-verified on HEAD, sequential runs): unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172 (slow needs `-M12G` single-process). Do not cite gates against any other tree without re-running.
+4. **Gate status snapshot (2026-09-19)** (all six suites re-verified on that HEAD, sequential runs): unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172. **Current bootstrap-safety tree (2026-10-24)**: unit 1818, fast 1918, property 244, integration 47 (an earlier chained attempt hit a transient ENOSPC, not an assertion; the rerun was green); slow 190 is the last P3 result and was not re-run for this pin; main/core are registered at 1339/1219 and were rebuilt but not run as single processes this cycle. Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 
 | item | kind | owner | note |
 |---|---|---|---|
-| Publish 338 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
-| Uncommitted promotion/response-plan subsystem | hygiene | repo owner | untracked source files carry no history and no CI coverage |
+| Publish 51 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
+| ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED in the current tree**: `git status` has no untracked source files. Any future untracked subsystem must be committed or documented before it is cited as evidence. |
 | Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
-| M6-FELT | research | — | **NOT PROVEN**; see `ROADMAP.md` North Star and the B1–B4 split |
+| Architecture check red | hygiene | repo owner | `scripts/check_architecture.sh` currently reports **2 unrelated violations** (bare partial in `Core/TurnPipeline/Effects.hs`; missing WP-F anti-rot registration). Not introduced by the bootstrap-safety change; do not cite the check as green. |
+| M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
 
 ## Recently landed (2026-06-18 → 2026-07-17)
 
@@ -50,11 +51,11 @@ Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 - **ADR-0053** runtime-LLM discovery bridge to the semantic network.
 - **ADR-0054 M1–M4** autonomous semantic expansion: M1 infrastructure → M2 content-density gate → M3 end-to-end loop-closure test + `spawnAutonomousLearningHandles` in Bootstrap → M4 runtime-ready safety (`Learning/Quarantine.hs`, `Learning/CircuitBreaker.hs`, `Test/Suite/AutonomousSafety.hs`, all first landed in `c02549a`, 2026-07-16). Plans: `docs/superpowers/plans/2026-07-11-ADR-0054-M{3,4}-runtime-ready.md`.
 - **Closure Round** (`docs/plan/closure-round-tz.md`, 2026-07-09) — diagnosed pattern **write-without-read ×3**: atom-graph seed default-on, feedback read-side + relation-weight overlay, selfplay admission gate, cross-turn coherence via emitted-predicate buffer, ontology depth weighting + sibling borrowing.
-- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6239 lines (batches through 6224). The bulk of the 338 unpushed commits are these batches.
+- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6,238 lines / 4,045 unique topic keys (2026-10-23 count; the historical 6,239-line note was the 2026-07 snapshot). The bulk of the 51 unpushed commits are these batches.
 
 ## Current state of the M6 gate
 
-Scope note: the table below is **M6-STRUCTURAL** only. Structural closure is *necessary, not sufficient* for the North Star; **M6-FELT remains NOT PROVEN** and no row here upgrades it.
+Scope note: the table below is **M6-STRUCTURAL** only. Structural closure is *necessary, not sufficient* for the North Star. **M6-FELT mechanical is proven only on the bounded 12-turn benchmark; the human leg is partial and the formal claim stays withheld**; no structural row upgrades it.
 
 | Gate | Status |
 |------|--------|

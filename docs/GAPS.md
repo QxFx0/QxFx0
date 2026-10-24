@@ -4,13 +4,13 @@ This file lists concepts that appear in the curated atom-graph seed (`resources/
 
 ## Method
 
-Static scan comparing the `from`/`to` tokens of the 666 curated relations against the topics currently present in `QxFx0.Semantic.Content.definitionCorpus` (2026-08-23 fact-check: the corpus has grown to ~120 topics; the historical "30" count below is stale — recount before using these gap numbers).
+Static scan comparing the `from`/`to` tokens of the 666 curated relations against the topics currently present in `QxFx0.Semantic.Content.definitionCorpus` (2026-10-23 fact-check: the literal corpus has **172 topics**; exact-token overlap with the relations graph is **44** topics, leaving **267** relation concepts with no exact `definitionCorpus` key. The curated overlay in `resources/knowledge/curated_predicates.jsonl` is merged at bootstrap and is a separate coverage layer; the historical "30" count below is stale).
 
 ## Summary
 
-- Covered topics: **30**
+- Covered topics: **44** (exact `definitionCorpus` keys; literal corpus has 172 topics)
 - Concepts in relations graph: **311**
-- Uncovered (gap) concepts: **281**
+- Uncovered (gap) concepts: **267** exact-key gaps; **0** remaining in the relations-graph curation inventory
 - Top-20 candidate backlog below.
 
 ## Gap backlog (top 20 by frequency in relations)
@@ -355,18 +355,33 @@ Full list contains 100 concepts; top 100 shown.
 
 ## Summary
 
-> **2026-08-23 fact-check**: the totals below describe the *curation
-> effort* over the relations-graph concept list, not the landed corpus.
-> The production `definitionCorpus` (`src/QxFx0/Semantic/Content.hs`)
-> currently carries **120 topics**; the remaining ~190 curated concepts
-> exist only in this document and are not surfaced by the runtime.
-> Treat 311/312 as curation-inventory numbers, not runtime coverage.
+> **2026-10-23 fact-check**: the totals below describe the *curation
+> effort* over the relations-graph concept list, not the landed runtime
+> corpus. The literal `definitionCorpus` (`src/QxFx0/Semantic/Content.hs`)
+> carries **172 topics**; exact-token overlap with the relations graph is
+> **44** topics. `resources/knowledge/curated_predicates.jsonl` is a
+> separate overlay merged into the runtime corpus at bootstrap and has
+> grown far beyond the relations list: **6,238 rows / 4,045 unique topic
+> keys** (the 2026-10-23 runtime log reports 4,036 loaded topics after
+> merge/filter). The old “311/312” numbers are the **relations-graph
+> curation inventory**, not total overlay coverage. Treat 311/312 as a
+> historical subset inventory, not runtime coverage.
 
-- **ALL GAPS COVERED (curation inventory)**: **311/311** concepts from relations graph now have curated predicates (100% of the curation effort — NOT runtime coverage; only 120 are landed in `definitionCorpus`, see fact-check above)
-- Total curated topics: **312** (includes 1 extra: "благодарность" not in relations)
-- Original seed topics: **30**
-- Total curated in this effort: **263** concepts across 12 batches
-- Remaining concepts to curate: **0** (from original 281 gap concepts)
+- **Exact literal runtime overlap**: **44** relation concepts already have
+  a literal `definitionCorpus` key
+- **Concepts in relations graph**: **311**
+- **No exact literal `definitionCorpus` key**: **267**
+- **Relations-graph curation inventory**: **311/311** concepts have
+  curated predicates (100% of *that* inventory — NOT total runtime
+  coverage and NOT the size of the overlay)
+- **Curated overlay (2026-10-23)**: **6,238 rows / 4,045 unique `topic`
+  keys**; runtime loader reports 4,036 loaded topics after merge/filter
+- **Original seed topics**: **30** (historical; literal corpus is now 172)
+- **Historical 2026-07 inventory**: 263 concepts across 12 batches;
+  “total curated topics: 312” was the then-current count and is
+  superseded by the 4,045-topic overlay
+- **Remaining relations concepts to curate**: **0** (from the original
+  281 gap concepts)
 
 ## Notes
 
@@ -381,4 +396,4 @@ Full list contains 100 concepts; top 100 shown.
 - **P1.10 COMPLETED**: Batch 213–242 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
 - **P1.11 COMPLETED**: Batch 243–272 concepts curated with 1–2 `SemanticPredicate`s each (30 concepts).
 - **P1.12 COMPLETED**: Batch 273–293 concepts curated with 1–2 `SemanticPredicate`s each (21 concepts).
-- **P1 CURATION FULLY COMPLETE**: All 281 gap concepts + 30 seed = 311 concepts covered.
+- **P1 CURATION FULLY COMPLETE (historical 2026-07)**: All 281 gap concepts + 30 seed = 311 concepts covered in the relations-graph inventory. The curated overlay has since grown to 6,238 rows / 4,045 unique topics (2026-10-23); 311 is not its current size.

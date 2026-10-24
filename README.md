@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: 1821 fast-suite cases, 0 failures (2026-09-29, substrate era; full matrix below). B3 mechanical gates 1-5 passing. Unit 1671, core 1194, property 227, integration 46, slow 173 — all green.
+**Tests**: 1918 fast-suite cases, 0 failures (2026-10-24, substrate era; full matrix below). B3 mechanical gates 1-5 passing. Unit 1818, property 244, integration 47 — green on the bootstrap-safety tree; slow 190 was last green at the P3 landing and was not re-run for this pin. Core/main are registered at 1219/1339 but were not re-run as single processes this cycle.
 
 ### Verified Capabilities
 
@@ -29,10 +29,11 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 - **Multi-turn**: 3-turn session — define → confront ("Я удерживаю позицию...") → reflect
 - **Challenge detection**: "свобода это просто отсутствие ограничений" → hypothesis + counter-grounds (no strawman confrontation)
 - **Commitment memory**: `ssSemanticCommitments` wired into render path
-- **Calibration corpus**: 1030 records across 11 strata + 237 live-dialogue turns, all operator-confirmed (`data/calibration_corpus/`); executable semantic-IR gold (100 parses), freedom-cluster gold (500), 30 IR-annotated scenarios, 24 primitives, 6+ sense contracts, 16 rules, 20 minimal pairs, 41-task exit harness — all shadow-only (`data/semantic_ir/`, ADR-0054)
+- **Calibration corpus**: 1030 records across 11 strata + 305 live-dialogue turns, all operator-confirmed (`data/calibration_corpus/`); executable semantic-IR gold (100 parses), freedom-cluster gold (500), 30 IR-annotated scenarios, 24 primitives, 6+ sense contracts, 16 rules, 20 minimal pairs, 41-task exit harness — all shadow-only (`data/semantic_ir/`, ADR-0054)
 - **Render-phase rescue**: degraded turns (tautology, default lexeme, empty compose/hold) repaired with marked trailing lines instead of silent degradation
 - **Researcher regimes**: speculative markers route to hypothesis-marked generative plans; generative turns compose topic-anchored assemblies (same-topic/input-term, hypothesis-marked, R+L2-gated)
 - **Misunderstanding repair**: user-side reports («ты меня не понял») reach the repair surface; bare-pronoun self-reference backstop gated to genuine self-knowledge prepares
+- **Crisis safety**: acute markers force Protocol B with real resources; the CLI/worker bootstrap fallback still serves the resource surface when a strict runtime cannot start (domain or I/O bootstrap failure; cancellation/programming errors still fail closed)
 - **Guard honesty**: person-aware topic-relevance overlap, traced block reasons, honest recovery text (no false retry promise)
 - **Substrate layer**: 53K-entry associative graph routes spreading activation only — never surfaces in output
 - **SelfPlay**: `--selfplay [N]` — offline graph enrichment via LLM evaluation
@@ -52,7 +53,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 - `Essence` — Σ-typed commitment, unconditionally active
 
 **Semantic Core**:
-- `AtomStore` — 52 RelationType, 136 philosophical topics (definitionCorpus)
+- `AtomStore` — 52 RelationType, 172 philosophical topics (definitionCorpus) plus the curated bootstrap overlay
 - Typed edges with morphological reconstruction (6 Russian cases)
 - Dialectical structure: rationale / counter / synthesis per relation
 - `PathFinder` — Graph traversal with field-biased ranking
@@ -74,13 +75,20 @@ python3 >= 3.9  # for build scripts
 
 ```bash
 cabal build all
-cabal test qxfx0-test-fast  # 1821 cases; minutes-scale (see Testing below)
+cabal test qxfx0-test-fast  # 1918 cases; minutes-scale (see Testing below)
 ```
 
 ### Run
 
 ```bash
-# Interactive session
+# Strict runtime (default) requires a verified Agda witness.
+# Write it once for the configured state directory:
+cabal run -v0 qxfx0-main -- --write-agda-witness
+
+# Local exploration without the formal witness: degraded mode, not strict.
+QXFX0_RUNTIME_MODE=degraded cabal run -v0 qxfx0-main -- --session demo
+
+# Interactive session (strict)
 cabal run -v0 qxfx0-main -- --session demo
 
 # Single turn (JSON output)
@@ -144,16 +152,16 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1671 (incl. IR + Stage-1 pins) | ✅ 0 failures |
-| qxfx0-test | 1307 (core 1194 + runtime 94 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures |
-| qxfx0-test-property | 227 | ✅ 0 failures |
-| qxfx0-test-integration | 46 | ✅ 0 failures |
-| qxfx0-test-fast | 1821 | ✅ 0 failures |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 94 / 45 / 23 / 11 (= 173) | ✅ 0 failures |
+| qxfx0-test-unit | 1818 (incl. IR + Stage-1 pins) | ✅ 0 failures (2026-10-24) |
+| qxfx0-test | 1339 (core 1219 + runtime 97 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ⚠️ registered count; not re-run as one process this cycle |
+| qxfx0-test-property | 244 | ✅ 0 failures (2026-10-24) |
+| qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-24; an earlier chained attempt hit transient ENOSPC) |
+| qxfx0-test-fast | 1918 | ✅ 0 failures (2026-10-24) |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures at P3 landing 2026-10-23; not re-run for the bootstrap-safety pin |
 
-Counts re-verified green on HEAD 2026-09-29 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
+Counts re-verified green on the bootstrap-safety tree 2026-10-24 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
 
-The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1821 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20 min wall-clock. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
+The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1918 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 
 ## Audit History
 

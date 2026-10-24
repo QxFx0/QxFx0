@@ -1,15 +1,12 @@
 # B2 — Human-Eval Protocol (Felt Subjecthood Discrimination)
 
-- **Status**: Design only (no runtime code, no tests, no raters run, no
-  claim upgrade). **M6-FELT remains NOT PROVEN.**
-- **Date**: 2026-06-17
-- **Depends on**: `B3_SEMANTIC_CORE_MVS_GATE.md` (finalized `b7e4ec3`) —
-  B2 must NOT run until B3's Gates 1–5 are mechanically passing under
-  governed-evidence conditions.
+- **Status**: Protocol design + executed (EXEC-001 packet; EXEC-002/003 rating records, 2026-09-22). **PARTIAL EVIDENCE** — one effective rater, no preset threshold, formal claim withheld. **M6-FELT formal status remains withheld; the mechanical bounded benchmark is `M6FeltProven`.**
+- **Date**: 2026-06-17 (protocol); 2026-09-22 (execution records)
+- **Depends on**: `B3_SEMANTIC_CORE_MVS_GATE.md` (finalized `b7e4ec3`) — B3 mechanical gates are now green; the human leg still needs the second-rater/threshold decisions below.
 - **Predecessor**: internal draft `docs/tz/ROADMAP-COHERENCE-B2-HUMAN-EVAL.md`
   (gitignored); this is the canonical public version, synchronized with
   the finalized B3 gate structure.
-- **Front type**: Human-eval protocol design (docs only)
+- **Front type**: Human-eval protocol + execution records
 
 ## Purpose
 
@@ -21,8 +18,26 @@ direction the rubric predicts.
 
 Together B2 + B3 convert the North Star from an aspiration into a
 **falsifiable program**: B3 says when the core is *capable*; B2 says when
-the felt claim is *evidenced or refuted*. Neither closes M6-FELT; both are
-design-only.
+the felt claim is *evidenced or refuted*. B3 is now implemented and green
+on its mechanical gates; B2's protocol has execution records. Neither
+upgrades the formal claim by itself.
+
+## Execution status (2026-10-23)
+
+- **EXEC-001** defined the packet (corpus, Control-A definition, rubric,
+  generation script); the packet was used by the runs below.
+- **EXEC-002** (single effective rater; 10 blind pairs): D3 was decisive
+  for System (6-0), D1 was 5-5 (confounded), D5 5-1, D6 5-1; overall
+  5-3-2 — verdict **MIXED**, neither pass nor fail. See
+  `docs/closure/B2_EXEC_002_RATING.md`.
+- **EXEC-003** re-ran D1 against a fully ablated control (not merely
+  fluency-matched): D1 6-2-2, D3 8-2, overall 6-3-1; pooled across all
+  dimensions the System side is favored, but the sample is small. See
+  `docs/closure/B2_EXEC_003_D1_RERUN.md`.
+- **What is still missing**: a second independent rater, a pre-set
+  numeric threshold for the pooled verdict, and a decision to upgrade (or
+  reject) the formal M6-FELT claim. Until then this document is
+  **PARTIAL EVIDENCE**, not a pass.
 
 ## 0. The trap B2 must not fall into
 
@@ -81,7 +96,7 @@ classification, recovery/fallback phrases, meta-frame without content,
 request paraphrase do not count. This keeps the human rubric and the
 mechanical gate measuring the same thing.
 
-## 3. Protocol skeleton (design only — no thresholds set)
+## 3. Protocol skeleton (design; thresholds still unset — execution records above)
 
 ### 3.1 Format
 
@@ -224,17 +239,22 @@ cited.
   fail/pivot).
 - Together they convert the North Star from an aspiration into a
   **falsifiable program**: B3 says when the core is *capable*, B2 says
-  when the felt claim is *evidenced or refuted*. Neither closes M6-FELT;
-  both are design-only and feed the terminal-thesis decision (pass /
-  reframe / pivot).
+  when the felt claim is *evidenced or refuted*. B3 is implemented and
+  green; B2 has execution records but remains partial; neither upgrades
+  the formal claim by itself.
 
 ## 7. What B2 does NOT do
 
-- **No runtime code** — this is a design document, not an implementation.
-- **No tests** — no corpus is created, no raters are run.
-- **No claim upgrade** — M6-FELT remains NOT PROVEN.
-- **No B3 implementation** — B2 assumes B3 gates are passing; making
-  them pass is M4 semantic-core deepening, separate from B2.
+- **No B2-specific runtime code** — this is a protocol/evidence document,
+  not a runtime feature.
+- **No automated B2 tests** — the packet and rating records exist, but
+  the protocol is not a CI gate. The B3 mechanical gates are the
+  automated floor.
+- **No claim upgrade** — the formal M6-FELT claim remains withheld; the
+  mechanical bounded benchmark is `M6FeltProven`, the human leg is
+  partial (one effective rater, no preset threshold).
+- **No B3 implementation** — B2 assumes B3 gates are passing; B3 is now
+  green separately.
 - **No thresholds** — all numeric bars are placeholders pending
   calibration.
 
@@ -243,5 +263,8 @@ cited.
 - Source: `ROADMAP.md` North Star (`:29`) + Final Anchor Doctrine;
   `B3_SEMANTIC_CORE_MVS_GATE.md` (finalized `b7e4ec3`); internal draft
   `docs/tz/ROADMAP-COHERENCE-B2-HUMAN-EVAL.md`; `audit-objective-2026-06-17.md`.
-- Runtime/gates/eval: **NOT PROVEN.** No public artifact, no claim
-  upgrade, no public ✅. Design only.
+- Execution: `docs/closure/B2_EXEC_001_PACKET.md`,
+  `docs/closure/B2_EXEC_002_RATING.md`,
+  `docs/closure/B2_EXEC_003_D1_RERUN.md`.
+- Runtime/gates/eval: **PARTIAL EVIDENCE.** No formal claim upgrade and
+  no public ✅; the mechanical bounded benchmark is separate.

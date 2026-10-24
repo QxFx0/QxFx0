@@ -1,10 +1,8 @@
 # M6-FELT Mechanical Evidence Gate
 
 - **Front**: M6-FELT gate (felt-evidence gate)
-- **Status**: IMPLEMENTED (2026-08-08) — the mechanical checker exists;
-  the gate currently **fails fail-closed** on real data expectations
-  (it only proves a session when the runtime record satisfies Gates
-  1–5 under governed-evidence conditions)
+- **Status**: **MECHANICAL PROVEN (bounded benchmark, 2026-08-08; runtime re-verified 2026-08-22, suite green 2026-10-24); HUMAN PARTIAL; formal claim withheld.** The checker remains fail-closed by design: it only proves a session when the runtime record satisfies Gates 1–5 under governed-evidence conditions.
+- **Last status sync**: 2026-10-24 (matrix re-verification after the bootstrap-safety catch widening; no new M6 evidence)
 - **Depends on**: SLICE-012 (`EvidenceAdmissibility`,
   `QXFX0_GOVERNED_EVIDENCE`, `trcEvidenceAdmissibility`) — closed
 - **Module**: `QxFx0.Core.M6FeltGate`

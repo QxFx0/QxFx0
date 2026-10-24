@@ -173,7 +173,7 @@
   full lineage tracking (LineageRevised events, ContradictionEvent records).
   Integration test verifies pipeline fires when `ceContradicted = True`.
   `seedFromCorpus` creates initial `SemanticNetwork` from `definitionCorpus`
-  (**120 topics** as of 2026-08-22, `Semantic/Content.hs` — the historical
+  (**172 topics** as of 2026-10-23, `Semantic/Content.hs` — the historical
   "34" grew with the corpus; edges between topics sharing atoms, explicit
   edge weight = `sharedCount / 10.0`, not a flat 1.0 — flat 1.0 remains
   only for synonym-type `TopicRelations`), ensuring `contentDensityGate`
@@ -460,8 +460,8 @@ Conjunction (>=2 shared atoms), Irreducible (<2 shared atoms), интеграц�
     predicates); edge weight is `sharedCount / 10.0`
     (`Network/Seed.hs`), flat 1.0 only for synonym-type `TopicRelations`.
     The historical "30 topics / ~50 edges" described the 2026-06-20
-    corpus; `definitionCorpus` has since grown to **120 topics**
-    (2026-08-22 count), so node/edge counts scale with the corpus.
+    corpus; `definitionCorpus` has since grown to **172 topics**
+    (2026-10-23 count), so node/edge counts scale with the corpus.
     Only source of output.
   - **Substrate layer**: same topic set, weight 0.3,
     from `buildSubstrateEdges` (brain_kb co-occurrence in triggers).
@@ -622,11 +622,11 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-10-23)
+## Test counts (updated 2026-10-24)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
 suites that run them). unit/fast/integration re-verified green on HEAD
-2026-10-23 (sequential runs; `-M10G` for fast, `-M6G` for unit/
+2026-10-24 (sequential runs; `-M10G` for fast, `-M6G` for unit/
 integration, `-M12G` for slow groups). Slow: 190 cases green BY GROUP
 (runtime 106/state 50/http 23/lifecycle 11, all re-verified WITH
 substrate on HEAD 2026-10-23); state group requires `-M10G`
@@ -654,10 +654,10 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1338 (core 1218 + runtime 97 + http 23; full single-process
+| qxfx0-test | 1339 (core 1219 + runtime 97 + http 23; full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1917 |
-| qxfx0-test-unit | 1817 |
+| qxfx0-test-fast | 1918 |
+| qxfx0-test-unit | 1818 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -669,7 +669,7 @@ runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
 after 59 others but passes solo — run it standalone on stall.
-property/integration re-verified green on HEAD 2026-10-23
+property/integration re-verified green on HEAD 2026-10-24
 (244/244, 47/47).
 Batch-1 landing (2026-10-17, tree = landing commits): unit 1739,
 fast 1841, property 227, integration 47, slow 179 (100+45+23+11) —
@@ -745,7 +745,7 @@ before this count) plus the audit follow-up below (+9).
 **Audit follow-up landing (2026-08-23)**: (1) the ADR-0013 dangling
 reference corrected to ADR-0034 §3 Rule 5 / FOLLOWUPS Rule [15];
 (2) GAPS.md 311/312 totals annotated as curation-inventory numbers
-(runtime corpus is 120 topics); (3) empty-substrate bootstrap now logs
+(runtime corpus is 172 topics); (3) empty-substrate bootstrap now logs
 a WARN (`brain_kb.jsonl loaded 0 entries…`) instead of degrading
 silently, and `loadBrainKB` has direct tests (missing path → `[]`;
 JSONL parse with bad-line skip); (4) dead suite
@@ -852,6 +852,31 @@ re-observe before treating as real).
   ровно 2 падения; проглатывание bind-`Left` — ровно 1; возврат
   `T.index` — ровно 1. В техдолге остаются tmp-fsync и
   `Prepare/Resolve` fallback.
+  **Bootstrap-safety follow-up (2026-10-23/24, аудит 2026-10-16)** —
+  свежий strict-state без `agda-witness.json` падал в
+  `bootstrapSession` до Engine, поэтому `--turn-json "не хочу жить"`
+  не отдавал ресурсы. `CLI.Turn` теперь ловит **только** ошибку
+  bootstrap: острый crisis-маркер → синтетический `CrisisProtocolB`
+  response (`turns = 0`, без trace/persistence), non-crisis
+  пробрасывается fail-closed. `--worker-stdio` при ошибке bootstrap
+  входит в preflight-only режим: sidecar-handshake проходит,
+  crisis-turn отдаёт surface, non-crisis — `worker_bootstrap_failed`,
+  `shutdown` подтверждается. Здоровый runtime не изменён (preflight
+  не выполняется перед bootstrap). Bootstrap acquisition ловится по
+  двум boot-boundary классам: `tryQxFx0` (`QxFx0Exception`) +
+  `tryIO` (`IOException`) — та же матрица, что у канонического
+  `tryBootResource`; `AsyncException` и programming errors
+  пробрасываются. Пин:
+  `Test.Suite.CrisisGuard` +1 (fresh strict-state без witness;
+  surface содержит 112 и 8-800-2000-122; non-crisis → `Left`).
+  Worker preflight проверен smoke-прогоном hello → crisis turn →
+  shutdown. Матрица: unit 1818, fast 1918, property 244,
+  integration 47 (2026-10-24; первый chained-прогон упал
+  на транзиентном `No space left on device` в nix/souffle, не на
+  runtime-ассерте) — все exit 0; slow 190 не перезапускался;
+  main/core зарегистрированы как 1339/1219, одним процессом не
+  перезапускались; `qxfx0-test` и `qxfx0-test-slow` собираются
+  чисто (warnings only).
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

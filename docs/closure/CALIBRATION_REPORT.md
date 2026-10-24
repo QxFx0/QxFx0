@@ -495,7 +495,9 @@ beyond 24 verbs.
   (`trimClauseTail`, live-verified); F4 fixed twice (verb-tail strip
   in candidates + honest abstain for GF-default-lexeme renders,
   live-verified); F3 needs no fix (rater-approved). GF map gap
-  (55/120 topics without lexemes) recorded as data backlog.
+  (55/120 topics without lexemes at the 2026-09-17 measurement; the
+  literal corpus is now 172 topics — remeasure before using this as a
+  current ratio) recorded as data backlog.
 - **Slow heap**: full single-process run requires `-M12G`
   (172/172 green; smaller caps die at the tail with 0 failures).
 - **Prototype/lemma skew**: `fieldDimensionPrototypes` normalized via
@@ -619,7 +621,8 @@ beyond 24 verbs.
   replica as `lemma_verb_coverage.py`); the port self-checks against
   the Haskell unit vectors (identity 1.0, converse j=1.0/s<0.5, neg
   cap) before evaluating. Candidates extracted from `Content.hs`
-  entry blocks (asserted 120 topics). Results:
+  entry blocks (asserted 120 topics at the 2026-09-20 measurement; the
+  literal corpus is now 172 — the eval is a historical snapshot). Results:
   `data/calibration_corpus/structscore_eval.json`.
 - **Eval set**: 40 records with predicate_relevant (corpus ⋈ rated by
   id). Used-candidate mapping by response containment (covered_exact
@@ -6587,3 +6590,51 @@ bootstrap-гейт был единственным путём, который е
 - Preflight-only worker рекламирует protocol capabilities, но
   non-crisis turn честно отклоняет; это не degraded runtime.
 - Resource pack не менялся: 112 + 8-800-2000-122, `crVersion = 1`.
+
+### Landing (2026-10-24)
+
+- **Code**: `app/CLI/Turn.hs` (bootstrap-only catch + synthetic
+  `CrisisProtocolB` response), `app/CLI/Worker.hs` (preflight-only
+  protocol loop: `hello` handshake, crisis turns, `worker_bootstrap_failed`
+  for other turns, shutdown). Healthy runtime keeps the original
+  bootstrap → Engine path.
+- **Catch class**: bootstrap acquisition catches the two boot-boundary
+  classes explicitly: domain failures via `tryQxFx0` and I/O failures
+  via `tryIO`. This is the same class matrix as
+  `ExceptionPolicy.tryBootResource` (architecture rule [5] keeps
+  `SomeException` out of app code). `AsyncException` and programming
+  errors still rethrow: a broken disk must not hide a real bug, but
+  must also not turn an acute crisis utterance into an error. The class
+  matrix itself is pinned by `Test.Suite.BootBoundary` (IO caught,
+  `ErrorCall` and `AsyncException` rethrown).
+- **Pin**: `Test.Suite.CrisisGuard` 19 → 20 cases. The test uses an
+  empty strict state with `QXFX0_AGDA_WITNESS` unset, asserts the
+  surface contains `112` / `8-800-2000-122`, and asserts the non-crisis
+  path is still `Left`.
+- **Red check**: reverting only the CLI fallback yielded exactly one
+  failure in the new CrisisGuard pin (`HEALTH_GATE_FAILURE`), with all
+  other CrisisGuard cases green; restoring the fallback turned the
+  slice green.
+- **Smoke**: fresh strict state without witness:
+  `--turn-json "не хочу жить"` → `status=ok`, `family=CrisisProtocolB`,
+  surface carries both resource lines; `--turn-json "привет"` →
+  `RuntimeInitError`; worker protocol: `hello` → `hello_ack`,
+  crisis turn → same surface, non-crisis turn →
+  `worker_bootstrap_failed`, `shutdown` → `status=ok`. A strict state
+  with a freshly written witness still renders a normal `CMDefine` turn
+  (`status=ok`, `turns=1`), so the healthy path was not replaced.
+- **Matrix (bootstrap-safety tree)**: unit 1818/1818, fast 1918/1918,
+  property 244/244, integration 47/47 (2026-10-24) — all exit 0. An
+  earlier chained integration attempt hit a transient
+  `No space left on device` during the nix/souffle eval
+  (`Curated and ontology persistence integration`), not a runtime
+  assertion; after the disk had free space the same 47 cases passed.
+  Slow 190 was last green at P3 and was not re-run for this pin;
+  main/core are registered at 1339/1219 and were not run as single
+  processes. `qxfx0-test` and `qxfx0-test-slow` were rebuilt cleanly
+  (warnings only) so the main/slow wiring is known to compile.
+- **Architecture check**: `scripts/check_architecture.sh` still reports
+  two unrelated violations outside this change (bare partial in
+  `Core/TurnPipeline/Effects.hs`; missing WP-F anti-rot registration).
+  Neither file was touched here; the check is not green, so do not cite
+  it as a release gate for this landing.

@@ -10,6 +10,13 @@ checks. These are release invariants, not aspirational notes.
   health model.
 - If `--runtime-ready` reports `status="ok"` and `ready=true` in strict mode,
   a strict `--turn-json` using the same environment must be able to bootstrap.
+- Exception (crisis safety, 2026-10-23; widened 2026-10-24): an acute crisis utterance may receive
+  the Protocol B resource surface even when strict bootstrap fails. That
+  synthetic response is explicitly **not** a turn (`turns=0`, no trace, no
+  persistence) and does not imply readiness; non-crisis input still fails
+  closed on the bootstrap error. The fallback covers the boot-boundary classes
+  (`QxFx0Exception` and `IOException`); cancellation and programming errors
+  still propagate.
 - If strict bootstrap would fail on schema, Agda, Datalog, embedding, or
   resource readiness, `--runtime-ready` must be not-ready and expose the same
   component class in its JSON payload.

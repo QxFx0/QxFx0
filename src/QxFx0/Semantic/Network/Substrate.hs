@@ -8,8 +8,8 @@
 Module      : QxFx0.Semantic.Network.Substrate
 Description : Substrate Network — brain_kb enrichment of SemanticNetwork edges.
 
-Two-layer knowledge graph (scales with the corpus; 120 topics as
-of 2026-08-22 — the historical "30 topics / ~50 edges" described the
+Two-layer knowledge graph (scales with the corpus; 172 topics as
+of 2026-10-23 — the historical "30 topics / ~50 edges" described the
 2026-06-20 corpus):
   Explicit: definitionCorpus topics, weight sharedCount\/10.0
     (flat 1.0 only for synonym-type TopicRelations)

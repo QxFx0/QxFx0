@@ -1,6 +1,7 @@
 # Remaining Closure Checklist
 
 Status: Active
+Last status sync: 2026-10-24 (bootstrap-safety follow-up; B2/B3/M6 rows aligned with the execution records and `M6_FELT_GATE.md`; integration rerun after ENOSPC)
 Purpose: compact list of the remaining public debt to the final anchor.
 
 ## Open fronts
@@ -8,10 +9,10 @@ Purpose: compact list of the remaining public debt to the final anchor.
 | Front | Status | Exit |
 |---|---|---|
 | `DATALOG-ROLE-001` public role document | CLOSED 2026-09-19 | `docs/closure/DATALOG_ROLE.md` + enforced rules `[22]`/`[23]` in `scripts/check_architecture.sh` (both pass; negative-tested); prior `[23]`/`[25]` refs were phantom numbers, corrected |
-| `M7` production evidence closure | OPEN | corpus/replay gate, authority round-trip subset, Python authority contour, M6 evidence reconciliation, and tier split are all checked |
+| `M7` production evidence closure | OPEN (regenerative evidence/ops regime) | No closure evidence in the current tree. `docs/tz/ROADMAP-COHERENCE-001.md` reframes M7 as ongoing evidence/ops upkeep, not a terminal phase; the old exit list (corpus/replay, authority round-trip, Python contour, M6 reconciliation, tier split) remains a checklist, not a demonstrated closure. Do not claim M7 closed. |
 | `SLICE-012` governed evidence admissibility | CLOSED (with pre-existing morphology blocker) | `EvidenceAdmissibility` type + `QXFX0_GOVERNED_EVIDENCE` fail-closed; `trcEvidenceAdmissibility` in every trace; CI extended contract governed; `ENV_CONTRACT.md` documents the contract; fast gate 0 new failures (8 errors + 2 failures pre-existing morphology, SLICE-010B); commits `b12cafb` + `6755b0e` on `origin/main` |
-| `B3` semantic-core MVS gate | IMPLEMENTED (tests wired, not verified passing) | content-quality pass/fail gates defined for definition, distinction, repair, commitment, non-fallback; 4 decisions resolved; `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`; M6-FELT remains NOT PROVEN; commit `b7e4ec3` |
-| `B2` human-eval protocol (design) | OPEN (design only) | paired blind discrimination protocol with structure-ablated fluency-matched control; rubric tied to B3 gates; pre-registered fail/pivot; `docs/closure/B2_HUMAN_EVAL_PROTOCOL.md`; M6-FELT remains NOT PROVEN; cannot run until B3 gates mechanically pass |
+| `B3` semantic-core MVS gate | GREEN (mechanical) | content-quality pass/fail gates defined for definition, distinction, repair, commitment, non-fallback; 4 decisions resolved; tests wired and fast/unit green 2026-10-24; B3 mechanical gates 1–5 passing in the M6 bounded benchmark; `docs/closure/B3_SEMANTIC_CORE_MVS_GATE.md`; commit `b7e4ec3`. M6-FELT mechanical is proven, human leg is partial. |
+| `B2` human-eval protocol (executed, partial) | PARTIAL EVIDENCE — formal claim withheld | paired blind discrimination protocol with structure-ablated fluency-matched control; rubric tied to B3 gates; pre-registered fail/pivot; `docs/closure/B2_HUMAN_EVAL_PROTOCOL.md`; EXEC-002 (single effective rater: D3 6-0, D1 5-5 confounded, overall 5-3-2 mixed) and EXEC-003 (D1 6-2-2 vs fully ablated control) are recorded. No second rater and no preset threshold, so M6-FELT is not formally proven. |
 
 ## Deferred feature gaps
 
@@ -19,7 +20,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 |---|---|---|
 | `SLICE-015` runtime summary observability gaps (50/51) | CLOSED 2026-09-19 | both summary lines existed; case 51 covered+green, case 50 closed with `testStateSummaryShowsTypedPreActorFailure` (envelope-aware injected trace; session-level trigger impossible by flag-off design, documented) |
 | `BD1` Envelope/angst parameter calibration | DEFERRED | `emAngst*` and `sdt*` stay hand-set; ADR-0012 §15.2 requires a production trace corpus (synthetic cannot produce `RuleHolisticAdvantage`/`RuleFormalAdvantage` divergence); unit-guards pin the invariants (`0 < sdtScaling <= 1`, `0 <= sdtThreshold <= 1`, `sdtWindow >= 1`, healthy scalar above `emConatusStructuralFloor`); A-slice/C-slice closed on 2026-08-07 (commits `6362c57`, `5832fff`, `7861323`, `7eb759a`, `72fe9db`) |
-| `M6-FELT` felt-evidence gate | IMPLEMENTED (NOT PROVEN) | mechanical checker `QxFx0.Core.M6FeltGate` over `[TurnReplayTrace]`: governed-evidence precondition (SLICE-012) + B3 Gates 1–5, fail-closed conjunction, per-gate verdict; `Test.Suite.M6FeltGate` (13 cases); `docs/closure/M6_FELT_GATE.md`; sessions become M6-FELT evidence only when the gate passes under `QXFX0_GOVERNED_EVIDENCE=1` + B2 human-eval. **Bounded benchmark (2026-08-08)**: real 12-turn governed session (`Test.Suite.M6FeltBenchmark`) fails fail-closed with exactly `[FeltGate5NonFallback]` — C1–C4 + governed-evidence pass on the production runtime; the blocker is the GF linearizer non-fallback coverage (distinction/linkage/proof/hypothesis turns fall back to `gf_response_plan:response_plan_without_propositions` / `russian_compatibility_shim`), making M6-FELT mechanically unreachable until the linearizer gap is closed. **2026-08-23 verification**: the full `qxfx0-test-fast` run (1808 cases incl. `M6FeltBenchmark`) is green — the benchmark verdict passes under the current runtime; re-verify and close this line or document the remaining gate before relying on the old status |
+| `M6-FELT` felt-evidence gate | MECHANICAL PROVEN (bounded); HUMAN PARTIAL | mechanical checker `QxFx0.Core.M6FeltGate` over `[TurnReplayTrace]`: governed-evidence precondition (SLICE-012) + B3 Gates 1–5, fail-closed conjunction, per-gate verdict; `Test.Suite.M6FeltGate` (13 cases); `docs/closure/M6_FELT_GATE.md`. **Bounded benchmark**: the 12-turn governed session (`Test.Suite.M6FeltBenchmark`) records `M6FeltProven` (`feTurnCount = 12`, `feDistinctFocuses = 5`, `feRepairTurns = 2`); the historical 2026-08-08 `[FeltGate5NonFallback]` blocker was closed by runtime fixes, not by weakening the gate. **Human leg**: B2 EXEC-002/003 are partial (single effective rater, no preset threshold); formal “M6-FELT proven” remains withheld. |
 
 ## Closed this cycle (2026-06-27)
 
@@ -27,7 +28,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 |---|---|---|
 | `P4` Option A — legacy structuredBody gate enforcement | IMPLEMENTED | `validatePredicate` + `filterAdmissiblePredicates` in GeneratedPredicateGate.hs; `selectPredicatesGated` wrapper in Dialogue.hs; all 4 call sites gated; `docs/closure/P4_LEGACY_PATH_AUDIT.md` updated; build verification deferred to non-timeout env |
 | `C4` dead code removal | COMPLETE | Phase 0 removed 23 Python scripts + 1 Haskell module; all 407 remaining modules verified alive; no more safe mechanical removal possible |
-| `B3` mechanical gates wiring | IMPLEMENTED | Tests wired into TestMainUnit + TestMain; ContentQualityGate added to cabal; tests not verified passing due to 30s build timeout |
+| `B3` mechanical gates wiring | IMPLEMENTED (superseded 2026-10-23) | Tests wired into TestMainUnit + TestMain + TestMainFast; ContentQualityGate added to cabal; the historical “not verified due to 30s build timeout” note is stale — tests are verified green on 2026-10-23 (see the open-fronts B3 row) |
 
 ## Closed this cycle
 
@@ -49,6 +50,7 @@ Purpose: compact list of the remaining public debt to the final anchor.
 
 ## Notes
 
+- Status source hierarchy: `M6_FELT_GATE.md` for the M6 verdict, `B3_SEMANTIC_CORE_MVS_GATE.md` for B3 gate definitions, and `B2_HUMAN_EVAL_PROTOCOL.md` + `B2_EXEC_*` for B2. This checklist is a compact index, not a claim upgrade.
 - This checklist is intentionally smaller than `ROADMAP.md`.
 - It names the fronts that still matter operationally; it does not duplicate the doctrine spine.
 - A front is not closed until it has public evidence or an explicit deferred classification.

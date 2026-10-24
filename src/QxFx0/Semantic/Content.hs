@@ -40,7 +40,7 @@ differentiating predicate that is specific to the X/Y pair.
 
 == Coverage
 
-Covered seed topics: the 120 keys of 'definitionCorpus' (see
+Covered seed topics: the 172 keys of 'definitionCorpus' (see
 'coveredTopics', single source of truth — do not hand-list here).
 
 Uncovered topics fall through to the existing template path (Gate 5
@@ -138,7 +138,7 @@ normalizeTopic = T.toLower . T.strip
 
 -- | The covered seed topics: exactly the keys of 'definitionCorpus'.
 -- Single source of truth — a separate hand-list silently desyncs
--- (it once covered only 30 of 120 topics while five live paths
+-- (it once covered only 30 of 172 topics while five live paths
 -- consumed it: analogy fallback, geometric classifier, anomaly gate,
 -- dialogue coverage, bootstrap explicit-topic set).
 coveredTopics :: [Text]

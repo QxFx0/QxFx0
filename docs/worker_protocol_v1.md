@@ -53,6 +53,28 @@ Mismatch response:
 }
 ```
 
+## Bootstrap-failure preflight mode (2026-10-23; widened 2026-10-24)
+
+If the worker cannot bootstrap its runtime session, it does not exit before
+the handshake. It stays in a preflight-only protocol loop. Bootstrap acquisition
+catches the two boot-boundary classes explicitly: domain failures via
+`tryQxFx0` (`QxFx0Exception`) and `IOException` via `tryIO`; this is the same
+class matrix as `tryBootResource`. `AsyncException` and programming errors
+still propagate.
+
+- `hello` still returns `status="ok"` / `hello_ack`, so the sidecar handshake
+  succeeds; `runtime_epoch` identifies the preflight instance and
+  `runtime_turn_index` stays `0`.
+- `turn` with an acute crisis input returns the same Protocol B resource
+  surface as the healthy crisis preflight, with `turns=0` and no session
+  persistence. Every non-crisis turn returns
+  `{"status":"error","error":"worker_bootstrap_failed",...}` (fail-closed).
+- `health` and `state` return the same `worker_bootstrap_failed` error.
+- `ping` returns `status="degraded"`; `shutdown` is acknowledged normally.
+
+This mode is an emergency resource channel, not a degraded runtime. It must
+never be reported as `ready` by the HTTP sidecar.
+
 ## Canonical Commands
 
 Legacy array commands remain accepted for operational requests:

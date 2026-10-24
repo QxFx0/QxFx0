@@ -1,10 +1,9 @@
 # B3 — Semantic-Core MVS Gate Design
 
-- **Status**: IMPLEMENTED — mechanical gates exist and are wired into test suites (TestMainFast, TestMainUnit, TestMain). Tests not yet verified passing due to 30s build timeout in dev env.
-- **Date**: 2026-06-17
+- **Status**: GREEN (mechanical) — gates exist, are wired into TestMainFast/TestMainUnit/TestMain, and are verified green in fast/unit on 2026-10-24 (full `qxfx0-test` main was not re-run as one process). The historical “tests not yet verified due to 30s build timeout” note is stale.
+- **Date**: 2026-06-17 (design); 2026-10-24 (status sync)
 - **Front type**: Content-quality gate definition
-- **M6-FELT status**: **NOT PROVEN** — explicitly. This document defines
-  what would need to pass; it does not claim anything passes.
+- **M6-FELT status**: **MECHANICAL PROVEN (bounded benchmark), HUMAN PARTIAL, formal claim withheld** — this document defines the gates; see `M6_FELT_GATE.md` for the verdict mechanics.
 - **Predecessor**: `audit-objective-2026-06-17.md` (§2: weak content engine),
   SLICE-012 (governed evidence admissibility — now closed)
 - **Successor**: B2 (human-eval ablated-control discrimination) — goes after
@@ -45,17 +44,17 @@ Each gate is defined by:
 template + single extracted lemma. A gate **passes** only if the response
 contains domain-bearing predications that go beyond the template scaffold.
 
-## M6-FELT = NOT PROVEN
+## M6-FELT status: mechanical proven, human partial
 
-Until all five gates below have:
-- (a) a checked-in test corpus of stimuli,
-- (b) a mechanical pass/fail checker (not human judgement alone),
-- (c) the system actually passing under governed-evidence conditions
-  (`QXFX0_GOVERNDED_EVIDENCE=1`, guard `Available`, trace
-  `EvidenceGoverned`),
-
-…M6-FELT remains **NOT PROVEN**. The current system would fail every gate
-below on the evidence from `reports/ab_dialogue/ab-eval-2026-05-21`.
+The original design stated that M6-FELT remained **NOT PROVEN** until all
+five gates had a checked-in corpus, a mechanical checker, and a passing
+governed-evidence session. That mechanical conjunction is now recorded by
+the bounded 12-turn benchmark (`Test.Suite.M6FeltBenchmark`, verdict
+`M6FeltProven`); the historical 2026-08-08 blocker was closed by runtime
+fixes, not by weakening the gate. The **human** leg (B2) is partial: one
+effective rater and no preset threshold. The formal “M6-FELT proven”
+claim therefore remains withheld, while the mechanical bounded claim is
+green. See `M6_FELT_GATE.md`.
 
 ---
 
@@ -151,10 +150,12 @@ produce the distinguishing content.
 2. Turn N+1: the user challenges the claim ("Но разве X не означает Y?",
    "Я не согласен: X — это не Z", "Ты ошибаешься: X на самом деле…").
 
-**Current behavior**: Unknown from the AB eval (it was single-turn per
-topic). The commitment store has `revise`/`retract`/`contradict` operations,
-but whether the system actually invokes them under challenge in a real
-session is **NOT PROVEN**.
+**Current behavior**: The 2026-06-17 AB eval was single-turn per topic, so
+this gate was unknown then. The commitment store has `revise`/`retract`/
+`contradict` operations; the mechanical B3 suite and the 12-turn benchmark
+now exercise challenge/repair, including `trcCommitmentContradicted` and
+revision events. The formal human claim remains partial (B2), but the
+mechanical Gate 3 pin is green.
 
 **Pass criterion**: Under challenge, the system must produce **at least one
 typed commitment-store operation** — `revise`, `retract`, or `contradict`
@@ -319,13 +320,16 @@ content gates must pass (conjunction, not average) for M6-FELT.**
 
 ## What B3 does NOT do
 
-- **No runtime code** — this is a design document, not an implementation.
-- **No tests** — no test corpus or checker is created.
-- **No claim upgrade** — M6-FELT remains NOT PROVEN.
-- **No M4 semantic-core deepening** — the implementation that would make
-  the system pass these gates is M4 work, separate from B3.
-- **No B2 human-eval** — B2 goes after B3, evaluating the floor B3
-  defines.
+- **No runtime code in this document** — the gate definitions are design;
+  the implementation and tests landed separately and are green.
+- **No automated human eval** — B3 is the mechanical floor; B2 is the
+  human protocol and is partial.
+- **No formal claim upgrade** — the mechanical bounded benchmark is
+  `M6FeltProven`; the formal M6-FELT claim remains withheld pending B2.
+- **No M4 semantic-core deepening by itself** — the implementation that
+  makes the system pass these gates is M4 work; it is now partly landed,
+  not proven complete.
+- **No B2 human-eval** — B2 evaluates the floor B3 defines.
 
 ## What B3 enables
 
@@ -342,7 +346,8 @@ content gates must pass (conjunction, not average) for M6-FELT.**
    `Available`, trace `EvidenceGoverned`), mechanically checked, with
    the public seed corpus — conjunction across both layers, not
    average". This is a bounded, falsifiable claim — not "the system is
-   conscious". **M6-FELT remains NOT PROVEN.**
+   conscious". The mechanical bounded benchmark is now `M6FeltProven`;
+   the formal claim remains withheld pending the B2 human leg.
 
 ## Resolved decisions (2026-06-17)
 
@@ -411,7 +416,7 @@ The four open questions from the initial draft are resolved as follows.
   not generate new content — it opens non-obvious paths to existing
   explicit predicates under governed retrieval.
 - All output predicates come from the explicit `definitionCorpus`
-  (80 predicates). Substrate text never appears in output (verified by
+  (172 literal topics plus the curated bootstrap overlay). Substrate text never appears in output (verified by
   property tests in `Test.Suite.SubstrateNetwork`).
 - **Relation Graph** (formal relation extraction) is **deferred** until
   a curated relation corpus exists. It must not be reconstructed by
