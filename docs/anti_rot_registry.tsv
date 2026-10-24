@@ -5,7 +5,7 @@
 # Columns: artifact <TAB> kind <TAB> site <TAB> test_name <TAB> wp <TAB> adr <TAB> notes
 artifact	kind	site	test_name	wp	adr	notes
 emConatusStructuralFloor	value-guard	Self/Essence:defaultEssenceModulation	WP-F: conatus structural floor is in production log-scale (unit-guard)	F	ADR-0012	locks §15.1 fix vs arbitraryUnitDouble [0,1] regression
-emConatusStructuralFloor	value-guard	Self/Essence:phase9-vs-default	WP-F: phase9 0.5 floor is a kept reference, not the live default	F	ADR-0012	phase9 0.5 is a regression reference, not live
+emConatusStructuralFloor	value-guard	Self/Essence:phase9-vs-default	WP-F: phase9 base record carries the live floor (no 0.5 trap)	F	ADR-0012	phase9 base record now carries the live 7.0 floor; no 0.5 trap
 emAngst*	deferred-contract	Self/Essence:angst-path	WP-F: angst-side essence params are explicitly Deferred (uncalibrated)	F	ADR-0012	pins §15.2 deferred angst params
 recallForTrace	consumer	Core/TurnPipeline/Finalize/Projection.hs:trcEpisodicRetrieval	WP-B: retrieve returns events in turn range	B	ADR-0043	flag episodicRecallActive default-off; trace consumer of retrieve
 csContentSaliency	consumer	Core/Spectral:computeContentSaliency + Projection:buildCognitiveSignals	WP-C: content saliency is promoted to default-on	C	-	flag contentSalienceActive default-off; spectral clusters counted per turn in CognitiveSignals

@@ -459,11 +459,10 @@ buildOwnershipCompare ss input =
       morph = ssMorphology ss
   in case detectOwnershipCorrection input of
     Just (old, new)
-      | not (null journal)
-      , M.member new lib
-      , let lastEntry = last journal
+      | M.member new lib
+      , lastEntry : earlier <- reverse journal
       , old == "" || old == ojeEvent lastEntry ->
-        let corrected = init journal
+        let corrected = reverse earlier
               ++ [lastEntry { ojeEvent = new, ojeTurn = turnNo }]
             fromEvent = if old == "" then ojeEvent lastEntry else old
         in runJournal corrected True ("correction:" <> old <> ">" <> new) (Just fromEvent)
@@ -494,27 +493,29 @@ buildOwnershipCompare ss input =
     runJournal entries corrected reason fromEvent =
       case refold entries of
         Left err -> (Just (emptyRecord ("event-compute-failed:" <> T.pack (take 80 err)) entries corrected fromEvent), entries)
-        Right (st, finalTime, query) ->
+        Right (st, finalTime, query, lastEntry) ->
           let fluents = fluentsAt st finalTime
               verdict = verdictTag (entailmentVerdict 32 (borrowerRules lib) fluents query)
               lineage =
                 [ renderSupport p sup
                 | p <- fluents
                 , Just sup <- [lineageOf st finalTime p] ]
-          in (Just (fullRecord reason entries corrected fromEvent (Just verdict) lineage), entries)
+          in (Just (fullRecord reason entries lastEntry corrected fromEvent (Just verdict) lineage), entries)
     refold entries = do
-      firstEntry <- case entries of
+      (firstEntry, lastEntry) <- case entries of
         [] -> Left "empty journal"
-        (entry : _) -> Right entry
+        (entry : rest) -> Right (entry, lastOf entry rest)
       let times = map (TimeStep . ("t" <>) . T.pack . show . ojeTurn) entries
       evs <- mapM (\(entry, t) -> eventAt lib morph entry t) (zip entries times)
       let seed = seedForEntry morph firstEntry
-          finalTime = case times of
+          finalTime = case reverse times of
             [] -> TimeStep "t0"
-            _ -> last times
-          query = queryForEntry morph (last entries)
+            (t : _) -> t
+          query = queryForEntry morph lastEntry
       (st, _) <- foldHistory (TimeStep "t0") seed evs
-      pure (st, finalTime, query)
+      pure (st, finalTime, query, lastEntry)
+    lastOf acc [] = acc
+    lastOf _ (x : xs) = lastOf x xs
     emptyRecord reason entries corrected fromEvent = OwnershipCompareTrace
       { octGateFired = True
       , octGateReason = reason
@@ -528,15 +529,14 @@ buildOwnershipCompare ss input =
       , octCorrected = Just corrected
       , octCorrectedFrom = fromEvent
       }
-    fullRecord reason entries corrected fromEvent verdict lineage =
-      let det = last entries
-      in OwnershipCompareTrace
+    fullRecord reason entries lastEntry corrected fromEvent verdict lineage =
+      OwnershipCompareTrace
         { octGateFired = True
         , octGateReason = reason
-        , octEventId = Just (ojeEvent det)
-        , octAgent = Just (ojeAgent det)
-        , octRecipient = Just (ojeRecipient det)
-        , octObject = Just (ojeObject det)
+        , octEventId = Just (ojeEvent lastEntry)
+        , octAgent = Just (ojeAgent lastEntry)
+        , octRecipient = Just (ojeRecipient lastEntry)
+        , octObject = Just (ojeObject lastEntry)
         , octVerdict = verdict
         , octLineage = lineage
         , octHistoryDepth = Just (length entries)
