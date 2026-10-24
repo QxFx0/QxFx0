@@ -6633,8 +6633,10 @@ bootstrap-гейт был единственным путём, который е
   main/core are registered at 1339/1219 and were not run as single
   processes. `qxfx0-test` and `qxfx0-test-slow` were rebuilt cleanly
   (warnings only) so the main/slow wiring is known to compile.
-- **Architecture check**: `scripts/check_architecture.sh` still reports
-  two unrelated violations outside this change (bare partial in
-  `Core/TurnPipeline/Effects.hs`; missing WP-F anti-rot registration).
-  Neither file was touched here; the check is not green, so do not cite
-  it as a release gate for this landing.
+- **Architecture check**: at landing, `scripts/check_architecture.sh`
+  reported two unrelated violations outside this change (bare partial in
+  `Core/TurnPipeline/Effects.hs`; stale WP-F anti-rot label). Neither
+  file was touched by the bootstrap-safety change. **Follow-up
+  2026-10-24**: both are closed in the working tree (ownership-journal
+  partials totalized; anti-rot label synced), and the full check is
+  green. Do not cite the pre-fix red state as current.

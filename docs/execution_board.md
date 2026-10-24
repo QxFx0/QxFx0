@@ -11,25 +11,30 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `GF-RELEASE-AUDIT — bounded canary + release-corpus audit harness`
-- `current_state`: New audit tooling is in place and running locally but **entirely uncommitted**: `scripts/gf_release_audit.py`, `scripts/run-bounded-v3-canary.sh`, `scripts/autonomous-canary-monitor.sh`, fixtures `spec/gf/{release_corpus_golden.tsv,release_corpus_prompts.txt,curated_predicate_slots.tsv,argued_leaf_slots.tsv}`, output in `reports/gf-release/`. Latest run `20260726T170210Z` = **PASS**, but only **1 turn** (canonical rate 1.0000, recovery 0.0000, fallbacks `{"none": 1}`, 0 quality issues, 0 semantic substitutions, warm p95 6782 ms). A 1-turn PASS is a smoke signal, **not** release-grade canary evidence.
-- `last_updated`: `2026-07-26`
-- `evidence_or_result_ref`: `reports/gf-release/audit-20260726T170210Z.{md,json}`, `reports/gf-release/canary-20260726T170210Z.jsonl`
+- `front_id`: `RELEASE-READINESS — bootstrap-safety landing + publication decision`
+- `current_state`: Bootstrap-safety fallback is landed (`203ffbf`, `b98a833`, `c201a80`); `main` is **51 commits ahead of `origin/main`**, nothing pushed. Unit/fast/property/integration are green on the code tree (1818/1918/244/47); main/core and slow 190 were not run as single processes for this pin. Architecture check is green in the working tree after the two hygiene fixes (commit pending).
+- `last_updated`: `2026-10-24`
+- `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (Bootstrap-safety landing); `/tmp/opencode/qxfx0-bootstrap-rerun/` logs; gate snapshot below.
 
-### Second live front (same tree, uncommitted)
+### Second live front — promotion V4 (human review)
 
 - `front_id`: `PROMOTION-V4 — governed promotion chain + response plan`
-- `current_state`: Whole promotion subsystem exists **untracked**: `src/QxFx0/Learning/{Promotion,PromotionRuntime,PromotionReview,JobQueue,CorroborationQueue,Rollback,Quality}.hs`, `src/QxFx0/Semantic/ResponsePlan*`, `src/QxFx0/Runtime/{ManagedWorker,AutonomousSmoke,StateDefaults}.hs`, `src/QxFx0/Types/{Learning,Memory,Policy}/`, plus 4 new migrations (`learning_005_canary_state`, `learning_006_session_jobs`, `promotion_scope_001_session_evidence`, `runtime_projection_002_session_scope`).
+- `current_state`: Promotion/response-plan subsystem is **tracked** in the current tree (no untracked source files); draft overlay remains inactive.
 - `blocker`: **`human_review_required`** — automated runtime gate passes, activation eligible `false`. Repo-owner decision, not a code gap.
 - `evidence_or_result_ref`: `reports/promotion-v4-release-cycle-20260719.md` (+ 7 sibling `reports/promotion-*-20260719.md`, `reports/*selector-preflight*-20260719.md`)
 
 ## Immediate next action
 
-1. **Decide the fate of the working tree.** `main` is **51 commits ahead of `origin/main`** (0 behind — clean fast-forward, working tree clean after this landing) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
+1. **Commit the architecture hygiene fix.** The working tree totalizes the ownership-journal partials in `Core/TurnPipeline/Effects.hs` and syncs the stale anti-rot registry label for `emConatusStructuralFloor`; `scripts/check_architecture.sh` is green in the working tree. Commit, then re-run the check on the committed tree.
+2. **Run the remaining release gates on the exact tree.** `qxfx0-test` via `QXFX0_AGGREGATE_GROUP=core|runtime|http` and `qxfx0-test-slow` via `QXFX0_SLOW_GROUP=runtime|state|http|lifecycle`, sequentially with the documented `-M` caps; record counts in `CALIBRATION_REPORT.md`.
+3. **Decide the fate of the working tree.** `main` is **51 commits ahead of `origin/main`** (0 behind — clean fast-forward; working tree will be clean after the pending architecture commit) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
    - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
-2. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
-3. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-4. **Gate status snapshot (2026-09-19)** (all six suites re-verified on that HEAD, sequential runs): unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172. **Current bootstrap-safety tree (2026-10-24)**: unit 1818, fast 1918, property 244, integration 47 (an earlier chained attempt hit a transient ENOSPC, not an assertion; the rerun was green); slow 190 is the last P3 result and was not re-run for this pin; main/core are registered at 1339/1219 and were rebuilt but not run as single processes this cycle. Do not cite gates against any other tree without re-running.
+4. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
+5. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
+
+### Gate status snapshot (2026-10-24)
+
+All six suites were last fully re-verified sequentially on the 2026-09-19 HEAD: unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172. **Current bootstrap-safety tree**: unit 1818, fast 1918, property 244, integration 47 (an earlier chained attempt hit a transient ENOSPC, not an assertion; the rerun was green); slow 190 is the last P3 result and was not re-run for this pin; main/core are registered at 1339/1219 and were rebuilt but not run as single processes this cycle. Architecture check is green in the working tree after the hygiene fix (full run, including rule [10]). Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 
@@ -38,13 +43,16 @@ Purpose: authoritative source for what to do next.
 | Publish 51 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
 | ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED in the current tree**: `git status` has no untracked source files. Any future untracked subsystem must be committed or documented before it is cited as evidence. |
 | Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
-| Architecture check red | hygiene | repo owner | `scripts/check_architecture.sh` currently reports **2 unrelated violations** (bare partial in `Core/TurnPipeline/Effects.hs`; missing WP-F anti-rot registration). Not introduced by the bootstrap-safety change; do not cite the check as green. |
+| Architecture check | hygiene | repo owner | **GREEN in the working tree** after totalizing `Core/TurnPipeline/Effects.hs` and syncing the anti-rot registry label for `emConatusStructuralFloor`; commit pending. |
+| Release verification gap | release evidence | repo owner | main/core and slow 190 were not run as single processes on the bootstrap-safety tree; run via `QXFX0_AGGREGATE_GROUP` / `QXFX0_SLOW_GROUP` and record counts. |
 | M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
+| M7 production evidence | research/ops | repo owner | **OPEN** (regenerative evidence/ops regime); no closure evidence in the current tree. Do not claim M7 closed. |
 
-## Recently landed (2026-06-18 → 2026-07-17)
+## Recently landed (2026-06-18 → 2026-10-24)
 
 Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
+- **Bootstrap-safety fallback** (`203ffbf`, `b98a833`, `c201a80`, 2026-10-24): `--turn-json` and `--worker-stdio` now serve the real Protocol B resource pack when strict bootstrap fails on an acute crisis marker; non-crisis bootstrap failures still fail closed. Healthy runtime path unchanged. Pin: `Test.Suite.CrisisGuard` 20 cases; unit/fast/property/integration green on the code tree.
 - **ADR-0050** compose-from-activation surface text (`SurfaceAccumulator`, wired into `generateFromFrame`, golden tests + feature flag).
 - **ADR-0051** typed dispatch across all gates (a–h): `SemanticFrameTarget`, `DreamCandidateKind`, `ConflictPolicy`, `TransportMode`, `RuntimeMode`/`HealthStatus`, `ParserStatus`, `PipelineEffectLabel`, parameterized `PropositionAdmissionConfig`.
 - **ADR-0052** relation-graph external knowledge: 666 curated relations exported to JSONL, `ontology.jsonl` + `Ontology` module, provenance-aware network merge, field-modulated spreading activation, `ingest` CLI, ontology-driven category classification.
@@ -74,7 +82,7 @@ Public declaration scope lives in `docs/closure/M6_DECLARATION.md` (bounded/part
 1. Keep the CTS layer stable — no new proposition consumers without an admission module.
 2. When math constants change → follow `MATH_CHANGE_PROTOCOL.md`.
 3. Legacy decode windows (SR-05) — monitor for retirement triggers.
-4. New: untracked source under `src/` is an architecture risk — the arch gate (`scripts/check_architecture.sh`) and CI see none of the promotion/response-plan modules.
+4. Promotion/response-plan modules are tracked in the current tree; keep them covered by the architecture gate and CI. No untracked source is currently present.
 5. Gate 3 regression fixed 2026-09-08 (HEAD failed `check_architecture.sh` with 6 violations while ci-fast.yml keeps Gate 3 commented out): 5 bare `head`/`last` sites in Semantic/Core made total by construction (ContentSelector, Retrieve, ResponsePlan, Ontology/Dynamic, M6FeltGate — behavior-preserving, `qxfx0-test-fast` 1812/1812 green after), plus rule [11] now whitelists `QxFx0.Core.M6FeltGate` as a test/CI-consumed evidence gate (same boundary rationale as the `*Admission` whitelist). Consider re-enabling Gate 3 in ci-fast or a scheduled job so drift is caught at push time, not at verify.sh time.
 6. Measured boot cost (2026-09-08): `qxfx0-test-fast` spends ~215s in 23 `bootstrapSession` calls (median 8.9s each; breakdown: self-blanket ~6s + health probes ~2.7s + state build ~2.5s), which is why the "< 60s" README claim only holds with warm caches and no concurrent load; heap headroom is thin too (3.1GB max residency, OOM-killed under a second concurrent suite). Candidates: memoize `checkHealth`'s nix/souffle probes per process (morphology/PGF are already memoized), and split per-suite `other-modules` (audit P3-6) before adding more live-session slices to the fast gate.
 
@@ -87,7 +95,7 @@ Mirrored from AGENTS.md so they live in the execution coordinator, not only in t
 3. Learning-targets ADR for transition learning (`docs/closure/LEARNING_ALLOWED_TARGETS.md` governance).
 4. Absorption of the flag-off `ssUserModel` Bayesian niche.
 5. test-common compiles all 149 `Test.Suite` modules into each of the 6 suites — split per-suite `other-modules`, measure build time before/after (audit P3-6).
-6. `brain_kb.jsonl` absent on fresh clones; provenance/restore contract now in `docs/operations/BRAIN_KB_PROVENANCE.md` (audit P3-8, open ops task).
+6. `brain_kb.jsonl` is gitignored/external; restored locally 2026-09-21 (53,146 entries), but fresh clones still need the restore contract in `docs/operations/BRAIN_KB_PROVENANCE.md` (audit P3-8, open ops task).
 
 ## Notes
 
