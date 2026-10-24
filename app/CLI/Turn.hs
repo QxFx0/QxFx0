@@ -7,11 +7,12 @@ module CLI.Turn
   ( TurnJsonResponse(..)
   , runTurnJson
   , runTurnJsonInSession
+  , crisisPreflightResponse
   , attachRuntimeDiagnostics
   ) where
 
 import CLI.Protocol (RuntimeOutputMode(..))
-import Control.Exception (throwIO)
+import Control.Exception (IOException, bracket, displayException, throwIO)
 import Data.Aeson (ToJSON(..), object, (.=), Value, Key)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -22,7 +23,8 @@ import System.IO (hPutStrLn, stderr)
 
 import qualified QxFx0.Runtime as Runtime
 import QxFx0.Core.IdentityGuard (IdentityGuardReport(..))
-import QxFx0.ExceptionPolicy (QxFx0Exception(..), tryQxFx0)
+import QxFx0.ExceptionPolicy (QxFx0Exception(..), tryIO, tryQxFx0)
+import QxFx0.Safety.CrisisGuard (crisisPreflightSurface)
 import QxFx0.Types.Decision (IdentitySignalSnapshot(..), SemanticAnchor(..), TurnDecision(..), renderStyleText, DialogueOutputMode(..), dominantChannelText)
 import QxFx0.Types.State
 
@@ -84,22 +86,74 @@ backwardCompatAliases r =
 
 runTurnJson :: Text -> RuntimeOutputMode -> Text -> IO TurnJsonResponse
 runTurnJson sessionId mode inputText = do
-  result <- tryQxFx0 $
-    Runtime.withBootstrappedSession True sessionId $ \session0 -> do
-      (_, response) <- runTurnJsonInSession session0 mode inputText
-      pure response
-  case result of
-    Right response -> pure response
-    Left err -> do
-      emitCliDebug err
-      throwIO err
+  -- Catch only the bootstrap acquisition.  A turn that fails after the
+  -- session exists must follow the normal engine/exception policy; the
+  -- fallback exists solely for the pre-session window where the crisis
+  -- preflight inside Engine is unreachable.  The two boot-boundary
+  -- classes are caught explicitly: domain errors via 'tryQxFx0' and I/O
+  -- failures via 'tryIO'.  Cancellation and programming errors still
+  -- propagate, matching `ExceptionPolicy.tryBootResource` semantics
+  -- without naming 'SomeException' in app code (architecture rule [5]).
+  bootstrapResult <- tryIO (tryQxFx0 (Runtime.bootstrapSession True sessionId))
+  case bootstrapResult of
+    Left ioErr -> bootstrapIOFailureResponse sessionId inputText ioErr
+    Right (Left err) -> bootstrapFailureResponse sessionId inputText err
+    Right (Right session0) ->
+      bracket (pure session0) Runtime.closeSession $ \session -> do
+        (_, response) <- runTurnJsonInSession session mode inputText
+        pure response
 
-emitCliDebug :: QxFx0Exception -> IO ()
-emitCliDebug err = do
+bootstrapFailureResponse :: Text -> Text -> QxFx0Exception -> IO TurnJsonResponse
+bootstrapFailureResponse sessionId inputText err =
+  bootstrapFailureWith sessionId inputText (rawQxFx0Exception err) (throwIO err)
+
+bootstrapIOFailureResponse :: Text -> Text -> IOException -> IO TurnJsonResponse
+bootstrapIOFailureResponse sessionId inputText err =
+  bootstrapFailureWith sessionId inputText (displayException err) (throwIO err)
+
+bootstrapFailureWith :: Text -> Text -> String -> IO TurnJsonResponse -> IO TurnJsonResponse
+bootstrapFailureWith sessionId inputText detail rethrow =
+  case crisisPreflightSurface inputText of
+    Just surface -> pure (crisisPreflightResponse sessionId inputText surface)
+    Nothing -> do
+      emitCliDebug detail
+      rethrow
+
+-- | Emergency Protocol B response for a runtime that could not be
+-- bootstrapped at all.  This is deliberately not a synthetic turn: no
+-- session, no trace, no persistence.  It exists so an acute crisis
+-- utterance never gets a bootstrap error instead of real resources.
+crisisPreflightResponse :: Text -> Text -> Text -> TurnJsonResponse
+crisisPreflightResponse sessionId inputText surface =
+  TurnJsonResponse
+    { tjrStatus = "ok"
+    , tjrSessionId = sessionId
+    , tjrInput = inputText
+    , tjrOutput = surface
+    , tjrFamily = "CrisisProtocolB"
+    , tjrForce = "IFAssert"
+    , tjrRenderStrategy = Nothing
+    , tjrRenderStyle = Nothing
+    , tjrLegitimacy = Nothing
+    , tjrGuardStatus = Nothing
+    , tjrGuardReportWarnings = Nothing
+    , tjrIdentitySignal = Nothing
+    , tjrSemanticAnchor = Nothing
+    , tjrTurns = 0
+    , tjrEgoAgency = 0
+    , tjrEgoTension = 0
+    , tjrDecision = Nothing
+    , tjrRuntimeEpoch = Nothing
+    , tjrRuntimeTurnIndex = Nothing
+    , tjrWorkerMode = Nothing
+    }
+
+emitCliDebug :: String -> IO ()
+emitCliDebug detail = do
   mFlag <- lookupEnv "QXFX0_DEBUG_RAW_ERRORS"
   case fmap (T.toLower . T.strip . T.pack) mFlag of
-    Just "1" -> hPutStrLn stderr ("[cli_debug] " <> rawQxFx0Exception err)
-    Just "true" -> hPutStrLn stderr ("[cli_debug] " <> rawQxFx0Exception err)
+    Just "1" -> hPutStrLn stderr ("[cli_debug] " <> detail)
+    Just "true" -> hPutStrLn stderr ("[cli_debug] " <> detail)
     _ -> pure ()
 
 rawQxFx0Exception :: QxFx0Exception -> String

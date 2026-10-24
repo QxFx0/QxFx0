@@ -18,11 +18,17 @@ module Test.Suite.CrisisGuard
   ( crisisGuardTests
   ) where
 
+import CLI.Protocol (RuntimeOutputMode(..))
+import CLI.Turn (TurnJsonResponse(..), runTurnJson)
+import Control.Exception (bracket_)
 import Data.Aeson (eitherDecode, encode)
 import Data.Text (Text)
 import qualified Data.Text as T
+import System.Directory (createDirectoryIfMissing, getCurrentDirectory)
+import System.FilePath ((</>))
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
+import QxFx0.ExceptionPolicy (QxFx0Exception, tryQxFx0)
 import QxFx0.Safety.CrisisGuard
   ( acuteCrisisExactMarkers
   , acuteCrisisMarkers
@@ -35,6 +41,11 @@ import QxFx0.Safety.CrisisGuard
   , renderCrisisSurface
   )
 import QxFx0.Types.Safety.Crisis
+import Test.Support
+  ( freshTestPath
+  , removeDirIfExists
+  , withEnvVar
+  )
 
 crisisGuardTests :: [Test]
 crisisGuardTests =
@@ -201,6 +212,34 @@ crisisGuardTests =
         (case crisisPreflightSurface (overlongCalm <> " я не хочу жить") of
            Just s -> "112" `T.isInfixOf` s
            Nothing -> False)
+  , TestLabel "bootstrap failure still serves crisis resources" $ TestCase $ do
+      root <- getCurrentDirectory
+      stateDir <- freshTestPath "qxfx0_bootstrap_crisis.state"
+      let dbPath = stateDir </> "qxfx0.db"
+      createDirectoryIfMissing True stateDir
+      bracket_ (pure ()) (removeDirIfExists stateDir) $
+        withEnvVar "QXFX0_ROOT" (Just root) $
+          withEnvVar "QXFX0_RESOURCE_ROOT" (Just root) $
+            withEnvVar "QXFX0_DB" (Just dbPath) $
+              withEnvVar "QXFX0_STATE_DIR" (Just stateDir) $
+                withEnvVar "QXFX0_RUNTIME_MODE" (Just "strict") $
+                  withEnvVar "QXFX0_AGDA_WITNESS" Nothing $
+                    withEnvVar "QXFX0_EMBEDDING_BACKEND" (Just "local-deterministic") $
+                      withEnvVar "EMBEDDING_API_URL" Nothing $ do
+                        response <- runTurnJson "bootstrap-crisis" DialogueMode "не хочу жить"
+                        assertEqual "bootstrap-fallback status must be ok"
+                          "ok" (tjrStatus response)
+                        assertEqual "bootstrap-fallback family must identify Protocol B"
+                          "CrisisProtocolB" (tjrFamily response)
+                        assertBool "bootstrap-fallback must carry the emergency number"
+                          ("112" `T.isInfixOf` tjrOutput response)
+                        assertBool "bootstrap-fallback must carry the helpline"
+                          ("8-800-2000-122" `T.isInfixOf` tjrOutput response)
+                        nonCrisis <- tryQxFx0 (runTurnJson "bootstrap-crisis" DialogueMode "привет")
+                        assertBool "non-crisis bootstrap failure must stay fail-closed"
+                          (case nonCrisis :: Either QxFx0Exception TurnJsonResponse of
+                             Left _ -> True
+                             Right _ -> False)
   , TestLabel "CrisisGuardTrace JSON roundtrip" $ TestCase $ do
       let trace = CrisisGuardTrace
             { cgtProtocolB = True

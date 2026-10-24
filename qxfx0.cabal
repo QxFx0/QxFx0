@@ -636,7 +636,7 @@ executable qxfx0-stage1-traces
 common test-common
   import:        warnings, base-deps
   ghc-options:   -threaded -rtsopts -Wno-error=missing-deriving-strategies -Wno-error=incomplete-uni-patterns -Wno-error=overlapping-patterns -Wno-error=missing-fields
-  hs-source-dirs: test
+  hs-source-dirs: test app
   build-tool-depends:
     qxfx0:qxfx0-main
   build-depends:
@@ -656,6 +656,8 @@ common test-common
     , http-conduit  >=2.3 && <2.4
     , http-client   >=0.7 && <0.8
   other-modules:
+    CLI.Turn
+    CLI.Protocol
     Test.Support
     Test.Support.Runtime
     Test.Support.SessionRegistry

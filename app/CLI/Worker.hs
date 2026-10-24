@@ -17,15 +17,17 @@ import CLI.Protocol
   , healthJsonPairs
   , stateJsonPairs
   )
-import CLI.Turn (attachRuntimeDiagnostics, runTurnJsonInSession)
+import CLI.Turn (attachRuntimeDiagnostics, crisisPreflightResponse, runTurnJsonInSession)
 import QxFx0.ExceptionPolicy
   ( QxFx0Exception(RuntimeInitError)
   , catchIO
   , throwQxFx0
   , tryAsync
+  , tryIO
+  , tryQxFx0
   )
 
-import Control.Exception (AsyncException(..), fromException, throwIO)
+import Control.Exception (AsyncException(..), bracket, displayException, fromException, throwIO)
 import Control.Exception (bracketOnError)
 import Control.Monad (unless, when)
 import Data.Aeson (ToJSON, Value, encode, object, (.=))
@@ -44,12 +46,13 @@ import System.Directory
   )
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), isAbsolute, normalise, takeDirectory, takeFileName)
-import System.IO (BufferMode(..), hClose, hGetLine, hIsEOF, hPutStr, hSetBuffering, stdin, stdout)
+import System.IO (BufferMode(..), hClose, hGetLine, hIsEOF, hPutStr, hPutStrLn, hSetBuffering, stderr, stdin, stdout)
 import System.Posix.Files (ownerReadMode, ownerWriteMode, unionFileModes)
 import System.Posix.IO (OpenFileFlags(creat, exclusive, nofollow), OpenMode(WriteOnly), closeFd, defaultFileFlags, fdToHandle, openFd)
 import System.Posix.Types (FileMode)
 
 import qualified QxFx0.Runtime as Runtime
+import QxFx0.Safety.CrisisGuard (crisisPreflightSurface)
 import QxFx0.Internal.FilePath (isPathWithin)
 
 import qualified Data.ByteString.Lazy as BL
@@ -68,17 +71,26 @@ workerModeTag = "persistent_stdio"
 runWorkerStdio :: Text -> IO ()
 runWorkerStdio sessionId = do
   hSetBuffering stdout LineBuffering
-  Runtime.withBootstrappedSession True sessionId $ \session0 -> do
-    runtimeEpoch <- mkRuntimeEpoch sessionId
-    crashAfterAcceptOnceFile <- resolveCrashAfterAcceptHook
-    turnErrorAfterAcceptOnceFile <- resolveTurnErrorAfterAcceptHook
-    loop LiveWorkerState
-      { lwsSession = session0
-      , lwsRuntimeEpoch = runtimeEpoch
-      , lwsRuntimeTurnIndex = 0
-      , lwsCrashAfterAcceptOnceFile = crashAfterAcceptOnceFile
-      , lwsTurnErrorAfterAcceptOnceFile = turnErrorAfterAcceptOnceFile
-      }
+  -- Catch only bootstrap acquisition.  Once a live session exists, all
+  -- turn-level failures keep the worker's normal error contract.  Domain
+  -- errors and I/O failures are the two boot-boundary classes; async and
+  -- programming errors propagate.
+  bootstrapResult <- tryIO (tryQxFx0 (Runtime.bootstrapSession True sessionId))
+  case bootstrapResult of
+    Left ioErr -> runCrisisPreflightWorker sessionId (T.pack (displayException ioErr))
+    Right (Left err) -> runCrisisPreflightWorker sessionId (textShow err)
+    Right (Right session0) ->
+      bracket (pure session0) Runtime.closeSession $ \session -> do
+        runtimeEpoch <- mkRuntimeEpoch sessionId
+        crashAfterAcceptOnceFile <- resolveCrashAfterAcceptHook
+        turnErrorAfterAcceptOnceFile <- resolveTurnErrorAfterAcceptHook
+        loop LiveWorkerState
+          { lwsSession = session
+          , lwsRuntimeEpoch = runtimeEpoch
+          , lwsRuntimeTurnIndex = 0
+          , lwsCrashAfterAcceptOnceFile = crashAfterAcceptOnceFile
+          , lwsTurnErrorAfterAcceptOnceFile = turnErrorAfterAcceptOnceFile
+          }
   where
     loop :: LiveWorkerState -> IO ()
     loop state = do
@@ -102,6 +114,72 @@ runWorkerStdio sessionId = do
                 | otherwise -> do
                     T.putStrLn (workerError (textShow err))
                     loop state
+
+-- | A bootstrap failure must not make acute crisis input unreachable.
+-- The sidecar still needs a successful handshake, so this mode speaks the
+-- worker protocol but has no 'Runtime.Session': only crisis turns are
+-- served; every other command fails closed.
+runCrisisPreflightWorker :: Text -> Text -> IO ()
+runCrisisPreflightWorker sessionId bootstrapDetail = do
+  epoch <- mkRuntimeEpoch sessionId
+  hPutStrLn stderr ("[worker_bootstrap_failed] " <> T.unpack bootstrapDetail)
+  loop epoch
+  where
+    loop epoch = do
+      isEof <- hIsEOF stdin
+      unless isEof $ do
+        line <- T.pack <$> hGetLine stdin
+        case decodeWorkerMessage line of
+          Left err -> do
+            T.putStrLn (workerProtocolError err)
+            loop epoch
+          Right cmd -> do
+            result <- tryAsync (handlePreflightCommand epoch cmd)
+            case result of
+              Right shouldStop -> unless shouldStop (loop epoch)
+              Left err
+                | Just async <- (fromException err :: Maybe AsyncException) -> throwIO async
+                | otherwise -> do
+                    T.putStrLn (workerError (textShow err))
+                    loop epoch
+
+    handlePreflightCommand :: Text -> WorkerCommand -> IO Bool
+    handlePreflightCommand epoch = \case
+      WorkerShutdown -> do
+        T.putStrLn (workerStatus epoch 0 "ok" "shutdown")
+        pure True
+      WorkerHello version capabilities -> do
+        if version == workerProtocolVersion
+          then T.putStrLn (workerHelloResponse epoch 0 version capabilities)
+          else T.putStrLn (workerVersionMismatchResponse version)
+        pure False
+      WorkerPing -> do
+        T.putStrLn (workerStatus epoch 0 "degraded" "pong")
+        pure False
+      WorkerHealth sid -> do
+        T.putStrLn (workerErrorWithCode "worker_bootstrap_failed"
+          ("worker health unavailable for session " <> sid))
+        pure False
+      WorkerState sid -> do
+        T.putStrLn (workerErrorWithCode "worker_bootstrap_failed"
+          ("worker state unavailable for session " <> sid))
+        pure False
+      WorkerTurn sid _outputMode inputTxt
+        | sid /= sessionId -> do
+            T.putStrLn (workerError ("worker/session mismatch: " <> sid))
+            pure False
+        | otherwise ->
+            case crisisPreflightSurface inputTxt of
+              Just surface -> do
+                let response =
+                      attachRuntimeDiagnostics epoch 0 workerModeTag
+                        (crisisPreflightResponse sessionId inputTxt surface)
+                T.putStrLn (encodeAsText response)
+                pure False
+              Nothing -> do
+                T.putStrLn (workerErrorWithCode "worker_bootstrap_failed"
+                  "runtime bootstrap failed; only acute crisis turns can be served")
+                pure False
 
 isTurnCommand :: WorkerCommand -> Bool
 isTurnCommand WorkerTurn{} = True
