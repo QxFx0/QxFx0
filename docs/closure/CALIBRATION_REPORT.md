@@ -6532,3 +6532,58 @@ property 244/244, integration 47/47 — all exit 0 (`CHAIN1-DONE`
 
 - `maybeCheckpoint` не бросает: лог — наблюдаемость, не политика
   отказа. `lastCharOf` экспортирован только ради прямого пина.
+
+## Bootstrap-safety preflight — аудит 2026-10-16, follow-up 2026-10-23
+
+### Finding
+
+Свежий strict-state без `agda-witness.json` падает в
+`bootstrapSession` на `HEALTH_GATE_FAILURE` **до** `Runtime.Engine`,
+поэтому `--turn-json "не хочу жить"` возвращал `RuntimeInitError`
+без crisis-resources. `crisisPreflightSurface` существовал, но
+bootstrap-гейт был единственным путём, который его обходил.
+
+### Behavior change (pre-registered before code)
+
+- `--turn-json`: при ошибке **bootstrap** (не любого turn-а) и
+  наличии острого crisis-маркера CLI возвращает синтетический
+  Protocol B response: `status = ok`, `family = CrisisProtocolB`,
+  `surface/output` = канонический `crisisPreflightSurface`, turns 0,
+  без decision/trace. Non-crisis bootstrap failure по-прежнему
+  пробрасывается (fail-closed).
+- `--worker-stdio`: при ошибке bootstrap worker не выходит молча, а
+  входит в preflight-only режим: отвечает на `hello` (handshake
+  sidecar-а), отдаёт crisis-turn с тем же surface, на non-crisis turn
+  возвращает `worker_bootstrap_failed` (fail-closed), на `shutdown`
+  подтверждает остановку. Runtime session в этом режиме не создаётся.
+- Здоровый runtime не меняется: preflight **не** выполняется перед
+  bootstrap, обычный crisis-turn по-прежнему идёт через Engine и
+  пишет trace/persistence. Меняется только путь «bootstrap уже
+  сломан».
+
+### Bar / pins
+
+- `Test.Suite.CrisisGuard` +1: свежий strict-state без witness,
+  `runTurnJson` с острым маркером возвращает `status=ok` и surface,
+  содержащий `112` и `8-800-2000-122`; тот же state на non-crisis
+  входе возвращает `Left` (fail-closed).
+- Worker preflight проверяется smoke-прогоном `--worker-stdio`
+  (hello → crisis turn → shutdown) на пустом strict-state; ручной
+  smoke фиксируется в landing.
+
+### Red check
+
+- Убрать catch/bootstrap-fallback в `runTurnJson` → новый пин падает
+  с `HEALTH_GATE_FAILURE` (surface не возвращается); restore →
+  CrisisGuard зелёный.
+- Убрать preflight-only ветку worker'а → hello на пустом state не
+  приходит, sidecar получает worker-exit; restore → smoke проходит.
+
+### Honest limits
+
+- Синтетический response не является turn-ом: нет trace, нет
+  persistence, `turns = 0`. Это аварийная выдача ресурсов, а не
+  полноценный Protocol B turn; на здоровом runtime он не используется.
+- Preflight-only worker рекламирует protocol capabilities, но
+  non-crisis turn честно отклоняет; это не degraded runtime.
+- Resource pack не менялся: 112 + 8-800-2000-122, `crVersion = 1`.
