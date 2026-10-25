@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: 1918 fast-suite cases, 0 failures (2026-10-24, substrate era; full matrix below). B3 mechanical gates 1-5 passing. Unit 1818, property 244, integration 47 — green on the bootstrap-safety tree; slow 190 was last green at the P3 landing and was not re-run for this pin. Core/main are registered at 1219/1339 but were not re-run as single processes this cycle.
+**Tests**: 1918 fast-suite cases, 0 failures (2026-10-24, substrate era; full matrix below). B3 mechanical gates 1-5 passing. Unit 1818, property 244, integration 47 — green on the 2026-10-24 bootstrap-safety tree; main 1383 and slow 190 — re-verified by group on HEAD 2026-10-25. Full single-process main remains unsupported on 15 GB with substrate.
 
 ### Verified Capabilities
 
@@ -153,13 +153,13 @@ src/QxFx0/
 | Suite | Tests | Status |
 |-------|-------|--------|
 | qxfx0-test-unit | 1818 (incl. IR + Stage-1 pins) | ✅ 0 failures (2026-10-24) |
-| qxfx0-test | 1339 (core 1219 + runtime 97 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ⚠️ registered count; not re-run as one process this cycle |
+| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures by group (2026-10-25) |
 | qxfx0-test-property | 244 | ✅ 0 failures (2026-10-24) |
 | qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-24; an earlier chained attempt hit transient ENOSPC) |
 | qxfx0-test-fast | 1918 | ✅ 0 failures (2026-10-24) |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures at P3 landing 2026-10-23; not re-run for the bootstrap-safety pin |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group on HEAD (2026-10-25) |
 
-Counts re-verified green on the bootstrap-safety tree 2026-10-24 with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, slow groups (`-M12G`, except state which needs `-M10G`). Never build while a runtime sample is in flight (relink kills it).
+Counts re-verified green with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external): unit/fast/property/integration on the 2026-10-24 bootstrap-safety tree; main/slow by group on HEAD 2026-10-25. Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, main core/state `-M10G`, runtime/http/lifecycle `-M12G`. Never build while a runtime sample is in flight (relink kills it).
 
 The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1918 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 

@@ -654,18 +654,18 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1339 (core 1219 + runtime 97 + http 23; full single-process
-unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP) |
+| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23; re-verified by
+group on HEAD 2026-10-25; full single-process unsupported on 15 GB with
+substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-fast | 1918 |
 | qxfx0-test-unit | 1818 |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-10-23 (P3 batch), all exit 0 —
-runtime 106 ran as ONE process (no stall); the 2026-10-18 batch-2 run
-had self-recovered from a ~9.7 h stall at test #57 — known wart class,
-see batch-2 ops notes; unbuffered output required to judge the long
-runtime test) |
+per-group green on HEAD 2026-10-25, all exit 0 — runtime 106 ran as ONE
+process (no stall); the 2026-10-18 batch-2 run had self-recovered from a
+~9.7 h stall at test #57 — known wart class, see batch-2 ops notes;
+unbuffered output required to judge the long runtime test) |
 Known isolation wart (pre-existing, seen 2026-10-13..15):
 `testComputeReadinessModeReady` (runtime #60) hangs when run
 after 59 others but passes solo — run it standalone on stall.
@@ -873,10 +873,13 @@ re-observe before treating as real).
   shutdown. Матрица: unit 1818, fast 1918, property 244,
   integration 47 (2026-10-24; первый chained-прогон упал
   на транзиентном `No space left on device` в nix/souffle, не на
-  runtime-ассерте) — все exit 0; slow 190 не перезапускался;
-  main/core зарегистрированы как 1339/1219, одним процессом не
-  перезапускались; `qxfx0-test` и `qxfx0-test-slow` собираются
-  чисто (warnings only).
+  runtime-ассерте) — все exit 0. **Follow-up 2026-10-25**:
+  architecture hygiene landed (`49d8faa`, `e7f749b`), полный
+  `check_architecture.sh` зелёный; main/slow перепроверены по
+  группам на HEAD: main 1383 (core 1254 + runtime 106 + http 23),
+  slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) —
+  все exit 0. Full single-process main по-прежнему не поддерживается
+  на 15 GB с substrate.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

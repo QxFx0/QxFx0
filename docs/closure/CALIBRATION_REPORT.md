@@ -6633,6 +6633,8 @@ bootstrap-гейт был единственным путём, который е
   main/core are registered at 1339/1219 and were not run as single
   processes. `qxfx0-test` and `qxfx0-test-slow` were rebuilt cleanly
   (warnings only) so the main/slow wiring is known to compile.
+  **Superseded by the release verification follow-up below
+  (2026-10-25): main 1383 and slow 190 are green by group.**
 - **Architecture check**: at landing, `scripts/check_architecture.sh`
   reported two unrelated violations outside this change (bare partial in
   `Core/TurnPipeline/Effects.hs`; stale WP-F anti-rot label). Neither
@@ -6640,3 +6642,26 @@ bootstrap-гейт был единственным путём, который е
   2026-10-24**: both are closed in the working tree (ownership-journal
   partials totalized; anti-rot label synced), and the full check is
   green. Do not cite the pre-fix red state as current.
+
+### Release verification follow-up (2026-10-25)
+
+HEAD `e7f749b` (after architecture hygiene `49d8faa`). All runs were
+sequential, on the committed tree, with substrate active; logs under
+`/tmp/opencode/qxfx0-release-20261024/`.
+
+- **Main groups** (`qxfx0-test`): core 1254/1254, runtime 106/106,
+  http 23/23 — **1383/1383**, all exit 0. Heap caps: core `-M10G`,
+  runtime/http `-M12G`.
+- **Slow groups** (`qxfx0-test-slow`): runtime 106/106, state 50/50,
+  http 23/23, lifecycle 11/11 — **190/190**, all exit 0. Heap caps:
+  state `-M10G`, runtime/http/lifecycle `-M12G`.
+- **Count drift**: the historical `qxfx0-test` registration was
+  1339 (core 1219 + runtime 97 + http 23); the current suite has grown
+  to 1383 (core 1254 + runtime 106 + http 23). Slow stayed at 190.
+- **Architecture check**: full `scripts/check_architecture.sh` green,
+  including rule [10].
+- **Scope caveat**: unit/fast/property/integration were last full-run
+  on 2026-10-24 before the behavior-preserving architecture hygiene
+  commit; targeted `OwnershipDetect` was 16/16 after it. Main/slow are
+  green on HEAD. Full single-process main remains unsupported on 15 GB
+  with substrate.

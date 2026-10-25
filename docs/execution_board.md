@@ -12,8 +12,8 @@ Purpose: authoritative source for what to do next.
 ## Current front
 
 - `front_id`: `RELEASE-READINESS — bootstrap-safety landing + publication decision`
-- `current_state`: Bootstrap-safety fallback is landed (`203ffbf`, `b98a833`, `c201a80`); `main` is **51 commits ahead of `origin/main`**, nothing pushed. Unit/fast/property/integration are green on the code tree (1818/1918/244/47); main/core and slow 190 were not run as single processes for this pin. Architecture check is green in the working tree after the two hygiene fixes (commit pending).
-- `last_updated`: `2026-10-24`
+- `current_state`: Bootstrap-safety fallback is landed (`203ffbf`, `b98a833`, `c201a80`), architecture hygiene is landed (`49d8faa`, `e7f749b`); `main` is **53 commits ahead of `origin/main`**, working tree clean, nothing pushed. Unit/fast/property/integration are green on the 2026-10-24 code tree (1818/1918/244/47); main/slow were re-verified by group on HEAD 2026-10-25: main 1383 (core 1254 + runtime 106 + http 23), slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11). Architecture check is green on HEAD.
+- `last_updated`: `2026-10-25`
 - `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (Bootstrap-safety landing); `/tmp/opencode/qxfx0-bootstrap-rerun/` logs; gate snapshot below.
 
 ### Second live front — promotion V4 (human review)
@@ -25,26 +25,25 @@ Purpose: authoritative source for what to do next.
 
 ## Immediate next action
 
-1. **Commit the architecture hygiene fix.** The working tree totalizes the ownership-journal partials in `Core/TurnPipeline/Effects.hs` and syncs the stale anti-rot registry label for `emConatusStructuralFloor`; `scripts/check_architecture.sh` is green in the working tree. Commit, then re-run the check on the committed tree.
-2. **Run the remaining release gates on the exact tree.** `qxfx0-test` via `QXFX0_AGGREGATE_GROUP=core|runtime|http` and `qxfx0-test-slow` via `QXFX0_SLOW_GROUP=runtime|state|http|lifecycle`, sequentially with the documented `-M` caps; record counts in `CALIBRATION_REPORT.md`.
-3. **Decide the fate of the working tree.** `main` is **51 commits ahead of `origin/main`** (0 behind — clean fast-forward; working tree will be clean after the pending architecture commit) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
+1. **Decide whether the 2026-10-24 unit/fast/property/integration runs are sufficient for publication.** Main/slow are green on HEAD 2026-10-25; the architecture fix is behavior-preserving and targeted OwnershipDetect is green. If exact-tree proof is required, re-run those four suites before push.
+2. **Decide the fate of the working tree.** `main` is **53 commits ahead of `origin/main`** (0 behind — clean fast-forward; working tree clean) with nothing published since `436d6a8` (2026-06-24). Publish/withhold remains a repo-owner decision; until it happens no gate claim is externally reproducible.
    - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
-4. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-5. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
+3. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
+4. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
 
-### Gate status snapshot (2026-10-24)
+### Gate status snapshot (2026-10-25)
 
-All six suites were last fully re-verified sequentially on the 2026-09-19 HEAD: unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172. **Current bootstrap-safety tree**: unit 1818, fast 1918, property 244, integration 47 (an earlier chained attempt hit a transient ENOSPC, not an assertion; the rerun was green); slow 190 is the last P3 result and was not re-run for this pin; main/core are registered at 1339/1219 and were rebuilt but not run as single processes this cycle. Architecture check is green in the working tree after the hygiene fix (full run, including rule [10]). Do not cite gates against any other tree without re-running.
+All six suites were last fully re-verified sequentially on the 2026-09-19 HEAD: unit 1595, test 1306, fast 1812, property 227, integration 46, slow 172. **Current HEAD (2026-10-25)**: main 1383 by group (core 1254 + runtime 106 + http 23), slow 190 by group (runtime 106 + state 50 + http 23 + lifecycle 11) — all exit 0; architecture check green. Unit/fast/property/integration were last full-run on 2026-10-24 before the behavior-preserving architecture hygiene commit (1818/1918/244/47); targeted OwnershipDetect was 16/16 after it. Full single-process main remains unsupported on 15 GB with substrate. Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 
 | item | kind | owner | note |
 |---|---|---|---|
-| Publish 51 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
+| Publish 53 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
 | ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED in the current tree**: `git status` has no untracked source files. Any future untracked subsystem must be committed or documented before it is cited as evidence. |
 | Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
 | Architecture check | hygiene | repo owner | **GREEN in the working tree** after totalizing `Core/TurnPipeline/Effects.hs` and syncing the anti-rot registry label for `emConatusStructuralFloor`; commit pending. |
-| Release verification gap | release evidence | repo owner | main/core and slow 190 were not run as single processes on the bootstrap-safety tree; run via `QXFX0_AGGREGATE_GROUP` / `QXFX0_SLOW_GROUP` and record counts. |
+| Release verification | release evidence | repo owner | **CLOSED for main/slow (2026-10-25)**: main 1383 by group, slow 190 by group, all exit 0. Unit/fast/property/integration remain the 2026-10-24 runs before the behavior-preserving architecture hygiene fix; targeted OwnershipDetect 16/16 after. |
 | M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
 | M7 production evidence | research/ops | repo owner | **OPEN** (regenerative evidence/ops regime); no closure evidence in the current tree. Do not claim M7 closed. |
 
@@ -59,7 +58,7 @@ Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 - **ADR-0053** runtime-LLM discovery bridge to the semantic network.
 - **ADR-0054 M1–M4** autonomous semantic expansion: M1 infrastructure → M2 content-density gate → M3 end-to-end loop-closure test + `spawnAutonomousLearningHandles` in Bootstrap → M4 runtime-ready safety (`Learning/Quarantine.hs`, `Learning/CircuitBreaker.hs`, `Test/Suite/AutonomousSafety.hs`, all first landed in `c02549a`, 2026-07-16). Plans: `docs/superpowers/plans/2026-07-11-ADR-0054-M{3,4}-runtime-ready.md`.
 - **Closure Round** (`docs/plan/closure-round-tz.md`, 2026-07-09) — diagnosed pattern **write-without-read ×3**: atom-graph seed default-on, feedback read-side + relation-weight overlay, selfplay admission gate, cross-turn coherence via emitted-predicate buffer, ontology depth weighting + sibling borrowing.
-- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6,238 lines / 4,045 unique topic keys (2026-10-23 count; the historical 6,239-line note was the 2026-07 snapshot). The bulk of the 51 unpushed commits are these batches.
+- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6,238 lines / 4,045 unique topic keys (2026-10-23 count; the historical 6,239-line note was the 2026-07 snapshot). The bulk of the 53 unpushed commits are these batches.
 
 ## Current state of the M6 gate
 
