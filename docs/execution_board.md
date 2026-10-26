@@ -11,10 +11,10 @@ Purpose: authoritative source for what to do next.
 
 ## Current front
 
-- `front_id`: `RELEASE-READINESS — bootstrap-safety landing + publication decision`
-- `current_state`: Bootstrap-safety fallback is landed (`203ffbf`, `b98a833`, `c201a80`), architecture hygiene is landed (`49d8faa`, `e7f749b`); `main` is **55 commits ahead of `origin/main`** (including this docs sync), working tree clean, nothing pushed. All six suites are green on the exact tree: unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 (core 1254 + runtime 106 + http 23) and slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25, code HEAD `e7f749b`; `f3ae49a` is docs-only). Architecture check is green on HEAD.
+- `front_id`: `POST-RELEASE — B2/M6-FELT/M7 evidence`
+- `current_state`: `main` is published (55-commit fast-forward `045f37a..f70607d`); this post-publication status sync is docs-only. Working tree clean, `0` ahead / `0` behind. CI Core Contract run `40343025029` is green (`2h35m37s`); CI Fast run `40343024720` is green (`25m35s`). All six suites are exact-tree green: unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 (core 1254 + runtime 106 + http 23) and slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25, code HEAD `e7f749b`; `f3ae49a` is docs-only). Architecture check is green. Remaining release caveats: 500-prompt dialogue eval not run; B2/M6-FELT human leg partial; M7 evidence open.
 - `last_updated`: `2026-10-26`
-- `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (Bootstrap-safety landing; release verification follow-up 2026-10-25/26); gate snapshot below.
+- `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (release verification follow-up 2026-10-25/26); CI runs `40343025029` / `40343024720`; gate snapshot below.
 
 ### Second live front — promotion V4 (human review)
 
@@ -25,32 +25,35 @@ Purpose: authoritative source for what to do next.
 
 ## Immediate next action
 
-1. **Decide publication.** All six suites are green on the exact tree, architecture check is green, and `main` is 0 behind. Publish the **55 commits** (or record a documented withhold); until push, no gate claim is externally reproducible.
-   - Use `git diff --ignore-all-space` when sizing this: raw `--stat` reads ~96k lines because of CRLF churn, not content.
-2. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-3. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
-4. **B2/M7 next:** decide whether M6-FELT is a release gate; if not, keep the formal claim withheld and choose one bounded M7 evidence packet.
+1. **Close the 500-prompt dialogue eval.** It was not run; release readiness remains partial until it is. Record the run and its acceptance result.
+2. **B2/M6-FELT:** decide whether M6-FELT is a release gate. If yes, require a second rater and a pre-registered threshold; if not, keep the formal claim withheld and say so explicitly.
+3. **M7:** choose one bounded production-evidence packet and record what it proves; no closure claim without it.
+4. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
+5. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
 
 ### Gate status snapshot (2026-10-26)
 
-All six suites are green on the exact tree. **2026-10-26** (`f3ae49a`, docs-only after code HEAD `e7f749b`): unit 1818, property 244, integration 47, fast 1918 — all exit 0. **2026-10-25**: main 1383 by group (core 1254 + runtime 106 + http 23), slow 190 by group (runtime 106 + state 50 + http 23 + lifecycle 11) — all exit 0. Architecture check is green, including rule [10]. Full single-process main remains unsupported on 15 GB with substrate. Do not cite gates against any other tree without re-running.
+All six suites are green on the exact tree. **2026-10-26** (`f3ae49a`, docs-only after code HEAD `e7f749b`): unit 1818, property 244, integration 47, fast 1918 — all exit 0. **2026-10-25**: main 1383 by group (core 1254 + runtime 106 + http 23), slow 190 by group (runtime 106 + state 50 + http 23 + lifecycle 11) — all exit 0. Architecture check is green, including rule [10]. **Publication 2026-10-26**: `045f37a..f70607d` pushed; CI Core Contract `40343025029` green (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). Full single-process main remains unsupported on 15 GB with substrate. Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 
 | item | kind | owner | note |
 |---|---|---|---|
-| Publish 55 unpushed commits to `origin/main` | release decision | repo owner | ff-clean; public/private boundary applies (`docs/tz/` stays internal) |
+| ~~Publish 55 unpushed commits to `origin/main`~~ | release decision | repo owner | **DONE 2026-10-26**: fast-forward `045f37a..f70607d`; CI green. |
 | ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED in the current tree**: `git status` has no untracked source files. Any future untracked subsystem must be committed or documented before it is cited as evidence. |
 | Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
 | Architecture check | hygiene | repo owner | **GREEN on HEAD** (`49d8faa`): ownership-journal partials totalized, anti-rot registry label synced; full run includes rule [10]. |
 | Release verification | release evidence | repo owner | **CLOSED (2026-10-26)**: unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — all exit 0 on the exact tree; architecture check green. |
+| CI on published HEAD | release evidence | repo owner | **GREEN (2026-10-26)**: Core Contract `40343025029` (`2h35m37s`), CI Fast `40343024720` (`25m35s`). |
+| 500-prompt dialogue eval | release evidence | repo owner | **NOT RUN**; release readiness remains partial until it is. |
 | M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
 | M7 production evidence | research/ops | repo owner | **OPEN** (regenerative evidence/ops regime); no closure evidence in the current tree. Do not claim M7 closed. |
 
-## Recently landed (2026-06-18 → 2026-10-24)
+## Recently landed (2026-06-18 → 2026-10-26)
 
 Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
+- **Publication** (`f70607d`, 2026-10-26): `main` fast-forward `045f37a..f70607d` (55 commits); CI Core Contract `40343025029` and CI Fast `40343024720` green.
 - **Bootstrap-safety fallback** (`203ffbf`, `b98a833`, `c201a80`, 2026-10-24): `--turn-json` and `--worker-stdio` now serve the real Protocol B resource pack when strict bootstrap fails on an acute crisis marker; non-crisis bootstrap failures still fail closed. Healthy runtime path unchanged. Pin: `Test.Suite.CrisisGuard` 20 cases; all six suites exact-tree green (2026-10-25/26).
 - **ADR-0050** compose-from-activation surface text (`SurfaceAccumulator`, wired into `generateFromFrame`, golden tests + feature flag).
 - **ADR-0051** typed dispatch across all gates (a–h): `SemanticFrameTarget`, `DreamCandidateKind`, `ConflictPolicy`, `TransportMode`, `RuntimeMode`/`HealthStatus`, `ParserStatus`, `PipelineEffectLabel`, parameterized `PropositionAdmissionConfig`.
@@ -58,7 +61,7 @@ Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 - **ADR-0053** runtime-LLM discovery bridge to the semantic network.
 - **ADR-0054 M1–M4** autonomous semantic expansion: M1 infrastructure → M2 content-density gate → M3 end-to-end loop-closure test + `spawnAutonomousLearningHandles` in Bootstrap → M4 runtime-ready safety (`Learning/Quarantine.hs`, `Learning/CircuitBreaker.hs`, `Test/Suite/AutonomousSafety.hs`, all first landed in `c02549a`, 2026-07-16). Plans: `docs/superpowers/plans/2026-07-11-ADR-0054-M{3,4}-runtime-ready.md`.
 - **Closure Round** (`docs/plan/closure-round-tz.md`, 2026-07-09) — diagnosed pattern **write-without-read ×3**: atom-graph seed default-on, feedback read-side + relation-weight overlay, selfplay admission gate, cross-turn coherence via emitted-predicate buffer, ontology depth weighting + sibling borrowing.
-- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6,238 lines / 4,045 unique topic keys (2026-10-23 count; the historical 6,239-line note was the 2026-07 snapshot). The bulk of the 55 unpushed commits are these batches.
+- **P1 curation COMPLETE** (`bd0fdd1`, 2026-07-14): `docs/GAPS.md` reports 100% coverage — all 281 gap concepts curated; `resources/knowledge/curated_predicates.jsonl` at 6,238 lines / 4,045 unique topic keys (2026-10-23 count; the historical 6,239-line note was the 2026-07 snapshot). The bulk of the published 55 commits are these batches.
 
 ## Current state of the M6 gate
 

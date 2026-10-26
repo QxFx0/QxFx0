@@ -878,8 +878,11 @@ re-observe before treating as real).
   — все exit 0. Main/slow — code HEAD `e7f749b` (2026-10-25;
   `f3ae49a` docs-only); unit/fast/property/integration — `f3ae49a`
   (2026-10-26). Architecture hygiene landed (`49d8faa`, `e7f749b`),
-  полный `check_architecture.sh` зелёный. Full single-process main
-  по-прежнему не поддерживается на 15 GB с substrate.
+  полный `check_architecture.sh` зелёный. **Publication 2026-10-26**:
+  `045f37a..f70607d` pushed; CI Core Contract `40343025029` green
+  (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). Full
+  single-process main по-прежнему не поддерживается на 15 GB
+  с substrate.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

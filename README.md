@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: all six suites green on the exact tree (2026-10-25/26, substrate era; full matrix below): unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — 0 failures. B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
+**Tests**: all six suites green on the exact tree (2026-10-25/26, substrate era; full matrix below): unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — 0 failures. CI Core Contract and CI Fast green (2026-10-26). B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
 
 ### Verified Capabilities
 

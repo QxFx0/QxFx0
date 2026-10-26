@@ -6667,5 +6667,10 @@ logs are ephemeral, the counts below are the record.
   to 1383 (core 1254 + runtime 106 + http 23). Slow stayed at 190.
 - **Architecture check**: full `scripts/check_architecture.sh` green,
   including rule [10].
+- **Publication (2026-10-26)**: `main` fast-forward
+  `045f37a..f70607d` (55 commits). CI Core Contract run `40343025029`
+  success (`2h35m37s`); CI Fast run `40343024720` success (`25m35s`).
+- **Post-publication status sync**: this update is docs-only and does
+  not change the code tree verified at `f70607d`.
 - **Scope**: all six suites are exact-tree green. Full single-process
   main remains unsupported on 15 GB with substrate.
