@@ -622,7 +622,7 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-10-24)
+## Test counts (updated 2026-10-26)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
 suites that run them). unit/fast/integration re-verified green on HEAD
@@ -870,16 +870,16 @@ re-observe before treating as real).
   `Test.Suite.CrisisGuard` +1 (fresh strict-state без witness;
   surface содержит 112 и 8-800-2000-122; non-crisis → `Left`).
   Worker preflight проверен smoke-прогоном hello → crisis turn →
-  shutdown. Матрица: unit 1818, fast 1918, property 244,
-  integration 47 (2026-10-24; первый chained-прогон упал
-  на транзиентном `No space left on device` в nix/souffle, не на
-  runtime-ассерте) — все exit 0. **Follow-up 2026-10-25**:
-  architecture hygiene landed (`49d8faa`, `e7f749b`), полный
-  `check_architecture.sh` зелёный; main/slow перепроверены по
-  группам на HEAD: main 1383 (core 1254 + runtime 106 + http 23),
-  slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) —
-  все exit 0. Full single-process main по-прежнему не поддерживается
-  на 15 GB с substrate.
+  shutdown. **Exact-tree matrix (2026-10-25/26)**: unit 1818, fast 1918,
+  property 244, integration 47 (первый chained-прогон упал на
+  транзиентном `No space left on device` в nix/souffle, не на
+  runtime-ассерте; rerun зелёный), main 1383 (core 1254 + runtime 106 +
+  http 23), slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11)
+  — все exit 0. Main/slow — code HEAD `e7f749b` (2026-10-25;
+  `f3ae49a` docs-only); unit/fast/property/integration — `f3ae49a`
+  (2026-10-26). Architecture hygiene landed (`49d8faa`, `e7f749b`),
+  полный `check_architecture.sh` зелёный. Full single-process main
+  по-прежнему не поддерживается на 15 GB с substrate.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

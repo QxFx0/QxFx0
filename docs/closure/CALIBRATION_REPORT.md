@@ -6639,29 +6639,33 @@ bootstrap-гейт был единственным путём, который е
   reported two unrelated violations outside this change (bare partial in
   `Core/TurnPipeline/Effects.hs`; stale WP-F anti-rot label). Neither
   file was touched by the bootstrap-safety change. **Follow-up
-  2026-10-24**: both are closed in the working tree (ownership-journal
-  partials totalized; anti-rot label synced), and the full check is
-  green. Do not cite the pre-fix red state as current.
+  2026-10-24**: both are closed on HEAD (ownership-journal partials
+  totalized; anti-rot label synced), and the full check is green. Do not
+  cite the pre-fix red state as current.
 
-### Release verification follow-up (2026-10-25)
+### Release verification follow-up (2026-10-25/26)
 
-HEAD `e7f749b` (after architecture hygiene `49d8faa`). All runs were
-sequential, on the committed tree, with substrate active; logs under
-`/tmp/opencode/qxfx0-release-20261024/`.
+All runs were sequential, on the committed tree, with substrate active.
+Logs were under `/tmp/opencode/qxfx0-release-20261024/` (main/slow) and
+`/tmp/opencode/qxfx0-release-exact-20261026/` (remaining suites); `/tmp`
+logs are ephemeral, the counts below are the record.
 
-- **Main groups** (`qxfx0-test`): core 1254/1254, runtime 106/106,
-  http 23/23 — **1383/1383**, all exit 0. Heap caps: core `-M10G`,
-  runtime/http `-M12G`.
-- **Slow groups** (`qxfx0-test-slow`): runtime 106/106, state 50/50,
-  http 23/23, lifecycle 11/11 — **190/190**, all exit 0. Heap caps:
-  state `-M10G`, runtime/http/lifecycle `-M12G`.
+- **Main groups** (`qxfx0-test`, code HEAD `e7f749b`, 2026-10-25):
+  core 1254/1254, runtime 106/106, http 23/23 — **1383/1383**, all
+  exit 0. Heap caps: core `-M10G`, runtime/http `-M12G`.
+- **Slow groups** (`qxfx0-test-slow`, code HEAD `e7f749b`, 2026-10-25):
+  runtime 106/106, state 50/50, http 23/23, lifecycle 11/11 —
+  **190/190**, all exit 0. Heap caps: state `-M10G`,
+  runtime/http/lifecycle `-M12G`.
+- **Unit/fast/property/integration** (`f3ae49a`, 2026-10-26):
+  unit 1818/1818, property 244/244, integration 47/47, fast 1918/1918 —
+  all exit 0. Heap caps: unit/integration `-M6G`, property/fast `-M10G`.
+  `f3ae49a` is docs-only after code HEAD `e7f749b`, so the code tree is
+  the same as the main/slow runs.
 - **Count drift**: the historical `qxfx0-test` registration was
   1339 (core 1219 + runtime 97 + http 23); the current suite has grown
   to 1383 (core 1254 + runtime 106 + http 23). Slow stayed at 190.
 - **Architecture check**: full `scripts/check_architecture.sh` green,
   including rule [10].
-- **Scope caveat**: unit/fast/property/integration were last full-run
-  on 2026-10-24 before the behavior-preserving architecture hygiene
-  commit; targeted `OwnershipDetect` was 16/16 after it. Main/slow are
-  green on HEAD. Full single-process main remains unsupported on 15 GB
-  with substrate.
+- **Scope**: all six suites are exact-tree green. Full single-process
+  main remains unsupported on 15 GB with substrate.
