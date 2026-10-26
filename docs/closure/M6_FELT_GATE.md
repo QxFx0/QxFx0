@@ -2,7 +2,8 @@
 
 - **Front**: M6-FELT gate (felt-evidence gate)
 - **Status**: **MECHANICAL PROVEN (bounded benchmark, 2026-08-08; runtime re-verified 2026-08-22, suite green 2026-10-24); HUMAN PARTIAL; formal claim withheld.** The checker remains fail-closed by design: it only proves a session when the runtime record satisfies Gates 1–5 under governed-evidence conditions.
-- **Last status sync**: 2026-10-24 (matrix re-verification after the bootstrap-safety catch widening; no new M6 evidence)
+- **Release-gate status**: **INFORMATIONAL — NOT a blocking gate for v0.1.0** (operator decision 2026-10-26). Formal claim remains withheld; no runtime decision depends on it.
+- **Last status sync**: 2026-10-26 (release-gate decision recorded; no new M6 evidence)
 - **Depends on**: SLICE-012 (`EvidenceAdmissibility`,
   `QXFX0_GOVERNED_EVIDENCE`, `trcEvidenceAdmissibility`) — closed
 - **Module**: `QxFx0.Core.M6FeltGate`
@@ -154,3 +155,7 @@ above. Full M6-FELT status still awaits the B2 human-eval leg.
   informational: no runtime decision depends on it. It reactivates
   automatically if a second rater + threshold ever complete the
   formalities — no code change needed.
+- **Release-gate decision (2026-10-26)**: M6-FELT is **informational,
+  not a blocking release gate for v0.1.0**. The formal claim remains
+  withheld until a second independent rater and a pre-registered
+  threshold exist; this decision does not upgrade the claim.

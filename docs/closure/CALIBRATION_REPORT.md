@@ -6672,5 +6672,14 @@ logs are ephemeral, the counts below are the record.
   success (`2h35m37s`); CI Fast run `40343024720` success (`25m35s`).
 - **Post-publication status sync**: this update is docs-only and does
   not change the code tree verified at `f70607d`.
+- **Post-publication M7 bounded packet (2026-10-26)**: 30 official
+  Russian GF definition prompts, strict runtime, isolated sessions.
+  Routing family `CMDefine` 30/30; trace `AuthorityCanonical` 16/30;
+  14/30 `AuthorityShim` with
+  `gf_response_plan:unmapped_curated_predicate:<predicate>`; exact
+  golden surface 4/30. The packet **FAILED** its definitional-content
+  acceptance; M7 remains OPEN. The 500-prompt gate remains **BLOCKED**
+  because no labeled 500-prompt Russian set exists. See
+  `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`.
 - **Scope**: all six suites are exact-tree green. Full single-process
   main remains unsupported on 15 GB with substrate.

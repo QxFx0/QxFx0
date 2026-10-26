@@ -12,7 +12,7 @@ Purpose: authoritative source for what to do next.
 ## Current front
 
 - `front_id`: `POST-RELEASE — B2/M6-FELT/M7 evidence`
-- `current_state`: `main` is published (55-commit fast-forward `045f37a..f70607d`); this post-publication status sync is docs-only. Working tree clean, `0` ahead / `0` behind. CI Core Contract run `40343025029` is green (`2h35m37s`); CI Fast run `40343024720` is green (`25m35s`). All six suites are exact-tree green: unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 (core 1254 + runtime 106 + http 23) and slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25, code HEAD `e7f749b`; `f3ae49a` is docs-only). Architecture check is green. Remaining release caveats: 500-prompt dialogue eval not run; B2/M6-FELT human leg partial; M7 evidence open.
+- `current_state`: `main` is published (55-commit fast-forward `045f37a..f70607d`); this post-publication status sync is docs-only. Working tree clean, `0` ahead / `0` behind. CI Core Contract run `40343025029` is green (`2h35m37s`); CI Fast run `40343024720` is green (`25m35s`). All six suites are exact-tree green: unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 (core 1254 + runtime 106 + http 23) and slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25, code HEAD `e7f749b`; `f3ae49a` is docs-only). Architecture check is green. Remaining release caveats: 500-prompt gate BLOCKED (no labeled Russian set); B2/M6-FELT human leg partial; M7 bounded 30-prompt GF packet FAILED (16/30 canonical, 14/30 `unmapped_curated_predicate`, 4/30 exact golden).
 - `last_updated`: `2026-10-26`
 - `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (release verification follow-up 2026-10-25/26); CI runs `40343025029` / `40343024720`; gate snapshot below.
 
@@ -25,11 +25,11 @@ Purpose: authoritative source for what to do next.
 
 ## Immediate next action
 
-1. **Close the 500-prompt dialogue eval.** It was not run; release readiness remains partial until it is. Record the run and its acceptance result.
-2. **B2/M6-FELT:** decide whether M6-FELT is a release gate. If yes, require a second rater and a pre-registered threshold; if not, keep the formal claim withheld and say so explicitly.
-3. **M7:** choose one bounded production-evidence packet and record what it proves; no closure claim without it.
+1. **Resolve the 500-prompt gate blocker.** The labeled 500-prompt Russian set is absent; the current script falls back to the ~60-prompt English baseline. Build/label the set before claiming the gate ran. The 30-prompt GF packet is not a substitute.
+2. **B2/M6-FELT:** M6-FELT is informational, not a release gate (operator decision 2026-10-26). Keep the formal claim withheld; revisit only if a second independent rater and a pre-registered threshold are commissioned.
+3. **M7:** the bounded 30-prompt GF packet is recorded and **FAILED** (16/30 `AuthorityCanonical`, 14/30 `unmapped_curated_predicate`, 4/30 exact golden). Pre-registration is `docs/closure/M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md` (mapped-predicate fallback); implement it next and keep M7 OPEN until a re-run passes.
 4. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-5. **Widen the bounded canary before treating it as evidence.** 1 turn is not a corpus; run the release corpus (`spec/gf/release_corpus_prompts.txt`) and record turns/fallback distribution/p95 over a real window.
+5. **Do not widen the canary yet.** The release-corpus run has now been executed as the 30-prompt packet and failed on GF mapping coverage (14/30 `unmapped_curated_predicate`). Fix and re-run the packet first; 1 turn is still not a corpus.
 
 ### Gate status snapshot (2026-10-26)
 
@@ -45,15 +45,16 @@ All six suites are green on the exact tree. **2026-10-26** (`f3ae49a`, docs-only
 | Architecture check | hygiene | repo owner | **GREEN on HEAD** (`49d8faa`): ownership-journal partials totalized, anti-rot registry label synced; full run includes rule [10]. |
 | Release verification | release evidence | repo owner | **CLOSED (2026-10-26)**: unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — all exit 0 on the exact tree; architecture check green. |
 | CI on published HEAD | release evidence | repo owner | **GREEN (2026-10-26)**: Core Contract `40343025029` (`2h35m37s`), CI Fast `40343024720` (`25m35s`). |
-| 500-prompt dialogue eval | release evidence | repo owner | **NOT RUN**; release readiness remains partial until it is. |
-| M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
-| M7 production evidence | research/ops | repo owner | **OPEN** (regenerative evidence/ops regime); no closure evidence in the current tree. Do not claim M7 closed. |
+| 500-prompt dialogue eval | release evidence | repo owner | **BLOCKED**: no labeled 500-prompt Russian set; script falls back to ~60 English prompts. |
+| M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld; informational, NOT a release gate (operator decision 2026-10-26)** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
+| M7 production evidence | research/ops | repo owner | **OPEN**; bounded 30-prompt GF packet **FAILED** (16/30 canonical, 14/30 `unmapped_curated_predicate`, 4/30 exact golden). Pre-register the mapping fix; do not claim M7 closed. |
 
 ## Recently landed (2026-06-18 → 2026-10-26)
 
 Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
 - **Publication** (`f70607d`, 2026-10-26): `main` fast-forward `045f37a..f70607d` (55 commits); CI Core Contract `40343025029` and CI Fast `40343024720` green.
+- **M7 bounded packet** (`M7_BOUNDED_PACKET_2026-10-26.md`, 2026-10-26): 30-prompt GF release corpus; routing `CMDefine` 30/30; trace `AuthorityCanonical` 16/30; 14/30 `unmapped_curated_predicate` → `AuthorityShim`; exact golden 4/30. **FAILED**; M7 remains OPEN.
 - **Bootstrap-safety fallback** (`203ffbf`, `b98a833`, `c201a80`, 2026-10-24): `--turn-json` and `--worker-stdio` now serve the real Protocol B resource pack when strict bootstrap fails on an acute crisis marker; non-crisis bootstrap failures still fail closed. Healthy runtime path unchanged. Pin: `Test.Suite.CrisisGuard` 20 cases; all six suites exact-tree green (2026-10-25/26).
 - **ADR-0050** compose-from-activation surface text (`SurfaceAccumulator`, wired into `generateFromFrame`, golden tests + feature flag).
 - **ADR-0051** typed dispatch across all gates (a–h): `SemanticFrameTarget`, `DreamCandidateKind`, `ConflictPolicy`, `TransportMode`, `RuntimeMode`/`HealthStatus`, `ParserStatus`, `PipelineEffectLabel`, parameterized `PropositionAdmissionConfig`.
@@ -65,7 +66,7 @@ Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
 ## Current state of the M6 gate
 
-Scope note: the table below is **M6-STRUCTURAL** only. Structural closure is *necessary, not sufficient* for the North Star. **M6-FELT mechanical is proven only on the bounded 12-turn benchmark; the human leg is partial and the formal claim stays withheld**; no structural row upgrades it.
+Scope note: the table below is **M6-STRUCTURAL** only. Structural closure is *necessary, not sufficient* for the North Star. **M6-FELT mechanical is proven only on the bounded 12-turn benchmark; the human leg is partial and the formal claim stays withheld; M6-FELT is informational, not a release gate (2026-10-26)**; no structural row upgrades it.
 
 | Gate | Status |
 |------|--------|
