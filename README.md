@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: pre-fallback tree (2026-10-25/26, substrate era; full matrix below) — unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190, 0 failures. Mapped-predicate fallback tree (working tree, 2026-10-28) — unit 1820, fast 1918, property 244, integration 47, main core 1254, 0 failures; runtime/http and slow were not re-run on that tree. CI Core Contract and CI Fast green on the published tree (2026-10-26). B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
+**Tests**: pre-fallback tree (2026-10-25/26, substrate era; full matrix below) — unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190, 0 failures. Mapped-predicate fallback tree (committed `2144a6a`, 2026-10-28) — unit 1820, fast 1918, property 244, integration 47, main core 1254, 0 failures; runtime/http and slow were not re-run on that tree. GF-case + eval-instrumentation tree (working tree, 2026-10-28) — unit 1821/1821 green; other suites not re-run on that exact tree. CI Fast green on `2144a6a` (`40672419939`); CI Core Contract `40672419906` was still in progress at the last check. B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
 
 ### Verified Capabilities
 
@@ -152,7 +152,7 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1820 (incl. IR + Stage-1 pins; +2 mapped-GF-fallback pins) | ✅ 0 failures (2026-10-28, fallback tree) |
+| qxfx0-test-unit | 1821 (incl. IR + Stage-1 pins; +2 mapped-GF-fallback pins +1 GF case pin) | ✅ 0 failures (2026-10-28, GF-case tree; 1820 on committed fallback tree `2144a6a`) |
 | qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures by group (2026-10-25); core slice re-verified green on the fallback tree (2026-10-28), runtime/http not re-run |
 | qxfx0-test-property | 244 | ✅ 0 failures (2026-10-28, fallback tree) |
 | qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-28, fallback tree; the earlier chained ENOSPC was environmental) |

@@ -160,7 +160,7 @@ concrete QxFx0SyntaxRus of QxFx0Syntax = QxFx0LexiconRus ** {
     RelationYavlyaetsya = { s = "является" } ;
     RelationZadaet = { s = "задаёт" } ;
     RelationZavisit = { s = "зависит" } ;
-    ObjectAktObrashcheniya = { s = "актом обращения к личному прошлому" } ;
+    ObjectAktObrashcheniya = { s = "акт обращения к личному прошлому" } ;
     ObjectAspektPervogoLitsa = { s = "аспект от первого лица" } ;
     ObjectAvtonomiyuCheloveka = { s = "автономию человека" } ;
     ObjectBytAktom = { s = "быть актом отказа или знаком присутствия" } ;

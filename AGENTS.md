@@ -658,7 +658,7 @@ available list); unset = byte-identical full run. Slow keeps its
 group on HEAD 2026-10-25; full single-process unsupported on 15 GB with
 substrate — run via QXFX0_AGGREGATE_GROUP) |
 | qxfx0-test-fast | 1918 |
-| qxfx0-test-unit | 1820 (fallback tree 2026-10-28; 1818 on the pre-fallback tree) |
+| qxfx0-test-unit | 1821 (GF-case tree 2026-10-28; 1820 on committed fallback `2144a6a`; 1818 on the pre-fallback tree) |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
@@ -879,11 +879,17 @@ re-observe before treating as real).
   `f3ae49a` docs-only); unit/fast/property/integration — `f3ae49a`
   (2026-10-26). Architecture hygiene landed (`49d8faa`, `e7f749b`),
   полный `check_architecture.sh` зелёный. **Fallback-tree matrix
-  (2026-10-28, mapped-predicate fallback, uncommitted)**: unit 1820,
-  fast 1918, property 244, integration 47, main core 1254 — все exit 0;
-  main runtime/http и slow на этом дереве не перезапускались. **Publication 2026-10-26**:
+  (2026-10-28, mapped-predicate fallback, committed `2144a6a`)**:
+  unit 1820, fast 1918, property 244, integration 47, main core
+  1254 — все exit 0; main runtime/http и slow на этом дереве не
+  перезапускались. **GF-case + eval-instrumentation tree (working
+  tree, 2026-10-28)**: unit **1821/1821** green; `Test.Suite.ResponsePlan`
+  39/39; fast/property/integration/main runtime/http/slow на этом
+  точном дереве не перезапускались. **Publication 2026-10-26**:
   `045f37a..f70607d` pushed; CI Core Contract `40343025029` green
-  (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). Full
+  (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). **Publication
+  2026-10-28**: `2144a6a` pushed; CI Fast `40672419939` green; CI
+  Core Contract `40672419906` ещё шёл на момент последней проверки. Full
   single-process main по-прежнему не поддерживается на 15 GB
   с substrate.
 - Audit 2026-08-23 → session backup + open-debt register + forward

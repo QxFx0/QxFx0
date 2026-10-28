@@ -100,24 +100,34 @@ semantic-predicate match rule. **No golden re-baseline was performed.**
 
 ## Grammar-quality caveat — one exposed GF case defect
 
-`gf-rel-007` renders:
+`gf-rel-007` rendered (pre-fix):
 
 ```text
 Тезис: воспоминание есть актом обращения к личному прошлому. Проверка: верно ли это?
 ```
 
-The trace predicate is nominative (`воспоминание есть акт обращения к личному
-прошлому`), and `spec/gf/curated_predicate_slots.tsv:17` also records the
-nominative surface. The instrumental form comes from the GF concrete syntax:
-`spec/gf/QxFx0SyntaxRus.gf:163` hardcodes
-`ObjectAktObrashcheniya = { s = "актом обращения к личному прошлому" }`.
-This is a **pre-existing GF linearization/case defect**, exposed (not caused)
-by the fallback selecting that already-mapped predicate. It was not fixed in
-this slice because the pre-registration explicitly excludes GF grammar
-changes. Follow-up: correct the concrete-syntax case and re-run the packet;
-do not change the TSV to match the defective surface.
+The trace predicate and the composite `source_ru` slot are nominative
+(`воспоминание есть акт обращения к личному прошлому`). The defect was a
+two-place inconsistency: `spec/gf/curated_predicate_slots.tsv` row
+`recollection_past` carried `object_ru = "актом обращения к личному
+прошлому"` (instrumental), and `spec/gf/QxFx0SyntaxRus.gf:163` hardcoded
+`ObjectAktObrashcheniya = { s = "актом обращения к личному прошлому" }`,
+following that inconsistent column. This was a **pre-existing GF
+linearization/case defect**, exposed (not caused) by the fallback selecting
+that already-mapped predicate.
 
-No other surface in this packet shows the `есть <instrumental>` pattern.
+**Fixed 2026-10-28** under the separate pre-registration
+`docs/closure/GF_RECOLLECTION_CASE_PREREG_2026-10-28.md`: `object_ru` and
+the GF literal are now nominative, the tracked PGF/manifest were recompiled,
+and a unit pin asserts the nominative surface. Isolated `gf-rel-007` smoke
+now returns:
+
+```text
+Тезис: воспоминание есть акт обращения к личному прошлому. Проверка: верно ли это?
+```
+
+with `AuthorityCanonical` and `trcFallbackReason=null`. No other surface in
+this packet shows the `есть <instrumental>` pattern.
 
 ## Latency
 
@@ -173,6 +183,8 @@ are the replay trace (`trcAuthorityClass`, `trcLinearizationOk`,
 
 1. Decide the golden acceptance rule for the 25 non-exact canonical turns:
    exact-surface, semantic-predicate match, or a documented re-baseline.
-2. Fix the `ObjectAktObrashcheniya` case in `QxFx0SyntaxRus.gf` under a
-   separate pre-registration, then re-run this packet.
+2. ~~Fix the `ObjectAktObrashcheniya` case in `QxFx0SyntaxRus.gf`~~ —
+   done 2026-10-28 under
+   `docs/closure/GF_RECOLLECTION_CASE_PREREG_2026-10-28.md`; re-run this
+   packet after the golden acceptance rule is decided.
 3. Keep M7 OPEN and the 500-prompt gate BLOCKED until both are resolved.

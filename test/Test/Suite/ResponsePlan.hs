@@ -76,6 +76,7 @@ responsePlanTests =
    , TestLabel "response plan keeps an unmapped predicate when no GF mapping exists" testGfMappedFallbackAbsent
     , TestLabel "curated GF slot catalog covers the definition corpus baseline" testDefinitionCorpusGfCoverage
     , TestLabel "curated response plan linearizes through compiled GF" testGfPlanLinearization
+    , TestLabel "recollection GF surface uses the nominative object case" testGfRecollectionNominativeCase
     , TestLabel "argued freedom plan linearizes through compiled GF" testArguedFreedomPlanGfLinearization
      , TestLabel "argued duty GF surface passes exact GuardSurface pipeline" testArguedDutyPlanGfGuardSurface
      , TestLabel "argued leaf overlay exhaustively covers literal leaves" testArguedLeafOverlayCoverage
@@ -306,6 +307,31 @@ testGfPlanLinearization = TestCase $ do
       assertEqual "GF must realize the generated curated predicate slots"
         "Тезис: свобода предполагает возможность выбора."
         (glrText rendered)
+
+testGfRecollectionNominativeCase :: Test
+testGfRecollectionNominativeCase = TestCase $ do
+  let surface = "воспоминание есть акт обращения к личному прошлому"
+      predicate = PropositionPredicate "воспоминание" "есть" "акт обращения к личному прошлому"
+      plan = planWith
+        (PlannedClaim "claim-1" ClaimKnown surface [surface] EvidenceCuratedPredicate 0.9)
+        (Just "воспоминание")
+        [predicate]
+        Nothing
+        Nothing
+      pgfPath = "spec/gf/QxFx0Syntax.pgf"
+  exists <- doesFileExist pgfPath
+  assertBool "generated PGF must be present for the GF case contract" exists
+  result <- RuntimePGF.linearizeResponseSemanticPlanGf (Just pgfPath) plan
+  case result of
+    Left err -> assertFailure ("recollection GF plan linearization failed: " <> T.unpack err)
+    Right rendered -> do
+      assertEqual "recollection must use canonical PGF authority"
+        AuthorityCanonical
+        (glrAuthorityClass rendered)
+      assertBool "recollection object must be nominative after есть"
+        ("есть акт обращения к личному прошлому" `T.isInfixOf` glrText rendered)
+      assertBool "recollection must not keep the instrumental object"
+        (not ("актом обращения" `T.isInfixOf` glrText rendered))
 
 testArguedFreedomPlanGfLinearization :: Test
 testArguedFreedomPlanGfLinearization = TestCase $ do

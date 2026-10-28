@@ -6694,13 +6694,18 @@ logs are ephemeral, the counts below are the record.
   `DeriveGfMappedFallback` 14; exact golden **5/30** (pre-fix 4/30;
   `gf-rel-016` added). Per-prompt end-to-end latency (includes isolated
   bootstrap) avg `83,191.7 ms`, median `82,568.5 ms`, max `119,617 ms` —
-  not a warm-turn measurement. One fallback-selected surface exposed a pre-existing GF
-  concrete-syntax case defect (`ObjectAktObrashcheniya` renders instrumental
-  `актом` where the TSV expects nominative `акт`). The canonical-mapping gate
-  passes; exact-golden/content acceptance and M7 remain OPEN. See
+  not a warm-turn measurement. One fallback-selected surface exposed a
+  pre-existing GF two-place case inconsistency: `source_ru` is nominative,
+  but `object_ru` and the `ObjectAktObrashcheniya` literal were instrumental
+  (`актом`). **Fixed 2026-10-28** under
+  `docs/closure/GF_RECOLLECTION_CASE_PREREG_2026-10-28.md` (TSV `object_ru`
+  + GF literal → nominative, PGF/manifest recompiled, new unit pin; isolated
+  `gf-rel-007` smoke: `AuthorityCanonical`, `trcFallbackReason=null`,
+  nominative surface). The canonical-mapping gate passes;
+  exact-golden/content acceptance and M7 remain OPEN. See
   `docs/closure/M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`.
-- **Fallback-tree verification matrix (2026-10-28)**: the uncommitted
-  mapped-predicate fallback tree was re-verified sequentially:
+- **Fallback-tree verification matrix (2026-10-28, committed `2144a6a`)**:
+  the mapped-predicate fallback tree was re-verified sequentially:
   `qxfx0-test-unit` **1820/1820** (exit 0), `qxfx0-test-fast`
   **1918/1918** (exit 0), `qxfx0-test-property` **244/244** (exit 0),
   `qxfx0-test-integration` **47/47** (exit 0), and the `qxfx0-test` core
@@ -6711,5 +6716,15 @@ logs are ephemeral, the counts below are the record.
   this tree; their last green remains the pre-fallback code HEAD `e7f749b`
   (2026-10-25).
   Unit growth 1818 → 1820 is the two mapped-GF-fallback pins.
+- **GF-case + eval-instrumentation tree (working tree, 2026-10-28)**: unit
+  **1821/1821** green (`-M6G`, exit 0); `Test.Suite.ResponsePlan` **39/39**;
+  `git diff --check` and full `check_architecture.sh` green. Fast, property,
+  integration, main runtime/http, and slow were **not** re-run on this exact
+  tree. The eval instrumentation was verified by a 3-prompt canonical run
+  (`gf-case-instr-20261028`: trace 3/3, `AuthorityCanonical` 3/3,
+  `gf_mapped_fallback` 2/3, drift 0) and a 1-prompt shim run
+  (`gf-shim-instr-20261028`, "что такое добро?": `AuthorityShim`, drift 1,
+  legacy marker 0). See
+  `docs/closure/EVAL_TRACE_INSTRUMENTATION_PREREG_2026-10-28.md`.
 - **Scope**: all six suites are exact-tree green on the pre-fallback tree.
   Full single-process main remains unsupported on 15 GB with substrate.

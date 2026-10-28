@@ -14,7 +14,7 @@ opinion_position	mnenie	мнение	vyrazhaet	выражает	pozitsiyu_subekt
 opinion_perspective	mnenie	мнение	zavisit	зависит	ot_perspektivy_nablyudatelya	от перспективы наблюдателя	мнение зависит от перспективы наблюдателя
 memory_past	pamyat	память	sohranyaet	сохраняет	proshloe_dlya_nastoyashchego	прошлое для настоящего	память сохраняет прошлое для настоящего
 memory_reconstruction	pamyat	память	rekonstruiruet	реконструирует	ne_prosto_kopiruet	а не просто копирует	память реконструирует а не просто копирует
-recollection_past	vospominanie	воспоминание	est	есть	akt_obrashcheniya	актом обращения к личному прошлому	воспоминание есть акт обращения к личному прошлому
+recollection_past	vospominanie	воспоминание	est	есть	akt_obrashcheniya	акт обращения к личному прошлому	воспоминание есть акт обращения к личному прошлому
 recollection_subjectivity	vospominanie	воспоминание	otlichaetsya	отличается	ot_pamyati_subektivnostyu	от памяти своей субъективностью	воспоминание отличается от памяти своей субъективностью
 consciousness_first_person	soznanie	сознание	imeet	имеет	aspekt_pervogo_litsa	аспект от первого лица	сознание имеет аспект от первого лица
 consciousness_reflection	soznanie	сознание	obedinyaet	объединяет	vospriyatie_i_refleksiyu	восприятие и рефлексию	сознание объединяет восприятие и рефлексию
