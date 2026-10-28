@@ -107,6 +107,7 @@ data DerivationRule
   | DeriveQualification
   | DeriveConsequence
   | DeriveQuestion
+  | DeriveGfMappedFallback
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 

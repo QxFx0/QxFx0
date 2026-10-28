@@ -28,7 +28,7 @@ All items below are required for `open_public`.
   - `reports/dialogue_eval_500_prompts.tsv` when present, otherwise bundled fallback prompts
   - `reports/dialogue_eval_regression_prompts.tsv` when present, otherwise bundled fallback prompts
   - one-shot gate: `bash scripts/run_release_dialogue_gate.sh`
-  - **2026-10-26 status: BLOCKED as specified.** Neither 500-prompt file exists; the script's bundled fallback is `data/semantic/en_baseline_prompts.tsv` (English, ~60 prompts), not a labeled 500-prompt Russian set. Do not claim the 500-prompt gate ran. A bounded 30-prompt governed GF release-corpus packet is recorded in `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`; it is not a substitute for this gate.
+  - **2026-10-28 status: BLOCKED as specified.** Neither 500-prompt file exists; the script's bundled fallback is `data/semantic/en_baseline_prompts.tsv` (English, ~60 prompts), not a labeled 500-prompt Russian set. Do not claim the 500-prompt gate ran. A bounded 30-prompt governed GF release-corpus packet is recorded in `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`; its mapped-predicate fallback rerun is canonical 30/30 with exact golden 5/30 (`M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`). Neither is a substitute for this gate.
 - `intent_fit_rate >= 0.85`.
 - `fallback_or_template_drift_rate <= 0.05`.
 - `reflect_escape_rate <= 0.10`.
@@ -74,7 +74,7 @@ Release decision:
    - `QXFX0_CONTRACT_PROFILE=extended bash scripts/ci_gate_contract.sh` for open/public release
    - `bash scripts/verify.sh`
    - `cabal test qxfx0-test -v0`
-3. Run 500-prompt eval and fill report template. **BLOCKED (2026-10-26): no labeled 500-prompt Russian set exists; the script falls back to ~60 English prompts. Do not substitute the 30-prompt GF packet.**
+3. Run 500-prompt eval and fill report template. **BLOCKED (2026-10-28): no labeled 500-prompt Russian set exists; the script falls back to ~60 English prompts. Do not substitute the 30-prompt GF packet.**
 4. Hold Go/No-Go review with evidence links.
 5. If `GO`, tag release and publish notes with known limitations.
 

@@ -12,8 +12,8 @@ Purpose: authoritative source for what to do next.
 ## Current front
 
 - `front_id`: `POST-RELEASE — B2/M6-FELT/M7 evidence`
-- `current_state`: `main` is published (55-commit fast-forward `045f37a..f70607d`); this post-publication status sync is docs-only. Working tree clean, `0` ahead / `0` behind. CI Core Contract run `40343025029` is green (`2h35m37s`); CI Fast run `40343024720` is green (`25m35s`). All six suites are exact-tree green: unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 (core 1254 + runtime 106 + http 23) and slow 190 (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25, code HEAD `e7f749b`; `f3ae49a` is docs-only). Architecture check is green. Remaining release caveats: 500-prompt gate BLOCKED (no labeled Russian set); B2/M6-FELT human leg partial; M7 bounded 30-prompt GF packet FAILED (16/30 canonical, 14/30 `unmapped_curated_predicate`, 4/30 exact golden).
-- `last_updated`: `2026-10-26`
+- `current_state`: `main` is published through `6788c9f` (docs-only M6/M7 record on top of the 55-commit fast-forward `045f37a..f70607d`); `origin/main...main` is `0/0`. The mapped-predicate fallback is **implemented in the working tree but not committed**: response-plan selection + `DeriveGfMappedFallback` + tests + post-fix M7 docs. The post-fix 30-prompt packet (run `m7-gf-fallback-20261026`) is **PASS on the canonical-mapping gate**: `AuthorityCanonical` 30/30, `AuthorityShim` 0/30, `unmapped_curated_predicate` 0/30, `trcLinearizationOk=true` 30/30; exact golden **5/30**, so **M7 remains OPEN**. One fallback-selected surface exposed a pre-existing GF case defect (`ObjectAktObrashcheniya`, instrumental vs nominative). Unit suite on the new code is 1820/1820 green; fast 1918/1918, property 244/244, integration 47/47, and the main core slice 1254/1254 were re-verified on the same tree on 2026-10-28 (all exit 0; main runtime/http and slow not re-run). Remaining release caveats: 500-prompt gate BLOCKED (no labeled Russian set); B2/M6-FELT human leg partial; M7 content acceptance unresolved.
+- `last_updated`: `2026-10-28`
 - `evidence_or_result_ref`: `docs/closure/CALIBRATION_REPORT.md` (release verification follow-up 2026-10-25/26); CI runs `40343025029` / `40343024720`; gate snapshot below.
 
 ### Second live front — promotion V4 (human review)
@@ -27,34 +27,35 @@ Purpose: authoritative source for what to do next.
 
 1. **Resolve the 500-prompt gate blocker.** The labeled 500-prompt Russian set is absent; the current script falls back to the ~60-prompt English baseline. Build/label the set before claiming the gate ran. The 30-prompt GF packet is not a substitute.
 2. **B2/M6-FELT:** M6-FELT is informational, not a release gate (operator decision 2026-10-26). Keep the formal claim withheld; revisit only if a second independent rater and a pre-registered threshold are commissioned.
-3. **M7:** the bounded 30-prompt GF packet is recorded and **FAILED** (16/30 `AuthorityCanonical`, 14/30 `unmapped_curated_predicate`, 4/30 exact golden). Pre-registration is `docs/closure/M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md` (mapped-predicate fallback); implement it next and keep M7 OPEN until a re-run passes.
+3. **M7:** the mapped-predicate fallback closed the hard mapping failure on the 30-prompt packet (`AuthorityCanonical` 30/30, `AuthorityShim` 0/30, exact golden 5/30). Keep M7 **OPEN**: decide the golden acceptance rule for the 25 non-exact canonical turns, then fix the pre-existing `ObjectAktObrashcheniya` GF case defect under a separate pre-registration and re-run. Evidence: `docs/closure/M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`.
 4. **Resolve Promotion-V4 `human_review_required`** — either attest the review and activate the draft overlay (`overlay-42c1335b…`), or record a documented refusal. Draft has been inactive since 2026-07-19.
-5. **Do not widen the canary yet.** The release-corpus run has now been executed as the 30-prompt packet and failed on GF mapping coverage (14/30 `unmapped_curated_predicate`). Fix and re-run the packet first; 1 turn is still not a corpus.
+5. **Do not widen the canary yet.** The 30-prompt packet is canonical 30/30 but exact golden 5/30; 1 turn is still not a corpus. Keep the canary narrow until the content-acceptance rule and the 500-prompt set exist.
 
-### Gate status snapshot (2026-10-26)
+### Gate status snapshot (2026-10-28)
 
-All six suites are green on the exact tree. **2026-10-26** (`f3ae49a`, docs-only after code HEAD `e7f749b`): unit 1818, property 244, integration 47, fast 1918 — all exit 0. **2026-10-25**: main 1383 by group (core 1254 + runtime 106 + http 23), slow 190 by group (runtime 106 + state 50 + http 23 + lifecycle 11) — all exit 0. Architecture check is green, including rule [10]. **Publication 2026-10-26**: `045f37a..f70607d` pushed; CI Core Contract `40343025029` green (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). Full single-process main remains unsupported on 15 GB with substrate. Do not cite gates against any other tree without re-running.
+Pre-fallback tree (published through `6788c9f`, docs-only after code HEAD `e7f749b`): unit 1818, fast 1918, property 244, integration 47 (2026-10-26); main 1383 by group (core 1254 + runtime 106 + http 23) and slow 190 by group (runtime 106 + state 50 + http 23 + lifecycle 11) (2026-10-25) — all exit 0. CI Core Contract `40343025029` green (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). **Fallback tree (working tree, uncommitted)**: unit 1820/1820, fast 1918/1918, property 244/244, integration 47/47, main core 1254/1254 — all exit 0 (2026-10-28); `Test.Suite.ResponsePlan` 38/38; main runtime/http and slow not re-run on this tree. `git diff --check` and full `check_architecture.sh` are green before any commit request. Full single-process main remains unsupported on 15 GB with substrate. Do not cite gates against any other tree without re-running.
 
 ## Open decisions / blockers
 
 | item | kind | owner | note |
 |---|---|---|---|
 | ~~Publish 55 unpushed commits to `origin/main`~~ | release decision | repo owner | **DONE 2026-10-26**: fast-forward `045f37a..f70607d`; CI green. |
-| ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED in the current tree**: `git status` has no untracked source files. Any future untracked subsystem must be committed or documented before it is cited as evidence. |
+| ~~Uncommitted promotion/response-plan subsystem~~ | hygiene | repo owner | **RESOLVED for the pre-publication subsystem**: no untracked source files remain from it. The 2026-10-26 mapped-predicate fallback is intentionally uncommitted pending explicit approval (see `current_state`). |
 | Promotion-V4 draft activation | human review | repo owner | `human_review_required`; snapshot `promotion-snapshot-aa7e60d4…`, 17700 edges, 9 candidates → 1 gate-eligible |
 | Architecture check | hygiene | repo owner | **GREEN on HEAD** (`49d8faa`): ownership-journal partials totalized, anti-rot registry label synced; full run includes rule [10]. |
-| Release verification | release evidence | repo owner | **CLOSED (2026-10-26)**: unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — all exit 0 on the exact tree; architecture check green. |
+| Release verification | release evidence | repo owner | **CLOSED for the pre-fallback tree (2026-10-26)**: unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — all exit 0; architecture check green. Fallback tree (2026-10-28): unit 1820, fast 1918, property 244, integration 47, main core 1254 — all exit 0; main runtime/http and slow not re-run. |
 | CI on published HEAD | release evidence | repo owner | **GREEN (2026-10-26)**: Core Contract `40343025029` (`2h35m37s`), CI Fast `40343024720` (`25m35s`). |
 | 500-prompt dialogue eval | release evidence | repo owner | **BLOCKED**: no labeled 500-prompt Russian set; script falls back to ~60 English prompts. |
 | M6-FELT | research | — | **MECHANICAL PROVEN (bounded 12-turn benchmark); HUMAN PARTIAL; formal claim withheld; informational, NOT a release gate (operator decision 2026-10-26)** — see `M6_FELT_GATE.md`, B2 EXEC-002/003 |
-| M7 production evidence | research/ops | repo owner | **OPEN**; bounded 30-prompt GF packet **FAILED** (16/30 canonical, 14/30 `unmapped_curated_predicate`, 4/30 exact golden). Pre-register the mapping fix; do not claim M7 closed. |
+| M7 production evidence | research/ops | repo owner | **OPEN**; post-fix 30-prompt packet is canonical **30/30** with 0 shims, but exact golden is **5/30** and one GF case defect is exposed. Decide golden acceptance + fix `ObjectAktObrashcheniya`; do not claim M7 closed. |
 
-## Recently landed (2026-06-18 → 2026-10-26)
+## Recently landed (2026-06-18 → 2026-10-28)
 
 Summaries only — details live in the ADRs and in `docs/front_archive.md`.
 
 - **Publication** (`f70607d`, 2026-10-26): `main` fast-forward `045f37a..f70607d` (55 commits); CI Core Contract `40343025029` and CI Fast `40343024720` green.
-- **M7 bounded packet** (`M7_BOUNDED_PACKET_2026-10-26.md`, 2026-10-26): 30-prompt GF release corpus; routing `CMDefine` 30/30; trace `AuthorityCanonical` 16/30; 14/30 `unmapped_curated_predicate` → `AuthorityShim`; exact golden 4/30. **FAILED**; M7 remains OPEN.
+- **M7 bounded packet** (`M7_BOUNDED_PACKET_2026-10-26.md`, 2026-10-26): 30-prompt GF release corpus; routing `CMDefine` 30/30; trace `AuthorityCanonical` 16/30; 14/30 `unmapped_curated_predicate` → `AuthorityShim`; exact golden 4/30. **FAILED (pre-fix)**; retained as trigger evidence.
+- **M7 mapped-predicate fallback** (`M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md` + `M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`, working tree 2026-10-26/28): response-plan selection now filters to GF-mapped predicates per topic, emits `DeriveGfMappedFallback` with the rejected original, and retains the old shim path when no mapping exists. Post-fix packet: `AuthorityCanonical` 30/30, `AuthorityShim` 0/30, `unmapped_curated_predicate` 0/30, exact golden 5/30. M7 remains OPEN on content acceptance; one pre-existing GF case defect exposed.
 - **Bootstrap-safety fallback** (`203ffbf`, `b98a833`, `c201a80`, 2026-10-24): `--turn-json` and `--worker-stdio` now serve the real Protocol B resource pack when strict bootstrap fails on an acute crisis marker; non-crisis bootstrap failures still fail closed. Healthy runtime path unchanged. Pin: `Test.Suite.CrisisGuard` 20 cases; all six suites exact-tree green (2026-10-25/26).
 - **ADR-0050** compose-from-activation surface text (`SurfaceAccumulator`, wired into `generateFromFrame`, golden tests + feature flag).
 - **ADR-0051** typed dispatch across all gates (a–h): `SemanticFrameTarget`, `DreamCandidateKind`, `ConflictPolicy`, `TransportMode`, `RuntimeMode`/`HealthStatus`, `ParserStatus`, `PipelineEffectLabel`, parameterized `PropositionAdmissionConfig`.

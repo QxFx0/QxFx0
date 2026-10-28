@@ -7,7 +7,7 @@ module Test.Suite.ResponsePlan
 import Test.HUnit
 import Data.Aeson (decode, encode)
 import qualified Data.Map.Strict as M
-import Data.Maybe (maybeToList)
+import Data.Maybe (isJust, isNothing, maybeToList)
 import qualified Data.Text as T
 import System.Directory (doesFileExist)
 
@@ -41,6 +41,7 @@ import QxFx0.Lexicon.Generated.SemanticSlots
   ( arguedLeafSlotCount
   , curatedPredicateSlotCount
   , lookupArguedLeafConstructor
+  , lookupCuratedPredicateSlots
   )
 import qualified QxFx0.Runtime.PGF as RuntimePGF
 import QxFx0.Types (AssemblyPath(..), AuthorityClass(..), GfLinearizationResult(..), SurfaceProvenance(..))
@@ -71,6 +72,8 @@ responsePlanTests =
    , TestLabel "response plan survives JSON round trip" testPlanRoundTrip
    , TestLabel "curated response plan maps to generator-owned GF slots" testGfSlotAdapter
    , TestLabel "unmapped response plan cannot enter GF" testGfSlotAdapterRejectsUnmapped
+   , TestLabel "response plan falls back to a GF-mapped predicate" testGfMappedFallback
+   , TestLabel "response plan keeps an unmapped predicate when no GF mapping exists" testGfMappedFallbackAbsent
     , TestLabel "curated GF slot catalog covers the definition corpus baseline" testDefinitionCorpusGfCoverage
     , TestLabel "curated response plan linearizes through compiled GF" testGfPlanLinearization
     , TestLabel "argued freedom plan linearizes through compiled GF" testArguedFreedomPlanGfLinearization
@@ -208,6 +211,74 @@ testGfSlotAdapterRejectsUnmapped = TestCase $
     (case semanticPropositionToGfExpr (PropositionPredicate "" "неизвестный предикат" "") of
        Left "unmapped_curated_predicate:неизвестный предикат" -> True
        _ -> False)
+
+testGfMappedFallback :: Test
+testGfMappedFallback = TestCase $ do
+  let unmapped = SemanticPredicate
+        RoleProperty
+        "свобода есть отсутствие ограничений"
+        "freedom is the absence of restrictions"
+        "свобода"
+        Nothing Nothing Nothing Nothing
+      mapped = SemanticPredicate
+        RoleProperty
+        "свобода предполагает возможность выбора"
+        "freedom presupposes the possibility of choice"
+        "свобода"
+        Nothing Nothing Nothing Nothing
+      selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "свобода" [unmapped, mapped] }
+      plan = buildGenerativeResponsePlan selector emptyField "придумай тезис о свободе" Nothing
+  assertBool "fixture: the first predicate must be unmapped"
+    (isNothing (lookupCuratedPredicateSlots (spRu unmapped)))
+  assertBool "fixture: the second predicate must be mapped"
+    (isJust (lookupCuratedPredicateSlots (spRu mapped)))
+  case rspClaims plan of
+    [claim] -> do
+      assertBool "fallback must select the mapped predicate"
+        (spRu mapped `elem` pcPredicateRefs claim)
+      assertBool "fallback must not keep the unmapped predicate as the claim"
+        (spRu unmapped `notElem` pcPredicateRefs claim)
+    _ -> assertFailure "fallback plan must contain exactly one claim"
+  assertBool "fallback must be visible in the plan derivation"
+    (any ((== DeriveGfMappedFallback) . pdRule) (rspDerivation plan))
+  assertBool "fallback must name the rejected original predicate"
+    (any (elem (spRu unmapped) . pdRejectedAlternatives) (rspDerivation plan))
+  assertEqual "fallback plan must remain non-fallback"
+    Nothing
+    (rspFallbackReason plan)
+  assertEqual "fallback plan must survive JSON round trip"
+    (Just plan)
+    (decode (encode plan))
+  case responsePlanToGfExpr plan of
+    Left err -> assertFailure ("fallback plan must remain GF-addressable: " <> T.unpack err)
+    Right expression ->
+      assertBool "fallback plan must use the mapped GF constructors"
+        ("MkSemanticPredicate" `T.isInfixOf` expression)
+
+testGfMappedFallbackAbsent :: Test
+testGfMappedFallbackAbsent = TestCase $ do
+  let unmapped = SemanticPredicate
+        RoleProperty
+        "свобода есть отсутствие ограничений"
+        "freedom is the absence of restrictions"
+        "свобода"
+        Nothing Nothing Nothing Nothing
+      selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "свобода" [unmapped] }
+      plan = buildGenerativeResponsePlan selector emptyField "придумай тезис о свободе" Nothing
+  assertBool "fixture: the only predicate must be unmapped"
+    (isNothing (lookupCuratedPredicateSlots (spRu unmapped)))
+  assertBool "no mapped predicate means no fallback derivation"
+    (not (any ((== DeriveGfMappedFallback) . pdRule) (rspDerivation plan)))
+  case rspClaims plan of
+    [claim] -> assertBool "the original unmapped predicate must remain selected"
+      (spRu unmapped `elem` pcPredicateRefs claim)
+    _ -> assertFailure "no-mapping plan must contain exactly one claim"
+  assertBool "the GF layer must still reject the unmapped predicate"
+    (case responsePlanToGfExpr plan of
+       Left err -> "unmapped_curated_predicate:" `T.isPrefixOf` err
+       Right _ -> False)
 
 testDefinitionCorpusGfCoverage :: Test
 testDefinitionCorpusGfCoverage = TestCase $

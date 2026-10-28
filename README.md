@@ -21,7 +21,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: all six suites green on the exact tree (2026-10-25/26, substrate era; full matrix below): unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190 — 0 failures. CI Core Contract and CI Fast green (2026-10-26). B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
+**Tests**: pre-fallback tree (2026-10-25/26, substrate era; full matrix below) — unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190, 0 failures. Mapped-predicate fallback tree (working tree, 2026-10-28) — unit 1820, fast 1918, property 244, integration 47, main core 1254, 0 failures; runtime/http and slow were not re-run on that tree. CI Core Contract and CI Fast green on the published tree (2026-10-26). B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
 
 ### Verified Capabilities
 
@@ -152,14 +152,14 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1818 (incl. IR + Stage-1 pins) | ✅ 0 failures (2026-10-26) |
-| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures by group (2026-10-25) |
-| qxfx0-test-property | 244 | ✅ 0 failures (2026-10-26) |
-| qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-26; the earlier chained ENOSPC was environmental) |
-| qxfx0-test-fast | 1918 | ✅ 0 failures (2026-10-26) |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-10-25) |
+| qxfx0-test-unit | 1820 (incl. IR + Stage-1 pins; +2 mapped-GF-fallback pins) | ✅ 0 failures (2026-10-28, fallback tree) |
+| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures by group (2026-10-25); core slice re-verified green on the fallback tree (2026-10-28), runtime/http not re-run |
+| qxfx0-test-property | 244 | ✅ 0 failures (2026-10-28, fallback tree) |
+| qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-28, fallback tree; the earlier chained ENOSPC was environmental) |
+| qxfx0-test-fast | 1918 | ✅ 0 failures (2026-10-28, fallback tree) |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-10-25; not re-run on the fallback tree) |
 
-Counts re-verified green with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external): main/slow by group on code HEAD `e7f749b` (2026-10-25; `f3ae49a` is docs-only); unit/fast/property/integration on `f3ae49a` (2026-10-26). Sequential runs only: `-M10G` for fast, `-M6G` for unit/integration, main core/state `-M10G`, runtime/http/lifecycle `-M12G`. Never build while a runtime sample is in flight (relink kills it).
+Counts re-verified green with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external): main/slow by group on code HEAD `e7f749b` (2026-10-25; `f3ae49a` is docs-only); unit/fast/property/integration and the main core slice on the mapped-predicate fallback tree (working tree, 2026-10-28). Sequential runs only: `-M10G` for fast/property/main core, `-M6G` for unit/integration, main state `-M10G`, runtime/http/lifecycle `-M12G`. Never build while a runtime sample is in flight (relink kills it).
 
 The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1918 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 

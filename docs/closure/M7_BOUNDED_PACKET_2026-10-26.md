@@ -1,6 +1,14 @@
 # M7 Bounded Evidence Packet — Governed GF Release Corpus (2026-10-26)
 
-- **Status**: **FAIL (bounded packet)** — routing classification PASS, GF surface/canonical FAIL; **M7 remains OPEN**.
+- **Status**: **FAIL (pre-fix packet)** — routing classification PASS, GF
+  surface/canonical FAIL; **M7 remains OPEN**.
+- **Post-fix rerun (2026-10-26, run `m7-gf-fallback-20261026`)**: the
+  mapped-predicate fallback closed the hard mapping failure —
+  `AuthorityCanonical` **30/30**, `AuthorityShim` **0/30**,
+  `unmapped_curated_predicate` **0/30**. Exact golden is **5/30**, so M7
+  remains OPEN. See
+  `docs/closure/M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`. The pre-fix
+  evidence below is retained as the trigger record.
 - **Scope**: 30 Russian definition prompts from `spec/gf/release_corpus_prompts.txt` (the governed GF release corpus).
 - **Runtime**: `QXFX0_RUNTIME_MODE=strict`, `QXFX0_EVAL_SESSION_MODE=isolated`, GHC 9.6.7, substrate active.
 - **Expected family**: `CMDefine` for all 30 prompts (definition questions).
@@ -27,9 +35,23 @@ The routing layer classifies all 30 prompts as `CMDefine`, but the rendered surf
 
 `gf_release_audit.py --mode latency` on the first 5 prompts (persistent worker, strict runtime) recorded canonical rate `1.0`, fallback histogram `{"none": 5}`, quality issues `0`, semantic substitutions `0`; warm wall median `34,491 ms`, warm p95 `43,185 ms` — above the audit’s `10,000 ms` threshold. Cold CLI wall was `64,005 ms`, bootstrap `20,217 ms`. This smoke did not hit the 14 unmapped predicates (the first five are canonical), so it does not contradict the 30-prompt failure; it is a latency/observability smoke only.
 
+## Supplemental full 30-prompt trace audit
+
+`gf_release_audit.py --mode surface` (one persistent session, strict runtime) completed with exit 1:
+
+- `AuthorityCanonical` **14/30** (`canonical_rate=0.4667`);
+- `AuthorityShim` **16/30**, all with `gf_response_plan:unmapped_curated_predicate:<predicate>`;
+- golden mismatches **26/30** (4 matches);
+- `quality_issue_count=0`, `semantic_substitution_count=1`, `recovery_rate=0.1333`;
+- warm wall median `37,857 ms`, p95 `48,498 ms`; bootstrap `20,263 ms`.
+
+This persistent-session audit is supplemental, not the canonical isolated-session packet. It selects different predicates on later turns (16 unmapped instead of 14), which is itself evidence that the mapping gap is a general coverage defect, not one fixed list of 14 prompts. Both runs fail the definitional-content acceptance.
+
 ## Root cause 1 — 14/30 curated predicates are unmapped by the GF response plan
 
 The trace records `gf_response_plan:unmapped_curated_predicate:<predicate>` and `trcLinearizationOk=false` for these turns; the surface falls back to an exploratory/hypothesis form (`Гипотеза: ... Следующий ход: вернуться к открытому вопросу ...`). This is a **GF response-plan coverage gap**, not a routing-family error.
+
+The isolated packet's affected predicates are listed below. The persistent audit later selected additional unmapped predicates (`время выражает последовательность становления`, `долг обязывает к действию`, `надежда ведет к действию`, `разум оперирует понятиями`, `сознание различает субъект и объект`), so this list is not exhaustive.
 
 | # | prompt | selected predicate | exact golden |
 |---:|---|---|---|
@@ -117,7 +139,7 @@ The dialogue-eval script reports `fallback_drift_rate=0.000` and `critical_misma
 
 ## Recommended next step
 
-1. Pre-register a bounded GF response-plan coverage fix for the 14 `unmapped_curated_predicate` entries above (mapping/rendering only; no routing or safety change). The proposed mapped-predicate fallback is pre-registered in `docs/closure/M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md`.
-2. Re-run this 30-prompt packet and require `AuthorityCanonical` 30/30 before discussing exact golden.
-3. Decide the golden acceptance rule for the 16 mapped turns: exact-surface baseline, semantic predicate match, or a documented re-baseline after per-predicate selection. Do not silently re-baseline before that decision.
-4. Keep M7 OPEN and the 500-prompt gate BLOCKED until both the content fix and the labeled corpus exist.
+1. ~~Pre-register a bounded GF response-plan coverage fix for the 14 `unmapped_curated_predicate` entries above~~ — **DONE 2026-10-26**: mapped-predicate fallback pre-registered in `docs/closure/M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md`.
+2. ~~Re-run this 30-prompt packet and require `AuthorityCanonical` 30/30 before discussing exact golden~~ — **DONE 2026-10-26**: 30/30 canonical, 0/30 shim; exact golden 5/30.
+3. Decide the golden acceptance rule for the 25 non-exact canonical turns: exact-surface baseline, semantic predicate match, or a documented re-baseline after per-predicate selection. Do not silently re-baseline before that decision.
+4. Keep M7 OPEN and the 500-prompt gate BLOCKED until the golden acceptance rule and the labeled corpus exist. Also resolve the pre-existing `ObjectAktObrashcheniya` GF case defect exposed by the fallback.

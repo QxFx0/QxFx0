@@ -26,7 +26,7 @@ module QxFx0.Semantic.ResponsePlan
 
 import Data.Char (isAlphaNum)
 import Data.List (find, sortOn)
-import Data.Maybe (fromMaybe, listToMaybe, mapMaybe, maybeToList)
+import Data.Maybe (fromMaybe, isJust, listToMaybe, mapMaybe, maybeToList)
 import qualified Data.Map.Strict as M
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -44,7 +44,10 @@ import QxFx0.Semantic.ContentSelector
   , SelectedPredicate(..)
   , selectPredicates
   )
-import QxFx0.Lexicon.Generated.SemanticSlots (lookupArguedLeafConstructor)
+import QxFx0.Lexicon.Generated.SemanticSlots
+  ( lookupArguedLeafConstructor
+  , lookupCuratedPredicateSlots
+  )
 import QxFx0.Semantic.Network (ActivationArtifact, activationArtifactNetwork)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..))
 import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..))
@@ -223,6 +226,12 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
                    [ PlanDerivation "claim-1" (pcPredicateRefs claim) DeriveSelectedPredicate
                        "selected highest-ranked admitted predicate" (take 7 (map (cleanSentence . spRu . candidatePredicate) alternatives))
                    ]
+                   <> [ PlanDerivation "claim-1" [cleanSentence (spRu (candidatePredicate primary))]
+                          DeriveGfMappedFallback
+                          "selected predicate has no GF slots; used the highest-ranked mapped predicate for the topic"
+                          [rejected]
+                      | Just rejected <- [candidateGfFallback primary]
+                      ]
                    <> [ PlanDerivation "counterpoint-1" [pcText point] DeriveContrast
                           "used curated counterpredicate or distinct admitted predicate" []
                       | Just point <- [counterpoint]
@@ -255,9 +264,19 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
   where
     topics = take 2 . uniqueNonEmpty $ map cleanTopic rawTopics
     candidates = take 8 $ concatMap candidatesForTopic topics
+    mappedSelector = gfMappedSelector selector
     candidatesForTopic topic =
-      let selected = selectPredicates selector field topic (activationArtifactNetwork <$> mActivation)
-      in [ PlanCandidate predicate (maybe 0 spScore (listToMaybe selected))
+      let network = activationArtifactNetwork <$> mActivation
+          originalSelected = selectPredicates selector field topic network
+          mappedSelected = selectPredicates mappedSelector field topic network
+          selected = if null mappedSelected then originalSelected else mappedSelected
+          rejectedSurface =
+            case (listToMaybe originalSelected, listToMaybe mappedSelected) of
+              (Just original, Just mapped)
+                | selectedSurface original /= selectedSurface mapped ->
+                    Just (selectedSurface original)
+              _ -> Nothing
+      in [ PlanCandidate predicate (maybe 0 spScore (listToMaybe selected)) rejectedSurface
          | selectedPredicate <- selected
          , predicate <- spPredicates selectedPredicate
          ]
@@ -265,7 +284,25 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
 data PlanCandidate = PlanCandidate
   { candidatePredicate :: !SemanticPredicate
   , candidateConfidence :: !Double
+  , candidateGfFallback :: Maybe Text
   }
+
+-- | The response-plan path may only feed predicates that have a generated GF
+-- slot.  The selector itself is unchanged; this view is used for the bounded
+-- mapped-predicate fallback so routing and non-GF selection keep their current
+-- behavior.
+gfMappedSelector :: ContentSelector -> ContentSelector
+gfMappedSelector selector =
+  selector
+    { csTopicPredicates =
+        M.map (filter hasGfSlots) (csTopicPredicates selector)
+    }
+  where
+    hasGfSlots predicate = isJust (lookupCuratedPredicateSlots (spRu predicate))
+
+selectedSurface :: SelectedPredicate -> Text
+selectedSurface selected =
+  maybe "" (cleanSentence . spRu) (listToMaybe (spPredicates selected))
 
 comparisonCounter :: ResponseGoal -> PlanCandidate -> [PlanCandidate] -> Maybe SemanticProposition
 comparisonCounter GoalCompare primary alternatives =

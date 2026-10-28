@@ -6677,9 +6677,39 @@ logs are ephemeral, the counts below are the record.
   Routing family `CMDefine` 30/30; trace `AuthorityCanonical` 16/30;
   14/30 `AuthorityShim` with
   `gf_response_plan:unmapped_curated_predicate:<predicate>`; exact
-  golden surface 4/30. The packet **FAILED** its definitional-content
-  acceptance; M7 remains OPEN. The 500-prompt gate remains **BLOCKED**
-  because no labeled 500-prompt Russian set exists. See
-  `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`.
-- **Scope**: all six suites are exact-tree green. Full single-process
-  main remains unsupported on 15 GB with substrate.
+  golden surface 4/30. A supplemental persistent-session trace audit
+  recorded `AuthorityCanonical` 14/30, 16/30 `unmapped_curated_predicate`,
+  golden mismatches 26/30, and warm p95 `48,498 ms`. The packet **FAILED**
+  its definitional-content acceptance; M7 remains OPEN. The 500-prompt
+  gate remains **BLOCKED** because no labeled 500-prompt Russian set
+  exists. See `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`.
+- **M7 mapped-predicate fallback rerun (run `m7-gf-fallback-20261026`,
+  2026-10-26; recorded 2026-10-28)**: the response-plan builder now filters
+  each topic's predicates to GF-mapped slots, keeps the highest-scoring
+  mapped predicate, and records `DeriveGfMappedFallback` with the rejected
+  original. On the same 30 official definition prompts (strict runtime,
+  isolated sessions): routing `CMDefine` 30/30; `AuthorityCanonical` **30/30**;
+  `AuthorityShim` **0/30**; `unmapped_curated_predicate` **0/30**;
+  `trcLinearizationOk=true` 30/30; `trcFallbackReason=null` 30/30;
+  `DeriveGfMappedFallback` 14; exact golden **5/30** (pre-fix 4/30;
+  `gf-rel-016` added). Per-prompt end-to-end latency (includes isolated
+  bootstrap) avg `83,191.7 ms`, median `82,568.5 ms`, max `119,617 ms` —
+  not a warm-turn measurement. One fallback-selected surface exposed a pre-existing GF
+  concrete-syntax case defect (`ObjectAktObrashcheniya` renders instrumental
+  `актом` where the TSV expects nominative `акт`). The canonical-mapping gate
+  passes; exact-golden/content acceptance and M7 remain OPEN. See
+  `docs/closure/M7_GF_MAPPING_FALLBACK_RESULT_2026-10-26.md`.
+- **Fallback-tree verification matrix (2026-10-28)**: the uncommitted
+  mapped-predicate fallback tree was re-verified sequentially:
+  `qxfx0-test-unit` **1820/1820** (exit 0), `qxfx0-test-fast`
+  **1918/1918** (exit 0), `qxfx0-test-property` **244/244** (exit 0),
+  `qxfx0-test-integration` **47/47** (exit 0), and the `qxfx0-test` core
+  slice **1254/1254** (exit 0). Heap caps: unit/integration
+  `-M6G`, fast/property/core `-M10G`. `Test.Suite.ResponsePlan` targeted
+  **38/38**. `git diff --check` exit 0; full `check_architecture.sh`
+  green. Main runtime/http (106 + 23) and slow (190) were **not** re-run on
+  this tree; their last green remains the pre-fallback code HEAD `e7f749b`
+  (2026-10-25).
+  Unit growth 1818 → 1820 is the two mapped-GF-fallback pins.
+- **Scope**: all six suites are exact-tree green on the pre-fallback tree.
+  Full single-process main remains unsupported on 15 GB with substrate.
