@@ -242,5 +242,15 @@ Order of operations, as executed:
 | D3 | semantic threshold | 30/30, no pre-declared exceptions |
 | D4 | exact-surface role | informational only |
 
-M7 stays **OPEN** until the confirmatory run satisfies every gate; the
-500-prompt gate stays **BLOCKED** (no labeled corpus).
+M7 was to stay **OPEN** until the confirmatory run satisfied every gate; it
+did (see the post-run addendum below). The 500-prompt gate stays **BLOCKED**
+(no labeled corpus).
+
+## Post-run addendum (2026-10-31)
+
+The confirmatory run `m7-gf-confirm-20261031` satisfied every gate:
+**30/30** turns canonical, shim 0, harness drift 0, thesis + check present,
+predicate inside the frozen admissible set. The rule, the packet and the
+admissible sets above were **not** modified before or after the run. M7 is
+therefore closed for this bounded 30-prompt packet. Result and caveats:
+`docs/closure/M7_CONFIRM_RESULT_2026-10-31.md`.

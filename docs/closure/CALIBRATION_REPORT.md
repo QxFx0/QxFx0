@@ -6716,7 +6716,8 @@ logs are ephemeral, the counts below are the record.
   this tree; their last green remains the pre-fallback code HEAD `e7f749b`
   (2026-10-25).
   Unit growth 1818 → 1820 is the two mapped-GF-fallback pins.
-- **GF-case + eval-instrumentation tree (working tree, 2026-10-28)**: unit
+- **GF-case + eval-instrumentation tree (`bcceee6`, committed and pushed,
+  2026-10-28)**: unit
   **1821/1821** green (`-M6G`, exit 0); `Test.Suite.ResponsePlan` **39/39**;
   `git diff --check` and full `check_architecture.sh` green. Fast, property,
   integration, main runtime/http, and slow were **not** re-run on this exact
@@ -6726,5 +6727,28 @@ logs are ephemeral, the counts below are the record.
   (`gf-shim-instr-20261028`, "что такое добро?": `AuthorityShim`, drift 1,
   legacy marker 0). See
   `docs/closure/EVAL_TRACE_INSTRUMENTATION_PREREG_2026-10-28.md`.
+- **M7 pre-registration + confirmatory run (2026-10-28/31, `f34cf62`)**:
+  the golden acceptance rule was frozen **before** the run
+  (`docs/closure/M7_GOLDEN_ACCEPTANCE_RULE_2026-10-28.md`): D1-A structural
+  minimum (thesis + check), D2-A owner-approved admissible sets, D3 30/30,
+  D4 exact-surface informational. Frozen
+  `spec/gf/m7_admissible_predicates.tsv` — 45 rows = 30 golden + 15
+  owner-approved alternatives (9 `fallback-approved`, 6 `curated-approved`),
+  sha256 `ef75231d65b1bf4bae20a55c93721c034dd020e2a6da66654848a34945033766`.
+  Mechanical checker `scripts/m7_gate_check.py`, sha-guarded against
+  post-hoc set edits; red check: tampering with one admissible row fails
+  exactly that id (`29/30`, exit 1), untouched data passes.
+  Confirmatory run `m7-gf-confirm-20261031` (strict runtime, isolated
+  sessions, 30 official prompts, harness exit 0): gate **30/30 PASS** —
+  `AuthorityCanonical` 30/30, `authority_shim_count` 0,
+  `fallback_drift_count` 0, thesis + check 30/30, admissible predicate
+  30/30. Informational (D4): exact golden **5/30** (same five ids as the
+  descriptive packet), `gf_mapped_fallback` 14/30, latency mean
+  `78,699 ms` / median `74,151 ms` / min `56,659 ms` / max `236,094 ms`
+  (isolated sessions — bootstrap included, **not** a warm-turn figure).
+  Surfaces and predicates are byte-identical to `m7-gf-case-20261028`, so
+  the pipeline is run-stable on a fixed tree. **M7 is CLOSED for this
+  bounded 30-prompt packet**; the 500-prompt gate stays **BLOCKED**. See
+  `docs/closure/M7_CONFIRM_RESULT_2026-10-31.md`.
 - **Scope**: all six suites are exact-tree green on the pre-fallback tree.
   Full single-process main remains unsupported on 15 GB with substrate.

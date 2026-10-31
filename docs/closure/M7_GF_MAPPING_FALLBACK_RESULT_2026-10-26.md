@@ -1,8 +1,13 @@
 # M7 GF mapped-predicate fallback — bounded packet result (2026-10-26)
 
-- **Status**: **PASS on the canonical-mapping gate; M7 remains OPEN**.
-  `AuthorityCanonical` is 30/30, but exact golden replay is 5/30 and one
-  fallback-selected surface exposes a pre-existing GF case defect.
+- **Status**: **PASS on the canonical-mapping gate; M7 remained OPEN at the
+  time of this packet** (superseded 2026-10-31). `AuthorityCanonical` is
+  30/30, but exact golden replay is 5/30 and one fallback-selected surface
+  exposes a pre-existing GF case defect.
+  **Superseded 2026-10-31**: the content-acceptance rule was pre-registered
+  and the confirmatory run passed 30/30 — see
+  `docs/closure/M7_CONFIRM_RESULT_2026-10-31.md`. This document stays as the
+  historical trigger evidence.
 - **Pre-registration**: `docs/closure/M7_GF_MAPPING_FALLBACK_PREREG_2026-10-26.md`.
 - **Trigger evidence**: `docs/closure/M7_BOUNDED_PACKET_2026-10-26.md`.
 - **Run id**: `m7-gf-fallback-20261026`.
