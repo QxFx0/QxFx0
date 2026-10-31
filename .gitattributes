@@ -6,3 +6,6 @@
 # Generated artifacts that must match LF source files.
 src/QxFx0/Bridge/EmbeddedSQL.hs text eol=lf
 resources/morphology/forms_by_surface.json text eol=lf
+# M7 pre-registration: byte-stable frozen artifacts (sha256-pinned).
+spec/gf/m7_admissible_predicates.tsv text eol=lf
+scripts/m7_gate_check.py text eol=lf
