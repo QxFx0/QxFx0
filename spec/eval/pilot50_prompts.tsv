@@ -1,0 +1,51 @@
+id	split	topic	prompt	expected_family
+anchor-001	anchor	свобода	что такое свобода?	CMDefine
+anchor-002	anchor	произвол	что такое произвол?	CMDefine
+anchor-003	anchor	ответственность	что такое ответственность?	CMDefine
+anchor-004	anchor	истина	что такое истина?	CMDefine
+anchor-005	anchor	мнение	что такое мнение?	CMDefine
+anchor-006	anchor	память	что такое память?	CMDefine
+anchor-007	anchor	воспоминание	что такое воспоминание?	CMDefine
+anchor-008	anchor	сознание	что такое сознание?	CMDefine
+anchor-009	anchor	самосознание	что такое самосознание?	CMDefine
+anchor-010	anchor	вера	что такое вера?	CMDefine
+anchor-011	anchor	красота	что такое красота?	CMDefine
+anchor-012	anchor	долг	что такое долг?	CMDefine
+anchor-013	anchor	доверие	что такое доверие?	CMDefine
+anchor-014	anchor	страх	что такое страх?	CMDefine
+anchor-015	anchor	надежда	что такое надежда?	CMDefine
+anchor-016	anchor	справедливость	что такое справедливость?	CMDefine
+anchor-017	anchor	время	что такое время?	CMDefine
+anchor-018	anchor	разум	что такое разум?	CMDefine
+anchor-019	anchor	бытие	что такое бытие?	CMDefine
+anchor-020	anchor	история	что такое история?	CMDefine
+anchor-021	anchor	язык	что такое язык?	CMDefine
+anchor-022	anchor	воля	что такое воля?	CMDefine
+anchor-023	anchor	смерть	что такое смерть?	CMDefine
+anchor-024	anchor	одиночество	что такое одиночество?	CMDefine
+anchor-025	anchor	любовь	что такое любовь?	CMDefine
+anchor-026	anchor	труд	что такое труд?	CMDefine
+anchor-027	anchor	покой	что такое покой?	CMDefine
+anchor-028	anchor	власть	что такое власть?	CMDefine
+anchor-029	anchor	правда	что такое правда?	CMDefine
+anchor-030	anchor	молчание	что такое молчание?	CMDefine
+held-001	held	смысл	что такое смысл?	CMDefine
+held-002	held	идентичность	что такое идентичность?	CMDefine
+held-003	held	граница	что такое граница?	CMDefine
+held-004	held	доказательство	что такое доказательство?	CMDefine
+held-005	held	сущность	что такое сущность?	CMDefine
+held-006	held	верность	что такое верность?	CMDefine
+held-007	held	будущее	что такое будущее?	CMDefine
+held-008	held	восприятие	что такое восприятие?	CMDefine
+held-009	held	воображение	что такое воображение?	CMDefine
+held-010	held	удивление	что такое удивление?	CMDefine
+held-011	held	привычка	что такое привычка?	CMDefine
+held-012	held	стыд	что такое стыд?	CMDefine
+held-013	held	зависть	что такое зависть?	CMDefine
+held-014	held	внимание	что такое внимание?	CMDefine
+held-015	held	мудрость	что такое мудрость?	CMDefine
+oov-001	oov	квантовая пена	что такое квантовая пена?	Unknown
+oov-002	oov	нейропластичность	что такое нейропластичность?	Unknown
+oov-003	oov	светодиод	что такое светодиод?	Unknown
+oov-004	oov	гравитационная волна	что такое гравитационная волна?	Unknown
+oov-005	oov	термоядерный синтез	что такое термоядерный синтез?	Unknown

@@ -892,6 +892,12 @@ re-observe before treating as real).
   Core Contract `40672419906` ещё шёл на момент последней проверки. Full
   single-process main по-прежнему не поддерживается на 15 GB
   с substrate.
+  **Matrix 2026-11-01/02 (verification, tree `c2383d9` / code
+  `bcceee6`)**: unit 1821, fast 1918, property 244, integration 47,
+  main runtime 106 + http 23, slow 190 (runtime 106 / state 50 /
+  http 23 / lifecycle 11) — все **exit 0**, 4 349 кейсов, 0 падений;
+  core-slice (1254) не перезапускался (тот же OOM-контур). Отчёт:
+  `docs/closure/TEST_MATRIX_2026-11-01.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
