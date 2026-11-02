@@ -44,10 +44,13 @@ bootstrap dominates (see §3.3).
    `spec/eval/pilot50_prompts_harness.tsv`, a three-column rendering verified
    byte-identical on ids, prompts and expected families. This is a file-format
    derivation, not a packet change.
-2. **No prompt sanity guard.** The harness has no check that a prompt looks like
-   a prompt: the invalid run passed 50 one-word "prompts" through without an
-   error. A guard (minimum length / split-label rejection) plus a test is worth
-   adding; it is a code change and was not made before this run.
+2. **No prompt sanity guard at run time.** The harness had no check that a
+   prompt looks like a prompt: the invalid run passed 50 one-word "prompts"
+   through without an error. *Fixed 2026-11-02, after this run*:
+   `scripts/eval/check_prompt_file.py` enforces the three-column contract
+   (plus non-empty fields, no split label in the prompt column, unique ids) and
+   `run_dialogue_eval_200.sh` refuses a non-conforming file **before** creating
+   the run directory. This run was not protected by it.
 3. **Measurement wording.** The protocol's earlier "12 000 predicate rows" is
    the merged corpus after per-topic dedup (12 000 rows, 11 997 distinct
    surfaces); raw JSONL rows are 12 474. No rule changed — only the stated
@@ -261,9 +264,14 @@ a separate pre-registration (it changes surfaces for 99.3% of the corpus).
    Neither surfaces in this pilot (both topics are anchors and the mapped
    fallback wins), but both are data defects and both would surface on the text
    path.
-6. **Tooling** — the pilot scripts live in `reports/eval_runs/_tooling/`, which
-   is gitignored. Should they move to `scripts/` (with tests), or stay as local
-   evidence? Same question for a harness prompt-sanity guard.
+6. **Tooling** — *resolved 2026-11-02, same day*: the four pilot tools moved
+   to `scripts/eval/` (the eval-only quarantine from
+   `PYTHON_SUPPLIER_ALLOWLIST.md` §3 item 3, marked by
+   `scripts/eval/NON_AUTHORITY.txt`) and now carry `--self-test`; the harness
+   also gained a prompt-file contract guard. One item stays open for the owner:
+   `PYTHON_SUPPLIER_ALLOWLIST.md` §1 is still empty, so these eval-only files
+   are quarantined but not registered — amending that governance list was not
+   done unilaterally.
 7. **GF checker** — scope `scripts/check_gf_concrete_consistency.py` to the
    compiled Rus concrete (or teach it to skip the legacy Eng/Colloquial stubs)
    and add a test that a missing Rus function still fails. This is a two-line
@@ -335,10 +343,16 @@ Local, gitignored (`reports/eval_runs/`):
   keep as evidence, never score.
 - `pilot50-export/` — `blind.tsv` (rater view), `mapping.tsv` (operator only),
   `labels_r1.tsv` (rater-1 scores), `refs.tsv` (R2 corpus lookup).
-- `_tooling/` — `pilot50_export_blind.py`, `pilot50_score.py`,
-  `pilot50_label_aid.py`, `pilot50_result_tables.py`.
 
-Durable:
+Durable tooling (`scripts/eval/`, eval-only quarantine, each with `--self-test`):
+
+- `check_prompt_file.py` — pre-flight three-column contract for the harness.
+- `pilot50_export_blind.py` — blind sheet + mapping (`--self-test`: 11 cases).
+- `pilot50_score.py` — P1 gates and κ (`--self-test`: 14 cases).
+- `pilot50_label_aid.py` — R2 corpus lookup aid (read-only).
+- `pilot50_result_tables.py` — descriptive tables (read-only).
+
+Durable artifacts:
 
 - `spec/eval/pilot50_prompts.tsv` — frozen packet.
 - `spec/eval/pilot50_prompts_harness.tsv` — derived three-column rendering.

@@ -228,12 +228,13 @@ and requires a new packet.
 
 3. Export surfaces to a blind sheet (prompt id + answer only, split hidden
    from raters; `oov` rows will be obvious from the prompt, which is
-   unavoidable — note it in the report). Tooling: `pilot50_export_blind.py`.
+   unavoidable — note it in the report). Tooling:
+   `scripts/eval/pilot50_export_blind.py`.
 4. Two raters score independently in `pilot50_labels_TEMPLATE.tsv`. Until a
    second rater is named (P2), only rater 1 scores and the κ gate is **not
    evaluated**.
-5. Compute pass rates and κ mechanically (`pilot50_score.py`); do not adjust
-   the rubric afterwards.
+5. Compute pass rates and κ mechanically (`scripts/eval/pilot50_score.py`); do
+   not adjust the rubric afterwards.
 6. Report the result **including failures**, and state explicitly that the
    500-prompt gate remains BLOCKED unless a 500-prompt labeled set exists.
 
