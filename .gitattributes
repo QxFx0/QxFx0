@@ -9,3 +9,7 @@ resources/morphology/forms_by_surface.json text eol=lf
 # M7 pre-registration: byte-stable frozen artifacts (sha256-pinned).
 spec/gf/m7_admissible_predicates.tsv text eol=lf
 scripts/m7_gate_check.py text eol=lf
+# Eval packets are read positionally; CRLF would leak a \r into the last
+# column and break expected-family matching.
+spec/eval/pilot50_prompts.tsv text eol=lf
+spec/eval/pilot50_prompts_harness.tsv text eol=lf

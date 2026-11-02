@@ -39,6 +39,23 @@ if [[ ! -f "$PROMPTS_FILE" ]]; then
   exit 1
 fi
 
+# Pre-flight column contract. The loop below reads exactly three columns, so a
+# wider packet (e.g. the five-column pilot packet
+# `id/split/topic/prompt/expected_family`) would use the split label as the
+# prompt and still "succeed": on 2026-11-02 that produced 50 one-word prompts
+# and 50 English template answers with zero reported errors. Refuse before any
+# run artifact is created. See
+# docs/closure/DIALOGUE_PILOT50_RESULT_2026-11-02.md (Deviations 1-2).
+PROMPT_CHECK="$ROOT/scripts/eval/check_prompt_file.py"
+if [[ ! -f "$PROMPT_CHECK" ]]; then
+  echo "prompt-file contract checker missing: $PROMPT_CHECK" >&2
+  exit 1
+fi
+if ! python3 "$PROMPT_CHECK" "$PROMPTS_FILE"; then
+  echo "refusing to run: $PROMPTS_FILE does not satisfy the three-column contract" >&2
+  exit 1
+fi
+
 mkdir -p "$OUT_DIR" "$RAW_DIR"
 rm -f "$RESULTS_JSONL" "$SUMMARY_JSON" "$SUMMARY_MD"
 

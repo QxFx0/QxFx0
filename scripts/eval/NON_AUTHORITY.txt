@@ -1,0 +1,12 @@
+NON-AUTHORITY (eval-only)
+=========================
+
+Everything in this directory is eval/report tooling. It is not on the runtime
+authority path and must never be invoked by the runtime to produce or validate
+a user-visible surface.
+
+Classification and retention rule:
+docs/closure/PYTHON_SUPPLIER_ALLOWLIST.md, section 3 item 3
+(eval-only Python lives in scripts/eval/ with a NON_AUTHORITY marker).
+
+The frozen runtime authority remains the Haskell library and `qxfx0-main`.
