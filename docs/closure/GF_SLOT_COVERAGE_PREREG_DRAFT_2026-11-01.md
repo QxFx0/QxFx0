@@ -26,7 +26,7 @@ decision with the highest-ranked *mapped* predicate for the same topic —
 
 Measured shape of the gap (against the *merged* runtime corpus: 172 seed topics
 from `Content.hs` + 4 036 distinct curated topics = 4 070 topics, 12 000
-predicate rows):
+predicate rows / 11 997 distinct surfaces):
 
 | scope | predicate rows | with slots | coverage |
 |---|---:|---:|---:|
@@ -75,11 +75,26 @@ Therefore every candidate row must satisfy, mechanically:
    `spec/gf/QxFx0Lexicon*.gf` (checked by `rg` in a script, not by eye);
 2. the generated `SemanticSlots.hs` compiles and the row's constructor appears
    in it;
-3. a GF round-trip on the assembled sentence succeeds
-   (`scripts/check_gf_concrete_consistency.py` plus one explicit linearization
-   per row);
+3. a GF round-trip on the assembled sentence succeeds. Note the measured state
+   of the checker first: `scripts/check_gf_concrete_consistency.py` is **red at
+   HEAD**, but not on the grammar the runtime uses. `QxFx0SyntaxRus.gf` is
+   aligned with the abstract (290/290 functions). `QxFx0SyntaxEng.gf` (52 lines)
+   and `QxFx0SyntaxRusColloquial.gf` (57 lines) are legacy stubs that never
+   received the semantic layer (40/290 functions each, no `SemanticSubject`
+   lincat) and are not compiled: `scripts/compile_gf_grammar.sh` builds only
+   `QxFx0SyntaxRus.gf`. The checker still compares all three, so it reports
+   250 "missing" functions per stub, and `Gate 9` in `scripts/ci_gate_contract.sh`
+   is **advisory**, so CI never saw it either.
+   Consequence for this batch: use the **Rus concrete only** plus one explicit
+   linearization per row, and do not widen the stub drift. The real risk is the
+   converse: because the checker is permanently red for known reasons, it cannot
+   flag a *new* Rus drift. Scoping it to the compiled concrete (or teaching it
+   to skip stubs) is a two-line change and should land before the batch, with a
+   test that a missing Rus function still fails;
 4. the emitted `source_ru` is byte-identical to the corpus predicate (this is
-   what makes the lookup fire).
+   what makes the lookup fire), and `subject_ru + " " + relation_ru + " " +
+   object_ru` concatenates back to it exactly — measured to hold for 84/84
+   existing rows (see the S3 cost model below).
 
 If a row cannot pass 1–4 within the authoring budget, it is **dropped, not
 approximated**. Dropping a row is not a failure of the batch; inventing a
@@ -106,6 +121,62 @@ because "emitted the system's own choice" is not automatically better — the
 14-row review found 5 harmless, 7 acceptable, 1 drift, 1 weak, and that
 judgement has to be redone on the *new* emitted set, not assumed.
 
+## S3 cost model, measured (2026-11-02, evidence only — no decision)
+
+The open question is "authoring GF lexemes for the new objects: in scope or
+not". Measured against the GF sources, the term "lexeme" is misleading: every
+semantic slot is a literal string, and the proposition is plain concatenation.
+
+```
+lincat  SemanticSubject / SemanticRelation / SemanticObject = { s : Str }
+lin     MkSemanticPredicate subject relation object =
+          { s = subject.s ++ " " ++ relation.s ++ " " ++ object.s }
+```
+
+So a row needs three strings, not a morphology entry. Current inventory:
+
+| item | count | note |
+|---|---:|---|
+| `Subject*` constructors | 30 | exactly the 30 anchor topics — no new subject needed |
+| `Relation*` constructors | 48 | 48 distinct relation strings used by the 84 rows |
+| `Object*` constructors | 83 | 83 distinct object strings for the 84 rows |
+
+All 84 existing rows satisfy `subject_ru + " " + relation_ru + " " + object_ru
+== source_ru` **exactly** (84/84). Exact reconstruction is the convention, not
+an accident, so a new row's three strings must concatenate to the corpus
+surface byte for byte.
+
+Breakdown of the signed 207-row set:
+
+| bucket | rows | what it needs |
+|---|---:|---|
+| relation string already exists (17 distinct relations used) | 116 | 114 new object strings (115 distinct; 1 already exists) |
+| relation string does **not** exist (57 distinct verb forms) | 91 | 57 new relation strings + 86 new object strings |
+| **total** | **207** | **200 new object lines, 57 relation lines, 207 TSV rows** |
+
+Two measured risks for S3:
+
+1. **Agreement.** 23 of the 91 new-relation rows use a relation head ending in
+   -а/-я (`основана`, `направлена`, `формируется`, `измеряется`, …). Those
+   encode gender or number and cannot be reused across subjects mechanically —
+   the same relation string under a different subject can become ungrammatical.
+   The other 68 use present-tense 3rd-person forms that are subject-invariant
+   for singular subjects.
+2. **Corpus typos leak into the strings.** While measuring this, two more
+   misspellings surfaced in the same corpus: `воспоминание преобразкет` (line
+   147, should be «преобразует») and `доверие стройтся` (should be «строится»).
+   A row whose `source_ru` contains a typo would put that typo into the emitted
+   surface. They must be fixed (or the rows excluded) before authoring, which is
+   a data decision like `bec1d19` was.
+
+What this changes about S3: the question is **not** "can we author ~45 new
+lexemes" (there is no lexeme inventory to extend) but "do we accept 257 new
+GF string lines (200 objects + 57 relations) plus 207 table rows, with the
+agreement and typo risks above, in one batch or in topic groups". The 4-point
+realizability check in the previous section still applies, and point 3 (GF
+round-trip per row) is what catches both risks.
+
+
 ## What this does not do
 
 - Does not make new topics answerable with GF. Outside the 30 anchors the
@@ -124,10 +195,10 @@ batch:
 1. **S2** — bars 1–7 above: accept, or set different values before
    implementation? Bar 3 (emitted predicate = the system's own choice, ≥ 28/30)
    is the point of the exercise; bar 2 is only its mechanism.
-2. **S3** — is authoring GF lexemes for the new `object_id`s in scope, or is the
-   batch restricted to predicates whose triple is realizable with existing
-   lexemes only? The latter is smaller and safer (estimated 20–30 rows) but
-   leaves most of the 207 unlanded, which contradicts the signed scope unless a
-   follow-up is scheduled. This must be answered before any row is authored,
-   because it decides whether the 4-point realizability check can *fail* a row
-   or merely *defer* it.
+2. **S3** — the batch needs 200 new `Object*` strings, 57 new `Relation*`
+   strings and 207 TSV rows (measured above; all slots are literal strings, and
+   the 30 subjects already exist). Is that in scope as one batch, or should it
+   land in topic groups? The choice decides whether the 4-point realizability
+   check can *fail* a row (single batch) or merely *defer* it to the next group.
+   Two data fixes must precede authoring: `воспоминание преобразкет` and
+   `доверие стройтся`.

@@ -5,6 +5,10 @@
   exception is recorded under P2: no second rater is named yet, so the packet
   can be run and scored by one rater, but the κ gate and therefore any gate
   claim stay withheld until an independent rater exists.
+- **Result (2026-11-02)**: `docs/closure/DIALOGUE_PILOT50_RESULT_2026-11-02.md`
+  — run `pilot50-20261102b`, rater 1 only: 49/50 overall, 30/30 anchor, 15/15
+  held, **4/5 OOV honesty (FAIL)**, R4=0 count 0, κ withheld. The pilot is
+  **not passed**; the 500-prompt gate remains BLOCKED.
 - **Purpose**: build the first *labeled* dialogue-quality packet so that the
   500-prompt gate has a real precedent instead of a bigger descriptive run.
   This pilot does **not** satisfy the 500-prompt gate and does not replace it.
@@ -20,7 +24,12 @@
   the fallback-approved surface for `время` in
   `spec/gf/m7_admissible_predicates.tsv` (rows `gf-rel-017`), so it cannot move
   the gate. Nothing else may change between this sign-off and the run; if it
-  does, record the new tree here before running.
+  does, record the new tree here before running. One derived file was added
+  after sign-off: `spec/eval/pilot50_prompts_harness.tsv`, a three-column
+  rendering of the same packet required by the harness (see the harness-column
+  section); its ids, prompts and expected families were verified byte-identical
+  to the frozen five-column packet, so this is a format derivation, not a
+  packet change.
 
 ## Signed decisions (2026-11-02)
 
@@ -42,9 +51,10 @@ pilot fails those, the 500 set would only produce 500 unlabeled transcripts.
 
 ### What a 500-prompt gate would actually sample (measured 2026-11-01)
 
-The merged runtime corpus holds 4 070 topics and 12 000 predicate rows. Only 30
-topics (0.7%) have any GF slot, and only 79 rows (0.66%) are mapped. So a
-uniform 500-prompt draw would put **~497 prompts on the unmapped text path**
+The merged runtime corpus holds 4 070 topics and 12 000 predicate rows
+(11 997 distinct surfaces). Only 30 topics (0.7%) have any GF slot, and only
+79 rows (0.66% of the distinct surfaces) are mapped. So a uniform 500-prompt
+draw would put **~497 prompts on the unmapped text path**
 and ~3 on the GF path. A 500-prompt gate drawn today is therefore a gate on the
 text path, not on the GF pipeline that M7 measured.
 
@@ -105,6 +115,34 @@ That makes the three splits three different code paths, not three samples of
 one distribution. The pilot is still useful — it measures all three — but it is
 not a scale-up of the anchor result.
 
+### Harness column contract (found 2026-11-02, first run attempt)
+
+`scripts/run_dialogue_eval_200.sh` reads the prompt file positionally:
+
+```
+while IFS=$'\t' read -r id prompt expected_family; do
+```
+
+so it requires exactly three columns (`id`, `prompt`, `expected_family`). The
+frozen packet is five columns (`id`, `split`, `topic`, `prompt`,
+`expected_family`) because the split and topic are needed by the blind export
+and the split-level scoring. The first run attempt therefore sent the literal
+words «anchor», «held», «oov» as prompts (CSV overflow into the last field) and
+produced 50 `CMReflect` answers in 24 minutes. That run is kept under
+`reports/eval_runs/pilot50-20261102-INVALID-harness-columns` as evidence and
+must not be scored.
+
+Fix used: `spec/eval/pilot50_prompts_harness.tsv`, a three-column rendering of
+the same frozen packet (same ids, byte-identical prompts, same expected
+families; equality verified mechanically). This is a file-format derivation, not
+a packet change.
+
+The harness has no sanity check that a prompt looks like a prompt — a
+three-word vocabulary passed through 50 turns without an error. A guard
+(reject prompts shorter than N characters or equal to a split label) is worth
+adding with a test, but it is a code change and was not made before this run.
+
+
 ### Observed surface on the unmapped path (spot-checked 2026-11-01)
 
 Three held-out prompts were run end-to-end before the packet (strict mode,
@@ -115,13 +153,17 @@ rubric must not mistake for content quality:
    «Определение: смысл ищется в условиях абсурда (основание: смысл ищется в
    условиях абсурда). Следующий ход: вернуться к открытому вопросу: «что такое
    смысл?».» This is a template duplication, not a second argument.
-2. **Framing flips between `Определение:` and `Гипотеза:`** depending on which
-   predicate wins selection, not on the topic. `isCorpusPredicate` checks the
-   *seed* 172-topic corpus only, so a curated predicate under a seed topic is
-   framed as a hypothesis. «граница» (a seed topic) rendered as «Гипотеза:», while
-   «страх» rendered as «Тезис:». Ten of the 15 held-out topics are in the seed
-   corpus and five are curated-only, but the framing of any given row depends on
-   the selected predicate.
+2. **The framing label is not stable.** `claimLabel` (`Semantic/ResponsePlan.hs`)
+   prints «Определение» for `GoalDefine`, «Тезис» for `GoalGenerateThesis`,
+   «Гипотеза» for `GoalHypothesize`. The goal is downgraded from `GoalDefine`
+   to `GoalHypothesize` whenever `isCorpusPredicate` is false, and that
+   predicate is defined against the *seed* `definitionCorpus` (172 topics) —
+   `isCoveredTopic` and `lookupDefinitionContent` both use `definitionCorpus`,
+   never the merged curated corpus. So a curated predicate under a curated topic
+   is always framed as a hypothesis, and a generative goal is framed as a thesis.
+   Observed: «граница» (a seed topic) rendered «Гипотеза:», «страх» rendered
+   «Тезис:», «смысл» rendered «Определение:». The label therefore depends on
+   goal classification and predicate provenance, not on the topic alone.
 
 Both artifacts sit on the path that serves 99.3% of the corpus, so fixing them
 matters more than the 30-anchor packet does — but they are behaviour changes and
@@ -174,12 +216,14 @@ and requires a new packet.
 
 1. ~~Owner signs the rubric and thresholds~~ — done 2026-11-02 (this document is
    PRE-REGISTERED).
-2. Run the packet on the frozen tree (`c2383d9`, code `bcceee6`):
+2. Run the packet on the frozen tree (`c2383d9`, code `bcceee6`). The harness
+   needs the three-column rendering, not the five-column packet (see the
+   harness-column section above):
 
    ```
    QXFX0_RUNTIME_MODE=strict QXFX0_EVAL_SESSION_MODE=isolated \
      bash scripts/run_dialogue_eval_200.sh pilot50-<date> \
-     spec/eval/pilot50_prompts.tsv
+     spec/eval/pilot50_prompts_harness.tsv
    ```
 
 3. Export surfaces to a blind sheet (prompt id + answer only, split hidden

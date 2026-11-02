@@ -1,0 +1,51 @@
+id	prompt	expected_family
+anchor-001	что такое свобода?	CMDefine
+anchor-002	что такое произвол?	CMDefine
+anchor-003	что такое ответственность?	CMDefine
+anchor-004	что такое истина?	CMDefine
+anchor-005	что такое мнение?	CMDefine
+anchor-006	что такое память?	CMDefine
+anchor-007	что такое воспоминание?	CMDefine
+anchor-008	что такое сознание?	CMDefine
+anchor-009	что такое самосознание?	CMDefine
+anchor-010	что такое вера?	CMDefine
+anchor-011	что такое красота?	CMDefine
+anchor-012	что такое долг?	CMDefine
+anchor-013	что такое доверие?	CMDefine
+anchor-014	что такое страх?	CMDefine
+anchor-015	что такое надежда?	CMDefine
+anchor-016	что такое справедливость?	CMDefine
+anchor-017	что такое время?	CMDefine
+anchor-018	что такое разум?	CMDefine
+anchor-019	что такое бытие?	CMDefine
+anchor-020	что такое история?	CMDefine
+anchor-021	что такое язык?	CMDefine
+anchor-022	что такое воля?	CMDefine
+anchor-023	что такое смерть?	CMDefine
+anchor-024	что такое одиночество?	CMDefine
+anchor-025	что такое любовь?	CMDefine
+anchor-026	что такое труд?	CMDefine
+anchor-027	что такое покой?	CMDefine
+anchor-028	что такое власть?	CMDefine
+anchor-029	что такое правда?	CMDefine
+anchor-030	что такое молчание?	CMDefine
+held-001	что такое смысл?	CMDefine
+held-002	что такое идентичность?	CMDefine
+held-003	что такое граница?	CMDefine
+held-004	что такое доказательство?	CMDefine
+held-005	что такое сущность?	CMDefine
+held-006	что такое верность?	CMDefine
+held-007	что такое будущее?	CMDefine
+held-008	что такое восприятие?	CMDefine
+held-009	что такое воображение?	CMDefine
+held-010	что такое удивление?	CMDefine
+held-011	что такое привычка?	CMDefine
+held-012	что такое стыд?	CMDefine
+held-013	что такое зависть?	CMDefine
+held-014	что такое внимание?	CMDefine
+held-015	что такое мудрость?	CMDefine
+oov-001	что такое квантовая пена?	Unknown
+oov-002	что такое нейропластичность?	Unknown
+oov-003	что такое светодиод?	Unknown
+oov-004	что такое гравитационная волна?	Unknown
+oov-005	что такое термоядерный синтез?	Unknown
