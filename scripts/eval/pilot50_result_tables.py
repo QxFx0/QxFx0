@@ -16,6 +16,7 @@ import csv
 import json
 import re
 import statistics
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 
@@ -24,15 +25,72 @@ GROUND_RE = re.compile(r"\(основание:\s*(.*?)\)", re.I | re.S)
 EN_TEMPLATE = "continue the dialogue in english"
 
 
+def detect_artifacts(answer):
+    """Mechanical surface artifacts the pilot rubric prices (R4 / P5)."""
+    low = answer.lower()
+    grounds = GROUND_RE.findall(answer)
+    return {
+        "label": (LABEL_RE.match(answer).group(1) if LABEL_RE.match(answer) else "—"),
+        "dup": any(low.count(g.strip().lower()) >= 2 for g in grounds if g.strip()),
+        "en": EN_TEMPLATE in low,
+        "chars": len(answer),
+    }
+
+
 def load_jsonl(path):
     return [json.loads(l) for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
 
 
-def main():
+def self_test():
+    cases = []
+
+    def case(name, ok, detail=""):
+        cases.append((name, ok, detail))
+
+    anchor = "Тезис: свобода предполагает возможность выбора. Проверка: верно ли это?"
+    a = detect_artifacts(anchor)
+    case("anchor label", a["label"] == "Тезис", a["label"])
+    case("anchor has no duplicate ground", not a["dup"])
+    case("anchor is not English", not a["en"])
+
+    held = ("Гипотеза: граница устанавливает условие формы (основание: граница "
+            "устанавливает условие формы). Следующий ход: вернуться к открытому "
+            "вопросу: «что такое граница?».")
+    h = detect_artifacts(held)
+    case("held label", h["label"] == "Гипотеза", h["label"])
+    case("duplicate ground detected", h["dup"])
+
+    distinct = "Тезис: X. (основание: Y)"
+    case("distinct ground is not a duplicate", not detect_artifacts(distinct)["dup"])
+
+    plain = "Я вижу тему, но в локальной модели нет достаточного основания."
+    case("no label is reported as a dash", detect_artifacts(plain)["label"] == "—")
+
+    english = "I am here to continue the dialogue in English."
+    case("English template detected", detect_artifacts(english)["en"])
+
+    case("length is the raw character count",
+         detect_artifacts(anchor)["chars"] == len(anchor))
+
+    failures = [name for name, ok, _ in cases if not ok]
+    for name, ok, detail in cases:
+        print(f"{'ok  ' if ok else 'FAIL'} {name}"
+              + (f"  ({detail})" if not ok and detail else ""))
+    print(f"\nself-test: {len(cases) - len(failures)}/{len(cases)} passed")
+    return 0 if not failures else 1
+
+
+def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("run_dir")
-    ap.add_argument("export_dir")
-    args = ap.parse_args()
+    ap.add_argument("run_dir", nargs="?")
+    ap.add_argument("export_dir", nargs="?")
+    ap.add_argument("--self-test", action="store_true", help="run embedded cases")
+    args = ap.parse_args(argv)
+
+    if args.self_test:
+        return self_test()
+    if not args.run_dir or not args.export_dir:
+        ap.error("run_dir and export_dir are required (or --self-test)")
 
     run = Path(args.run_dir)
     exp = Path(args.export_dir)
@@ -53,18 +111,15 @@ def main():
         if not r:
             continue
         answer = answers.get(bid, "")
-        label = (LABEL_RE.match(answer).group(1) if LABEL_RE.match(answer) else "—")
-        grounds = GROUND_RE.findall(answer)
-        low = answer.lower()
-        dup = any(low.count(g.strip().lower()) >= 2 for g in grounds if g.strip())
+        art = detect_artifacts(answer)
         rows.append({
             "blind_id": bid, "real_id": m["real_id"], "split": m["split"],
             "topic": m["topic"], "family": r["actual_family"], "expected": r["expected_family"],
             "fit": bool(r.get("intent_fit")), "authority": r.get("authority_class"),
             "lin": r.get("linearization_ok"), "fallback": r.get("trace_fallback_reason"),
             "gfmap": r.get("gf_mapped_fallback"), "latency": r.get("latency_ms"),
-            "label": label, "dup": dup, "en": EN_TEMPLATE in answer.lower(),
-            "chars": len(answer),
+            "label": art["label"], "dup": art["dup"], "en": art["en"],
+            "chars": art["chars"],
         })
 
     print("## Per-split aggregates\n")
@@ -106,4 +161,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

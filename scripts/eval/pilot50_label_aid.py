@@ -23,6 +23,7 @@ import argparse
 import csv
 import json
 import re
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,12 +63,54 @@ def load_corpus():
     return merged
 
 
-def main():
+def self_test():
+    """Guard the silent-failure mode: if the corpus loader stops matching the
+    real files, every R2 lookup returns "—" and the score looks clean."""
+    cases = []
+
+    def case(name, ok, detail=""):
+        cases.append((name, ok, detail))
+
+    corpus = load_corpus()
+    case("merged corpus is non-trivial", len(corpus) > 1000, f"{len(corpus)} topics")
+    freedom = corpus.get("свобода", [])
+    case("known seed topic resolves", bool(freedom), f"{len(freedom)} predicates")
+    case("known seed predicate resolves",
+         any(p.startswith("свобода") for p in freedom), str(freedom[:2]))
+    case("unknown term has no topic entry",
+         "термоядерный синтез" not in corpus)
+    case("curated-only topic is merged in",
+         bool(corpus.get("идентичность")), f"{len(corpus.get('идентичность', []))}")
+
+    answer = "Тезис: свобода предполагает возможность выбора."
+    case("traceable predicate is found",
+         any(p in answer.lower() for p in freedom), "lookup failed")
+
+    case("framing label extracted",
+         (LABEL_RE.match(answer).group(1) if LABEL_RE.match(answer) else None) == "Тезис")
+    case("grounding clause counted, not deduplicated",
+         len(GROUND_RE.findall("A (основание: X) B (основание: Y)")) == 2)
+
+    failures = [name for name, ok, _ in cases if not ok]
+    for name, ok, detail in cases:
+        print(f"{'ok  ' if ok else 'FAIL'} {name}"
+              + (f"  ({detail})" if not ok and detail else ""))
+    print(f"\nself-test: {len(cases) - len(failures)}/{len(cases)} passed")
+    return 0 if not failures else 1
+
+
+def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("blind")
-    ap.add_argument("mapping")
+    ap.add_argument("blind", nargs="?")
+    ap.add_argument("mapping", nargs="?")
     ap.add_argument("--mode", choices=("artifacts", "refs"), default="artifacts")
-    args = ap.parse_args()
+    ap.add_argument("--self-test", action="store_true", help="run embedded cases")
+    args = ap.parse_args(argv)
+
+    if args.self_test:
+        return self_test()
+    if not args.blind or not args.mapping:
+        ap.error("blind and mapping paths are required (or --self-test)")
 
     topics = {}
     with open(args.mapping, encoding="utf-8") as fh:
@@ -97,4 +140,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -741,6 +741,23 @@ for file in "$SRC/QxFx0/Bridge/Datalog/"*.hs; do
   fi
 done
 
+echo "  [24] Eval tooling must ship and pass --self-test (scripts/eval, eval-only)..."
+# PYTHON_SUPPLIER_ALLOWLIST.md section 5 forbids test-only Python files, so an
+# eval tool's cases live in the tool itself. A new tool without --self-test, or
+# one whose cases fail, is a violation: the quarantine is only safe while the
+# scripts that can silently corrupt a scored record are checked.
+for tool in "$ROOT"/scripts/eval/*.py; do
+  [ -e "$tool" ] || continue
+  tool_name="${tool#"$ROOT"/}"
+  if ! grep -q -- "--self-test" "$tool" 2>/dev/null; then
+    fail_violation "eval tool without --self-test: $tool_name"
+    continue
+  fi
+  if ! python3 "$tool" --self-test >/dev/null 2>&1; then
+    fail_violation "eval tool self-test failed: $tool_name --self-test"
+  fi
+done
+
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"
   exit 1

@@ -349,8 +349,12 @@ Durable tooling (`scripts/eval/`, eval-only quarantine, each with `--self-test`)
 - `check_prompt_file.py` — pre-flight three-column contract for the harness.
 - `pilot50_export_blind.py` — blind sheet + mapping (`--self-test`: 11 cases).
 - `pilot50_score.py` — P1 gates and κ (`--self-test`: 14 cases).
-- `pilot50_label_aid.py` — R2 corpus lookup aid (read-only).
-- `pilot50_result_tables.py` — descriptive tables (read-only).
+- `pilot50_label_aid.py` — R2 corpus lookup aid (`--self-test`: 8 cases).
+- `pilot50_result_tables.py` — descriptive tables (`--self-test`: 9 cases).
+
+`scripts/check_architecture.sh` rule [24] fails the build if any tool in
+`scripts/eval/` lacks `--self-test` or if its cases fail, so the quarantine
+cannot drift into untested scoring code.
 
 Durable artifacts:
 
