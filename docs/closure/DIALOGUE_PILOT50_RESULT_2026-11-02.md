@@ -248,10 +248,13 @@ a separate pre-registration (it changes surfaces for 99.3% of the corpus).
 1. **P2** — name the second rater (independent of the author) and score the
    same blind sheet. Until then this document is a one-rater record; do not
    promote it to "pilot passed".
-2. **OOV substitution** — is the `oov-005` behaviour (answer the known head noun
-   of an unknown compound) a defect to fix before the 500-prompt gate, or an
-   accepted limitation to document in the packet? This is a behaviour change and
-   needs its own pre-registration either way.
+2. **OOV substitution** — **direction chosen 2026-11-03: fix, not document.**
+   The mechanism was measured
+   (`docs/closure/OOV_SUBSTITUTION_BLAST_RADIUS_2026-11-03.md`) and the fix was
+   pre-registered (`docs/closure/OOV_TOPIC_SPAN_PREREG_2026-11-03.md`) and
+   **signed 2026-11-04** (D-1…D-5 as written); nothing is implemented yet. The
+   500-prompt gate stays blocked until the labeled corpus exists and the fix
+   lands.
 3. **S2** — accept the seven bars in
    `GF_SLOT_COVERAGE_PREREG_DRAFT_2026-11-01.md` as written, or set different
    values before any slot authoring?
