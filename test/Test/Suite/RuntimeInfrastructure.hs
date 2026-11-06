@@ -2009,6 +2009,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
           , trcOwnershipCompare = Nothing
+          , trcTopicResolution = Nothing
                   }
            , tqpDivergence = True
            }
@@ -2622,6 +2623,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
           , trcOwnershipCompare = Nothing
+          , trcTopicResolution = Nothing
                   }
            , tqpDivergence = True
            }

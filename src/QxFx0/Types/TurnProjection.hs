@@ -8,6 +8,7 @@ module QxFx0.Types.TurnProjection
   , TurnReplayTrace(..)
   , UserRegimeTrace(..)
   , OwnershipCompareTrace(..)
+  , TopicResolutionTrace(..)
   , ReplayTraceEnvelope(..)
   , currentReplayTraceEnvelopeVersion
   , encodePersistedReplayTrace
@@ -537,6 +538,14 @@ data TurnReplayTrace = TurnReplayTrace
     --   'Nothing' when the gate did not fire or on traces
     --   recorded before Stage 1a. Sub-record discipline:
     --   future cutover fields grow this record, not the top level.
+  , trcTopicResolution :: !(Maybe TopicResolutionTrace)
+    -- ^ OOV topic-span disclosure (pre-registered 2026-11-03, signed
+    --   2026-11-04, D-4): the topic span the intent carried at render
+    --   time, the topic the response plan actually answered, and the
+    --   resolution class.  Populated on the semantic-first path;
+    --   'Nothing' on legacy renders and on traces recorded before
+    --   this field landed.  Sub-record discipline: future
+    --   topic-resolution fields grow this record, not the top level.
    } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON)
 
@@ -588,6 +597,27 @@ data OwnershipCompareTrace = OwnershipCompareTrace
     --   whether a correction rewrote the last entry. Sub-record
     --   discipline: old readers ignore them.
   , octLineage :: ![Text]
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON, FromJSON)
+
+-- | OOV topic-span disclosure for one turn (see 'trcTopicResolution').
+-- Sub-record discipline per the 'trcUserRegime' precedent: a cluster of
+-- related fields, not another row on the god-record.
+data TopicResolutionTrace = TopicResolutionTrace
+  { trtIntentTopic :: !Text
+    -- ^ Topic span carried by the intent at render time, after
+    --   'QxFx0.Semantic.Intent.Classifier.canonicalTopic'.  Since
+    --   2026-11-04 a multiword span is preserved verbatim, so this is
+    --   the topic the user actually asked about (not its head noun).
+  , trtPlanTopic :: !(Maybe Text)
+    -- ^ Topic the response plan actually answered.  'Nothing' when the
+    --   plan abstained (it carries a fallback reason) or when no plan
+    --   was built.
+  , trtResolution :: !Text
+    -- ^ @\"exact\"@ — the plan topic equals the intent span;
+    --   @\"refined\"@ — the clause retry replaced the span with a
+    --   covered token (3+ token clauses only); @\"fallback\"@ — the
+    --   plan abstained.
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
@@ -816,6 +846,7 @@ instance FromJSON TurnReplayTrace where
        <*> o .:? "trcResponsePlan"
        <*> o .:? "trcUserRegime"
        <*> o .:? "trcOwnershipCompare"
+       <*> o .:? "trcTopicResolution"
 
 data TurnProjection = TurnProjection
   { tqpTurn              :: !Int

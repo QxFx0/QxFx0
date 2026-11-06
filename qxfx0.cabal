@@ -811,6 +811,7 @@ common test-common
     Test.Suite.SubstrateCandidate
     Test.Suite.SemanticSlices
     Test.Suite.SemanticIR
+    Test.Suite.TopicSpan
 
 test-suite qxfx0-test-unit
   import:        test-common

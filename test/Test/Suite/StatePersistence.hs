@@ -1720,6 +1720,7 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
            , trcResponsePlan = Nothing
            , trcUserRegime = Nothing
           , trcOwnershipCompare = Nothing
+          , trcTopicResolution = Nothing
     }
 
 authoritativeGovernedState :: SystemState -> SystemState

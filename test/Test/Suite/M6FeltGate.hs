@@ -370,6 +370,7 @@ passingTrace = TurnReplayTrace
   , trcResponsePlan = Nothing
   , trcUserRegime = Nothing
           , trcOwnershipCompare = Nothing
+          , trcTopicResolution = Nothing
   }
 
 -- | A session of @n@ identical passing turns, with the dialogue focus

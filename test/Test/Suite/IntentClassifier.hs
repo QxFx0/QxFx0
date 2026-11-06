@@ -22,7 +22,7 @@ import qualified Data.Text as T
 import QxFx0.Semantic.Proposition.Semantic (comparisonCandidates)
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..), extractFeatures)
 import QxFx0.Semantic.Morphology (extractContentNouns, analyzeMorph, POS(..), MorphToken(..))
-import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, intentToFamily, intentToPropositionType, normalizeIntentTopics, resolveCarryTopic)
+import QxFx0.Semantic.Intent.Classifier (SemanticIntent(..), classifyIntent, classifyIntentWithoutSelfReference, canonicalTopic, intentToFamily, intentToPropositionType, normalizeIntentTopics, resolveCarryTopic)
 import QxFx0.Semantic.Frame.Types (SemanticFrame(..), frameTypeText)
 import QxFx0.Semantic.Proposition.Detectors (detectBareNounDefinition)
 import QxFx0.Semantic.Frame.Builder (buildFrame, extractTarget)
@@ -447,7 +447,52 @@ canonicalTopicTests = TestLabel "PlanTopicCanonical" $ TestList
       assertEqual "nominative identity"
         (IntentGround "смысл")
         (normalizeIntentTopics testMorph (IntentGround "смысл"))
+  , TestCase $ do
+      -- D-1 (pre-registered 2026-11-03, signed 2026-11-04): a multiword
+      -- span is returned verbatim — no per-token lemmatization, no case
+      -- folding.  Before this, the first-content-noun rule reduced every
+      -- measured compound to a different concept.
+      mapM_
+        (\(span_, legacyHead) -> do
+           assertEqual
+             ("multiword span preserved: " <> T.unpack span_)
+             span_
+             (canonicalTopic testMorph span_)
+           assertEqual
+             ("pin is non-trivial: the old rule reduced " <> T.unpack span_)
+             legacyHead
+             (legacyFirstContentNoun span_))
+        [ ("цифровая свобода", "цифровая")
+        , ("коллективная память", "коллективная")
+        , ("термоядерный синтез", "синтез")
+        , ("гравитационная волна", "гравитационная")
+        , ("смысл жизни", "смысл")
+        , ("анализ данных", "анализ")
+        ]
+      assertEqual "whitespace normalized, tokens untouched"
+        "анализ данных"
+        (canonicalTopic testMorph "  анализ   данных ")
+      assertEqual "mixed-case English span is preserved, not folded"
+        "Raspberry Pi"
+        (canonicalTopic testMorph "Raspberry Pi")
+  , TestCase $ do
+      -- The single-token branch is byte-identical to the old rule: full
+      -- morphological lemma first, then the whole-phrase nominative map.
+      assertEqual "single token still lemmatizes"
+        "ответственность"
+        (canonicalTopic testMorph "ответственности")
+      assertEqual "unknown single token passes through"
+        "квантор"
+        (canonicalTopic testMorph "квантор")
   ]
+
+-- | First content noun, i.e. the pre-2026-11-03 reduction, kept in the
+-- test only to prove the pins above are non-trivial.
+legacyFirstContentNoun :: Text -> Text
+legacyFirstContentNoun text =
+  case extractContentNouns text of
+    (lemma:_) -> lemma
+    [] -> text
 
 -- ---------------------------------------------------------------------------
 -- Challenge target extraction (pre-registered 2026-09-25)

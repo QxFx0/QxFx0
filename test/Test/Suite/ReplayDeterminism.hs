@@ -44,6 +44,7 @@ import QxFx0.Types.TurnProjection
   ( ParserStatus(..)
   , TurnReplayTrace(..)
   , EffectSnapshot(..)
+  , TopicResolutionTrace(..)
   , TurnProjection(..)
   , encodePersistedReplayTrace
   , decodePersistedReplayTrace
@@ -222,6 +223,7 @@ minimalReplayTrace apiHealthy =
           , trcResponsePlan = Nothing
           , trcUserRegime = Nothing
           , trcOwnershipCompare = Nothing
+          , trcTopicResolution = Nothing
     }
 
 -- | Baseline 'ShadowDivergence' with no mismatch, for scoring.
@@ -342,6 +344,27 @@ testFullTraceRoundTrips =
     assertEqual "persisted envelope decode must reproduce the trace exactly"
       (Right trace)
       (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace trace)))
+    -- D-4 anti-rot: the fixture above carries 'Nothing'; a populated
+    -- sub-record must survive the same DB-column round-trip, including the
+    -- nullable plan topic in both polarities.
+    let populatedExact = trace
+          { trcTopicResolution = Just (TopicResolutionTrace
+              { trtIntentTopic = "смысл жизни"
+              , trtPlanTopic = Just "смысл жизни"
+              , trtResolution = "exact"
+              }) }
+        populatedFallback = trace
+          { trcTopicResolution = Just (TopicResolutionTrace
+              { trtIntentTopic = "цифровая свобода"
+              , trtPlanTopic = Nothing
+              , trtResolution = "fallback"
+              }) }
+    assertEqual "populated trcTopicResolution (Just plan topic) survives the round-trip"
+      (Right populatedExact)
+      (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace populatedExact)))
+    assertEqual "populated trcTopicResolution (no plan topic) survives the round-trip"
+      (Right populatedFallback)
+      (decodePersistedReplayTrace (BL.toStrict (encodePersistedReplayTrace populatedFallback)))
 
 replayDeterminismTests :: [Test]
 replayDeterminismTests =

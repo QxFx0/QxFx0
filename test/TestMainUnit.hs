@@ -68,6 +68,7 @@ import Test.Suite.CommitmentStoreAdmission (commitmentStoreAdmissionTests)
 import Test.Suite.CommitmentQuarantine (commitmentQuarantineTests)
 import Test.Suite.CommitmentAwareRouting (commitmentAwareRoutingTests)
 import Test.Suite.IntentClassifier (intentClassifierTests)
+import Test.Suite.TopicSpan (topicSpanTests)
 import Test.Suite.SemanticNetwork (semanticNetworkTests)
 import Test.Suite.SemanticSpace (semanticSpaceTests)
 import Test.Suite.ContentSelector (contentSelectorTests)
@@ -168,6 +169,7 @@ unitSuites =
   , ("B3MechanicalGateExecution", b3MechanicalGateExecutionTests)
   , ("ContentQualityGate", contentQualityGateTests)
   , ("ResponsePlan", responsePlanTests)
+  , ("TopicSpan", topicSpanTests)
   ]
 
 main :: IO ()

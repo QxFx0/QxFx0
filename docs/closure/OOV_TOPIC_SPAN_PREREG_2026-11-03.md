@@ -120,6 +120,45 @@ principled successor and is **out of scope**
 (§8): it changes corpus *lookup*, not topic canonicalization, and it belongs
 in its own pre-registration with its own collision measurement.
 
+**Amendment 2026-11-05 (post-implementation measurement).** The accepted cost
+above assumed that an inflected multiword query reaches `canonicalTopic` as a
+span. Measured after D-1 landed, the example that motivated it — «о смысле
+жизни» — does **not** reach it: the compositional classifier already returns
+`IntentDefine "смысл"` before canonicalization (`classifyIntent "о смысле
+жизни"` → `IntentDefine "смысл"`; probe source
+`/tmp/opencode/intentprobe.hs`), so no span exists and the turn is
+byte-identical to the baseline (spot probe before/after: same surface, same
+`best_topic=смысл`, `covered_exact`). The cost class is therefore narrower
+than predicted: it applies only to surfaces whose intent topic is already a
+multiword span at classification time. It remains a property of the rule
+(the `IntentDefine` path D-1 fixes does carry spans — «что такое смысл
+жизни» → `IntentDefine "смысл жизни"`), but **no measured pilot surface
+moved from answer to abstain**. Recorded, not re-scoped: the signed decision
+and the bars stand as written.
+
+**Amendment 2026-11-05 (case rationale correction, measured).** §2 justified
+"no case folding" with three mixed-case corpus keys («Raspberry Pi», «Spring
+Boot», «Standing ovation»): the argument was that a lowercased span would make
+them unreachable. Measured after landing, the argument is inverted. The loader
+normalizes every key (`normalizeTopic = T.toLower . T.strip`,
+`Semantic/Content.hs`), so the loaded merged population contains **0**
+mixed-case keys — the three rows exist mixed-case only in
+`resources/knowledge/curated_predicates.jsonl`. Preserving case therefore does
+not protect them: «Raspberry Pi» canonicalizes to itself, misses the lowercase
+key `raspberry pi`, and abstains, while the lowercase surface is reachable (and
+was not reachable before D-1, which truncated it to «raspberry»). The same
+applies to any capitalised span: «Что такое Смысл жизни?» →
+`trtIntentTopic = "Смысл жизни"`, `trtResolution = "fallback"`, whereas
+«Что такое смысл жизни?» answers. This is a **cost class the pre-registration
+did not name**, of the same kind as the accepted inflected-span cost; it is
+narrow in practice because the definitional marker puts the topic mid-sentence
+(«Что такое время года?» → topic «время года», answers). The signed rule is
+unchanged — this amendment corrects the recorded rationale and names the cost,
+it does not re-scope D-1. Evidence: `/tmp/opencode/caseprobe2.hs` (pure:
+membership of raw vs lowercased forms) and `/tmp/opencode/case_runtime.py`
+(three strict runtime turns). B1 is unaffected: the 624 keys it enumerates are
+the lowercase loaded keys, and all 624 are fixpoints.
+
 ## 3. Decision D-2 — the refine gate lives at the call site
 
 `refineUncoveredTopic` is itself unchanged: six unit pins in

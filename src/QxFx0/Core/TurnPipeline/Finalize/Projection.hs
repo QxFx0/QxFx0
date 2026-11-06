@@ -473,6 +473,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcFrameType = extractFrameTag (taDerivationTags ta)
           , trcContentSource = extractContentSourceTag (taDerivationTags ta)
           , trcAnalogicalSource = extractAnalogicalSourceTag (taDerivationTags ta)
+          , trcTopicResolution = extractTopicResolution (taDerivationTags ta)
           , trcSubstrateActivated = substrateActivated
           , trcSubstrateEdgesUsed = length substrateSteps
           , trcActivationSteps = activationSteps
@@ -791,3 +792,25 @@ extractAnalogicalSourceTag tags =
   case filter (T.isPrefixOf "analogical_source=") tags of
     (tag:_) -> Just (T.drop 18 tag)
     []      -> Nothing
+
+-- | Extract the OOV topic-resolution sub-record (pre-registered
+-- 2026-11-03, signed 2026-11-04, D-4).  Requires both the span and the
+-- resolution tag; a partial tag set decodes to 'Nothing' rather than a
+-- half-filled record.  @plan_topic=@ is absent on fallback turns by
+-- design, so it decodes to 'Nothing' too.
+extractTopicResolution :: [Text] -> Maybe TopicResolutionTrace
+extractTopicResolution tags = do
+  intentTopic <- tagValue "topic_span="
+  resolution <- tagValue "topic_resolution="
+  pure TopicResolutionTrace
+    { trtIntentTopic = intentTopic
+    , trtPlanTopic = tagValue "plan_topic="
+    , trtResolution = resolution
+    }
+  where
+    tagValue prefix =
+      case filter (T.isPrefixOf prefix) tags of
+        (tag:_) ->
+          let value = T.drop (T.length prefix) tag
+          in if T.null value then Nothing else Just value
+        [] -> Nothing

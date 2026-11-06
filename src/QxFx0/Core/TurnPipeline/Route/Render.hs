@@ -418,7 +418,8 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
             , "intent=" <> T.pack (show semanticIntent)
             , "frame=" <> frameTypeText semanticFrame
             , "content_source=" <> semanticContentSource
-             ] ++ mAnalogicalSourceTag ++ maybe [] responsePlanTags mResponsePlan
+             ] ++ mAnalogicalSourceTag ++ topicResolutionTags semanticIntent mResponsePlan
+               ++ maybe [] responsePlanTags mResponsePlan
         , draDialogAtoms = emptyDialogAtoms
         , draGenerationTrace =
             [ GenerationAttempt "semantic_intent" "ok"
@@ -1149,6 +1150,48 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
          , taActivationArtifact = draActivationArtifact (rsTemplateArtifact renderStatic)
          , taResponsePlan = draResponsePlan (rsTemplateArtifact renderStatic)
           }
+
+-- | OOV topic-span disclosure (pre-registered 2026-11-03, signed
+-- 2026-11-04, D-4).  Emits the derivation tags that
+-- 'QxFx0.Core.TurnPipeline.Finalize.Projection' folds into
+-- 'trcTopicResolution': the span the intent carried at render time, the
+-- topic the plan actually used, and the resolution class.  No tags when
+-- the intent carries no single topic (challenge, exploratory and
+-- generative shapes take their topic from the frame or the raw input,
+-- so there is no span to disclose).
+topicResolutionTags :: SemanticIntent -> Maybe ResponseSemanticPlan -> [Text]
+topicResolutionTags intent mPlan =
+  case intentTopicSpan intent of
+    Nothing -> []
+    Just intentTopic ->
+      let planTopic = case mPlan of
+            Just plan | isNothing (rspFallbackReason plan) -> rspTopic plan
+            _ -> Nothing
+          resolution = case planTopic of
+            Nothing -> "fallback"
+            Just t | t == intentTopic -> "exact"
+            Just _ -> "refined"
+      in [ "topic_span=" <> intentTopic
+         , "topic_resolution=" <> resolution
+         ] <> maybe [] (\t -> ["plan_topic=" <> t]) planTopic
+
+-- | First (and, for distinction, primary) topic carried by an intent
+-- whose 'planRequest' shape is single-topic.  Total: 'Nothing' for
+-- topic-less intents and for empty spans.
+intentTopicSpan :: SemanticIntent -> Maybe Text
+intentTopicSpan intent = case intent of
+  IntentDefine t -> nonEmpty t
+  IntentDistinguish t _ -> nonEmpty t
+  IntentGround t -> nonEmpty t
+  IntentLearn t -> nonEmpty t
+  IntentPurpose t -> nonEmpty t
+  IntentWorldCause t -> nonEmpty t
+  IntentDeepen t -> nonEmpty t
+  _ -> Nothing
+  where
+    nonEmpty t
+      | T.null (T.strip t) = Nothing
+      | otherwise = Just t
 
 deriveAssemblyPath :: RenderStatic -> DialogueRenderArtifact -> SurfaceProvenance -> AssemblyPath
 deriveAssemblyPath renderStatic artifact finalizeSurfaceProv

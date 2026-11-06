@@ -493,3 +493,46 @@ hand-maintained here.)
 Old traces (pre-2026-06-05) serialise `trcEffectSnapshot` as `Nothing`;
 `mkReplayPipelineIO` falls back to `apiHealthy = False` for them, so they
 are explicitly **not** `apiHealthy`-deterministic under replay.
+
+---
+
+## 13. Topic-resolution disclosure (`trcTopicResolution`) — 2026-11-06
+
+**Field:** `trcTopicResolution :: Maybe TopicResolutionTrace`
+**Sub-record:** `TopicResolutionTrace { trtIntentTopic :: !Text
+, trtPlanTopic :: !(Maybe Text), trtResolution :: !Text }`
+**Source:** `Route/Render.hs` emits three derivation tags on the
+semantic-first path (`topic_span=…`, `plan_topic=…`,
+`topic_resolution=…`); `Finalize/Projection.hs`
+(`extractTopicResolution`) folds them into the sub-record, exactly like
+`content_source=` / `analogical_source=`.
+
+Purpose (pre-registered 2026-11-03, signed 2026-11-04, D-4): make the
+multiword-topic substitution defect (`oov-005`) auditable from replay.
+`trcBestTopic` is frame-level (`термоядерный` vs `синтез`), so without
+this field the claim "the compound was answered" would rest on surface
+text alone.
+
+Values:
+
+- `trtIntentTopic` — the topic span the intent carried at render time,
+  after `canonicalTopic`. Since the 2026-11-06 landing multiword
+  spans are preserved verbatim.
+- `trtPlanTopic` — the topic the response plan actually answered;
+  `Nothing` when the plan abstained (it carries a fallback reason) or
+  when no plan was built.
+- `trtResolution` — `"exact"` (plan topic equals the intent span),
+  `"refined"` (the clause retry replaced it with a covered token; 3+
+  token clauses only), `"fallback"` (the plan abstained).
+
+Scope (honest): populated only when a semantic-first artifact was
+rendered **and** the intent carries a single topic (`IntentDefine`,
+`IntentDistinguish` primary, `IntentGround`, `IntentLearn`,
+`IntentPurpose`, `IntentWorldCause`, `IntentDeepen`). Challenge,
+exploratory and generative shapes take their topic from the frame or
+the raw input, so they emit no tags and decode to `Nothing` — absence
+means "not disclosed", never "no substitution".
+
+JSON is backward-compatible: absent → `Nothing`. Old traces stay
+readable; new fields never widen the top-level god-record (sub-record
+discipline, `trcUserRegime` / `trcOwnershipCompare` precedent).

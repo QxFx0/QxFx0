@@ -33,6 +33,7 @@ import QxFx0.Semantic.ResponsePlan
   , renderResponseSemanticPlan
   , responsePlanQualityIssues
   , refineUncoveredTopic
+  , clauseShaped
   , topicMentioned
   , isSpeculativeRequestText
   )
@@ -85,6 +86,8 @@ responsePlanTests =
      , TestLabel "cataloged argued question leaves preserve their exact question mark" testCatalogedQuestionLeafPreserved
   , TestLabel "invalid plan is rejected" testPlanAdmission
   , TestLabel "uncovered plan topic retries first covered token" testRefineUncoveredTopic
+  , TestLabel "clause gate admits clauses and rejects compound terms" testClauseShaped
+  , TestLabel "compound span abstains instead of answering its head noun" testCompoundSpanAbstains
   , TestLabel "back-reference cites only the current topic" testTopicMentioned
   , TestLabel "speculative trigger fires only on markers" testSpeculativeTrigger
   , TestLabel "speculative reroute yields renderable claims" testSpeculativeRerouteProbe
@@ -774,6 +777,56 @@ testRefineUncoveredTopic = TestCase $ do
   assertEqual "empty stays Nothing"
     Nothing
     (refineUncoveredTopic lm "")
+
+-- | D-2 (pre-registered 2026-11-03, signed 2026-11-04): the retry is a
+-- clause device.  Three or more tokens are a clause; the measured
+-- substitution class is 2-token compound terms.
+testClauseShaped :: Test
+testClauseShaped = TestCase $ do
+  assertBool "4-token clause is clause-shaped"
+    (clauseShaped "в чём смысл моей жизни")
+  assertBool "3-token clause is clause-shaped"
+    (clauseShaped "смысл моей жизни")
+  assertBool "2-token compound is not a clause"
+    (not (clauseShaped "цифровая свобода"))
+  assertBool "single token is not a clause"
+    (not (clauseShaped "свобода"))
+  assertBool "empty is not a clause"
+    (not (clauseShaped ""))
+
+-- | D-2 call site: a 2-token OOV compound abstains even when its head
+-- noun is covered (pre-fix it answered about the head); a clause still
+-- retries to its covered token (2026-09-25 behaviour preserved).
+testCompoundSpanAbstains :: Test
+testCompoundSpanAbstains = TestCase $ do
+  let selector = emptyContentSelector
+        { csTopicPredicates = M.singleton "свобода" [head freedomPreds] }
+      frame = DefinitionFrame "цифровая свобода" GeneralScope Known
+  case buildResponseSemanticPlan selector emptyField
+         "что такое цифровая свобода?" Nothing frame (IntentDefine "цифровая свобода") of
+    Nothing -> assertFailure "definitional compound must still produce a plan"
+    Just plan -> do
+      assertEqual "compound must abstain, not answer its head noun"
+        (Just TopicNotCovered)
+        (rspFallbackReason plan)
+      assertBool "abstaining plan carries no claims"
+        (null (rspClaims plan))
+  let clauseSelector = emptyContentSelector
+        { csTopicPredicates = M.singleton "смысл" [head freedomPreds] }
+      clauseFrame = DefinitionFrame "в чём смысл моей жизни" GeneralScope Known
+  case buildResponseSemanticPlan clauseSelector emptyField
+         "в чём смысл моей жизни?" Nothing clauseFrame
+         (IntentDefine "в чём смысл моей жизни") of
+    Nothing -> assertFailure "clause retry must produce a plan"
+    Just plan -> do
+      assertEqual "clause retries to its covered head"
+        Nothing
+        (rspFallbackReason plan)
+      assertBool "clause plan carries a claim"
+        (not (null (rspClaims plan)))
+      assertEqual "plan topic is the refined token"
+        (Just "смысл")
+        (rspTopic plan)
 
 
 -- | Back-reference guard (pre-registered 2026-09-25).

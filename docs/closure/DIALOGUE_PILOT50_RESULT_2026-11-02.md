@@ -252,9 +252,13 @@ a separate pre-registration (it changes surfaces for 99.3% of the corpus).
    The mechanism was measured
    (`docs/closure/OOV_SUBSTITUTION_BLAST_RADIUS_2026-11-03.md`) and the fix was
    pre-registered (`docs/closure/OOV_TOPIC_SPAN_PREREG_2026-11-03.md`) and
-   **signed 2026-11-04** (D-1…D-5 as written); nothing is implemented yet. The
-   500-prompt gate stays blocked until the labeled corpus exists and the fix
-   lands.
+   **signed 2026-11-04** (D-1…D-5 as written). Implemented and measured
+   2026-11-05 — see `docs/closure/OOV_TOPIC_SPAN_RESULT_2026-11-05.md`: the
+   `oov-005` row now abstains instead of answering «синтез», the other 49
+   pilot50 surfaces are byte-identical, and the 30-prompt GF packet is
+   byte-identical. This replay does **not** change this pilot's status: it
+   remains a one-rater record and the 500-prompt gate stays blocked until the
+   labeled corpus exists.
 3. **S2** — accept the seven bars in
    `GF_SLOT_COVERAGE_PREREG_DRAFT_2026-11-01.md` as written, or set different
    values before any slot authoring?

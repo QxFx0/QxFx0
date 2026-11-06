@@ -19,6 +19,7 @@ module QxFx0.Semantic.ResponsePlan
   , responsePlanQualityIssues
   , responsePlanTopic
   , refineUncoveredTopic
+  , clauseShaped
   , topicMentioned
   , isGenerativeRequestText
   , isSpeculativeRequestText
@@ -130,11 +131,28 @@ buildResponseSemanticPlanWithActiveQuestion selector field rawInput mActivation 
       | isClarifyRequestText rawInput = Just (GoalClarify, maybeToList (responsePlanTopic selector rawInput))
       | otherwise = Nothing
 
+-- | Clause-shaped topic span: three or more whitespace-separated tokens
+-- (pre-registered 2026-11-03, signed 2026-11-04, D-2).  The refine retry
+-- below is a clause device — the 2026-09-25 pre-registration produced
+-- 4-token clauses — while every measured substitution is a 2-token
+-- compound term.  A token count is used instead of a function-word test
+-- because `guessPOS` classifies «моей» as a noun, so the latter would
+-- need a new hand-written lexicon.  Known residual: an OOV span of 3+
+-- tokens whose first covered token is a seed topic still refines; the
+-- pre-registration pins the four measured 2-token cases instead of
+-- claiming the class is closed.
+clauseShaped :: Text -> Bool
+clauseShaped = (>= 3) . length . T.words
+
 -- | Retry an uncovered single plan topic with its first covered
 -- token, lemmatized through the selector map (pre-registered
 -- 2026-09-25, micro): inflected covered forms («смысле» → «смысл»)
 -- now match. Total: Nothing when negated, topic-less, or nothing
 -- covered (lemma map gaps behave exactly like before).
+--
+-- The function itself is unchanged by the 2026-11-03 pre-registration
+-- (D-2): the clause gate lives at the call site, so these pins stay
+-- byte-identical.
 refineUncoveredTopic :: M.Map Text Text -> Text -> Maybe Text
 refineUncoveredTopic lemmaMap surface =
   let toks = [ M.findWithDefault t t lemmaMap
@@ -174,10 +192,22 @@ buildGroundedPlan goal rawTopics mActiveQuestion selector field mActivation =
             -- surfaces («почему нет слов») and topic-less surfaces
             -- keep today's fallback. Multi-topic (distinction) plans
             -- untouched.
-            [t] -> case refineUncoveredTopic (csLemmaMap selector) t of
-              Just t2 | t2 /= t ->
-                buildGroundedPlan goal [t2] mActiveQuestion selector field mActivation
-              _ -> fallbackPlan goal TopicNotCovered (Just topic)
+            --
+            -- Clause gate (pre-registered 2026-11-03, signed
+            -- 2026-11-04, D-2): the retry is a *clause* device — the
+            -- 2026-09-25 pre-registration produced 4-token clauses,
+            -- while every measured substitution is a 2-token compound
+            -- term («цифровая свобода» → «свобода»,
+            -- «коллективная память» → «память»). Without the gate,
+            -- preserving the span (D-1) would hand an OOV compound to
+            -- the retry and answer about its seed-topic head.
+            [t]
+              | clauseShaped t ->
+                  case refineUncoveredTopic (csLemmaMap selector) t of
+                    Just t2 | t2 /= t ->
+                      buildGroundedPlan goal [t2] mActiveQuestion selector field mActivation
+                    _ -> fallbackPlan goal TopicNotCovered (Just topic)
+              | otherwise -> fallbackPlan goal TopicNotCovered (Just topic)
             _ -> fallbackPlan goal TopicNotCovered (Just topic)
       | otherwise ->
           case candidates of

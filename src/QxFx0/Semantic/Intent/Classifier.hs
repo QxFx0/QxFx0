@@ -204,11 +204,29 @@ shortCoveredHead rawText =
 -- "ответственность").  Uses full morphological analysis first (handles
 -- instrumental etc. beyond the precomputed case maps), then the
 -- nominative map; unknown surfaces pass through unchanged.
+--
+-- Multiword spans are returned verbatim — whitespace-normalized only, never
+-- lemmatized and never case-folded (pre-registered 2026-11-03, signed
+-- 2026-11-04, D-1).  The lemmatization ban is measured: the 624 multiword
+-- corpus keys are /surface phrases/, not lemmas ("смысл жизни", "анализ
+-- данных", "время года"), and per-token lemmatization breaks 247 of them
+-- ("смысл жизни" → "смысл жизнь").  The case rule is the signed rule, not a
+-- claim that the corpus is mixed-case: measured 2026-11-05, the loader
+-- lowercases every key (`normalizeTopic = T.toLower . T.strip`), so the
+-- loaded population has no mixed-case keys and a capitalised span («Смысл
+-- жизни») abstains — a recorded cost, see the pre-registration §2 amendment.
+-- Reducing a span to its first content noun — the behaviour before 2026-11-03
+-- — replaced the asked topic with a different concept
+-- ("термоядерный синтез" → "синтез").
 canonicalTopic :: MorphologyData -> Text -> Text
 canonicalTopic morph topic =
-  case extractContentNouns topic of
-    (lemma:_) -> lemma
-    [] -> fromMaybe topic (M.lookup (T.toLower (T.strip topic)) (mdNominative morph))
+  case T.words (T.strip topic) of
+    -- Single tokens keep the pre-2026-11-03 behaviour byte-for-byte.
+    [_single] ->
+      case extractContentNouns topic of
+        (lemma:_) -> lemma
+        [] -> fromMaybe topic (M.lookup (T.toLower (T.strip topic)) (mdNominative morph))
+    span -> T.unwords span
 
 -- | Core classification logic. Separated from extraction for testability.
 -- The Bool gates the L4 bare-pronoun self-reference backstop (F1b):

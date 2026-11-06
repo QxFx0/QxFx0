@@ -78,6 +78,7 @@ import Test.Suite.DialogueSemanticSelection (dialogueSemanticSelectionTests)
 import Test.Suite.BootstrapRecovery (bootstrapRecoveryTests)
 import Test.Suite.BootstrapExternalKnowledge (bootstrapExternalKnowledgeTests)
 import Test.Suite.SemanticSlices (semanticSliceTests)
+import Test.Suite.TopicSpan (topicSpanTests)
 import Test.Suite.OntologyContentSelector (ontologyContentSelectorTests)
 import Test.Suite.SurfaceAccumulator (surfaceAccumulatorTests)
 import Test.Suite.SurfaceAccumulatorGolden (surfaceAccumulatorGoldenTests)
@@ -217,6 +218,7 @@ fastSuites =
   , ("ChallengeMarkers", challengeMarkersTests)
   , ("ReplayTraceCompatibility", replayTraceCompatibilityTests)
   , ("SemanticSlice", semanticSliceTests)
+  , ("TopicSpan", topicSpanTests)
   ]
 
 -- TuningRuntimeIntegration must run first: it forces the top-level
