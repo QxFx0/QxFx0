@@ -96,8 +96,10 @@ Therefore every candidate row must satisfy, mechanically:
    `--self-test` (12 cases) plus a real-tree Rus case are invoked from
    `scripts/check_generated_artifacts.sh`. Red check: deleting
    `SubjectSvoboda` from a temp copy exits 1; the real tree exits 0. Gate 9
-   is still advisory in the core profile — the checker can now flag a new Rus
-   drift, but making it a hard gate is a separate CI decision;
+   runs only in the extended profile (weekly cron + manual dispatch) and is
+   advisory there, and the core PROD_GO profile does not run it at all — the
+   checker can now flag a new Rus drift, but making it a hard gate is a
+   separate CI decision;
 4. the emitted `source_ru` is byte-identical to the corpus predicate (this is
    what makes the lookup fire), and `subject_ru + " " + relation_ru + " " +
    object_ru` concatenates back to it exactly — measured to hold for 84/84

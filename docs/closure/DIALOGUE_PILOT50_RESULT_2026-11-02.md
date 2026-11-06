@@ -289,9 +289,11 @@ a separate pre-registration (it changes surfaces for 99.3% of the corpus).
    `scripts/check_generated_artifacts.sh`. Red check: deleting
    `SubjectSvoboda` from a temp copy of the Rus concrete exits 1 with
    `missing: SubjectSvoboda`; the real tree exits 0. This closes the
-   precondition, not the CI severity question — Gate 9 remains advisory in
-   the core profile, so the checker is now *able* to flag a new Rus drift but
-   is not yet a hard gate.
+   precondition, not the CI severity question — Gate 9
+   (`check_generated_artifacts.sh`) runs only in the extended profile
+   (weekly cron + manual dispatch) and is advisory there; the core PROD_GO
+   profile does not run it at all. The checker is now *able* to flag a new
+   Rus drift, but a Rus drift still cannot block a push.
 
 ## Appendix A — rater-1 scores (blind ids mapped after scoring)
 

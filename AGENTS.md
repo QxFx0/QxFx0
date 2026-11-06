@@ -919,8 +919,10 @@ re-observe before treating as real).
   Rus concrete by default (`--all-concretes` keeps the legacy Eng/Colloquial
   drift measurable), carries `--self-test` (12/12) and is invoked from
   `check_generated_artifacts.sh`; red check — deleting `SubjectSvoboda`
-  from a temp copy exits 1, real tree exits 0. Gate 9 is still advisory, so
-  this is a precondition fix, not a hard CI gate. New
+  from a temp copy exits 1, real tree exits 0. Gate 9 runs only in the
+  extended profile (weekly cron + manual dispatch) and is advisory there;
+  it is absent from the core PROD_GO profile, so this is a precondition
+  fix, not a hard CI gate. New
   `scripts/eval/prompt_frame_500.py` (eval-only, self-test 25/25) measures
   the uniform 500-prompt frame: **5/500 GF-mapped**, 86 multiword, 8 pilot
   overlaps — a uniform 500 gate is a text-path gate, not M7
