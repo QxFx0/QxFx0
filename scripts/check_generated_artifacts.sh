@@ -56,7 +56,10 @@ if ! rg -n 'inputGeneratedLexiconProvenanceTag\s*=\s*"generated_input_lexicon_co
   exit 1
 fi
 
-# 5) Alternate concrete syntaxes must stay structurally aligned with the abstract.
+# 5) The compiled Rus concrete must stay aligned with the abstract.
+#    The legacy Eng/Colloquial stubs are not compiled and are skipped by
+#    default; `--all-concretes` still reports their known drift.
+python3 scripts/check_gf_concrete_consistency.py --self-test
 python3 scripts/check_gf_concrete_consistency.py >/dev/null
 
 echo "generated-artifact gate passed"

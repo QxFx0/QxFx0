@@ -275,15 +275,23 @@ a separate pre-registration (it changes surfaces for 99.3% of the corpus).
    to `scripts/eval/` (the eval-only quarantine from
    `PYTHON_SUPPLIER_ALLOWLIST.md` §3 item 3, marked by
    `scripts/eval/NON_AUTHORITY.txt`) and now carry `--self-test`; the harness
-   also gained a prompt-file contract guard. One item stays open for the owner:
-   `PYTHON_SUPPLIER_ALLOWLIST.md` §1 is still empty, so these eval-only files
-   are quarantined but not registered — amending that governance list was not
-   done unilaterally.
-7. **GF checker** — scope `scripts/check_gf_concrete_consistency.py` to the
-   compiled Rus concrete (or teach it to skip the legacy Eng/Colloquial stubs)
-   and add a test that a missing Rus function still fails. This is a two-line
-   change and should land before the slot batch; it is currently red for known
-   reasons, so it cannot flag a new Rus drift.
+   also gained a prompt-file contract guard. **Update 2026-11-06**: the
+   "quarantined but unregistered" gap is closed — §1 now registers the five
+   pilot tools plus `scripts/eval/prompt_frame_500.py` as `eval-only`, with
+   retention justification, PENDING replacement target and explicit removal
+   criteria. The empty-allowlist closure goal remains for authority-path
+   Python.
+7. **GF checker** — *resolved 2026-11-06*: `scripts/check_gf_concrete_consistency.py`
+   now checks only the compiled Rus concrete by default (`--all-concretes`
+   keeps the legacy Eng/Colloquial drift measurable instead of hiding it),
+   carries `--self-test` (12/12: missing, extra, arity, pass, determinism,
+   real-Rus check) and is invoked with its self-test from
+   `scripts/check_generated_artifacts.sh`. Red check: deleting
+   `SubjectSvoboda` from a temp copy of the Rus concrete exits 1 with
+   `missing: SubjectSvoboda`; the real tree exits 0. This closes the
+   precondition, not the CI severity question — Gate 9 remains advisory in
+   the core profile, so the checker is now *able* to flag a new Rus drift but
+   is not yet a hard gate.
 
 ## Appendix A — rater-1 scores (blind ids mapped after scoring)
 

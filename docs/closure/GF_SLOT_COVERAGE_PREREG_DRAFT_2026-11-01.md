@@ -91,6 +91,13 @@ Therefore every candidate row must satisfy, mechanically:
    flag a *new* Rus drift. Scoping it to the compiled concrete (or teaching it
    to skip stubs) is a two-line change and should land before the batch, with a
    test that a missing Rus function still fails;
+   **resolved 2026-11-06**: the checker now defaults to the compiled Rus
+   concrete, `--all-concretes` keeps the legacy drift measurable, and
+   `--self-test` (12 cases) plus a real-tree Rus case are invoked from
+   `scripts/check_generated_artifacts.sh`. Red check: deleting
+   `SubjectSvoboda` from a temp copy exits 1; the real tree exits 0. Gate 9
+   is still advisory in the core profile — the checker can now flag a new Rus
+   drift, but making it a hard gate is a separate CI decision;
 4. the emitted `source_ru` is byte-identical to the corpus predicate (this is
    what makes the lookup fire), and `subject_ru + " " + relation_ru + " " +
    object_ru` concatenates back to it exactly — measured to hold for 84/84

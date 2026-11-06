@@ -30,13 +30,26 @@ empty, every entry carries:
 
 ## 1. The allowlist
 
+**Status 2026-11-06:** §1 is no longer empty. Six eval-only tools are
+registered below: the five pre-existing pilot tools plus
+`scripts/eval/prompt_frame_500.py`. They are quarantined by
+`scripts/eval/NON_AUTHORITY.txt`, carry `--self-test` (enforced by
+`scripts/check_architecture.sh` rule [24]), and are not on any authority
+path. The empty-allowlist closure goal remains for authority-path Python;
+these entries are an open retention and must be reviewed at every
+closure-plan pass.
+
 | Path | Class | Retention justification | Replacement target | Replacement deadline | Removal criterion |
 |---|---|---|---|---|---|
-| _empty_ | — | — | — | — | — |
+| `scripts/eval/check_prompt_file.py` | `eval-only` | Guards the frozen prompt-file contract for the pilot/500 harness; self-tested; not on any authority path. | PENDING (Haskell eval harness) | PENDING | Deleted when the eval harness is ported or the prompt-file contract is enforced in Haskell. |
+| `scripts/eval/pilot50_export_blind.py` | `eval-only` | Reproduces the blind rater sheet for the frozen pilot50 record (one-rater, κ withheld); self-tested. | PENDING (Haskell eval harness) | PENDING | Deleted when the pilot50 record is retired or the export is ported. |
+| `scripts/eval/pilot50_label_aid.py` | `eval-only` | Deterministic label aid for the frozen pilot50 sheet; self-tested; never scores or promotes a verdict. | PENDING (Haskell eval harness) | PENDING | Deleted when the pilot50 labeling pass is retired or the aid is ported. |
+| `scripts/eval/pilot50_result_tables.py` | `eval-only` | Reproduces the result tables from the frozen pilot50 record; self-tested. | PENDING (Haskell eval harness) | PENDING | Deleted when the pilot50 result record is retired or the tables are ported. |
+| `scripts/eval/pilot50_score.py` | `eval-only` | Scores the frozen pilot50 packet; recomputes totals instead of trusting them; kappa withheld without a second rater. | PENDING (Haskell eval harness) | PENDING | Deleted when the pilot50/500 scoring path is ported to Haskell or the gate is retired. |
+| `scripts/eval/prompt_frame_500.py` | `eval-only` | Builds the deterministic 500-prompt sampling frame and measures its composition; creates no labels and does not freeze a packet; self-tested. | PENDING (Haskell eval harness) | PENDING | Deleted when the 500-prompt frame is ported or the gate is retired. |
 
-**Empty allowlist is the closure goal.** Any entry below this
-line is an open retention; it must be reviewed at every
-closure-plan pass.
+**Empty allowlist remains the closure goal.** The six entries above are
+open retentions; they must be reviewed at every closure-plan pass.
 
 ## 2. The pre-closure inventory (transition reference)
 

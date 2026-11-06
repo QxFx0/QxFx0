@@ -914,6 +914,20 @@ re-observe before treating as real).
   `docs/closure/OOV_TOPIC_SPAN_RESULT_2026-11-05.md`. Scope: closes the
   named substitution class only; 500-prompt gate stays **BLOCKED** and
   pilot50 remains a one-rater record.
+- **Post-landing tooling 2026-11-06 (no runtime change)**:
+  `scripts/check_gf_concrete_consistency.py` now checks only the compiled
+  Rus concrete by default (`--all-concretes` keeps the legacy Eng/Colloquial
+  drift measurable), carries `--self-test` (12/12) and is invoked from
+  `check_generated_artifacts.sh`; red check — deleting `SubjectSvoboda`
+  from a temp copy exits 1, real tree exits 0. Gate 9 is still advisory, so
+  this is a precondition fix, not a hard CI gate. New
+  `scripts/eval/prompt_frame_500.py` (eval-only, self-test 25/25) measures
+  the uniform 500-prompt frame: **5/500 GF-mapped**, 86 multiword, 8 pilot
+  overlaps — a uniform 500 gate is a text-path gate, not M7
+  (`PROMPT_FRAME_500_2026-11-06.md`). `PYTHON_SUPPLIER_ALLOWLIST.md` §1
+  now registers the six eval-only tools (previously quarantined but
+  unregistered). The GF slot batch remains blocked on owner decisions
+  S2/S3.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

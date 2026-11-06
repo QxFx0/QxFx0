@@ -73,6 +73,13 @@ This is why the pilot runs first and why the slot-coverage pre-registration
 (`GF_SLOT_COVERAGE_PREREG_DRAFT_2026-11-01.md`) matters for the 500 gate: without
 coverage, "500 prompts" and "M7" measure different pipelines.
 
+**Measured 2026-11-06** (uniform deterministic frame, seed
+`qxfx0-500-2026-11-06`): 500 prompts contain **5 GF-mapped / 495 text-path**,
+86 multiword, 8 pilot50 overlaps (5 anchor, 3 held, 0 OOV). The estimate above
+(~3 GF) is confirmed in order of magnitude. The frame is reproducible with
+`scripts/eval/prompt_frame_500.py`; it creates no labels and does not freeze a
+packet. See `PROMPT_FRAME_500_2026-11-06.md`.
+
 
 ## Composition
 
