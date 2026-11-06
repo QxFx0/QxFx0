@@ -80,6 +80,12 @@ coverage, "500 prompts" and "M7" measure different pipelines.
 `scripts/eval/prompt_frame_500.py`; it creates no labels and does not freeze a
 packet. See `PROMPT_FRAME_500_2026-11-06.md`.
 
+**Decision 2026-11-06: the gate stays an M7/GF gate (option A).** Slot coverage
+lands first (S2 signed as written; S3 signed as topic groups, group 1 = 116
+rows then group 2 = 91), and the 500-prompt packet is redrawn as a GF-enriched
+frame afterwards. The uniform frame above is the recorded baseline, not the
+gate packet; the gate remains **BLOCKED** until that labeled packet exists.
+
 
 ## Composition
 

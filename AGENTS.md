@@ -928,8 +928,13 @@ re-observe before treating as real).
   overlaps — a uniform 500 gate is a text-path gate, not M7
   (`PROMPT_FRAME_500_2026-11-06.md`). `PYTHON_SUPPLIER_ALLOWLIST.md` §1
   now registers the six eval-only tools (previously quarantined but
-  unregistered). The GF slot batch remains blocked on owner decisions
-  S2/S3.
+  unregistered). **Owner decisions 2026-11-06**: S2 signed as written
+  (bars 1–7 unchanged), S3 signed as topic groups (group 1 = 116 rows
+  first, group 2 = 91 second), and the 500-prompt gate stays an M7/GF
+  gate (option A) — a GF-enriched frame is drawn after coverage lands,
+  so the gate remains BLOCKED. Both corpus typos
+  (`преобразкет`→`преобразует`, `стройтся`→`строится`) fixed in a
+  data-only commit.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

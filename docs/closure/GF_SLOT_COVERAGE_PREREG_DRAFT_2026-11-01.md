@@ -1,6 +1,8 @@
-# Pre-registration — GF slot coverage for the release corpus (2026-11-01, S1 signed 2026-11-02)
+# Pre-registration — GF slot coverage for the release corpus (2026-11-01, S1 signed 2026-11-02, S2–S3 signed 2026-11-06)
 
-- **Status**: **S1 signed (scope = option B, 207 rows). S2–S3 still open.**
+- **Status**: **S1 signed 2026-11-02 (scope = option B, 207 rows). S2 signed
+  2026-11-06 as written (bars 1–7 unchanged). S3 signed 2026-11-06 as
+  topic-grouped: group 1 (116 rows) first, group 2 (91 rows) second.**
   Nothing has been implemented or changed yet; the slot table, the generated
   Haskell and the frozen M7 admissible sets are untouched.
 - **Predecessor**: `docs/closure/M7_FALLBACK_CONTENT_REVIEW_2026-11-01.md`
@@ -109,7 +111,7 @@ If a row cannot pass 1–4 within the authoring budget, it is **dropped, not
 approximated**. Dropping a row is not a failure of the batch; inventing a
 near-miss surface is (it re-creates the 51-row mismatch problem above).
 
-## Bars (S2 — still open, not yet signed)
+## Bars (S2 — signed 2026-11-06 as written)
 
 Run the same 30-prompt strict/isolated packet as `m7-gf-confirm-20261031` and
 the same checker, with a **new** admissible-set file (new sha256), because the
@@ -130,7 +132,7 @@ because "emitted the system's own choice" is not automatically better — the
 14-row review found 5 harmless, 7 acceptable, 1 drift, 1 weak, and that
 judgement has to be redone on the *new* emitted set, not assumed.
 
-## S3 cost model, measured (2026-11-02, evidence only — no decision)
+## S3 cost model, measured 2026-11-02 (signed 2026-11-06 as topic groups)
 
 The open question is "authoring GF lexemes for the new objects: in scope or
 not". Measured against the GF sources, the term "lexeme" is misleading: every
@@ -177,6 +179,12 @@ Two measured risks for S3:
    A row whose `source_ru` contains a typo would put that typo into the emitted
    surface. They must be fixed (or the rows excluded) before authoring, which is
    a data decision like `bec1d19` was.
+   **Resolved 2026-11-06**: both fixed in a data-only commit of the same shape
+   as `bec1d19`. Verified that nothing else moves — the two anchor goldens
+   (`release_corpus_golden.tsv` rows 8 and 14) already used the correct slot
+   surfaces, `curated_predicate_slots.tsv` carries no typo for either topic,
+   and no test or spec fixture pins the misspelled strings. The
+   `CuratedPredicates` slice (18 cases) is green with the fix.
 
 What this changes about S3: the question is **not** "can we author ~45 new
 lexemes" (there is no lexeme inventory to extend) but "do we accept 257 new
@@ -198,16 +206,17 @@ round-trip per row) is what catches both risks.
 
 ## Open questions for the owner
 
-S1 is signed (option B, 207 rows). Two items remain open and both block the
-batch:
+**Both closed 2026-11-06.**
 
-1. **S2** — bars 1–7 above: accept, or set different values before
-   implementation? Bar 3 (emitted predicate = the system's own choice, ≥ 28/30)
-   is the point of the exercise; bar 2 is only its mechanism.
-2. **S3** — the batch needs 200 new `Object*` strings, 57 new `Relation*`
-   strings and 207 TSV rows (measured above; all slots are literal strings, and
-   the 30 subjects already exist). Is that in scope as one batch, or should it
-   land in topic groups? The choice decides whether the 4-point realizability
-   check can *fail* a row (single batch) or merely *defer* it to the next group.
-   Two data fixes must precede authoring: `воспоминание преобразкет` and
-   `доверие стройтся`.
+1. **S2** — *signed as written*: bars 1–7 above, no changes. Bar 3 (emitted
+   predicate = the system's own choice, ≥ 28/30) stays the point of the
+   exercise; bar 2 is only its mechanism.
+2. **S3** — *signed as topic groups*: group 1 (116 rows whose relation string
+   already exists) lands first, group 2 (91 rows needing 57 new relation
+   strings) second. Because the check runs per group, a row that fails the
+   4-point realizability check is **deferred** to the next group rather than
+   failing the batch. Both data fixes named here are done (2026-11-06).
+
+What remains before authoring starts: nothing on the decision side. The
+implementation itself (200 `Object*` strings, 57 `Relation*` strings, 207 TSV
+rows across two groups) has not begun.

@@ -143,8 +143,10 @@ finishes.)
   the `CuratedPredicates` suite slice (18 cases green).
 - **A second corpus typo found while fixing this one**:
   `curated_predicates.jsonl:147` has «воспоминание преобразкет пережитое в новую
-  рамку» («преобразкет» for «преобразует»). Not fixed — outside the approved
-  one-line change; recorded here so it is not lost.
+  рамку» («преобразкет» for «преобразует»). **Fixed 2026-11-06** in a
+  data-only commit together with a third one found during the S3 measurement
+  (`curated_predicates.jsonl:5656` «доверие стройтся со временем» →
+  «строится»); verified with the `CuratedPredicates` slice (18 cases green).
 - **Coverage hole**: the same 14 predicates are absent from
   `curated_predicate_slots.tsv`. Worth checking whether the whole
   `curated_predicates.jsonl` and the GF slot table are kept in sync by any
