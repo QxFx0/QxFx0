@@ -898,6 +898,22 @@ re-observe before treating as real).
   http 23 / lifecycle 11) — все **exit 0**, 4 349 кейсов, 0 падений;
   core-slice (1254) не перезапускался (тот же OOM-контур). Отчёт:
   `docs/closure/TEST_MATRIX_2026-11-01.md`.
+- **`oov-005` multiword topic span fix landed 2026-11-06** (`99910de`;
+  pre-registration signed in `aa211b5`): D-1 exact span in
+  `canonicalTopic` (verbatim, whitespace-normalized, no lemmatization,
+  no case fold; single tokens unchanged), D-2 `clauseShaped` (>= 3
+  tokens) refine gate at the `buildGroundedPlan` call site
+  (`refineUncoveredTopic` untouched), D-4 nullable
+  `trcTopicResolution` sub-record (`TRACE_SCHEMA.md` §13). Bars: B1
+  624/624 fixpoints, B2 16/16 preserved spans, B3 3 446/3 446
+  single-word keys, B4 red D-1-only 2/4 → green D-1+D-2 0/4, B6 M7 GF
+  30/30 + pilot50 45/45 non-OOV byte-identical (only `oov-005` moved
+  to abstention), B8 matrix unit 1828 / fast 1921 / property 244 /
+  integration 47 / main runtime 106 + http 23 / slow 190 — all exit 0.
+  CI Fast `42227691167` + Core Contract `42227691665` green. Result:
+  `docs/closure/OOV_TOPIC_SPAN_RESULT_2026-11-05.md`. Scope: closes the
+  named substitution class only; 500-prompt gate stays **BLOCKED** and
+  pilot50 remains a one-rater record.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
