@@ -941,6 +941,23 @@ re-observe before treating as real).
   frozen as `spec/gf/gf_slot_gap_2026-11-06.tsv` (sha256
   `10ecdb6a…765cdc6`). S1's scope and S2's bars are unchanged; only the
   measured sizes moved.
+- **Slot realizability checker 2026-11-07** (`scripts/eval/gf_slot_realizability.py`,
+  self-test 27/27): mechanizes the 4-point rule that bar 4 of S2 talks
+  about, which previously had no tool. Two dated corrections to the
+  prereg: point 1 named `QxFx0Lexicon*.gf`, but slot constructors are
+  generated into `QxFx0Syntax*.gf` from the TSV (`rg SubjectSvoboda` →
+  0 hits in the lexicon, 1 in each syntax file) — read literally the
+  rule rejected all 84 live rows; point 3 now has a real round-trip
+  (render → `gf --make --startcat=SemanticProposition` → linearize →
+  parse, one process per row so a hiccup cannot shift the rest). Run on
+  HEAD it finds two **pre-existing** defects, pinned as a known-failure
+  baseline `spec/gf/gf_slot_realizability_baseline.tsv` (sha256
+  `6fea29f7…4d2e08`): «отсутствие ограничений» is registered under two
+  object ids, and «произвол выражает отсутствие ограничений» therefore
+  parses back to the wrong constructor. Both are the batch's to fix.
+  Group 1 was dry-run in `/tmp` against the repo's own generator:
+  123/123 rows linearize byte-identically and parse back exactly, 0
+  deferred — the batch is mechanically feasible, it has not landed.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,

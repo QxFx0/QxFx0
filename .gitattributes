@@ -18,3 +18,7 @@ spec/eval/pilot50_prompts_harness.tsv text eol=lf
 # would silently invalidate it.
 spec/gf/gf_slot_gap_2026-11-06.tsv text eol=lf
 spec/gf/gf_slot_gap_2026-11-06.tsv.sha256 text eol=lf
+# Known-failure baseline for the 4-point realizability checker: its sha256 is
+# quoted in the slot prereg, so a CRLF checkout would invalidate it.
+spec/gf/gf_slot_realizability_baseline.tsv text eol=lf
+spec/gf/gf_slot_realizability_baseline.tsv.sha256 text eol=lf

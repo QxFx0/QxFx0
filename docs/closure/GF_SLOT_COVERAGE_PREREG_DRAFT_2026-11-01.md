@@ -110,6 +110,51 @@ Therefore every candidate row must satisfy, mechanically:
    object_ru` concatenates back to it exactly — measured to hold for 84/84
    existing rows (see the S3 cost model below).
 
+### Dated correction — 2026-11-07: what the four points actually check
+
+Points 1 and 3 were written before the mechanism was measured, and both were
+wrong in ways that matter. The correction is signed as a **clarification of the
+same intent**, not a loosening of the bar: a row still has to linearize, it is
+just measured against the artefacts that actually exist.
+
+**Point 1 named the wrong file.** Slot constructors are not lexicon lexemes.
+`scripts/export_lexicon.py` generates `Subject*`/`Relation*`/`Object*` from
+`spec/gf/curated_predicate_slots.tsv` into `QxFx0Syntax.gf` and
+`QxFx0SyntaxRus.gf`; `rg SubjectSvoboda` finds **0** hits in
+`QxFx0Lexicon*.gf` and 1 in each syntax file. Read literally, point 1 rejects
+every multiword object — including all 84 rows that are already live. The check
+is therefore: each id appears as the generated constructor in **both** syntax
+files, the table's id-to-surface mapping is one-to-one in both directions, and
+the syntax files on disk are not stale relative to the TSV.
+
+**Point 3 had no tool, so bar 4 was unmeasurable.** "New rows that fail the
+4-point realizability check = 0" is a bar about a check that did not exist.
+Point 3 is now mechanized: the syntax files are rendered from the TSV with the
+repo's own generator, compiled in a temp directory with `gf --make
+--startcat=SemanticProposition`, and every row must linearize byte-identically
+to `source_ru` and parse back to the same tree.
+
+Both are mechanized by `scripts/eval/gf_slot_realizability.py` (eval-only,
+`--self-test` 27/27, one process per row so a parse hiccup cannot shift the
+remaining rows). Run against HEAD it reports **two real defects that predate
+this batch**, pinned as a known-failure baseline
+(`spec/gf/gf_slot_realizability_baseline.tsv`, sha256
+`6fea29f74ef25f171133388bcefc7484e9eafc1c17ef698179479800974d2e08`):
+
+1. **Duplicate object id.** «отсутствие ограничений» is registered twice —
+   `otsutstvie_ogranicheniy` (line 67) and `otsutstvie_ogranichenij` (line 79) —
+   which produces two GF constructors with the same linearization.
+2. **That duplicate breaks one round-trip.** «произвол выражает отсутствие
+   ограничений» parses back to the *other* constructor, so it fails point 3.
+   The prereg's earlier "measured to hold for 84/84" covered reconstruction
+   (point 4) only; round-trip had never been measured.
+
+Both must be fixed by the batch (unifying the id changes one constructor name
+and no surface). Until then the tool exits 0 only with `--baseline`, and any
+*new* failure is loud — the baseline exists precisely so this checker does not
+become the "permanently red for known reasons" instrument criticized in point 3
+above.
+
 If a row cannot pass 1–4 within the authoring budget, it is **dropped, not
 approximated**. Dropping a row is not a failure of the batch; inventing a
 near-miss surface is (it re-creates the 51-row mismatch problem above).

@@ -30,9 +30,10 @@ empty, every entry carries:
 
 ## 1. The allowlist
 
-**Status 2026-11-06:** §1 is no longer empty. Seven eval-only tools are
+**Status 2026-11-07:** §1 is no longer empty. Eight eval-only tools are
 registered below: the five pre-existing pilot tools plus
-`scripts/eval/prompt_frame_500.py` and `scripts/eval/gf_slot_gap.py`. They are
+`scripts/eval/prompt_frame_500.py`, `scripts/eval/gf_slot_gap.py` and
+`scripts/eval/gf_slot_realizability.py`. They are
 quarantined by
 `scripts/eval/NON_AUTHORITY.txt`, carry `--self-test` (enforced by
 `scripts/check_architecture.sh` rule [24]), and are not on any authority
@@ -49,8 +50,9 @@ closure-plan pass.
 | `scripts/eval/pilot50_score.py` | `eval-only` | Scores the frozen pilot50 packet; recomputes totals instead of trusting them; kappa withheld without a second rater. | PENDING (Haskell eval harness) | PENDING | Deleted when the pilot50/500 scoring path is ported to Haskell or the gate is retired. |
 | `scripts/eval/prompt_frame_500.py` | `eval-only` | Builds the deterministic 500-prompt sampling frame and measures its composition; creates no labels and does not freeze a packet; self-tested. | PENDING (Haskell eval harness) | PENDING | Deleted when the 500-prompt frame is ported or the gate is retired. |
 | `scripts/eval/gf_slot_gap.py` | `eval-only` | Measures the GF slot gap over the merged runtime corpus and freezes the unmapped row list with sha256; creates no slots and edits no corpus file; self-tested (21 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the slot-gap measurement is ported or the slot batch is retired. |
+| `scripts/eval/gf_slot_realizability.py` | `eval-only` | Mechanizes the 4-point realizability rule for slot rows (constructors, generated Haskell, GF round-trip, corpus identity) and pins known failures with sha256; creates no slots and edits no corpus file; self-tested (27 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the realizability check is ported or the slot batch is retired. |
 
-**Empty allowlist remains the closure goal.** The seven entries above are
+**Empty allowlist remains the closure goal.** The eight entries above are
 open retentions; they must be reviewed at every closure-plan pass.
 
 ## 2. The pre-closure inventory (transition reference)
