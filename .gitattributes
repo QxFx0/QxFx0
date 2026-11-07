@@ -13,3 +13,8 @@ scripts/m7_gate_check.py text eol=lf
 # column and break expected-family matching.
 spec/eval/pilot50_prompts.tsv text eol=lf
 spec/eval/pilot50_prompts_harness.tsv text eol=lf
+# GF slot-gap frozen row list and its sha256 sidecar: the digest is pinned in
+# docs/closure/GF_SLOT_COVERAGE_PREREG_DRAFT_2026-11-01.md, so a CRLF checkout
+# would silently invalidate it.
+spec/gf/gf_slot_gap_2026-11-06.tsv text eol=lf
+spec/gf/gf_slot_gap_2026-11-06.tsv.sha256 text eol=lf

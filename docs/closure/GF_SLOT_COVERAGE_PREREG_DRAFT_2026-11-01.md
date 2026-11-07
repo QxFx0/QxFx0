@@ -1,8 +1,11 @@
 # Pre-registration — GF slot coverage for the release corpus (2026-11-01, S1 signed 2026-11-02, S2–S3 signed 2026-11-06)
 
-- **Status**: **S1 signed 2026-11-02 (scope = option B, 207 rows). S2 signed
-  2026-11-06 as written (bars 1–7 unchanged). S3 signed 2026-11-06 as
-  topic-grouped: group 1 (116 rows) first, group 2 (91 rows) second.**
+- **Status**: **S1 signed 2026-11-02 (scope = option B, every predicate of the
+  30 anchor topics). S2 signed 2026-11-06 as written (bars 1–7 unchanged). S3
+  signed 2026-11-06 as topic-grouped: group 1 first, group 2 second. The
+  2026-11-01 row counts were re-measured 2026-11-06 and are larger — group 1
+  is 123 rows, not 116, and the unmapped set is 225, not 207 (see the dated
+  correction in §S3; the original figures were not reproducible).**
   Nothing has been implemented or changed yet; the slot table, the generated
   Haskell and the frozen M7 admissible sets are untouched.
 - **Predecessor**: `docs/closure/M7_FALLBACK_CONTENT_REVIEW_2026-11-01.md`
@@ -165,10 +168,49 @@ Breakdown of the signed 207-row set:
 | relation string does **not** exist (57 distinct verb forms) | 91 | 57 new relation strings + 86 new object strings |
 | **total** | **207** | **200 new object lines, 57 relation lines, 207 TSV rows** |
 
+### Dated correction — re-measured 2026-11-06
+
+The numbers above are **not reproducible from the repository**. The measurement
+that produced them was never committed, and re-measuring the same population
+through the runtime itself (`extendedDefinitionCorpus` = seed + argued +
+curated) gives a larger gap. The corpus did not drift between the two dates:
+`Argued.hs` was last changed 2026-08-05, `Content.hs` 2026-10-24 and the slot
+table 2026-10-28; the only corpus change since 2026-11-01 is the two-typo fix
+(no row count change). So the difference is method, not content.
+
+| quantity | 2026-11-01 (text) | 2026-11-06 (reproducible) |
+|---|---:|---:|
+| anchor predicate rows | 286 | **309** |
+| of them with slots | 79 | **84** |
+| without slots (= scope B) | 207 | **225** |
+| group 1 (relation string exists) | 116 | **123** |
+| group 2 (new relation needed) | 91 | **102** |
+| new object strings in group 1 | 114 | **121** |
+
+Reproduce and inspect with `scripts/eval/gf_slot_gap.py` (eval-only,
+`--self-test` 21/21). The unmapped row list is frozen as
+`spec/gf/gf_slot_gap_2026-11-06.tsv`, sha256
+`10ecdb6a2cfec2ac121f4414a80204c8442babc46a5d7cae1cc66b489765cdc6`
+(sidecar `.sha256` next to it, both `text eol=lf` in `.gitattributes` so the
+digest survives a clone). Re-running the tool from a different dump produces
+the identical digest.
+
+**What stays signed and what moved.** S1's *scope* ("every predicate of the
+30 anchor topics") is unchanged; only its measured size moved from 207 to 225.
+S2's seven bars are unchanged. S3's shape (topic groups, group 1 first) is
+unchanged; group 1 now holds **123** rows, not 116, and its object budget is
+**121** new strings, not 114. Group membership is a **heuristic**: the tool
+attributes a row to group 1 only when the surface starts with
+`<topic> <existing relation> ` (longest match wins) and records the residual
+object; rows without such a match go to group 2 and carry a head hint that is
+not asserted to be the relation. Authoring must re-check each row's triple
+against the 4-point rule rather than trusting the bucket.
+
 Two measured risks for S3:
 
-1. **Agreement.** 23 of the 91 new-relation rows use a relation head ending in
-   -а/-я (`основана`, `направлена`, `формируется`, `измеряется`, …). Those
+1. **Agreement.** 23 of the 91 new-relation rows (re-measured: 102) use a
+   relation head ending in -а/-я (`основана`, `направлена`, `формируется`,
+   `измеряется`, …). Those
    encode gender or number and cannot be reused across subjects mechanically —
    the same relation string under a different subject can become ungrammatical.
    The other 68 use present-tense 3rd-person forms that are subject-invariant
@@ -189,9 +231,10 @@ Two measured risks for S3:
 What this changes about S3: the question is **not** "can we author ~45 new
 lexemes" (there is no lexeme inventory to extend) but "do we accept 257 new
 GF string lines (200 objects + 57 relations) plus 207 table rows, with the
-agreement and typo risks above, in one batch or in topic groups". The 4-point
-realizability check in the previous section still applies, and point 3 (GF
-round-trip per row) is what catches both risks.
+agreement and typo risks above, in one batch or in topic groups" — re-measured
+2026-11-06 as 225 table rows (121 + 102), still split into two topic groups. The
+4-point realizability check in the previous section still applies, and point 3
+(GF round-trip per row) is what catches both risks.
 
 
 ## What this does not do
@@ -211,12 +254,15 @@ round-trip per row) is what catches both risks.
 1. **S2** — *signed as written*: bars 1–7 above, no changes. Bar 3 (emitted
    predicate = the system's own choice, ≥ 28/30) stays the point of the
    exercise; bar 2 is only its mechanism.
-2. **S3** — *signed as topic groups*: group 1 (116 rows whose relation string
-   already exists) lands first, group 2 (91 rows needing 57 new relation
-   strings) second. Because the check runs per group, a row that fails the
-   4-point realizability check is **deferred** to the next group rather than
-   failing the batch. Both data fixes named here are done (2026-11-06).
+2. **S3** — *signed as topic groups*: group 1 (rows whose relation string
+   already exists; 123 re-measured) lands first, group 2 (rows needing a new
+   relation string; 102 re-measured) second. Because the check runs per group,
+   a row that fails the 4-point realizability check is **deferred** to the next
+   group rather than failing the batch. Both data fixes named here are done
+   (2026-11-06).
 
-What remains before authoring starts: nothing on the decision side. The
-implementation itself (200 `Object*` strings, 57 `Relation*` strings, 207 TSV
-rows across two groups) has not begun.
+What remains before authoring starts: nothing on the decision side, and the
+row list is now an artifact (`spec/gf/gf_slot_gap_2026-11-06.tsv`, sha256
+`10ecdb6a…765cdc6`) instead of a number in prose. The implementation itself
+(225 TSV rows across two groups, with 121 new object strings in group 1) has
+not begun.

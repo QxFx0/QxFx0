@@ -934,7 +934,13 @@ re-observe before treating as real).
   gate (option A) — a GF-enriched frame is drawn after coverage lands,
   so the gate remains BLOCKED. Both corpus typos
   (`преобразкет`→`преобразует`, `стройтся`→`строится`) fixed in a
-  data-only commit.
+  data-only commit. **Slot-gap re-measurement 2026-11-06**: the prereg's
+  286/207/116/91 figures are not reproducible (the measuring script was
+  never committed); the runtime corpus gives 309/225/123/102, measured by
+  the new eval-only `scripts/eval/gf_slot_gap.py` (self-test 21/21) and
+  frozen as `spec/gf/gf_slot_gap_2026-11-06.tsv` (sha256
+  `10ecdb6a…765cdc6`). S1's scope and S2's bars are unchanged; only the
+  measured sizes moved.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
