@@ -1,0 +1,33 @@
+# M7 GF confirmatory packet (30 prompts), reconstructed verbatim.
+# provenance: reports/eval_runs/m7-gf-confirm-20261031/results.jsonl
+# columns: id<TAB>prompt<TAB>expected_family
+gf-rel-001	что такое свобода?	CMDefine
+gf-rel-002	что такое произвол?	CMDefine
+gf-rel-003	что такое ответственность?	CMDefine
+gf-rel-004	что такое истина?	CMDefine
+gf-rel-005	что такое мнение?	CMDefine
+gf-rel-006	что такое память?	CMDefine
+gf-rel-007	что такое воспоминание?	CMDefine
+gf-rel-008	что такое сознание?	CMDefine
+gf-rel-009	что такое самосознание?	CMDefine
+gf-rel-010	что такое вера?	CMDefine
+gf-rel-011	что такое красота?	CMDefine
+gf-rel-012	что такое долг?	CMDefine
+gf-rel-013	что такое доверие?	CMDefine
+gf-rel-014	что такое страх?	CMDefine
+gf-rel-015	что такое надежда?	CMDefine
+gf-rel-016	что такое справедливость?	CMDefine
+gf-rel-017	что такое время?	CMDefine
+gf-rel-018	что такое разум?	CMDefine
+gf-rel-019	что такое бытие?	CMDefine
+gf-rel-020	что такое история?	CMDefine
+gf-rel-021	что такое язык?	CMDefine
+gf-rel-022	что такое воля?	CMDefine
+gf-rel-023	что такое смерть?	CMDefine
+gf-rel-024	что такое одиночество?	CMDefine
+gf-rel-025	что такое любовь?	CMDefine
+gf-rel-026	что такое труд?	CMDefine
+gf-rel-027	что такое покой?	CMDefine
+gf-rel-028	что такое власть?	CMDefine
+gf-rel-029	что такое правда?	CMDefine
+gf-rel-030	что такое молчание?	CMDefine
