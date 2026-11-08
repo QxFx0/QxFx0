@@ -3,6 +3,9 @@
 
 Pre-registered in docs/closure/M7_GOLDEN_ACCEPTANCE_RULE_2026-10-28.md
 (decisions D1-A / D2-A / D3 30/30 / D4 informational).
+Amended 2026-11-08 (docs/closure/GF_SLOT_BATCH_GROUP1_RESULT_2026-11-08.md):
+nine own-selection rows signed on top of the 2026-10-28 set; the four
+group-2 substitutes stay unsigned.
 
 The checker reads a frozen eval run directory and applies the signed rule with
 no manual judgement. It aborts if the admissible-set file no longer matches the
@@ -26,7 +29,8 @@ import sys
 from pathlib import Path
 
 ADMISSIBLE_PATH = Path("spec/gf/m7_admissible_predicates.tsv")
-ADMISSIBLE_SHA256 = "ef75231d65b1bf4bae20a55c93721c034dd020e2a6da66654848a34945033766"
+ADMISSIBLE_SHA256 = "aa6069385cfe95bc0768957ab77c04cd64d26ac306ea638eabb726fea2b2add0"
+SIGNED_DATES = {"2026-10-28", "2026-11-08"}
 GOLDEN_PATH = Path("spec/gf/release_corpus_golden.tsv")
 EXPECTED_TURNS = 30
 REQUIRED_MARKERS = ("Тезис:", "Проверка:")
@@ -69,8 +73,8 @@ def load_admissible() -> tuple[dict[str, set[str]], dict[str, str]]:
         rid, topic, predicate, provenance, approver, date = parts
         if provenance not in {"golden", "curated-approved", "fallback-approved"}:
             fail(f"unknown provenance {provenance!r} in row {rid}")
-        if approver != "owner" or date != "2026-10-28":
-            fail(f"row {rid} is not owner-signed on the pre-registered date")
+        if approver != "owner" or date not in SIGNED_DATES:
+            fail(f"row {rid} is not owner-signed on a pre-registered date")
         by_topic.setdefault(topic, set()).add(normalize(predicate))
         id_to_topic[rid] = topic
     return by_topic, id_to_topic

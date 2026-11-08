@@ -958,6 +958,25 @@ re-observe before treating as real).
   Group 1 was dry-run in `/tmp` against the repo's own generator:
   123/123 rows linearize byte-identically and parse back exactly, 0
   deferred — the batch is mechanically feasible, it has not landed.
+- **GF slot group-1 batch landed 2026-11-08** (measured, S2 bars
+  honestly open): 123 rows appended (`curated_predicate_slots.tsv` now
+  207 data rows), the duplicate object id `otsutstvie_ogranichenij`
+  unified to `otsutstvie_ogranicheniy`, three files regenerated
+  (`QxFx0Syntax.gf`, `QxFx0SyntaxRus.gf`, `SemanticSlots.hs`), GF
+  recompiled, test pin 84→207, generator `scripts/add_gf_slot_rows.py`.
+  Measured on two strict/isolated runs of the reconstructed 30-prompt
+  packet (`reports/eval_runs/m7-gf-batch-20261108{a,b}`,
+  `spec/gf/m7_gf_case_30.tsv`): `gf_mapped_fallback` 14→**5/30**, own
+  selection 16→**25/30**, determinism **0/30** predicate and surface
+  mismatches, 4-point realizability **207/207** incl. corpus identity.
+  Bars 2 (≤2) and 3 (≥28/30) still **FAIL**: all 5 remaining fallbacks
+  are group-2 rows (new relations required). Nine own-selection rows
+  signed into `m7_admissible_predicates.tsv` (54 rows, sha256
+  `aa606938…b2add0`, dates 2026-10-28 + 2026-11-08), so the gate is
+  **26/30**; the four group-2 substitutes stay unsigned. Bar 7 is
+  PENDING owner content sign-off (020/025 regress to weaker substitutes
+  until group 2). Result:
+  `docs/closure/GF_SLOT_BATCH_GROUP1_RESULT_2026-11-08.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
