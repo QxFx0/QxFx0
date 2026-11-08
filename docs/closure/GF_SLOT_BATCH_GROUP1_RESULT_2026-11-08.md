@@ -1,7 +1,8 @@
 # GF slot batch, group 1 — measurement result (2026-11-08)
 
-- **Status**: **measured, not landed.** The batch lives in the working tree
-  over HEAD `3f6c3da` and is uncommitted.
+- **Status**: **landed 2026-11-08** as `964ca2c` (batch) + `deef2cb`
+  (admissible-set amendment). Bar 6 is measured on the landing tree below;
+  bars 2/3/7 remain open (group 2 / owner content sign-off).
 - **Scope measured**: group 1 only — 123 rows appended to
   `spec/gf/curated_predicate_slots.tsv` (207 data rows total), the duplicate
   object id `otsutstvie_ogranichenij` unified to `otsutstvie_ogranicheniy`,
@@ -19,10 +20,12 @@
   `spec/gf/m7_gf_case_30.tsv` (sha256
   `d1a6615476b40e481674813175c3359c78603d532e1f48f99f339c1fb662d9cb`).
   `scripts/eval/check_prompt_file.py` accepts it.
-- **Admissible set**: the runs were judged with the **frozen 2026-10-28 set**
-  (`spec/gf/m7_admissible_predicates.tsv`, sha256 `ef75231d…033766`), exactly
-  as pre-registered. S2 anticipates a **new** set because emitted predicates
-  change; this document reports the candidate additions, it does not sign them.
+- **Admissible set**: the runs were first judged with the frozen 2026-10-28 set
+  (`spec/gf/m7_admissible_predicates.tsv`, sha256 `ef75231d…033766`, gate
+  **17/30**). After the owner signed 9 own-selection rows on 2026-11-08, the
+  set is `spec/gf/m7_admissible_predicates.tsv` (54 rows, sha256
+  `aa606938…b2add0`, signed dates 2026-10-28 + 2026-11-08), and the gate is
+  **26/30**. The four group-2 substitutes stay unsigned.
 
 ## Bars (S2, signed 2026-11-06)
 
@@ -33,7 +36,7 @@
 | 3 | emitted = system's own selection ≥ 28/30 | **25/30** | **FAIL** |
 | 4 | new rows failing the 4-point check = 0 | **207/207, 0 failures** (constructors, generated Haskell, GF round-trip, corpus identity against a 12 325-line runtime dump) | **PASS** |
 | 5 | determinism, two runs | **0/30** predicate mismatches, **0/30** surface mismatches | **PASS** |
-| 6 | full test matrix on the landing tree | not run yet | **PENDING** |
+| 6 | full test matrix on the landing tree | **10/10 steps green** on `deef2cb`; the first fast run hit the pre-existing `testPersistentWorkerRetainsPendingTasks` SQLITE_BUSY close race once, clean rerun **1921/1921** | **PASS** (flake documented) |
 | 7 | no new `drift`/`weak` row vs the 14-row verdicts | 13 changed turns; 2 look weaker (020, 025); owner review needed | **PENDING** |
 
 Notes:
@@ -123,15 +126,66 @@ against the 2026-10-28 set:
 | gf-rel-028 | власть | власть это способность и возможность влиять на поведение людей | curated-approved | **yes** |
 | gf-rel-030 | молчание | молчание выражает позицию через отсутствие слов | curated-approved | **yes** |
 
+## Bar 6 — full test matrix (2026-11-08, tree `deef2cb`)
+
+Ten steps, same shape as `docs/closure/TEST_MATRIX_2026-11-01.md`,
+sequential, tree fixed. The fast step is listed twice: the first run and the
+clean rerun. Logs: `reports/eval_runs/_logs/matrix-20261108/`.
+
+| step | command | cases | exit | wall |
+|---|---|---:|---:|---:|
+| unit | `cabal test qxfx0-test-unit` | 1828 | 0 | 70 s |
+| fast | `cabal test qxfx0-test-fast` | 1921 | **1** | 3 181 s |
+| fast (rerun) | `cabal test qxfx0-test-fast` | 1921 | **0** | 3 437 s |
+| property | `cabal test qxfx0-test-property` | 244 | 0 | 41 s |
+| integration | `cabal test qxfx0-test-integration` | 47 | 0 | 623 s |
+| main-runtime | `QXFX0_AGGREGATE_GROUP=runtime` | 106 | 0 | 4 783 s |
+| main-http | `QXFX0_AGGREGATE_GROUP=http` | 23 | 0 | 526 s |
+| slow-runtime | `QXFX0_SLOW_GROUP=runtime` | 106 | 0 | 4 979 s |
+| slow-state | `QXFX0_SLOW_GROUP=state` | 50 | 0 | 4 021 s |
+| slow-http | `QXFX0_SLOW_GROUP=http` | 23 | 0 | 547 s |
+| slow-lifecycle | `QXFX0_SLOW_GROUP=lifecycle` | 11 | 0 | 436 s |
+
+Total: **4 359 cases**, 1 error on the first fast run, 0 on the rerun.
+
+### The one fast error is a pre-existing close race
+
+`testPersistentWorkerRetainsPendingTasks`
+(`test/Test/Suite/AutonomousIntegration.hs:619`) failed with
+`category=SQLiteError, operation=close, code=rc=5` (SQLITE_BUSY) inside the
+test's `finally` (`stopManagedWorker worker \`finally\` closeDb`). The worker
+kept writing `CORROBORATION_QUEUE_SQLITE_ERROR` repair marks after the close,
+so `stopManagedWorker` returns before the in-flight durable write drains.
+
+It is not caused by the slot batch:
+
+- isolated slice `QXFX0_FAST_SUITE=autonomousintegration` (65 cases) on the
+  **pre-batch** tree `3f6c3da`: **3 errors in 28 runs** (0 in the first 8,
+  3 in the next 20);
+- the same slice on `deef2cb`: 1 error in 5 runs;
+- the full fast run hit it once in 1 921 cases; the clean rerun did not.
+
+The fix belongs to the worker-stop/close contract (runtime or test), not to
+this landing; it is recorded as an open item.
+
+### Tree note
+
+The fast suite's GF pre-build rewrote the generated
+`spec/gf/QxFx0Syntax.pgf.manifest` at run start (the manifest hashes the
+on-disk `.gf` bytes, and a fresh checkout changes their line endings). The
+tracked `.gf`/`.pgf` content was unchanged (`git diff` empty for them); the
+manifest was restored after the run. No source, spec or data file changed
+content between run start and finish.
+
 ## What this establishes
 
 - Group 1 is **mechanically realizable and deterministic**: 207/207 on the
   4-point rule, identical surfaces and predicates across two runs.
 - It cuts GF-mapped fallback from 14/30 to 5/30 and restores the system's own
   predicate on 9 turns, including the two flagged in the 2026-11-01 review.
-- It **does not** close S2: bars 2/3 need group 2, bar 1 needs a new
-  admissible set, bar 7 needs the owner's content review, bar 6 needs the
-  matrix.
+- It **does not** close S2: bars 2/3 need group 2, bar 1 needs group 2 plus
+  the 4 deferred rows, bar 7 needs the owner's content review. Bar 6 is
+  closed on `deef2cb` (10/10 green, one pre-existing flake documented).
 
 ## Owner decisions (2026-11-08)
 
@@ -142,15 +196,19 @@ against the 2026-10-28 set:
 3. **Bar 7**: the 13-row content review is recorded above; 020/025 are
    flagged as regressions and are expected to disappear with group 2. Bar 7
    itself remains **PENDING** — this is not a content sign-off.
-4. **Bar 6**: run the full matrix on the landing tree (≈5 h 46 min).
+4. **Bar 6**: run the full matrix on the landing tree — done on `deef2cb`,
+   10/10 steps green (the first fast run hit a pre-existing flake; the rerun
+   was green).
 
 ## Remaining open items
 
 - Bars 2/3: need group 2 (102 rows, new relations).
 - Bar 1: needs group 2 plus the 4 deferred admissible rows.
-- Bar 6: matrix on the committed tree.
 - Bar 7: owner content sign-off on the 13 rows (020/025 are the open
   question).
+- Flake: `testPersistentWorkerRetainsPendingTasks` close race
+  (SQLITE_BUSY) — pre-existing, the fix belongs to the worker-stop/close
+  contract.
 
 ## Artifacts
 
@@ -162,3 +220,5 @@ against the 2026-10-28 set:
 - `spec/gf/m7_gf_case_30.tsv` — reconstructed packet.
 - `spec/gf/gf_slot_gap_2026-11-06.tsv` — frozen 225-row gap (group 1 = 123,
   group 2 = 102).
+- `reports/eval_runs/_logs/matrix-20261108/` — per-step matrix logs and
+  `summary.txt`; `fast-rerun.log` is the clean 1921/1921 run.

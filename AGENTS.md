@@ -898,6 +898,15 @@ re-observe before treating as real).
   http 23 / lifecycle 11) — все **exit 0**, 4 349 кейсов, 0 падений;
   core-slice (1254) не перезапускался (тот же OOM-контур). Отчёт:
   `docs/closure/TEST_MATRIX_2026-11-01.md`.
+  **Matrix 2026-11-08 (group-1 landing, tree `deef2cb`)**: unit 1828,
+  fast 1921 (first run 1 error — the pre-existing
+  `testPersistentWorkerRetainsPendingTasks` SQLITE_BUSY close race,
+  clean rerun 1921/1921), property 244, integration 47, main runtime
+  106 + http 23, slow 190 (runtime 106 / state 50 / http 23 /
+  lifecycle 11) — all exit 0, 4 359 cases. The flake reproduces on the
+  pre-batch tree `3f6c3da` (3 errors in 28 isolated-slice runs), so it
+  is not a slot-batch regression. Logs:
+  `reports/eval_runs/_logs/matrix-20261108/`.
 - **`oov-005` multiword topic span fix landed 2026-11-06** (`99910de`;
   pre-registration signed in `aa211b5`): D-1 exact span in
   `canonicalTopic` (verbatim, whitespace-normalized, no lemmatization,
@@ -975,7 +984,10 @@ re-observe before treating as real).
   `aa606938…b2add0`, dates 2026-10-28 + 2026-11-08), so the gate is
   **26/30**; the four group-2 substitutes stay unsigned. Bar 7 is
   PENDING owner content sign-off (020/025 regress to weaker substitutes
-  until group 2). Result:
+  until group 2). Bar 6 is closed on `deef2cb`: 10/10 steps green
+  (first fast run hit the pre-existing `testPersistentWorkerRetainsPendingTasks`
+  SQLITE_BUSY close race, clean rerun 1921/1921; the flake reproduces on
+  the pre-batch tree `3f6c3da`). Result:
   `docs/closure/GF_SLOT_BATCH_GROUP1_RESULT_2026-11-08.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
