@@ -7,6 +7,11 @@ Amended 2026-11-08 (docs/closure/GF_SLOT_BATCH_GROUP1_RESULT_2026-11-08.md):
 nine own-selection rows signed on top of the 2026-10-28 set; the four
 group-2 substitutes stay unsigned.
 
+Amended 2026-11-09 (docs/closure/GF_SLOT_BATCH_GROUP2_RESULT_2026-11-09.md):
+the group-2 landing removes the substitution, so five more own-selection
+rows are signed (013, 017, 020, 024, 025). The old substitute rows stay in
+the set; the gate is a membership test, not an exclusive list.
+
 The checker reads a frozen eval run directory and applies the signed rule with
 no manual judgement. It aborts if the admissible-set file no longer matches the
 pre-registered sha256.
@@ -29,8 +34,8 @@ import sys
 from pathlib import Path
 
 ADMISSIBLE_PATH = Path("spec/gf/m7_admissible_predicates.tsv")
-ADMISSIBLE_SHA256 = "aa6069385cfe95bc0768957ab77c04cd64d26ac306ea638eabb726fea2b2add0"
-SIGNED_DATES = {"2026-10-28", "2026-11-08"}
+ADMISSIBLE_SHA256 = "7c3576f221cf2743eb1c2b9688007503ef3ee61869b543bd90376652887ed10f"
+SIGNED_DATES = {"2026-10-28", "2026-11-08", "2026-11-09"}
 GOLDEN_PATH = Path("spec/gf/release_corpus_golden.tsv")
 EXPECTED_TURNS = 30
 REQUIRED_MARKERS = ("Тезис:", "Проверка:")
