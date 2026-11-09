@@ -23,6 +23,15 @@ Derivation rules (all deterministic, no judgement):
 - the row is refused unless ``subject_ru + " " + relation_ru + " " +
   object_ru`` reconstructs ``source_ru`` byte for byte.
 
+Group 2 (``--group2``) cannot be derived from the frozen row: the head hint is
+explicitly *not* the relation (``scripts/eval/gf_slot_gap.py``), so 102 rows
+need an authored subject/relation/object split. The split lives in
+``spec/gf/gf_slot_group2_splits_2026-11-08.tsv``; the tool refuses the batch
+unless every group-2 row has exactly one split entry, every ``authored`` row
+reconstructs, and every ``deferred`` row carries a reason. Relation and object
+ids are reused by surface exactly as in group 1, so a new relation surface is
+the only new thing a group-2 row can introduce.
+
 ``--apply`` appends in frozen-file order, which is already topic-grouped. Rows
 that are already present are reported as ``present`` and skipped, so the tool is
 idempotent and safe to re-run after a partial landing.
@@ -41,6 +50,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SLOTS = "spec/gf/curated_predicate_slots.tsv"
 GAP = "spec/gf/gf_slot_gap_2026-11-06.tsv"
+SPLITS = "spec/gf/gf_slot_group2_splits_2026-11-08.tsv"
 GAP_SHA256 = "10ecdb6a2cfec2ac121f4414a80204c8442babc46a5d7cae1cc66b489765cdc6"
 COLUMNS = [
     "predicate_id", "subject_id", "subject_ru",
@@ -79,6 +89,12 @@ def read_slots_text(text: str):
 
 def read_gap_text(text: str):
     lines = [line for line in text.splitlines() if line.strip()]
+    header, rows = lines[0].split("\t"), [line.split("\t") for line in lines[1:]]
+    return header, rows
+
+
+def read_splits_text(text: str):
+    lines = [line for line in text.splitlines() if line.strip() and not line.startswith("#")]
     header, rows = lines[0].split("\t"), [line.split("\t") for line in lines[1:]]
     return header, rows
 
@@ -127,6 +143,78 @@ def derive(generator, slot_rows, gap_rows):
     return candidates, skipped, problems
 
 
+def derive_group2(generator, slot_rows, gap_rows, split_rows):
+    """Derive group-2 rows from an authored split file.
+
+    The split file must cover every group-2 row exactly once. A row is either
+    ``authored`` (relation_ru/object_ru must reconstruct source_ru) or
+    ``deferred`` (schema-incompatible; carries the reason in note). Relations
+    and objects reuse an existing id by surface, matching the group-1 rule.
+    """
+    subject_ids, relation_ids, object_ids = {}, {}, {}
+    for row in slot_rows:
+        subject_ids.setdefault(row[2], row[1])
+        relation_ids.setdefault(row[4], row[3])
+        object_ids.setdefault(row[6], row[5])
+
+    sources = {row[7] for row in slot_rows}
+    predicate_ids = {row[0] for row in slot_rows}
+    gap_by_source = {row[1]: row for row in gap_rows if row[2] == "2"}
+    seen = set()
+    candidates, skipped, problems = [], [], []
+
+    for split in split_rows:
+        if len(split) < 6:
+            problems.append(("", f"split row has {len(split)} columns, expected 6"))
+            continue
+        topic, surface, relation, obj, disposition, note = split[:6]
+        if surface not in gap_by_source:
+            problems.append((surface, "not a group-2 row in the frozen gap"))
+            continue
+        if surface in seen:
+            problems.append((surface, "duplicate split row"))
+            continue
+        seen.add(surface)
+        gap_topic = gap_by_source[surface][0]
+        if topic != gap_topic:
+            problems.append((surface, f"topic {topic!r} != gap topic {gap_topic!r}"))
+            continue
+        if disposition == "deferred":
+            skipped.append((surface, f"deferred: {note}"))
+            continue
+        if disposition != "authored":
+            problems.append((surface, f"unknown disposition {disposition!r}"))
+            continue
+        if surface in sources:
+            skipped.append((surface, "present"))
+            continue
+        if surface != f"{topic} {relation} {obj}":
+            problems.append((surface, "row does not reconstruct from topic/relation/object"))
+            continue
+        if topic not in subject_ids:
+            problems.append((surface, f"subject {topic!r} has no existing id"))
+            continue
+        relation_id = relation_ids.get(relation)
+        if relation_id is None:
+            relation_id = unique(slug(generator, relation), set(relation_ids.values()))
+            relation_ids[relation] = relation_id
+        object_id = object_ids.get(obj)
+        if object_id is None:
+            object_id = unique(slug(generator, obj), set(object_ids.values()))
+            object_ids[obj] = object_id
+        predicate_id = unique(slug(generator, surface), predicate_ids)
+        predicate_ids.add(predicate_id)
+        candidates.append([
+            predicate_id, subject_ids[topic], topic,
+            relation_id, relation, object_id, obj, surface,
+        ])
+
+    for source in gap_by_source:
+        if source not in seen:
+            problems.append((source, "group-2 row has no split entry"))
+    return candidates, skipped, problems
+
+
 def render(candidates) -> str:
     return "".join("\t".join(row) + "\n" for row in candidates)
 
@@ -151,10 +239,11 @@ def self_test() -> int:
         "\t".join(["topic", "source_ru", "group", "matched_relation", "object", "note"]) + "\n"
         + "свобода\tсвобода предполагает новую рамку\t1\tпредполагает\tновую рамку\trelation_exists\n"
         + "свобода\tсвобода раскрывается через выбор\t2\t\t\tnew_relation_required\n"
+        + "свобода\tсвобода вдохновляет\t2\t\t\tnew_relation_required\n"
         + "свобода\tсвобода предполагает возможность выбора\t1\tпредполагает\tвозможность выбора\trelation_exists\n"
         + "чужое\tчужое предполагает нечто\t1\tпредполагает\tнечто\trelation_exists\n"
     )
-    case("gap rows parsed", len(gap_rows) == 4)
+    case("gap rows parsed", len(gap_rows) == 5)
 
     candidates, skipped, problems = derive(generator, slot_rows, gap_rows)
     case("group 1 only", [row[7] for row in candidates] == ["свобода предполагает новую рамку"], str(candidates))
@@ -173,6 +262,38 @@ def self_test() -> int:
     case("unique leaves free id", unique("y", {"x"}) == "y")
     case("render is tab separated", render([["a", "b"]]) == "a\tb\n")
 
+    split_header, split_rows = read_splits_text(
+        "\n".join([
+            "\t".join(["topic", "source_ru", "relation_ru", "object_ru", "disposition", "note"]),
+            "свобода\tсвобода раскрывается через выбор\tраскрывается\tчерез выбор\tauthored\t",
+            "свобода\tсвобода вдохновляет\t\t\tdeferred\tintransitive verb; no object slot",
+        ])
+    )
+    case("split header parsed", split_header == ["topic", "source_ru", "relation_ru", "object_ru", "disposition", "note"])
+    g2_candidates, g2_skipped, g2_problems = derive_group2(generator, slot_rows, gap_rows, split_rows)
+    case("group2 authored row derived", [row[7] for row in g2_candidates] == ["свобода раскрывается через выбор"], str(g2_candidates))
+    case("group2 deferred skipped", any(reason.startswith("deferred:") for _, reason in g2_skipped), str(g2_skipped))
+    case("group2 relation id derived", g2_candidates[0][3] == "raskryvaetsya", str(g2_candidates[0]))
+    case("group2 object id derived", g2_candidates[0][5] == "cherez_vybor", str(g2_candidates[0]))
+    case("group2 reconstruction holds", g2_candidates[0][7] == "свобода раскрывается через выбор")
+    case("group2 no problems on full coverage", not g2_problems, str(g2_problems))
+
+    missing_candidates, _, missing_problems = derive_group2(
+        generator, slot_rows, gap_rows, split_rows[:1]
+    )
+    case("group2 missing coverage refused", any("no split entry" in reason for _, reason in missing_problems), str(missing_problems))
+    case("group2 missing coverage yields one row", len(missing_candidates) == 1, str(missing_candidates))
+
+    bad_reconstruction = [list(row) for row in split_rows]
+    bad_reconstruction[0][3] = "выбор"
+    _, _, bad_problems = derive_group2(generator, slot_rows, gap_rows, bad_reconstruction)
+    case("group2 bad reconstruction refused", any("does not reconstruct" in reason for _, reason in bad_problems), str(bad_problems))
+
+    unknown = [list(row) for row in split_rows]
+    unknown[0][1] = "свобода неизвестная строка"
+    _, _, unknown_problems = derive_group2(generator, slot_rows, gap_rows, unknown)
+    case("group2 unknown surface refused", any("not a group-2 row" in reason for _, reason in unknown_problems), str(unknown_problems))
+
     failures = [name for name, ok, _ in cases if not ok]
     for name, ok, detail in cases:
         print(f"{'ok  ' if ok else 'FAIL'} {name}" + (f"  ({detail})" if not ok and detail else ""))
@@ -184,6 +305,16 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--slots", default=SLOTS, help="slot table to extend")
     parser.add_argument("--gap", default=GAP, help="frozen slot-gap TSV")
+    parser.add_argument(
+        "--splits",
+        default=None,
+        help=f"authored group-2 split file (default: {SPLITS} when --group2 is given)",
+    )
+    parser.add_argument(
+        "--group2",
+        action="store_true",
+        help="derive group-2 rows from the authored split file instead of group 1",
+    )
     parser.add_argument("--apply", action="store_true", help="append the derived rows")
     parser.add_argument("--self-test", action="store_true", help="run embedded cases")
     args = parser.parse_args(argv)
@@ -195,10 +326,18 @@ def main(argv=None) -> int:
 
     slots_path = Path(args.slots) if Path(args.slots).is_absolute() else ROOT / args.slots
     gap_path = Path(args.gap) if Path(args.gap).is_absolute() else ROOT / args.gap
+    splits_arg = args.splits or (SPLITS if args.group2 else None)
+    splits_path = (
+        Path(splits_arg) if splits_arg and Path(splits_arg).is_absolute()
+        else (ROOT / splits_arg if splits_arg else None)
+    )
     for path in (slots_path, gap_path):
         if not path.exists():
             print(f"INVALID: missing {path}", file=sys.stderr)
             return 2
+    if splits_path is not None and not splits_path.exists():
+        print(f"INVALID: missing {splits_path}", file=sys.stderr)
+        return 2
     gap_digest = hashlib.sha256(gap_path.read_bytes()).hexdigest()
     if args.gap == GAP and gap_digest != GAP_SHA256:
         print(f"INVALID: gap file sha256 {gap_digest} != frozen {GAP_SHA256}", file=sys.stderr)
@@ -207,7 +346,15 @@ def main(argv=None) -> int:
     generator = load_generator()
     _, slot_rows = read_slots_text(slots_path.read_text(encoding="utf-8"))
     _, gap_rows = read_gap_text(gap_path.read_text(encoding="utf-8"))
-    candidates, skipped, problems = derive(generator, slot_rows, gap_rows)
+    if splits_path is None:
+        candidates, skipped, problems = derive(generator, slot_rows, gap_rows)
+    else:
+        split_header, split_rows = read_splits_text(splits_path.read_text(encoding="utf-8"))
+        expected = ["topic", "source_ru", "relation_ru", "object_ru", "disposition", "note"]
+        if split_header != expected:
+            print(f"INVALID: split header {split_header} != {expected}", file=sys.stderr)
+            return 2
+        candidates, skipped, problems = derive_group2(generator, slot_rows, gap_rows, split_rows)
 
     print(f"slot rows: {len(slot_rows)}  gap rows: {len(gap_rows)}")
     print(f"candidates: {len(candidates)}  skipped: {len(skipped)}  problems: {len(problems)}")
