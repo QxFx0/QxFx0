@@ -989,6 +989,33 @@ re-observe before treating as real).
   SQLITE_BUSY close race, clean rerun 1921/1921; the flake reproduces on
   the pre-batch tree `3f6c3da`). Result:
   `docs/closure/GF_SLOT_BATCH_GROUP1_RESULT_2026-11-08.md`.
+- **GF slot group-2 batch landed 2026-11-09** (S2 closed for the bounded
+  packet): 98 rows appended from the authored split
+  `spec/gf/gf_slot_group2_splits_2026-11-08.tsv` (102 rows = 98 authored
+  + 4 deferred, sha256 `540d7472…c1ce50`), table 207 → **305 data rows**,
+  **62 new relation surfaces**, three files regenerated, GF recompiled,
+  pin 207 → 305. Generator gained `--group2`/`--splits` (self-test 27/27);
+  it refuses a batch unless every group-2 row has one split entry and
+  every authored row reconstructs `source_ru` byte for byte. The 4
+  deferred rows have no reusable relation/object
+  (`бытие основная категория философии`, `память избирательна и
+  реконструктивна`, `красота в глазах смотрящего`, `любовь вдохновляет`)
+  — owner-approved deferral, count corrected 3 → 4. Measured on
+  `m7-gf-batch-20261108c/d` (strict/isolated): `gf_mapped_fallback`
+  5 → **0/30**, own selection 25 → **30/30** (`DeriveGfMappedFallback`
+  0 times), determinism **0/30** predicate and surface mismatches,
+  4-point **305/305** incl. corpus identity (dump regenerated, 12 325
+  lines). The known-failure baseline is now empty (0 pinned). Five
+  own-selection rows signed 2026-11-09 (set 59 rows, sha256
+  `7c3576f2…7ed10f`), so the gate is **30/30**; the old substitutes stay
+  in the set (membership test, not an exclusive list). Bar 7 signed by
+  the owner (5 changed turns, all to the system's own selection). Bar 6:
+  matrix 2026-11-09, 10/10 steps green, 4 359 cases, 0 errors (fast
+  passed first try). One honest outlier: run `c` had a single 4 987 s
+  turn (`gf-rel-010`), known long-stall class, not diagnosed. S2 is
+  closed **only for the bounded 30-prompt packet**; the 500-prompt gate
+  stays BLOCKED. Result:
+  `docs/closure/GF_SLOT_BATCH_GROUP2_RESULT_2026-11-09.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
