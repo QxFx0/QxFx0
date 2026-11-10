@@ -132,11 +132,16 @@ SQLITE_BUSY close race) passed first try here.
 ## Latency outlier (honest note)
 
 Run `c` had one turn (`gf-rel-010`, «что такое вера?») take **4 987 s**
-(83 min); the run's average is 238 s and run `d`'s average is 77 s. The
-process was alive and progressing (observed in `ps` during the stall) and the
-run completed with 0 errors. This is the known long-stall wart class, not a
-slot-batch regression: no code on the turn path changed. Recorded, not
-diagnosed.
+(83 min); the run's average is 238 s and run `d`'s average is 77 s. The run
+completed with 0 errors and the turn's trace and surface are byte-identical to
+run `d`'s fast execution. This is not a slot-batch regression: no code on the
+turn path changed. Diagnosed in
+`docs/closure/TURN_STALL_DIAGNOSIS_2026-11-09.md` — 99.94 % of the turn is the
+render phase, which is a ~49 s / ~69 GB-allocation pure computation with no
+blocking construct on its path; the 100× slowdown itself is not attributable to
+a code path and is not root-caused. An earlier draft of this section said the
+process was "alive and progressing (observed in `ps`)"; no such observation
+artifact exists, so that claim was removed.
 
 ## What this establishes
 

@@ -932,7 +932,7 @@ re-observe before treating as real).
   extended profile (weekly cron + manual dispatch) and is advisory there;
   it is absent from the core PROD_GO profile, so this is a precondition
   fix, not a hard CI gate. New
-  `scripts/eval/prompt_frame_500.py` (eval-only, self-test 25/25) measures
+  `scripts/eval/prompt_frame_500.py` (eval-only, self-test 52/52) measures
   the uniform 500-prompt frame: **5/500 GF-mapped**, 86 multiword, 8 pilot
   overlaps — a uniform 500 gate is a text-path gate, not M7
   (`PROMPT_FRAME_500_2026-11-06.md`). `PYTHON_SUPPLIER_ALLOWLIST.md` §1
@@ -967,6 +967,45 @@ re-observe before treating as real).
   Group 1 was dry-run in `/tmp` against the repo's own generator:
   123/123 rows linearize byte-identically and parse back exactly, 0
   deferred — the batch is mechanically feasible, it has not landed.
+- **Frame tooling + stall diagnosis 2026-11-09/10 (no runtime change)**:
+  `scripts/eval/prompt_frame_500.py` gained `--enriched` (self-test
+  25 → **52/52**): it crosses the GF-covered topics with a table of
+  *verified* definitional carriers (prefixes of «что такое <topic>?»),
+  reports the **ceiling** and refuses a `--size` above it instead of
+  silently shrinking. Carrier space is prefix-only by construction —
+  `IntentDefine` extracts the topic after the first literal «что такое»
+  (`extractTopicAfter`), so trailing material becomes part of the topic.
+  Measured: 30 GF-covered topics × 12 verified carriers = **ceiling 360**,
+  so **a 500-prompt GF frame cannot be built from the current corpus**
+  (`--size 500` exits 1). The 12 carriers all keep `CMDefine` + topic;
+  11 of 12 also keep the bare predicate — a carrier perturbs the Field
+  and the per-predicate selector may pick different content
+  («мне нужно понять, что такое свобода?»: arousal 0.71 vs 0.15,
+  different predicate, same topic, same `covered_exact`/`exact`).
+  The 30 GF topics are **exactly** the 30 pilot `anchor` topics, all
+  single-word, so an enriched frame is the pilot's anchor set crossed
+  with carriers, not an independent sample. Owner decision 2026-11-09:
+  build the tooling, **do not freeze** a frame; the 500-prompt gate stays
+  BLOCKED. Uniform mode is unchanged (5/500 GF-mapped). Cost at current
+  latency: ~70 s/prompt (bootstrap ~23 s + turn ~47 s) → 500 ≈ 11 h,
+  360 ≈ 7 h, before ~17 h of two-rater labeling.
+  Stall diagnosis (`docs/closure/TURN_STALL_DIAGNOSIS_2026-11-09.md`):
+  the 4 987 s turn is **99.94 % render phase** (`render_ms=4 957 452` of
+  `total_ms=4 960 399`), whose only IO is 4 env reads, one
+  `doesFileExist` and an in-process PGF cache hit — no retry,
+  `threadDelay`, MVar, subprocess, network or DB, and external learning
+  is permanently off. Measured with `+RTS -s`: a definitional turn burns
+  **~49 s CPU (26 s MUT + 23 s GC) and allocates ~69 GB** (95.6 GB total
+  minus 26.8 GB bootstrap), 762 MB residency, 1.2 GiB peak, `-N1`. Run
+  c's other 29 turns are normal (render median 43.7 s), the stalled
+  turn's trace and surface are byte-identical to run d, no OOM/hung
+  task/swap in the journal, no other session in the DB window. Root
+  cause **not determined**: ~100× slowdown of a deterministic
+  computation with identical output is either CPU starvation or an
+  unrecorded RTS/GC pathology. The earlier group-2 doc sentence
+  "observed in `ps` during the stall" had no artifact and was removed.
+  Next diagnostic: `+RTS -s -RTS` in the per-turn invocation (the M7
+  harness is **not committed** — it lived in `/tmp` and was lost).
 - **GF slot group-1 batch landed 2026-11-08** (measured, S2 bars
   honestly open): 123 rows appended (`curated_predicate_slots.tsv` now
   207 data rows), the duplicate object id `otsutstvie_ogranichenij`
