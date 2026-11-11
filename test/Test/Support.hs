@@ -64,10 +64,10 @@ queryCount db sql = do
   stmt <- case stmtRes of
     Left err -> assertFailure ("Prepare failed: " <> T.unpack err) >> fail "unreachable"
     Right s -> pure s
-  hasRow <- NSQL.stepRow stmt
-  count <- if hasRow then NSQL.columnInt stmt 0 else pure 0
-  NSQL.finalize stmt
-  pure count
+  (do
+      hasRow <- NSQL.stepRow stmt
+      if hasRow then NSQL.columnInt stmt 0 else pure 0)
+    `finally` (NSQL.finalize stmt)
 
 withFakeSouffle :: IO a -> IO a
 withFakeSouffle action = do

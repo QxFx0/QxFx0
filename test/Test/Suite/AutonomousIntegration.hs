@@ -653,6 +653,11 @@ testPersistentWorkerRetainsPendingTasks = TestLabel "persistent autonomous worke
               "persistent-second-request" (nueRequestId second)
             pure (first, second)
           _ -> assertFailure "persistent worker did not emit both updates" >> fail "unreachable"
+        -- Stop the only concurrent writer before reading persisted counts:
+        -- production never queries a connection while another writer commits,
+        -- and this fixture's connection is a plain rollback-journal handle
+        -- without busy_timeout.
+        stopManagedWorker worker
         responseCount <- queryCount (qdbConn db)
           "SELECT COUNT(*) FROM learning_responses"
         proposalCount <- queryCount (qdbConn db)

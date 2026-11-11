@@ -750,6 +750,7 @@ common test-common
     Test.Suite.M6FeltBenchmark
     Test.Suite.RoundTrip
     Test.Suite.NativeSQLiteNulls
+    Test.Suite.NativeSQLiteClose
     Test.Suite.ResponseContentAdmission
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine

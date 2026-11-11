@@ -28,10 +28,13 @@ module QxFx0.Bridge.NativeSQLite
   , execSql
   , withStatement
   , withDatabase
+  , unfinalizedStatements
   , sqliteTransient
   ) where
 
 import Control.Exception (finally)
+import Control.Monad (void)
+import System.IO (hPutStrLn, stderr)
 import Data.Int (Int64)
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -64,6 +67,12 @@ foreign import ccall safe "sqlite3_step"
 
 foreign import ccall unsafe "sqlite3_finalize"
   c_sqlite3_finalize :: Statement -> IO CInt
+
+foreign import ccall unsafe "sqlite3_next_stmt"
+  c_sqlite3_next_stmt :: Database -> Statement -> IO Statement
+
+foreign import ccall unsafe "sqlite3_sql"
+  c_sqlite3_sql :: Statement -> IO CString
 
 foreign import ccall unsafe "qxfx0_sqlite3_bind_text_transient"
   c_qxfx0_sqlite3_bind_text_transient :: Statement -> CInt -> CString -> CInt -> IO CInt
@@ -143,9 +152,61 @@ open path = alloca $ \ppDb -> do
 close :: Database -> IO ()
 close db = do
   rc <- c_sqlite3_close db
-  if rc /= sqlOk
-    then throwQxFx0 (mkSQLiteError "close" (T.pack $ "rc=" ++ show rc) Map.empty)
-    else return ()
+  if rc == sqlOk
+    then return ()
+    else if rc == sqliteBusy
+      then closeAfterFinalizingLeaks db
+      else throwCloseFailure rc Map.empty
+
+-- | SQLite refuses to close a handle that still owns prepared statements
+-- (rc=5, SQLITE_BUSY).  An interrupted statement sequence — asynchronous
+-- cancellation, or any exception between 'prepare' and 'finalize' — leaves
+-- exactly that state, and a caller that swallows the error then leaks the
+-- handle and its file descriptor.  Finalizing the leftovers is what the close
+-- needs; the leak is still reported so it stays observable.
+closeAfterFinalizingLeaks :: Database -> IO ()
+closeAfterFinalizingLeaks db = do
+  leftovers <- unfinalizedStatementPtrs db
+  if null leftovers
+    then throwCloseFailure sqliteBusy Map.empty
+    else do
+      let sqls = map (T.take 240 . snd) leftovers
+      hPutStrLn stderr
+        ("[sqlite] close rc=" <> show sqliteBusy <> ": finalizing "
+          <> show (length leftovers) <> " leaked statement(s): "
+          <> T.unpack (T.intercalate " | " sqls))
+      mapM_ (\(stmt, _) -> void (c_sqlite3_finalize stmt)) leftovers
+      rc <- c_sqlite3_close db
+      if rc == sqlOk
+        then return ()
+        else throwCloseFailure rc (Map.singleton "unfinalized" (T.intercalate " | " sqls))
+
+throwCloseFailure :: CInt -> Map.Map Text Text -> IO ()
+throwCloseFailure rc context =
+  throwQxFx0 (mkSQLiteError "close" (T.pack $ "rc=" ++ show rc) context)
+
+-- | SQL text of every statement still attached to the connection.  Used for
+-- diagnostics: a non-empty list at 'close' time is a statement leak.
+unfinalizedStatements :: Database -> IO [Text]
+unfinalizedStatements db = map snd <$> unfinalizedStatementPtrs db
+
+unfinalizedStatementPtrs :: Database -> IO [(Statement, Text)]
+unfinalizedStatementPtrs db = go nullPtr
+  where
+    go prev = do
+      stmt <- c_sqlite3_next_stmt db prev
+      if stmt == nullPtr
+        then pure []
+        else do
+          sqlPtr <- c_sqlite3_sql stmt
+          sql <- if sqlPtr == nullPtr
+            then pure "<null>"
+            else T.pack <$> peekCString sqlPtr
+          rest <- go stmt
+          pure ((stmt, sql) : rest)
+
+sqliteBusy :: CInt
+sqliteBusy = 5
 
 prepare :: Database -> Text -> IO (Either Text Statement)
 prepare db sql = alloca $ \ppStmt -> alloca $ \ppTail -> do

@@ -1055,6 +1055,32 @@ re-observe before treating as real).
   closed **only for the bounded 30-prompt packet**; the 500-prompt gate
   stays BLOCKED. Result:
   `docs/closure/GF_SLOT_BATCH_GROUP2_RESULT_2026-11-09.md`.
+- **Fast-suite `SQLITE_BUSY` close flake closed 2026-11-10/11**: the
+  pre-existing `testPersistentWorkerRetainsPendingTasks` error
+  (`operation=close, rc=5`) was statement hygiene, not a runtime race.
+  Two leaks on two connections: (1) the worker thread killed inside
+  `failExhaustedLearningLeases` (`JobQueue.hs`, `safe` FFI between
+  `prepare` and `finalize`) left a fresh `withDB` connection
+  uncloseable and `safeClose` swallowed the rc=5, leaking the handle
+  and fd; (2) `queryCount` finalized only on the success path, so a
+  failed step stranded its statement on the shared fixture handle and
+  the `finally closeDb` then failed with rc=5, masking the real error.
+  Fix: `NativeSQLite.close` is **total** on rc=5 (enumerate
+  `sqlite3_next_stmt`, WARN the SQL on stderr, finalize the leftovers,
+  retry, throw only if the retry fails or there is nothing to
+  finalize); `queryCount` finalizes in `finally`; the fixture stops the
+  worker before reading persisted counts. New suite
+  `Test.Suite.NativeSQLiteClose` (5 cases, unit + fast). Red checks:
+  unfixed `close` fails exactly the 2 recovery pins; no-`finally`
+  `queryCount` fails exactly 1. Reliability: `AutonomousIntegration`
+  **40/40** on the fixed tree (unfixed ~1 failure in 7 runs). Matrix
+  2026-11-10/11 (tree = point-2 working tree): unit 1833, fast 1926,
+  property 244, integration 47, main runtime 106 + http 23, slow 190
+  (runtime 106 / state 50 / http 23 / lifecycle 11) — all exit 0,
+  **4 369 cases**, 0 `operation=close` errors. Logs:
+  `reports/eval_runs/_logs/matrix-20261110/` +
+  `reports/eval_runs/_logs/flake-20261110/`. Pre-registration signed
+  2026-11-10: `docs/closure/FAST_FLAKE_PREREG_2026-11-10.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
