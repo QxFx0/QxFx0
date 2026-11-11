@@ -65,6 +65,10 @@ corpus_identity:   PASS (305/305 rows)
 The dump is reproducible from the embedded program in
 `scripts/eval/gf_slot_gap.py` (`extendedDefinitionCorpus`, 12 325 lines) —
 the `/tmp` copy from 2026-11-08 was lost with the temp dir and regenerated.
+As of 2026-11-11 the tool writes it directly:
+`python3 scripts/eval/gf_slot_gap.py --write-dump <path>` (re-measured:
+12 325 lines, 309 anchor rows, 305 mapped, 4 unmapped), and
+`scripts/run_m7_batch.sh` does dump → gate → realizability in one pass.
 
 The known-failure baseline (`spec/gf/gf_slot_realizability_baseline.tsv`) is
 now **empty** (0 known failures, sha256 `510406fd…483c99`): the two defects

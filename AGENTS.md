@@ -1006,6 +1006,25 @@ re-observe before treating as real).
   "observed in `ps` during the stall" had no artifact and was removed.
   Next diagnostic: `+RTS -s -RTS` in the per-turn invocation (the M7
   harness is **not committed** — it lived in `/tmp` and was lost).
+- **M7 harness reconstructed 2026-11-11 (no runtime change)**: the lost
+  `/tmp` driver is replaced by `scripts/run_m7_batch.sh <run_id>
+  [prompts]` — strict mode, isolated sessions, eval → gate →
+  realizability, tree identity in `meta.env`; `QXFX0_M7_REPLICA=1`
+  mechanizes bar 5 (predicate + surface diff; **0/30** and **0/30** on
+  runs c/d), `QXFX0_M7_SKIP_EVAL=1` re-runs only the checks,
+  `QXFX0_M7_DUMP=<path>` reuses a dump. `run_dialogue_eval_200.sh`
+  gained `QXFX0_EVAL_RTS_ARGS` (per-turn `+RTS -s -RTS`; the report
+  lands in `raw/<id>.log`, which the JSON parser skips) and
+  `gf_slot_gap.py` gained `--write-dump` (12 325 lines; 309 anchor /
+  305 mapped / 4 unmapped). Verified: realizability **305/305**, gate
+  **30/30** on a reused run, comparator red checks (predicate, surface,
+  row-set) each fail exactly the mutated row, RTS cost model reproduces
+  2026-11-09 to the digit (turn-only 26.2 s MUT + 23.4 s GC, 68.8 GB
+  allocated). Full packet re-run 2026-11-11 with per-turn RTS: gate
+  **30/30**, `gf_mapped_fallback` **0/30**, realizability **305/305**,
+  avg 70.5 s, wall/(MUT+GC) 1.04 median / 1.06 max — the stall did not
+  recur; the instrument now makes the recurrence class readable
+  (starvation vs RTS pathology vs blocked syscall).
 - **GF slot group-1 batch landed 2026-11-08** (measured, S2 bars
   honestly open): 123 rows appended (`curated_predicate_slots.tsv` now
   207 data rows), the duplicate object id `otsutstvie_ogranichenij`

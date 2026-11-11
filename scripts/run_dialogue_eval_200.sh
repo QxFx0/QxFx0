@@ -16,6 +16,10 @@ SUMMARY_JSON="$OUT_DIR/summary.json"
 SUMMARY_MD="$OUT_DIR/summary.md"
 RAW_DIR="$OUT_DIR/raw"
 TRACE_WAIT_SECONDS="${QXFX0_EVAL_TRACE_WAIT_SECONDS:-5}"
+# Optional RTS flags for the per-turn invocation, e.g. "+RTS -s -RTS" for a
+# per-turn CPU/allocation record.  Deliberately word-split: the flags must
+# reach the runtime as separate argv entries.
+RTS_ARGS="${QXFX0_EVAL_RTS_ARGS:-}"
 
 # Mirror QxFx0.Runtime.Paths.resolveDbPath so the eval reads the trace from
 # the same database the CLI turn wrote to.
@@ -68,6 +72,7 @@ rm -f "$RESULTS_JSONL" "$SUMMARY_JSON" "$SUMMARY_MD"
   echo "prompts_file=$PROMPTS_FILE"
   echo "db_path=$EVAL_DB_PATH"
   echo "trace_wait_seconds=$TRACE_WAIT_SECONDS"
+  echo "rts_args=$RTS_ARGS"
 } >"$OUT_DIR/meta.env"
 
 echo "Running dialogue eval: $RUN_ID"
@@ -92,7 +97,8 @@ while IFS=$'\t' read -r id prompt expected_family; do
   fi
 
   start_ms=$(date +%s%3N)
-  cmd_out="$(QXFX0_RUNTIME_MODE="$RUNTIME_MODE" cabal run -v0 qxfx0-main -- --session "$row_session_id" --input "$prompt" --json 2>&1 || true)"
+  # shellcheck disable=SC2086  # RTS_ARGS is a deliberate word-split flag list.
+  cmd_out="$(QXFX0_RUNTIME_MODE="$RUNTIME_MODE" cabal run -v0 qxfx0-main -- --session "$row_session_id" --input "$prompt" --json ${RTS_ARGS} 2>&1 || true)"
   end_ms=$(date +%s%3N)
   latency_ms=$((end_ms - start_ms))
 

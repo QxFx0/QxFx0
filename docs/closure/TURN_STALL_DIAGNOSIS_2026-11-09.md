@@ -138,16 +138,72 @@ divergence (trace byte-identical).
 turn's log carries `MUT`, `GC`, allocated bytes, max residency and peak. Zero
 code change; ~40 min for the packet at current latency.
 
+Re-measured 2026-11-11 on the same tree through the now-committed harness
+(`QXFX0_EVAL_RTS_ARGS="+RTS -s -RTS"`), fresh sessions:
+
+| process | wall | MUT | GC | allocated | max residency | peak |
+|---|---:|---:|---:|---:|---:|---:|
+| `--state-json` (bootstrap only) | 26.1 s | 18.5 s | 4.9 s | 26.8 GB | 495 MB | 651 MiB |
+| one turn («что такое вера?») | 83.1 s | 44.7 s | 28.3 s | **95.6 GB** | 801 MB | 1 314 MiB |
+
+Turn-only delta: **26.2 s MUT + 23.4 s GC = 49.6 s CPU**, 68.8 GB allocated —
+the 2026-11-09 cost model reproduces to the digit. Logs:
+`reports/eval_runs/_logs/rts-probe-20261111/`.
+
 Then a recurrence is decisive:
 
 - low `MUT`/`GC` totals with a long wall → **starvation** (hypothesis 1);
 - huge `GC` or huge allocation → **RTS pathology** (hypothesis 2);
 - normal CPU totals and a long wall → **blocked syscall** (hypothesis 3).
 
-The harness that produced runs a–d is **not committed** (it lived in `/tmp` and
-was lost), so the instrumentation has to be re-added to a re-created harness.
-That is itself a gap worth closing: a committed harness is the precondition for
-any reproducible latency work.
+At the time of the original diagnosis the harness that produced runs a–d was
+**not committed** (it lived in `/tmp` and was lost), so the instrumentation had
+to be re-added to a re-created harness. That is itself a gap worth closing: a
+committed harness is the precondition for any reproducible latency work.
+
+**Closed 2026-11-11.** The three heavy pieces were already in the tree
+(`scripts/run_dialogue_eval_200.sh`, `scripts/m7_gate_check.py`,
+`scripts/eval/gf_slot_realizability.py`); what was missing was the thin driver
+and the corpus-dump writer, both now committed:
+
+- `scripts/run_m7_batch.sh <run_id> [prompts]` — strict mode, isolated
+  sessions, eval → gate → realizability in one pass, tree identity (git HEAD,
+  dirty flag, prompts/dump sha256) appended to `meta.env`.
+  `QXFX0_M7_REPLICA=1` runs a second pass and diffs predicate choice and
+  surface per row (mechanizes bar 5: **0/30** and **0/30** on runs c/d);
+  `QXFX0_M7_SKIP_EVAL=1` re-runs only the checks; `QXFX0_M7_DUMP=<path>`
+  reuses an existing dump.
+- `QXFX0_EVAL_RTS_ARGS` in `run_dialogue_eval_200.sh` — the per-turn RTS
+  instrumentation, appended to the runtime argv (the RTS report lands in
+  `raw/<id>.log`, which the JSON payload parser skips).
+- `scripts/eval/gf_slot_gap.py --write-dump` — writes the 12 325-line corpus
+  dump that the realizability check consumes (it was a lost `/tmp` file).
+
+Verified 2026-11-11: dump 12 325 lines (309 anchor rows, 305 mapped, 4
+unmapped), realizability **305/305**, gate **30/30** on a reused run, and the
+determinism comparator's red checks (predicate, surface, row-set) each fail
+exactly the mutated row.
+
+### Packet re-run with instrumentation (2026-11-11)
+
+The full 30-prompt packet through `scripts/run_m7_batch.sh` with
+`QXFX0_EVAL_RTS_ARGS="+RTS -s -RTS"`
+(`reports/eval_runs/m7-harness-20261111`):
+
+- gate **30/30**, realizability **305/305**, dump 12 325 lines;
+  `gf_mapped_fallback` **0/30**, `AuthorityCanonical` 30/30, 0 errors,
+  average latency **70.5 s** (run d: 77 s) — the group-2 numbers reproduce;
+- per-turn RTS (n = 30): median wall 70.8 s, MUT 41.9 s, GC 26.2 s,
+  allocation 92.9 GB (max 111.1 GB), max residency 891 MB, peak 1 333 MiB;
+- **no outlier**: wall/(MUT+GC) median **1.04**, max **1.06**. The stall did
+  not recur, so this run does not explain 2026-11-08 — it establishes the
+  instrument and the baseline band (per-turn table:
+  `reports/eval_runs/_logs/harness-20261111/rts-summary.txt`).
+
+The recurrence rule is now readable off one log line: wall/(MUT+GC) ≫ 1 with
+normal totals → starvation (hypothesis 1); large GC/allocation → RTS pathology
+(hypothesis 2); normal totals and a long wall → blocked syscall
+(hypothesis 3).
 
 ## 8. Product note (not a change)
 

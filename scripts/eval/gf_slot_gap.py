@@ -25,8 +25,12 @@ The split into group 1 / group 2 is a *heuristic*, and the tool says so:
   after the topic as a hint only — it is not asserted to be the relation.
 
 ``--freeze`` writes a deterministic TSV and its sha256 sidecar so the row list
-becomes an artifact instead of a number in prose.  The tool creates no slots,
-edits no corpus file, and does not change the 500-prompt or M7 gates.
+becomes an artifact instead of a number in prose.  ``--write-dump`` writes the
+raw runtime corpus dump (``topic<TAB>surface``) that
+``gf_slot_realizability.py --dump`` consumes; the 2026-11-08 copy lived in
+``/tmp`` and was lost, so the dump is now reproducible from the tree.  The tool
+creates no slots, edits no corpus file, and does not change the 500-prompt or
+M7 gates.
 
 ``--self-test`` runs the embedded cases on synthetic inputs and needs no
 Haskell build.  They live here rather than in a test file because the
@@ -189,6 +193,13 @@ def run_dump():
     return result.stdout
 
 
+def write_dump(path: Path, text: str) -> Path:
+    """Write the runtime corpus dump verbatim and return the path written."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
 def report(counts, frozen_digest):
     print("Anchor population (merged runtime corpus, de-duplicated pairs)")
     for key, value in counts.items():
@@ -264,6 +275,11 @@ def self_test():
              hashlib.sha256(path.read_bytes()).hexdigest() == digest_a)
         case("frozen file parses back", parse_dump("") == [] and path.read_text(encoding="utf-8").count("\n") == len(rows) + 1)
 
+        dump_text = "a\tx y\nb\tz\n"
+        dump_path = write_dump(Path(tmp) / "nested" / "dump.tsv", dump_text)
+        case("dump written verbatim", dump_path.read_text(encoding="utf-8") == dump_text)
+        case("written dump parses back", parse_dump(dump_path.read_text(encoding="utf-8")) == [("a", "x y"), ("b", "z")])
+
     failures = [name for name, ok, _ in cases if not ok]
     for name, ok, detail in cases:
         print(f"{'ok  ' if ok else 'FAIL'} {name}" + (f"  ({detail})" if not ok and detail else ""))
@@ -274,6 +290,7 @@ def self_test():
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dump", help="reuse a corpus dump file instead of running the runtime")
+    ap.add_argument("--write-dump", help="write the runtime corpus dump here (for gf_slot_realizability.py --dump)")
     ap.add_argument("--slots", default=SLOTS_SOURCE, help="slot table to compare against")
     ap.add_argument("--freeze", help="write the unmapped row list here (TSV + .sha256 sidecar)")
     ap.add_argument("--self-test", action="store_true", help="run embedded cases")
@@ -288,6 +305,9 @@ def main(argv=None):
         ap.error(f"no slot rows found in {slots_path}")
 
     dump_text = Path(args.dump).read_text(encoding="utf-8") if args.dump else run_dump()
+    if args.write_dump:
+        written = write_dump(Path(args.write_dump), dump_text)
+        print(f"corpus dump written: {written} ({dump_text.count(chr(10))} lines)")
     rows = build_rows(parse_dump(dump_text), subjects, relations, sources)
     counts = summarise(rows, objects)
 
