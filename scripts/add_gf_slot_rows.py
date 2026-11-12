@@ -52,6 +52,11 @@ SLOTS = "spec/gf/curated_predicate_slots.tsv"
 GAP = "spec/gf/gf_slot_gap_2026-11-06.tsv"
 SPLITS = "spec/gf/gf_slot_group2_splits_2026-11-08.tsv"
 GAP_SHA256 = "10ecdb6a2cfec2ac121f4414a80204c8442babc46a5d7cae1cc66b489765cdc6"
+# Group-3 coverage batch: the frozen selection produced by
+# `gf_slot_gap.py --select-topics 12 --freeze` (pre-registration
+# docs/closure/GF_SLOT_GROUP3_TOPICS_PREREG_2026-11-11.md).
+GROUP3_GAP = ROOT / "spec/gf/gf_slot_gap_group3_2026-11-11.tsv"
+GROUP3_GAP_SHA256 = "fa5fd7cb1d93cc75ce3bce9ab2d410840d4dc4cf2c9b4f4be83e01ef0b843d87"
 COLUMNS = [
     "predicate_id", "subject_id", "subject_ru",
     "relation_id", "relation_ru", "object_id", "object_ru", "source_ru",
@@ -100,7 +105,14 @@ def read_splits_text(text: str):
 
 
 def derive(generator, slot_rows, gap_rows):
-    """Return (candidates, skipped, problems) without touching the disk."""
+    """Return (candidates, skipped, problems, minted_subjects) without touching the disk.
+
+    Subjects, relations and objects reuse an existing id by surface.  A topic
+    with no subject id gets a minted one with the same rule objects already use
+    (``unique(slug(transliterate(topic)))``); the minted ids are reported so a
+    coverage batch can add topics without hand-editing the table.  The minting
+    is deterministic: it follows the frozen gap row order.
+    """
     subject_ids, relation_ids, object_ids = {}, {}, {}
     for row in slot_rows:
         subject_ids.setdefault(row[2], row[1])
@@ -110,6 +122,7 @@ def derive(generator, slot_rows, gap_rows):
     sources = {row[7] for row in slot_rows}
     predicate_ids = {row[0] for row in slot_rows}
     candidates, skipped, problems = [], [], []
+    minted_subjects = []
 
     for gap in gap_rows:
         topic, surface, group, relation, obj = gap[0], gap[1], gap[2], gap[3], gap[4]
@@ -122,9 +135,11 @@ def derive(generator, slot_rows, gap_rows):
         if surface != f"{topic} {relation} {obj}":
             problems.append((surface, "row does not reconstruct from topic/relation/object"))
             continue
-        if topic not in subject_ids:
-            problems.append((surface, f"subject {topic!r} has no existing id"))
-            continue
+        subject_id = subject_ids.get(topic)
+        if subject_id is None:
+            subject_id = unique(slug(generator, topic), set(subject_ids.values()))
+            subject_ids[topic] = subject_id
+            minted_subjects.append((topic, subject_id))
         if relation not in relation_ids:
             problems.append((surface, f"relation {relation!r} has no existing id"))
             continue
@@ -137,10 +152,10 @@ def derive(generator, slot_rows, gap_rows):
         predicate_id = unique(slug(generator, surface), predicate_ids)
         predicate_ids.add(predicate_id)
         candidates.append([
-            predicate_id, subject_ids[topic], topic,
+            predicate_id, subject_id, topic,
             relation_ids[relation], relation, object_id, obj, surface,
         ])
-    return candidates, skipped, problems
+    return candidates, skipped, problems, minted_subjects
 
 
 def derive_group2(generator, slot_rows, gap_rows, split_rows):
@@ -245,16 +260,20 @@ def self_test() -> int:
     )
     case("gap rows parsed", len(gap_rows) == 5)
 
-    candidates, skipped, problems = derive(generator, slot_rows, gap_rows)
-    case("group 1 only", [row[7] for row in candidates] == ["свобода предполагает новую рамку"], str(candidates))
+    candidates, skipped, problems, minted = derive(generator, slot_rows, gap_rows)
+    case("group 1 only", [row[7] for row in candidates] == ["свобода предполагает новую рамку", "чужое предполагает нечто"], str(candidates))
     case("group 2 skipped", any(reason.startswith("group 2") for _, reason in skipped), str(skipped))
     case("present row skipped", any(reason == "present" for _, reason in skipped), str(skipped))
-    case("unknown subject refused", any("has no existing id" in reason for _, reason in problems), str(problems))
+    case("unknown subject is minted, not refused", minted == [("чужое", "chuzhoe")], str(minted))
+    case("no problems when the subject is new", not problems, str(problems))
     case("relation id reused", candidates[0][3] == "predpolagaet", str(candidates[0]))
     case("subject id reused", candidates[0][1] == "svoboda", str(candidates[0]))
+    case("minted subject id used", candidates[1][1] == "chuzhoe", str(candidates[1]))
     case("object id derived", candidates[0][5] == "novuyu_ramku", str(candidates[0]))
     case("predicate id derived", candidates[0][0].startswith("svoboda_predpolagaet"), str(candidates[0]))
     case("reconstruction holds", candidates[0][7] == "свобода предполагает новую рамку")
+    again = derive(generator, slot_rows, gap_rows)
+    case("minting is deterministic", again[0] == candidates and again[3] == minted)
 
     case("slug collapses", slug(generator, "то, что не может быть проверено") == "to_chto_ne_mozhet_byt_provereno",
          slug(generator, "то, что не может быть проверено"))
@@ -342,12 +361,16 @@ def main(argv=None) -> int:
     if args.gap == GAP and gap_digest != GAP_SHA256:
         print(f"INVALID: gap file sha256 {gap_digest} != frozen {GAP_SHA256}", file=sys.stderr)
         return 2
+    if gap_path.resolve() == GROUP3_GAP.resolve() and gap_digest != GROUP3_GAP_SHA256:
+        print(f"INVALID: group-3 gap sha256 {gap_digest} != frozen {GROUP3_GAP_SHA256}", file=sys.stderr)
+        return 2
 
     generator = load_generator()
     _, slot_rows = read_slots_text(slots_path.read_text(encoding="utf-8"))
     _, gap_rows = read_gap_text(gap_path.read_text(encoding="utf-8"))
+    minted = []
     if splits_path is None:
-        candidates, skipped, problems = derive(generator, slot_rows, gap_rows)
+        candidates, skipped, problems, minted = derive(generator, slot_rows, gap_rows)
     else:
         split_header, split_rows = read_splits_text(splits_path.read_text(encoding="utf-8"))
         expected = ["topic", "source_ru", "relation_ru", "object_ru", "disposition", "note"]
@@ -357,7 +380,9 @@ def main(argv=None) -> int:
         candidates, skipped, problems = derive_group2(generator, slot_rows, gap_rows, split_rows)
 
     print(f"slot rows: {len(slot_rows)}  gap rows: {len(gap_rows)}")
-    print(f"candidates: {len(candidates)}  skipped: {len(skipped)}  problems: {len(problems)}")
+    print(f"candidates: {len(candidates)}  skipped: {len(skipped)}  problems: {len(problems)}  minted subjects: {len(minted)}")
+    for topic, subject_id in minted:
+        print(f"  MINT {topic!r} -> {subject_id!r}")
     for surface, reason in problems:
         print(f"  PROBLEM {surface!r}: {reason}")
     for surface, reason in skipped:

@@ -286,7 +286,7 @@ testGfMappedFallbackAbsent = TestCase $ do
 
 testDefinitionCorpusGfCoverage :: Test
 testDefinitionCorpusGfCoverage = TestCase $
-  assertEqual "the definition corpus baseline plus corpus-smoke primary slots must remain cataloged" 305 curatedPredicateSlotCount
+  assertEqual "the definition corpus baseline plus corpus-smoke primary slots must remain cataloged" 462 curatedPredicateSlotCount
 
 testGfPlanLinearization :: Test
 testGfPlanLinearization = TestCase $ do

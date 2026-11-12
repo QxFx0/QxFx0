@@ -28,9 +28,19 @@ The split into group 1 / group 2 is a *heuristic*, and the tool says so:
 becomes an artifact instead of a number in prose.  ``--write-dump`` writes the
 raw runtime corpus dump (``topic<TAB>surface``) that
 ``gf_slot_realizability.py --dump`` consumes; the 2026-11-08 copy lived in
-``/tmp`` and was lost, so the dump is now reproducible from the tree.  The tool
-creates no slots, edits no corpus file, and does not change the 500-prompt or
-M7 gates.
+``/tmp`` and was lost, so the dump is now reproducible from the tree.
+
+``--select-topics N`` extends the population to the N cheapest *uncovered*
+topics so a coverage batch can start from a reproducible selection instead of a
+hand-picked list: candidates are single-word topics not yet in the slot table,
+ranked by their group-1 row count (descending), ties broken by the topic string
+ascending.  Only group-1 rows count — a topic whose rows all need a new
+relation string cannot be covered by a group-1 batch.  The ranking is printed
+with three extra rows so the selection boundary is visible, and the selection
+is frozen together with the gap list.
+
+The tool creates no slots, edits no corpus file, and does not change the
+500-prompt or M7 gates.
 
 ``--self-test`` runs the embedded cases on synthetic inputs and needs no
 Haskell build.  They live here rather than in a test file because the
@@ -123,11 +133,12 @@ def classify(topic: str, surface: str, relations):
     }
 
 
-def build_rows(pairs, subjects, relations, sources):
+def build_rows(pairs, subjects, relations, sources, include_topics=()):
     """Every anchor predicate row, split into mapped / group 1 / group 2."""
+    selected = set(subjects) | set(include_topics)
     rows = []
     for topic, surface in pairs:
-        if topic not in subjects:
+        if topic not in selected:
             continue
         row = {"topic": topic, "source_ru": surface}
         if surface in sources:
@@ -136,6 +147,26 @@ def build_rows(pairs, subjects, relations, sources):
             row.update(classify(topic, surface, relations))
         rows.append(row)
     return rows
+
+
+def rank_candidate_topics(pairs, subjects, relations):
+    """Rank uncovered single-word topics by their group-1 row count.
+
+    Deterministic selection rule for a coverage batch.  A topic is a candidate
+    when it is not already in the slot table and is a single word: the carrier
+    is a prefix of «что такое <topic>?», so a multi-word topic would change the
+    extraction surface and confound the frame.  Order is group-1 row count
+    descending, then the topic string ascending.  Group-2 rows never count —
+    they need a new relation string, which a group-1 batch cannot add.
+    """
+    counts = {}
+    for topic, surface in pairs:
+        if topic in subjects or " " in topic:
+            continue
+        if classify(topic, surface, relations)["group"] != "1":
+            continue
+        counts[topic] = counts.get(topic, 0) + 1
+    return sorted(counts.items(), key=lambda item: (-item[1], item[0]))
 
 
 def summarise(rows, objects):
@@ -255,6 +286,33 @@ def self_test():
     case("non-anchor topics dropped", len(rows) == 3, str(rows))
     case("mapped row classified", [r["group"] for r in rows if r["source_ru"].endswith("ответственностью")] == ["mapped"])
 
+    rank_pairs = [
+        ("новая", "новая предполагает одно"),
+        ("новая", "новая предполагает два"),
+        ("другая", "другая ограничена чем-то"),
+        ("другая", "другая есть нечто"),
+        ("свобода", "свобода предполагает возможность выбора"),
+        ("два слова", "два слова предполагают нечто"),
+        ("сложная", "сложная раскрывается через выбор"),
+    ]
+    ranking = rank_candidate_topics(rank_pairs, {"свобода"}, relations)
+    case("ranking excludes covered topics", all(t != "свобода" for t, _ in ranking), str(ranking))
+    case("ranking excludes multiword topics", all(t != "два слова" for t, _ in ranking), str(ranking))
+    case("ranking excludes group-2-only topics", all(t != "сложная" for t, _ in ranking), str(ranking))
+    case("ranking orders by count then name", ranking == [("другая", 2), ("новая", 2)], str(ranking))
+    case("selection truncates to N", [t for t, _ in ranking[:1]] == ["другая"], str(ranking))
+
+    extended = build_rows(
+        rank_pairs,
+        subjects={"свобода"},
+        relations=relations,
+        sources=set(),
+        include_topics={"новая"},
+    )
+    case("include_topics adds the selected topic only",
+         {r["topic"] for r in extended} == {"свобода", "новая"},
+         str(sorted({r["topic"] for r in extended})))
+
     counts = summarise(rows, objects)
     case("summary counts", counts["anchor_rows"] == 3 and counts["mapped"] == 1 and counts["unmapped"] == 2, str(counts))
     case("new object counted", counts["group1_new_objects"] == 1, str(counts))
@@ -293,6 +351,8 @@ def main(argv=None):
     ap.add_argument("--write-dump", help="write the runtime corpus dump here (for gf_slot_realizability.py --dump)")
     ap.add_argument("--slots", default=SLOTS_SOURCE, help="slot table to compare against")
     ap.add_argument("--freeze", help="write the unmapped row list here (TSV + .sha256 sidecar)")
+    ap.add_argument("--select-topics", type=int, metavar="N",
+                    help="add the N cheapest uncovered single-word topics (ranked by group-1 rows) to the population and print the ranking")
     ap.add_argument("--self-test", action="store_true", help="run embedded cases")
     args = ap.parse_args(argv)
 
@@ -308,7 +368,24 @@ def main(argv=None):
     if args.write_dump:
         written = write_dump(Path(args.write_dump), dump_text)
         print(f"corpus dump written: {written} ({dump_text.count(chr(10))} lines)")
-    rows = build_rows(parse_dump(dump_text), subjects, relations, sources)
+    pairs = parse_dump(dump_text)
+
+    include_topics = ()
+    if args.select_topics is not None:
+        if args.select_topics < 1:
+            ap.error("--select-topics needs a positive count")
+        ranking = rank_candidate_topics(pairs, subjects, relations)
+        if len(ranking) < args.select_topics:
+            ap.error(f"--select-topics {args.select_topics} exceeds the {len(ranking)} candidate topics")
+        include_topics = tuple(topic for topic, _ in ranking[: args.select_topics])
+        print(f"Candidate ranking: {len(ranking)} uncovered single-word topics with group-1 rows")
+        for index, (topic, count) in enumerate(ranking[: args.select_topics + 3], start=1):
+            boundary = "  <- selection boundary" if index == args.select_topics else ""
+            print(f"  {index:4d}. {topic:<24} {count}{boundary}")
+        print(f"\nselected {len(include_topics)} topics: " + ", ".join(include_topics))
+        print(f"group-1 rows in the selection: {sum(count for _, count in ranking[: args.select_topics])}\n")
+
+    rows = build_rows(pairs, subjects, relations, sources, include_topics)
     counts = summarise(rows, objects)
 
     digest = None
