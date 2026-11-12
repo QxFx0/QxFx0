@@ -1125,21 +1125,38 @@ re-observe before treating as real).
   190 (runtime 106 / state 50 / http 23 / lifecycle 11) — all exit 0,
   **4 379 cases**. Logs: `reports/eval_runs/_logs/matrix-20261111/`.
   Pre-registration: `docs/closure/TMP_FSYNC_PREREG_2026-11-11.md`.
-- **GF slot group-3 pre-registered 2026-11-11 (not executed)**: owner
-  decision — the 500-prompt gate path is **+12 topics** (not +5 verified
+- **GF slot group-3 (+12 topics) landed 2026-11-12**: owner decision
+  2026-11-11 — the 500-prompt gate path is **+12 topics** (not +5 verified
   carriers, not a gate re-scope to 360). Ceiling is
   `covered topics × verified carriers` = topics × 12, so ≥ 500 needs
-  ≥ 42 topics; the table covers 30. Selection rule is deterministic and
-  must come from committed tooling (`gf_slot_gap.py --select-topics 12`):
-  uncovered single-word topics ranked by group-1-classifiable predicate
-  count, ties by name. Measured 2026-11-11: экономика 15, закон 14,
-  нация 14, анализ/гнев/здоровье/класс/музыка/наука/общество/
-  технология/цель 13 = **160 rows**, table 305 → 465, ceiling
-  42 × 12 = **504**. `add_gf_slot_rows.py` needs subject-id minting
-  (`unique(slug(transliterate(topic)))`, same rule as objects) because
-  group-1 mode refuses an unknown subject today. The batch does **not**
-  freeze the 500 frame and does **not** unblock the gate (500 labeled
-  rows + a second independent rater are still missing).
+  ≥ 42 topics; the table covered 30. Selection is deterministic from
+  committed tooling (`gf_slot_gap.py --select-topics 12`: uncovered
+  single-word topics ranked by group-1-classifiable predicate count, ties
+  by name) and frozen as `spec/gf/gf_slot_gap_group3_2026-11-11.tsv`
+  (199 rows = 157 group-1 + 42 group-2, sha256 `fa5fd7cb…0b843d87`).
+  **The pre-reg's ad-hoc numbers were not reproducible** (corrected
+  2026-11-12): the committed tool de-duplicates `(topic, surface)` pairs,
+  which moves both counts and the 12th boundary — 160 rows including
+  гнев/класс became **157 rows** with биология/география (a real tie at
+  12, broken by name). Selected: закон/нация/экономика 14,
+  анализ/здоровье/музыка/наука/общество/технология/цель 13,
+  биология/география 12. Table 305 → **462** data rows.
+  `add_gf_slot_rows.py` gained subject-id minting
+  (`unique(slug(transliterate(topic)))`, the rule objects already use) and
+  a group-3 digest guard; 12 ids minted (`analiz` … `ekonomika`), 0
+  problems, two dry-runs byte-identical. Bars B1–B9 all PASS: B1 a
+  pre-batch re-run reproduces the frozen digest byte-for-byte; B4 the
+  abstract and concrete grammars gained exactly 12 `Subject*` + 147
+  `Object*` and **no** new `cat`/`fun`; B5 4-point realizability
+  **462/462** (known-failure baseline stays empty); B6 the only pinned
+  count 305 → 462 (`ResponsePlan` 41/41); B7 the M7 30-prompt packet is
+  unchanged — gate **30/30**, `gf_mapped_fallback` **0/30**, **0/30**
+  predicate and **0/30** surface mismatches vs `m7-harness-20261111`;
+  B8 ceiling **504** over **42** topics and `--size 500` now succeeds;
+  B9 matrix 2026-11-12 **4 379** cases, 10/10 steps exit 0, tree
+  byte-identical start→end. The batch does **not** freeze the 500 frame
+  and does **not** unblock the gate (500 labeled rows + a second
+  independent rater are still missing).
   `docs/closure/GF_SLOT_GROUP3_TOPICS_PREREG_2026-11-11.md`.
 - **4 deferred group-2 rows closed as out of scope 2026-11-11 (owner
   decision C)**: all four topics (бытие, красота, любовь, память) are
