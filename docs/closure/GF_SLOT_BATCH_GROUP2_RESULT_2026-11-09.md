@@ -157,6 +157,47 @@ artifact exists, so that claim was removed.
   BLOCKED: no labeled GF-enriched 500-row frame exists. This is not a release
   gate and not M6-FELT evidence.
 
+## Scope amendment — the 4 deferred rows (2026-11-11, owner decision)
+
+The four schema-incompatible rows stay **deferred** and are now formally out of
+S2 scope. Owner decision 2026-11-11: option (C) of the three presented — a
+signed scope amendment, not a schema extension and not corpus rewording.
+
+Decisive measurement: all four topics are **already GF-covered by other rows**
+(`бытие`, `красота`, `любовь`, `память` are among the 30 subjects of the
+305-row table), so the four rows contribute **nothing** to the GF-enriched
+frame ceiling (`covered topics × verified carriers`, currently 30 × 12 = 360).
+They are needed only for table completeness, not for any gate.
+
+| row | why it is schema-incompatible |
+|---|---|
+| `бытие основная категория философии` | copula-less nominal predicate; no relation surface in the source |
+| `красота в глазах смотрящего` | prepositional fragment; no predicate and no object |
+| `любовь вдохновляет` | intransitive verb; no object slot |
+| `память избирательна и реконструктивна` | compound adjective predicate; no relation surface |
+
+Residual risk, accepted: if the per-predicate selector ever chooses one of
+these four unmapped predicates, the GF path fails closed to
+`gf_mapped_fallback`. The 30-prompt packet measures 0/30 today because the
+selector picks mapped predicates for these topics; the risk is latent, not
+observed.
+
+Not taken, for the record:
+
+- **(A) schema extension** — one `MkSemanticSubjectComplement : SemanticSubject
+  -> SemanticComplement -> SemanticProposition` (subject + raw complement)
+  would have covered all four rows. Cost: new cat/fun in the generator
+  (`export_lexicon.py` emits both the abstract and the Rus concrete), a
+  `construction` column in the slot table, dispatch in
+  `Semantic/ResponsePlan/GF.hs`, and a realizability update. Deferred as a
+  separate batch if table completeness ever becomes a requirement.
+- **(B) corpus rewording** — `бытие есть основная категория философии`
+  (`RelationEst` exists) and `красота зависит от смотрящего`
+  (`RelationZavisit` exists) are cheap, but `любовь вдохновляет` and
+  `память избирательна и реконструктивна` need new relation surfaces and the
+  latter loses its conjunction. It also changes content the system says, which
+  would force a corpus re-freeze and a re-measure of M6-FELT/M7.
+
 ## Artifacts
 
 - `spec/gf/gf_slot_group2_splits_2026-11-08.tsv` — the authored 102-row split.

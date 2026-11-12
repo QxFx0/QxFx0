@@ -1100,6 +1100,31 @@ re-observe before treating as real).
   `reports/eval_runs/_logs/matrix-20261110/` +
   `reports/eval_runs/_logs/flake-20261110/`. Pre-registration signed
   2026-11-10: `docs/closure/FAST_FLAKE_PREREG_2026-11-10.md`.
+- **GF slot group-3 pre-registered 2026-11-11 (not executed)**: owner
+  decision — the 500-prompt gate path is **+12 topics** (not +5 verified
+  carriers, not a gate re-scope to 360). Ceiling is
+  `covered topics × verified carriers` = topics × 12, so ≥ 500 needs
+  ≥ 42 topics; the table covers 30. Selection rule is deterministic and
+  must come from committed tooling (`gf_slot_gap.py --select-topics 12`):
+  uncovered single-word topics ranked by group-1-classifiable predicate
+  count, ties by name. Measured 2026-11-11: экономика 15, закон 14,
+  нация 14, анализ/гнев/здоровье/класс/музыка/наука/общество/
+  технология/цель 13 = **160 rows**, table 305 → 465, ceiling
+  42 × 12 = **504**. `add_gf_slot_rows.py` needs subject-id minting
+  (`unique(slug(transliterate(topic)))`, same rule as objects) because
+  group-1 mode refuses an unknown subject today. The batch does **not**
+  freeze the 500 frame and does **not** unblock the gate (500 labeled
+  rows + a second independent rater are still missing).
+  `docs/closure/GF_SLOT_GROUP3_TOPICS_PREREG_2026-11-11.md`.
+- **4 deferred group-2 rows closed as out of scope 2026-11-11 (owner
+  decision C)**: all four topics (бытие, красота, любовь, память) are
+  already GF-covered by other rows, so the four rows contribute **nothing**
+  to the frame ceiling. Accepted residual risk: a latent
+  `gf_mapped_fallback` if the per-predicate selector ever picks one of
+  them (0/30 on the packet today). Schema extension (a
+  `SemanticComplement` construction) and corpus rewording were presented
+  and not taken. Amendment:
+  `docs/closure/GF_SLOT_BATCH_GROUP2_RESULT_2026-11-09.md`.
 - Audit 2026-08-23 → session backup + open-debt register + forward
   plan: `docs/closure/AUDIT_FOLLOWUP_2026-08-23.md` (follow-up
   landing: substrate WARN + loadBrainKB tests, dead-suite cleanup,
