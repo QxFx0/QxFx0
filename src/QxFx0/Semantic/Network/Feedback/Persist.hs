@@ -5,7 +5,6 @@ module QxFx0.Semantic.Network.Feedback.Persist
   ( persistFeedbackNetwork
   ) where
 
-import Control.Exception (IOException, bracketOnError, catch)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
@@ -13,16 +12,11 @@ import Data.Foldable (foldl')
 import qualified Data.Map.Strict as M
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import System.Directory
-  ( createDirectoryIfMissing
-  , doesFileExist
-  , removeFile
-  , renameFile
-  )
-import System.FilePath (takeDirectory, takeFileName)
-import System.IO (hClose, hPutStrLn, openTempFile, stderr)
+import System.Directory (doesFileExist)
+import System.IO (hPutStrLn, stderr)
 
 import QxFx0.ExceptionPolicy (tryIO)
+import QxFx0.Internal.AtomicFile (atomicWriteFile)
 import QxFx0.Semantic.Content.AtomStore (RelationType(..))
 import QxFx0.Semantic.Network.Ingest (LoadedRelation(..))
 import QxFx0.Semantic.Network.Types (EdgeProvenance(..), SemanticEdge(..), SemanticNetwork(..))
@@ -123,28 +117,11 @@ persistFeedbackNetwork path previousNetwork updatedNetwork = do
         authorFromProvenance ProvenanceHumanCorrection  = "human_correction"
         authorFromProvenance ProvenanceDerived          = "derived"
 
--- | Write via a unique temp file in the target directory, then rename
--- over the target: the target is always either the previous complete
--- file or the new complete file, never a partial JSONL.  On any
--- failure the temp file is closed and removed (best-effort) and the
--- exception propagates to the best-effort post-commit caller.
+-- | Write via a unique temp file in the target directory, fsync it, then
+-- rename over the target: the target is always either the previous complete
+-- file or the new complete file, never a partial JSONL, and the new bytes are
+-- on the device before the name changes ('QxFx0.Internal.AtomicFile').  On any
+-- failure the temp file is closed and removed (best-effort) and the exception
+-- propagates to the best-effort post-commit caller.
 writeMirrorAtomically :: FilePath -> BL.ByteString -> IO ()
-writeMirrorAtomically path content = do
-  let dir = takeDirectory path
-      -- No dot in the template: 'openTempFile' inserts its random part
-      -- before the extension, so a @.tmp@ suffix would hide the marker
-      -- from the leftover checks.
-      template = takeFileName path <> "-tmp"
-  createDirectoryIfMissing True dir
-  bracketOnError
-    (openTempFile dir template)
-    (\(tmpPath, h) -> do
-        ignoreIO (hClose h)
-        ignoreIO (removeFile tmpPath))
-    (\(tmpPath, h) -> do
-        BL.hPutStr h content
-        hClose h
-        renameFile tmpPath path)
-
-ignoreIO :: IO () -> IO ()
-ignoreIO action = action `catch` \(_ :: IOException) -> pure ()
+writeMirrorAtomically = atomicWriteFile

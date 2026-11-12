@@ -1100,6 +1100,31 @@ re-observe before treating as real).
   `reports/eval_runs/_logs/matrix-20261110/` +
   `reports/eval_runs/_logs/flake-20261110/`. Pre-registration signed
   2026-11-10: `docs/closure/FAST_FLAKE_PREREG_2026-11-10.md`.
+- **P3 `tmp-fsync` closed 2026-11-11 (durability barrier)**: the three
+  in-place writers (feedback mirror, `resources/config/tuned_*.json`,
+  `agda-witness.json`) wrote a temp file, closed the handle and renamed
+  it — atomic *visibility*, no *durability*, so a crash could leave a
+  valid name over an empty/truncated file. New
+  `QxFx0.Internal.AtomicFile.atomicWriteFile`: temp in the target
+  directory → `fsync` the file fd (`handleToFd` + `fileSynchronise`) →
+  `rename` → `fsync` the directory (best effort; a filesystem that
+  rejects directory fsync cannot turn a completed write into an
+  exception). `Learning/Tuning.writeJson` keeps its non-atomic `.bak`
+  copy (manual-recovery aid, not a read path). `unix` lower bound
+  `>=2.7` → `>=2.8` in the library, `qxfx0-main` and `qxfx0-test-slow`
+  stanzas (the code already used the 3-arg `openFd`, a unix-2.8 API).
+  New `Test.Suite.AtomicFile` (5 cases, unit + fast). `strace`/`perf`/
+  `ltrace` are absent on the box, so the barrier evidence is an LD_PRELOAD
+  shim log: `fsync` temp → `rename` → `fsync` directory. Red checks:
+  direct write → exactly the inode pin fails; no temp cleanup → exactly
+  the leftover pin fails. Removing `fileSynchronise` alone is **not**
+  observable by any test — the shim is the only evidence, stated so the
+  suite is not over-trusted. Matrix 2026-11-11 (tree `148ec16` + change
+  set, code/spec/test paths byte-identical start→end): unit 1838, fast
+  1931, property 244, integration 47, main runtime 106 + http 23, slow
+  190 (runtime 106 / state 50 / http 23 / lifecycle 11) — all exit 0,
+  **4 379 cases**. Logs: `reports/eval_runs/_logs/matrix-20261111/`.
+  Pre-registration: `docs/closure/TMP_FSYNC_PREREG_2026-11-11.md`.
 - **GF slot group-3 pre-registered 2026-11-11 (not executed)**: owner
   decision — the 500-prompt gate path is **+12 topics** (not +5 verified
   carriers, not a gate re-scope to 360). Ceiling is

@@ -19,6 +19,7 @@ import QxFx0.Bridge.AgdaR5
   )
 import qualified Data.Map.Strict as M
 import QxFx0.ExceptionPolicy (catchIO, mkRuntimeInitError, throwQxFx0, tryQxFx0)
+import QxFx0.Internal.AtomicFile (atomicWriteFile)
 import QxFx0.Internal.FilePath (isPathWithin)
 import QxFx0.Resources
   ( ResourcePaths(..)
@@ -46,7 +47,6 @@ import Numeric (showHex)
 import System.Directory (canonicalizePath, createDirectoryIfMissing, doesDirectoryExist, doesFileExist)
 import System.Environment (lookupEnv)
 import System.FilePath ((</>), normalise, takeDirectory, takeFileName)
-import System.Directory (renameFile)
 
 data AgdaWitness = AgdaWitness
   { awVersion :: !Int
@@ -119,10 +119,8 @@ writeStubAgdaWitness witnessPath = do
   atomicWriteWitness witnessPath AgdaWitness { awVersion = witnessVersion, awFiles = hashes }
 
 atomicWriteWitness :: FilePath -> AgdaWitness -> IO ()
-atomicWriteWitness witnessPath witness = do
-  let tmpPath = witnessPath <> ".tmp"
-  BL.writeFile tmpPath (encode witness)
-  renameFile tmpPath witnessPath
+atomicWriteWitness witnessPath witness =
+  atomicWriteFile witnessPath (encode witness)
 
 verifyAgdaWitnessFresh :: IO Bool
 verifyAgdaWitnessFresh = awrFresh <$> readAgdaWitnessReport

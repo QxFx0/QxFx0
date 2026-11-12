@@ -34,18 +34,16 @@ import Data.List (sortOn)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
-import qualified Data.ByteString.Lazy as BL
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import System.Directory
   ( copyFile
-  , createDirectoryIfMissing
   , doesFileExist
-  , renameFile
   )
-import System.FilePath (takeDirectory, (<.>))
+import System.FilePath ((<.>))
 import System.IO (hPutStrLn, stderr)
 
 import QxFx0.Bridge.StatePersistence (DbRunner)
+import QxFx0.Internal.AtomicFile (atomicWriteFile)
 import QxFx0.Learning.Calibration (CalibrationId(..))
 import QxFx0.Learning.CorpusExtract (SessionId, extractCorpusDataset)
 import QxFx0.Learning.TrainingCycle
@@ -153,10 +151,7 @@ persistTunedConfig cand = case ccType cand of
       hPutStrLn stderr $
         "persist_tuned_config: missing " <> what <> " for candidate " <> show (unCalibrationId (ccId cand))
     writeJson path value = do
-      createDirectoryIfMissing True (takeDirectory path)
-      let tmpPath = path <.> "tmp"
-          bakPath = path <.> "bak"
-      BL.writeFile tmpPath (encode value)
+      let bakPath = path <.> "bak"
       existing <- doesFileExist path
       when existing (copyFile path bakPath)
-      renameFile tmpPath path
+      atomicWriteFile path (encode value)

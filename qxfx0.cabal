@@ -430,6 +430,7 @@ library
      QxFx0.Render.Semantic
      QxFx0.Render.Text
       QxFx0.Core.TurnPipeline.Route.Render
+      QxFx0.Internal.AtomicFile
       QxFx0.Internal.FilePath
 
       QxFx0.Types.PropositionType
@@ -604,7 +605,7 @@ library
     , async          >=2.2 && <2.3
     , hashable       >=1.3 && <1.5
     , cryptohash-sha256 >=0.11 && <0.12
-    , unix           >=2.7 && <2.9
+    , unix           >=2.8 && <2.9
     , deepseq        >=1.4 && <1.6
 
 executable qxfx0-main
@@ -624,7 +625,7 @@ executable qxfx0-main
     CLI.Worker
     CLI.AutonomousSmoke
   hs-source-dirs: app
-  build-depends: qxfx0, directory >=1.3 && <1.4, filepath >=1.4 && <1.5, process >=1.6 && <1.7, time >=1.11 && <1.13, unix >=2.7 && <2.9
+  build-depends: qxfx0, directory >=1.3 && <1.4, filepath >=1.4 && <1.5, process >=1.6 && <1.7, time >=1.11 && <1.13, unix >=2.8 && <2.9
 
 executable qxfx0-stage1-traces
   import:        warnings, base-deps
@@ -652,7 +653,7 @@ common test-common
     , filepath      >=1.4 && <1.5
     , time          >=1.11 && <1.13
     , process       >=1.6 && <1.7
-    , unix          >=2.7 && <2.9
+    , unix          >=2.8 && <2.9
     , http-conduit  >=2.3 && <2.4
     , http-client   >=0.7 && <0.8
   other-modules:
@@ -751,6 +752,7 @@ common test-common
     Test.Suite.RoundTrip
     Test.Suite.NativeSQLiteNulls
     Test.Suite.NativeSQLiteClose
+    Test.Suite.AtomicFile
     Test.Suite.ResponseContentAdmission
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine
