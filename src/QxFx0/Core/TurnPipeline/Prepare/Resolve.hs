@@ -7,6 +7,7 @@ module QxFx0.Core.TurnPipeline.Prepare.Resolve
 
 import Control.Concurrent.Async (forConcurrently)
 import QxFx0.Core.ConsciousnessLoop (initialLoop)
+import QxFx0.Core.EvidenceAdmissibility (missingGuardRequestStatus)
 import QxFx0.Core.Intuition
   ( defaultIntuitiveState
   , effectivePosterior
@@ -84,14 +85,16 @@ resolvePrepareEffects pio effectPlan = do
           []            -> (t0, t0)
   -- Prepare-stage missing or unexpected effect results are intentionally
   -- classified as degraded continuation rather than fail-closed termination:
-  -- local embedding, nix-blocked, default intuition/consciousness, and
-  -- apiHealthy=False keep the turn moving while reducing epistemic strength.
+  -- local embedding, default intuition/consciousness, and apiHealthy=False
+  -- keep the turn moving while reducing epistemic strength. A missing nix
+  -- guard is different: it degrades to Unavailable (see
+  -- 'missingGuardRequestStatus'), never to a refusal that was never made.
   let embeddingResult =
         fromMaybe fallbackEmbeddingResult $ do
           TurnResEmbedding value <- lookup PelEmbedding (filter (isEmbeddingResult . snd) results)
           Just value
       nixStatus =
-        fromMaybe (Blocked "nix_guard_missing_request") $ do
+        fromMaybe missingGuardRequestStatus $ do
           TurnResNixGuard value <- lookup PelNix (filter (isNixResult . snd) results)
           Just value
       consciousnessResult =

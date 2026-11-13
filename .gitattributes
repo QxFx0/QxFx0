@@ -22,3 +22,7 @@ spec/gf/gf_slot_gap_2026-11-06.tsv.sha256 text eol=lf
 # quoted in the slot prereg, so a CRLF checkout would invalidate it.
 spec/gf/gf_slot_realizability_baseline.tsv text eol=lf
 spec/gf/gf_slot_realizability_baseline.tsv.sha256 text eol=lf
+# Concept-v3 user-regime probe corpus: its sha256 is pinned in
+# docs/closure/USER_REGIME_CAPTURE_PREREG_2026-11-13.md and the driver reads
+# columns positionally, so a CRLF checkout would invalidate both.
+spec/eval/user_regime_multiturn_2026-11-13.tsv text eol=lf

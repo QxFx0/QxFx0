@@ -1,0 +1,86 @@
+# User-regime multi-turn probe corpus (2026-11-13).
+# Pre-registration: docs/closure/USER_REGIME_CAPTURE_PREREG_2026-11-13.md
+# columns: dialogue_id<TAB>turn<TAB>prompt<TAB>arc
+# Authored for the capture, not harvested: a probe corpus, not a sample.
+# Every prompt is checked against the canonical acute-crisis lexicon by
+# Test.Suite.CrisisGuard (pin crisisCorpusHasNoAcuteMarkers).
+calm-def	1	что такое свобода?	calm
+calm-def	2	а что такое ответственность?	calm
+calm-def	3	как свобода связана с ответственностью?	calm
+calm-def	4	что такое выбор?	calm
+calm-def	5	почему выбор иногда бывает трудным?	calm
+calm-def	6	что такое произвол?	calm
+calm-def	7	чем произвол отличается от свободы?	calm
+calm-def	8	что такое достоинство?	calm
+calm-alt	1	что такое истина?	calm
+calm-alt	2	может быть, истина связана с проверкой?	calm
+calm-alt	3	а если истина зависит от контекста?	calm
+calm-alt	4	что такое мнение?	calm
+calm-alt	5	чем мнение отличается от истины?	calm
+calm-alt	6	предположим, что истина недостижима — что тогда?	calm
+calm-alt	7	с другой стороны, истина ведь бывает полезной?	calm
+calm-alt	8	что такое сомнение?	calm
+decoy-pessimism	1	что такое пессимизм?	decoy
+decoy-pessimism	2	кажется, жизнь бессмысленна — так утверждал Шопенгауэр?	decoy
+decoy-pessimism	3	а Камю писал о самоубийстве как проблеме философии — это про абсурд?	decoy
+decoy-pessimism	4	значит, абсурд — честный ответ на бессмысленность?	decoy
+decoy-pessimism	5	а если смысл всё-таки создаётся человеком?	recovery
+decoy-pessimism	6	что такое отчаяние?	decoy
+decoy-pessimism	7	чем отчаяние отличается от пессимизма?	decoy
+decoy-pessimism	8	можно ли выйти из отчаяния?	recovery
+fatigue-inside	1	что такое усталость?	calm
+fatigue-inside	2	мне всё надоело.	fatigue
+fatigue-inside	3	но я всё равно хочу понять, что такое отдых?	recovery
+fatigue-inside	4	что такое восстановление?	calm
+fatigue-inside	5	устал, нет сил.	fatigue
+fatigue-inside	6	может быть, дело в ритме?	calm
+fatigue-inside	7	что такое ритм?	calm
+fatigue-inside	8	я попробую изменить расписание.	recovery
+pileup-exit	1	что такое тревога?	calm
+pileup-exit	2	тревожно и плохо.	negative
+pileup-exit	3	тревожно, одиноко, тяжело.	negative
+pileup-exit	4	я устал, нет сил, не могу больше.	negative
+pileup-exit	5	страшно, тоскливо, пусто, не выдерживаю, не могу, не получается!	pileup
+pileup-exit	6	бессмысленно, пусто, не хочу, не буду.	negative
+pileup-exit	7	я сдаюсь, всё равно, ничего не хочется.	negative
+pileup-exit	8	что такое покой?	calm
+move-act	1	что такое смысл?	calm
+move-act	2	как ты думаешь, почему всё кажется бессмысленным?	act
+move-act	3	скажи, есть ли смысл искать смысл?	act
+move-act	4	а если смысл создаётся, а не находится?	calm
+move-act	5	что значит создавать смысл?	calm
+move-act	6	как ты считаешь, можно ли начать с малого?	calm
+move-act	7	что такое малое?	calm
+move-act	8	я попробую начать с одного шага.	recovery
+recovery	1	что такое усталость?	calm
+recovery	2	тяжело, тоскливо, нет сил.	negative
+recovery	3	страшно, одиноко, пусто, не выдерживаю, не могу, не получается!	pileup
+recovery	4	как ты думаешь, а если отдых — это не слабость?	recovery
+recovery	5	что такое отдых?	calm
+recovery	6	как ты считаешь, почему восстановление связано с ритмом?	calm
+recovery	7	что такое восстановление?	calm
+recovery	8	я попробую отдыхать каждый день.	recovery
+topic-continuity	1	что такое свобода?	calm
+topic-continuity	2	почему свобода связана с выбором?	calm
+topic-continuity	3	значит, свобода требует ответственности?	calm
+topic-continuity	4	а если свобода ограничена законом?	calm
+topic-continuity	5	как ты думаешь, свобода — это возможность или бремя?	calm
+topic-continuity	6	что такое ответственность?	calm
+topic-continuity	7	почему ответственность связана со свободой?	calm
+topic-continuity	8	следовательно, свобода и ответственность неразделимы?	calm
+oscillation	1	что такое тревога?	calm
+oscillation	2	тревожно, плохо, не могу.	negative
+oscillation	3	что такое спокойствие?	calm
+oscillation	4	спокойно, я могу дышать.	recovery
+oscillation	5	что такое тревога?	calm
+oscillation	6	тревожно, страшно, не выдерживаю.	negative
+oscillation	7	что такое спокойствие?	calm
+oscillation	8	я попробую дышать медленно.	recovery
+mixed-decoy	1	что такое абсурд?	calm
+mixed-decoy	2	Камю считал, что абсурд возникает из столкновения человека и мира?	decoy
+mixed-decoy	3	значит, абсурд — это не отчаяние?	decoy
+mixed-decoy	4	а если смысл всё-таки создаётся?	recovery
+mixed-decoy	5	что такое отчаяние?	calm
+mixed-decoy	6	отчаяние — это когда нет смысла?	decoy
+mixed-decoy	7	как ты думаешь, можно ли выйти из отчаяния?	recovery
+mixed-decoy	8	что такое надежда?	calm

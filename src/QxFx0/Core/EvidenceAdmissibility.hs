@@ -27,6 +27,7 @@ module QxFx0.Core.EvidenceAdmissibility
   ( isGovernedEvidenceMode
   , classifyEvidence
   , classifyEvidenceIO
+  , missingGuardRequestStatus
   ) where
 
 import System.Environment (lookupEnv)
@@ -45,6 +46,19 @@ isGovernedEvidenceMode :: IO Bool
 isGovernedEvidenceMode = do
   mVal <- lookupEnv "QXFX0_GOVERNED_EVIDENCE"
   pure (isJust mVal && mVal == Just "1")
+
+-- | The guard status a stage must report when it never consulted the guard.
+--
+-- This is /not/ a refusal. Claiming @Blocked@ would tell every downstream
+-- reader that the guard was present and checked ('classifyEvidence' maps it to
+-- 'EvidenceGoverned'), so a missing request would be stamped as governed
+-- evidence. 'Unavailable' is the honest value: degraded evidence in normal
+-- mode, inadmissible (fail-closed) in governed-evidence mode.
+--
+-- The reason string is greppable in logs and traces and separates "never
+-- consulted" from a real refusal.
+missingGuardRequestStatus :: NixGuardStatus
+missingGuardRequestStatus = Unavailable "nix_guard_missing_request"
 
 -- | Pure classification of evidence admissibility from guard status and
 -- governed-evidence mode flag.

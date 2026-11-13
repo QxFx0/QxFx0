@@ -24,7 +24,7 @@ import Control.Exception (bracket_)
 import Data.Aeson (eitherDecode, encode)
 import Data.Text (Text)
 import qualified Data.Text as T
-import System.Directory (createDirectoryIfMissing, getCurrentDirectory)
+import System.Directory (createDirectoryIfMissing, doesFileExist, getCurrentDirectory)
 import System.FilePath ((</>))
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
@@ -240,6 +240,28 @@ crisisGuardTests =
                           (case nonCrisis :: Either QxFx0Exception TurnJsonResponse of
                              Left _ -> True
                              Right _ -> False)
+  , TestLabel "user-regime capture corpus stays in Protocol A" $ TestCase $ do
+      let corpusPath = "spec/eval/user_regime_multiturn_2026-11-13.tsv"
+      exists <- doesFileExist corpusPath
+      assertBool ("capture corpus must exist: " <> corpusPath) exists
+      corpus <- readFile corpusPath
+      let prompts =
+            [ fields !! 2
+            | line <- T.lines (T.pack corpus)
+            , not (T.null line)
+            , not ("#" `T.isPrefixOf` line)
+            , let fields = T.splitOn "\t" line
+            , length fields == 4
+            ]
+      assertEqual "capture corpus must keep its 80 authored prompts"
+        80 (length prompts)
+      mapM_
+        (\prompt ->
+           assertEqual
+             ("capture prompt must not fire the hard gate: " <> T.unpack prompt)
+             Nothing
+             (detectCrisisTrigger prompt))
+        prompts
   , TestLabel "CrisisGuardTrace JSON roundtrip" $ TestCase $ do
       let trace = CrisisGuardTrace
             { cgtProtocolB = True

@@ -753,6 +753,7 @@ common test-common
     Test.Suite.NativeSQLiteNulls
     Test.Suite.NativeSQLiteClose
     Test.Suite.AtomicFile
+    Test.Suite.EvidenceAdmissibility
     Test.Suite.ResponseContentAdmission
     Test.Suite.CommitmentStoreAdmission
     Test.Suite.CommitmentQuarantine
