@@ -787,6 +787,60 @@ re-observe before treating as real).
 
 ## Pointers
 
+- **P3 `Prepare/Resolve` fallback closed 2026-11-13**: the last P3 tail.
+  `Prepare/Resolve.hs` no longer reports `Blocked
+  "nix_guard_missing_request"` when the guard request is absent. Claiming
+  `Blocked` told every downstream reader that the guard was present and
+  checked (`classifyEvidence` maps `Blocked` to `EvidenceGoverned`), so an
+  unconsulted guard was stamped as governed evidence. The honest value is
+  `Unavailable "nix_guard_missing_request"`, exposed as
+  `missingGuardRequestStatus` from `QxFx0.Core.EvidenceAdmissibility` (the
+  hidden `Prepare.Resolve` module cannot be imported by test suites); the
+  reason string is unchanged and stays greppable. New
+  `Test.Suite.EvidenceAdmissibility` (6 cases) pins the fallback and the
+  classification table; red check — restoring `Blocked` fails **exactly 2**
+  fallback pins while the table stays green. No live-path behaviour change:
+  `prepareRequestToTurnEffect` has no `Nothing` branch and `-Werror` keeps it
+  that way. Pre-registration:
+  `docs/closure/PREPARE_FALLBACK_PREREG_2026-11-12.md`.
+- **Multi-turn user-regime capture + read-only reader 2026-11-13**: the
+  first multi-turn record of the concept-v3 regime. Authored probe corpus
+  `spec/eval/user_regime_multiturn_2026-11-13.tsv` (10 dialogues × 8 turns,
+  sha256 `0ea4cc34…c1e412`; **probe, not a sample** — the counts describe
+  the probe, never the population), driver
+  `scripts/run_user_regime_capture.sh` (own DB, one process per turn,
+  `QXFX0_CAPTURE_LIMIT` / `_RESUME` / `_SKIP_EVAL` / `_TURN_TIMEOUT`), reader
+  `scripts/eval/user_regime_report.py` (read-only `mode=ro`, mirrors
+  `analyzeUserRegime`, pins `userResidualAnomalyThreshold` 0.35 and
+  `vcAbsoluteFloor` 0.05 against the Haskell source, 15/15 self-test,
+  allowlist §1 ninth tool). New `CrisisGuard` pin runs the canonical
+  `detectCrisisTrigger` over all 80 prompts (suite 21/21). Full capture
+  (`reports/eval_runs/user-regime-20261113/`): 80/80 turns and 80/80 regime
+  records, 70/70 residual + window samples, **0 hard-trigger Protocol B**,
+  **2 contour-exit Protocol B**, 2 absolute-floor exits, 4 moves (all
+  `mirror_state`, gate passed), 0 relative exits, residual max **0.344**,
+  window max 0.202, ~36 s/turn, 48.5 min, no stalls. Findings: (1) the
+  relative contour branch needs baseline > ~0.30 and a score in
+  `[0.05, baseline−0.25)` — escalation misses it (both exits were
+  absolute-floor); (2) the residual flag is inert at v1 jump sizes (0.344 vs
+  0.35) — the clearest recovery turn does not fire; (3) 3 of 4 moves are
+  doctrinal mention-vs-use false positives (the v1 encoder reads a quoted
+  `being−` as the speaker's act); (4) the drift branch and the contour exit
+  are mutually exclusive on the same turn (Protocol B does not run the move
+  layer), so the drift window is the narrowest band of all; (5) the §9
+  invariant holds («мне всё надоело» scores 0.149, inside the contour). Bar
+  B3 was pre-registered as "0 Protocol B" and corrected after measurement to
+  "0 hard-trigger Protocol B and `protocol_b == contour_exits`", with the
+  driver gate fixed in the same change. Pre-registration:
+  `docs/closure/USER_REGIME_CAPTURE_PREREG_2026-11-13.md`.
+- **Verification 2026-11-13**: M7 30-prompt packet
+  `m7-prepare-fallback-20261113` — gate 30/30, `gf_mapped_fallback` 0/30,
+  0/30 predicate and 0/30 surface mismatches vs `m7-harness-20261111`,
+  realizability 462/462. Landing matrix 2026-11-13: 10/10 steps exit 0,
+  tree byte-identical start→end, **4 393** cases (unit 1845, fast 1938,
+  property 244, integration 47, main runtime 106 + http 23, slow 190 =
+  runtime 106 / state 50 / http 23 / lifecycle 11). CI on `847245b`:
+  Core Contract `43300587480`, Fast `43300587473` — both success.
 - Audit 2026-10-16 → register (verdicts, amended fix order, open
   decisions): `docs/closure/AUDIT_2026-10-16.md`; batch-1 bars
   pre-registered and landed in `CALIBRATION_REPORT.md` (2026-10-17).
@@ -889,7 +943,9 @@ re-observe before treating as real).
   `045f37a..f70607d` pushed; CI Core Contract `40343025029` green
   (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). **Publication
   2026-10-28**: `2144a6a` pushed; CI Fast `40672419939` green; CI
-  Core Contract `40672419906` ещё шёл на момент последней проверки. Full
+  Core Contract `40672419906` ещё шёл на момент последней проверки.
+  **Publication 2026-11-13**: `045f37a..847245b` pushed; CI Core Contract
+  `43300587480` green, CI Fast `43300587473` green. Full
   single-process main по-прежнему не поддерживается на 15 GB
   с substrate.
   **Matrix 2026-11-01/02 (verification, tree `c2383d9` / code
