@@ -262,6 +262,28 @@ crisisGuardTests =
              Nothing
              (detectCrisisTrigger prompt))
         prompts
+  , TestLabel "user-regime probe corpus stays in Protocol A" $ TestCase $ do
+      let corpusPath = "spec/eval/user_regime_probe_2026-11-14.tsv"
+      exists <- doesFileExist corpusPath
+      assertBool ("probe corpus must exist: " <> corpusPath) exists
+      corpus <- readFile corpusPath
+      let prompts =
+            [ fields !! 2
+            | line <- T.lines (T.pack corpus)
+            , not (T.null line)
+            , not ("#" `T.isPrefixOf` line)
+            , let fields = T.splitOn "\t" line
+            , length fields == 4
+            ]
+      assertEqual "probe corpus must keep its 19 authored prompts"
+        19 (length prompts)
+      mapM_
+        (\prompt ->
+           assertEqual
+             ("probe prompt must not fire the hard gate: " <> T.unpack prompt)
+             Nothing
+             (detectCrisisTrigger prompt))
+        prompts
   , TestLabel "CrisisGuardTrace JSON roundtrip" $ TestCase $ do
       let trace = CrisisGuardTrace
             { cgtProtocolB = True

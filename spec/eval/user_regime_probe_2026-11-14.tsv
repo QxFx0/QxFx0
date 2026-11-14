@@ -1,0 +1,26 @@
+# Targeted user-regime probe corpus (2026-11-14): the relative contour branch
+# and the drift-move band.
+# Pre-registration: docs/closure/USER_REGIME_PROBE_PREREG_2026-11-14.md
+# columns: dialogue_id<TAB>turn<TAB>prompt<TAB>arc
+# Authored for the capture, not harvested: a probe corpus, not a sample.
+# Every prompt is checked against the canonical acute-crisis lexicon by
+# Test.Suite.CrisisGuard (pin userRegimeProbeCorpusStaysInProtocolA).
+probe-rel-exit	1	скажи, что такое свобода? я хочу понять, потому что это связано с выбором, или, может быть, с ответственностью?	calm
+probe-rel-exit	2	скажи, что такое выбор? я хочу понять, потому что это связано с ответственностью, или, может быть, с риском?	calm
+probe-rel-exit	3	мне грустно, тяжело и одиноко, не хочу ничего делать	negative
+probe-rel-exit	4	сегодня я хочу разобраться, потому что это важно	recover
+probe-drift-move	1	скажи, что такое свобода? я хочу понять, потому что это связано с выбором, или с ответственностью?	calm
+probe-drift-move	2	мне тревожно, потому что много дел, не знаю зачем	drift
+probe-drift-move	3	сегодня я хочу разобраться, потому что это важно	recover
+probe-control	1	скажи, что такое свобода? я хочу понять, потому что это связано с выбором, или с ответственностью?	calm
+probe-control	2	мне тревожно, потому что много дел, но я хочу разобраться	mild
+probe-control	3	сегодня я хочу разобраться, потому что это важно	recover
+probe-ema-adapts	1	скажи, что такое свобода? я хочу понять, потому что это связано с выбором, или, может быть, с ответственностью?	calm
+probe-ema-adapts	2	мне тревожно, потому что много дел, но я хочу разобраться	mild
+probe-ema-adapts	3	мне тревожно, потому что дел много, но я хочу понять, с чего начать	mild
+probe-ema-adapts	4	сегодня тревожно, потому что забот много, но я хочу разобраться по порядку	mild
+probe-ema-adapts	5	мне тревожно, потому что времени мало, но я хочу всё успеть	mild
+probe-ema-adapts	6	тревожно, потому что задач много, но я хочу двигаться дальше	mild
+probe-ema-adapts	7	мне тревожно, потому что всё сразу, но я хочу разложить по шагам	mild
+probe-ema-adapts	8	мне тревожно, потому что дел невпроворот, но я хочу справиться	mild
+probe-ema-adapts	9	мне грустно, тяжело и одиноко, не хочу ничего делать	negative

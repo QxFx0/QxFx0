@@ -1251,3 +1251,29 @@ re-observe before treating as real).
   infrastructure, П5 B2 RU rater rubric + truthful metadata, П6 this
   sync). Landing commits: П4.2 `bc4398c`, П1 `57be6a9`, П2 `fb0c5f3`,
   П3 `a73ea0e`, П4.1 `508d8d7`, П4.3 `4051861`, П5 `85a21c6`.
+- **Targeted user-regime probe 2026-11-14 (evidence-only, no runtime
+  change)**: the first live observation of both branch classes the
+  2026-11-13 capture never reached. Corpus
+  `spec/eval/user_regime_probe_2026-11-14.tsv` (4 dialogues × 19 turns,
+  sha256 `55265d15…57ea27`), predictor `scripts/eval/r5_predict.py`
+  (eval-only, 13/13 self-test, `--verify-capture` 80/80 on the 2026-11-13
+  capture and 19/19 on the probe), pre-registration
+  `docs/closure/USER_REGIME_PROBE_PREREG_2026-11-14.md`. Measured:
+  **1 relative contour exit** (first live), **2 moves** (`mirror_state`
+  with a closed gate — the drift band, first live; `open_alternative` via
+  the act branch), 0 hard-trigger Protocol B, residual max 0.38.
+  Bars: B1/B2/B3 PASS, B4 PASS (substance; prior baseline 0.4436, not the
+  pre-registered 0.4295), B5/B6 PASS, **B7 FAIL** (the adapted-baseline
+  turn fired `open_alternative`), **B8 FAIL** 11/19. All 11 misses are
+  exactly the topic bit (`+0.09`, or `+0.0775` when resonance clamps):
+  `encodeR5`'s `topicHit` matches `ssLastTopic` (the previous turn's
+  intent-focus word — measured «хочу», «ответственность», «грустно»,
+  «тревожно», «разобраться») as a substring of the normalized text
+  **before** negation blanking, so «не хочу» counts as topic continuity.
+  Replaying measured topics through the same predictor gives 0/19 — the
+  encoder/score/contour/move replica is exact; only `bestTopic` is
+  unpredictable. Fixing `topicBit` is a runtime change (math version
+  bump) and is **not** in this landing. Matrix 2026-11-14: 10/10 steps
+  exit 0, tree byte-identical start→end — unit 1846, fast 1939,
+  property 244, integration 47, main runtime 106 + http 23, slow 190
+  (runtime 106 / state 50 / http 23 / lifecycle 11) = **4 395 cases**.
