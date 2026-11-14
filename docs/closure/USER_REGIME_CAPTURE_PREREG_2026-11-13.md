@@ -200,6 +200,34 @@ dedicated DB `reports/eval_runs/user-regime-20261113/capture.db`.
 5. **The §9 invariant holds.** «Мне всё надоело» stays inside the contour
    (score 0.149), and the fatigue dialogue produces no exit and no move.
 
+### Quantification of findings 1 and 4 (2026-11-14, post-landing analysis)
+
+`ur5Baseline` in the trace is the value **after** this turn's EMA update,
+while both `outsideViabilityContour` and `moveNeeded` receive the **prior**
+baseline. Recovering the prior value as `(after − α·score)/(1 − α)` with
+`α = 2/11` (`vcBaselineWindowTurns = 10`, `updateUserBaseline`) over the 70
+sampled turns gives:
+
+* the relative-contour band `[0.05, prior − 0.25)` was **empty on every
+  turn** (width −0.002 … −0.062): the prior baseline never exceeded 0.30 by
+  enough for the band to open;
+* the two largest single-turn drops — `recovery` t3 (0.258) and
+  `pileup-exit` t5 (0.253) — both landed at score −0.015, below the 0.05
+  absolute floor, so the absolute branch fired first;
+* the drift-move band (`score ≥ 0.05` and `prior − score > 0.20`, with
+  `negativeEvidenceEarned`) was met by **0 of 70** turns; the closest was
+  `pileup-exit` t4 (drop 0.186, score 0.086) — that turn had a negative act
+  but failed the 0.55 resonance gate (resonance 0.5 on a bare distress turn,
+  no addressed question).
+
+This is a structural consequence, not an ordering bug: gradual escalation
+lowers the EMA baseline faster than the score falls, so it always lands in
+the absolute floor (or inside the contour). The relative branch is reachable
+only by a sudden moderate drop from a calm baseline above ~0.30. The drift
+branch is narrower still, and mutually exclusive with an exit on the same
+turn. All four measured moves fired on addressed turns (resonance 0.9), which
+is the mirror→resonance ordering working as designed.
+
 ### Cost
 
 80 turns at ~36 s/turn (48.5 min wall), one process per turn, dedicated DB.
