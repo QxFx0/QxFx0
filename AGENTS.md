@@ -787,6 +787,23 @@ re-observe before treating as real).
 
 ## Pointers
 
+- **M7 comparator mechanized 2026-11-14 (no runtime change)**: the
+  baseline-vs-candidate comparison that produced
+  `determinism-vs-20261111.txt` was an ad-hoc inline script in the gitignored
+  `reports/` tree — the same loss class the M7 harness itself already suffered
+  in `/tmp`. New `scripts/eval/m7_compare.py` compares two M7 run directories
+  on `derivation_rules` and the rendered surface (last parseable JSON line of
+  `raw/<id>.log`, skipping the optional RTS report), treats a missing raw log
+  as a blind comparison (FAIL) rather than an empty surface, and is
+  self-tested (10 cases). `run_m7_batch.sh` now calls it for the replica leg,
+  replacing the ~50-line inline block. Equivalence is measured, not assumed:
+  the tool reproduces the recorded `m7-gf-group3-20261112` replica verdict
+  (30 rows, 0 mismatches, PASS) and the `m7-harness-20261111` vs
+  `m7-prepare-fallback-20261113` baseline verdict (30 rows, 0/30 predicate,
+  0/30 surface); a 3-row smoke replica exercised the driver path end to end
+  (`determinism.txt` produced by the tool, PASS; the gate's exit 1 is the
+  packet-size check, not the comparator). Allowlist §1 is now ten tools;
+  architecture rule [24] green.
 - **P3 `Prepare/Resolve` fallback closed 2026-11-13**: the last P3 tail.
   `Prepare/Resolve.hs` no longer reports `Blocked
   "nix_guard_missing_request"` when the guard request is absent. Claiming

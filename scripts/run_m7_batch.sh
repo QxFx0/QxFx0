@@ -103,65 +103,9 @@ if [[ "$REPLICA" == "1" ]]; then
   QXFX0_EVAL_RTS_ARGS="$RTS_ARGS" \
   bash "$ROOT/scripts/run_dialogue_eval_200.sh" "${RUN_ID}-replica" "$PROMPTS_FILE"
   DET_RC=0
-  python3 - "$OUT_DIR" "$ROOT/reports/eval_runs/${RUN_ID}-replica" \
-    >"$OUT_DIR/determinism.txt" 2>&1 <<'PY' || DET_RC=$?
-"""Diff predicate choice and surface between a run and its replica (bar 5).
-
-Predicate = the ordered `pdRule` list from the replay trace (already in
-results.jsonl).  Surface = the last JSON payload's `response`/`text` field in
-the row's raw log, i.e. exactly what the eval scored.
-"""
-import json
-import sys
-from pathlib import Path
-
-base, replica = Path(sys.argv[1]), Path(sys.argv[2])
-
-
-def read_rows(run_dir):
-    rows = {}
-    with (run_dir / "results.jsonl").open(encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if line:
-                row = json.loads(line)
-                rows[row["id"]] = row
-    return rows
-
-
-def surface(run_dir, row_id):
-    raw = (run_dir / "raw" / f"{row_id}.log").read_text(encoding="utf-8", errors="replace")
-    for line in reversed(raw.splitlines()):
-        line = line.strip()
-        if line.startswith("{"):
-            try:
-                payload = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            return str(payload.get("response") or payload.get("text") or "")
-    return ""
-
-
-base_rows, replica_rows = read_rows(base), read_rows(replica)
-missing = sorted(set(base_rows) ^ set(replica_rows))
-predicate_mismatch, surface_mismatch = [], []
-for row_id in sorted(set(base_rows) & set(replica_rows)):
-    if base_rows[row_id].get("derivation_rules") != replica_rows[row_id].get("derivation_rules"):
-        predicate_mismatch.append(row_id)
-    if surface(base, row_id) != surface(replica, row_id):
-        surface_mismatch.append(row_id)
-
-total = len(set(base_rows) & set(replica_rows))
-print(f"rows compared: {total}")
-print(f"row set mismatch: {len(missing)}" + (f" ({', '.join(missing)})" if missing else ""))
-print(f"predicate mismatches: {len(predicate_mismatch)}/{total}"
-      + (f" ({', '.join(predicate_mismatch)})" if predicate_mismatch else ""))
-print(f"surface mismatches: {len(surface_mismatch)}/{total}"
-      + (f" ({', '.join(surface_mismatch)})" if surface_mismatch else ""))
-ok = total > 0 and not missing and not predicate_mismatch and not surface_mismatch
-print("determinism: " + ("PASS" if ok else "FAIL"))
-sys.exit(0 if ok else 1)
-PY
+  python3 "$ROOT/scripts/eval/m7_compare.py" \
+    "$OUT_DIR" "$ROOT/reports/eval_runs/${RUN_ID}-replica" \
+    >"$OUT_DIR/determinism.txt" 2>&1 || DET_RC=$?
   [[ "$DET_RC" -eq 0 ]] || echo "      determinism exit=$DET_RC (see determinism.txt)" >&2
 else
   DET_RC=""

@@ -30,11 +30,11 @@ empty, every entry carries:
 
 ## 1. The allowlist
 
-**Status 2026-11-13:** §1 is no longer empty. Nine eval-only tools are
+**Status 2026-11-14:** §1 is no longer empty. Ten eval-only tools are
 registered below: the five pre-existing pilot tools plus
 `scripts/eval/prompt_frame_500.py`, `scripts/eval/gf_slot_gap.py`,
-`scripts/eval/gf_slot_realizability.py` and
-`scripts/eval/user_regime_report.py`. They are
+`scripts/eval/gf_slot_realizability.py`,
+`scripts/eval/user_regime_report.py` and `scripts/eval/m7_compare.py`. They are
 quarantined by
 `scripts/eval/NON_AUTHORITY.txt`, carry `--self-test` (enforced by
 `scripts/check_architecture.sh` rule [24]), and are not on any authority
@@ -53,8 +53,9 @@ closure-plan pass.
 | `scripts/eval/gf_slot_gap.py` | `eval-only` | Measures the GF slot gap over the merged runtime corpus and freezes the unmapped row list with sha256; also writes the runtime corpus dump (`--write-dump`) that the realizability check consumes; creates no slots and edits no corpus file; also ranks and freezes the N cheapest uncovered topics for a coverage batch (`--select-topics`); self-tested (29 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the slot-gap measurement is ported or the slot batch is retired. |
 | `scripts/eval/gf_slot_realizability.py` | `eval-only` | Mechanizes the 4-point realizability rule for slot rows (constructors, generated Haskell, GF round-trip, corpus identity) and pins known failures with sha256; creates no slots and edits no corpus file; self-tested (27 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the realizability check is ported or the slot batch is retired. |
 | `scripts/eval/user_regime_report.py` | `eval-only` | Read-only report over `turn_quality.replay_trace_json` for the concept-v3 user regime (protocol, contour exits, prediction residual and bounded window, ontological move); opens the DB `mode=ro`, never writes, mirrors `analyzeUserRegime` and pins the mirrored constants against the Haskell source; self-tested (15 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the regime report is ported to Haskell or the capture is retired. |
+| `scripts/eval/m7_compare.py` | `eval-only` | Compares two M7 run directories on predicate choice (`derivation_rules`) and rendered surface (last parseable JSON line of `raw/<id>.log`, skipping the optional RTS report); used by `run_m7_batch.sh` for the replica leg and for baseline-vs-candidate regression checks; read-only, writes no artifact, treats a missing raw log as a blind comparison (FAIL); self-tested (10 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the M7 determinism check is ported to Haskell or the M7 packet is retired. |
 
-**Empty allowlist remains the closure goal.** The nine entries above are
+**Empty allowlist remains the closure goal.** The ten entries above are
 open retentions; they must be reviewed at every closure-plan pass.
 
 ## 2. The pre-closure inventory (transition reference)
