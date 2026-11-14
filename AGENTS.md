@@ -944,8 +944,9 @@ re-observe before treating as real).
   (`2h35m37s`), CI Fast `40343024720` green (`25m35s`). **Publication
   2026-10-28**: `2144a6a` pushed; CI Fast `40672419939` green; CI
   Core Contract `40672419906` ещё шёл на момент последней проверки.
-  **Publication 2026-11-13**: `045f37a..847245b` pushed; CI Core Contract
-  `43300587480` green, CI Fast `43300587473` green. Full
+  **Publication 2026-11-13**: `045f37a..847245b` pushed (CI Core Contract
+  `43300587480`, CI Fast `43300587473`), then `847245b..c8d20d3` (CI Core
+  Contract `43519296695`, CI Fast `43519296567`) — all four green. Full
   single-process main по-прежнему не поддерживается на 15 GB
   с substrate.
   **Matrix 2026-11-01/02 (verification, tree `c2383d9` / code
