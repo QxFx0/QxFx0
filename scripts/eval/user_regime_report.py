@@ -18,6 +18,12 @@ mirrored and pinned against the Haskell source by ``--self-test``:
 
 * ``userResidualAnomalyThreshold`` (0.35) — ``TraceAnalysis.hs``
 * ``vcAbsoluteFloor`` (0.05) — ``Types/User/R5.hs``
+* ``resonanceGateThreshold`` (0.55) — ``Semantic/Ontological.hs``
+
+``--census`` adds a *descriptive* census of the decision surfaces (gate
+saturation, negative-act rate, act-branch candidates, moves, exits).  It is
+computed from the stored traces only, so it runs on any capture; text-level
+questions (mention versus use) are out of scope by construction.
 
 Pre-registration: ``docs/closure/USER_REGIME_CAPTURE_PREREG_2026-11-13.md``.
 """
@@ -36,6 +42,9 @@ from pathlib import Path
 # Mirrored from the Haskell source; pinned by --self-test.
 USER_RESIDUAL_ANOMALY_THRESHOLD = 0.35
 VC_ABSOLUTE_FLOOR = 0.05
+#: Mirror of ``resonanceGateThreshold`` (QxFx0.Semantic.Ontological).  The
+#: act branch of the move layer needs ``r5Resonance > RESONANCE_GATE``.
+RESONANCE_GATE = 0.55
 CONTOUR_EXIT_CAUSE = "contour_exit"
 #: Encoder version a fresh capture must record.  Bumped with the runtime
 #: (`r5EncoderVersion`); the capture driver's gate compares against it.
@@ -193,6 +202,60 @@ def _stats(values):
     }
 
 
+def negative_act(record):
+    """True when the ontological vector carries a negative component."""
+    vector = record.get("ontological") or {}
+    for key in ("ovBeing", "ovStriving", "ovAffirmation"):
+        value = _number(vector.get(key))
+        if value is not None and value < 0:
+            return True
+    return False
+
+
+def census(records):
+    """Descriptive census of the regime's decision surfaces.
+
+    A census measures how often a surface is reached, never whether the
+    decision was right.  Everything here comes from the stored traces, so it
+    runs on any captured database without the prompt text.
+
+    ``act_branch_candidates`` is the set of turns on which the move layer's
+    act branch *could* fire: Protocol A, a negative ontological act, and
+    resonance above the gate.  It is a candidate count, not an attribution —
+    which operator the search then picks is a separate decision.
+    """
+    with_resonance = [r for r in records if r["resonance"] is not None]
+    above = [r for r in with_resonance if r["resonance"] > RESONANCE_GATE]
+    negative = [r for r in with_resonance if negative_act(r)]
+    candidates = [r for r in above if not r["protocol_b"] and negative_act(r)]
+    moves = [r for r in records if r["move"]]
+    histogram = Counter(round(r["resonance"], 2) for r in with_resonance)
+    total = len(with_resonance)
+    return {
+        "turns": total,
+        "gate": RESONANCE_GATE,
+        "above_gate": len(above),
+        "above_gate_share": (len(above) / total) if total else None,
+        "resonance_histogram": {f"{k:.2f}": histogram[k] for k in sorted(histogram)},
+        "negative_act": len(negative),
+        "negative_act_share": (len(negative) / total) if total else None,
+        "act_branch_candidates": len(candidates),
+        "act_branch_candidate_turns": [
+            f"{r['session']}#{r['turn']}" for r in candidates
+        ],
+        "moves": len(moves),
+        "moves_gate_passed": sum(1 for r in moves if r["affirm_gate_passed"]),
+        "protocol_b": sum(1 for r in records if r["protocol_b"]),
+        "exit_classes": dict(Counter(r["exit_class"] for r in records if r["exit_class"])),
+        "residual_over_threshold": sum(
+            1
+            for r in records
+            if r["prediction_error"] is not None
+            and r["prediction_error"] > USER_RESIDUAL_ANOMALY_THRESHOLD
+        ),
+    }
+
+
 def aggregate(records, turns_scanned, missing_regime):
     sessions = {}
     for record in records:
@@ -246,6 +309,7 @@ def aggregate(records, turns_scanned, missing_regime):
         "residual": _stats(r["prediction_error"] for r in records),
         "window": _stats(r["window_mean"] for r in records),
         "flags": dict(Counter(r["flag"] for r in records if r["flag"])),
+        "census": census(records),
         "encoder_versions": sorted(
             {r["encoder_version"] for r in records if r["encoder_version"] is not None}
         ),
@@ -370,6 +434,36 @@ def render_summary(result, db_path, prefix):
     return "\n".join(lines)
 
 
+def render_census(result):
+    """The ``--census`` block: descriptive counts, no verdicts."""
+    block = result["census"]
+    share = block["above_gate_share"]
+    negative_share = block["negative_act_share"]
+    histogram = ", ".join(
+        f"{value} x{count}" for value, count in block["resonance_histogram"].items()
+    )
+    candidates = ", ".join(block["act_branch_candidate_turns"])
+    lines = [
+        "",
+        f"# Gate census (descriptive; gate = {block['gate']})",
+        f"turns with resonance:  {block['turns']}",
+        f"above gate:            {block['above_gate']}"
+        + (f"  ({share * 100:.0f}%)" if share is not None else ""),
+        f"resonance histogram:   {histogram or '-'}",
+        f"negative act:          {block['negative_act']}"
+        + (f"  ({negative_share * 100:.0f}%)" if negative_share is not None else ""),
+        f"act-branch candidates: {block['act_branch_candidates']}"
+        + (f"  {candidates}" if candidates else ""),
+        f"moves fired:           {block['moves']}"
+        f"  (gate passed {block['moves_gate_passed']})",
+        f"protocol B:            {block['protocol_b']}",
+        f"contour exits:         {block['exit_classes'] or '-'}",
+        f"residual over {USER_RESIDUAL_ANOMALY_THRESHOLD}: "
+        f"{block['residual_over_threshold']}",
+    ]
+    return "\n".join(lines)
+
+
 def render_turns(result):
     lines = [
         "",
@@ -428,6 +522,8 @@ def _regime(
     window_mean=None,
     move=None,
     encoder=R5_ENCODER_VERSION,
+    resonance=0.7,
+    ontological=None,
 ):
     return {
         "urtCrisis": {
@@ -437,7 +533,7 @@ def _regime(
             "cgtResourceVersion": 0,
         },
         "urtUserR5": {
-            "ur5Resonance": 0.7,
+            "ur5Resonance": resonance,
             "ur5Atmosphere": 0.25,
             "ur5Confidence": 0.5,
             "ur5Consolidation": 0.5,
@@ -448,7 +544,11 @@ def _regime(
             "ur5PredictionError": residual,
             "ur5WindowMean": window_mean,
         },
-        "urtOntologicalVector": {"ovBeing": 0, "ovStriving": 0, "ovAffirmation": 0},
+        "urtOntologicalVector": (
+            ontological
+            if ontological is not None
+            else {"ovBeing": 0, "ovStriving": 0, "ovAffirmation": 0}
+        ),
         "urtOntologicalMove": move,
         "urtEncoderVersion": encoder,
     }
@@ -662,6 +762,90 @@ def _case_floor_mirror():
     )
 
 
+@case("reader mirrors the Haskell resonance gate")
+def _case_gate_mirror():
+    root = Path(__file__).resolve().parents[2]
+    source = root / "src" / "QxFx0" / "Semantic" / "Ontological.hs"
+    if not source.is_file():
+        raise AssertionError(f"cannot locate {source}")
+    match = re.search(
+        r"^resonanceGateThreshold\s*=\s*([0-9.]+)\s*$",
+        source.read_text(encoding="utf-8"),
+        re.MULTILINE,
+    )
+    if not match:
+        raise AssertionError("resonanceGateThreshold not found in Semantic/Ontological.hs")
+    assert abs(float(match.group(1)) - RESONANCE_GATE) < 1e-12, (
+        f"Haskell {match.group(1)} != Python {RESONANCE_GATE}"
+    )
+
+
+@case("census: gate saturation and histogram")
+def _case_census_gate():
+    records = [
+        decode_row("s", 1, json.dumps(_trace(_regime(resonance=0.5)))),
+        decode_row("s", 2, json.dumps(_trace(_regime(resonance=0.7)))),
+        decode_row("s", 3, json.dumps(_trace(_regime(resonance=0.9)))),
+    ]
+    block = census(records)
+    assert block["turns"] == 3
+    assert block["above_gate"] == 2
+    assert abs(block["above_gate_share"] - 2 / 3) < 1e-12
+    assert block["resonance_histogram"] == {"0.50": 1, "0.70": 1, "0.90": 1}
+    assert block["gate"] == RESONANCE_GATE
+
+
+@case("census: act-branch candidates need Protocol A and a negative act")
+def _case_census_candidates():
+    negative = {"ovBeing": 0, "ovStriving": -1, "ovAffirmation": 0}
+    positive = {"ovBeing": 0, "ovStriving": 1, "ovAffirmation": 0}
+    rows = [
+        decode_row(
+            "s", 1, json.dumps(_trace(_regime(resonance=0.9, ontological=negative)))
+        ),
+        decode_row(
+            "s",
+            2,
+            json.dumps(
+                _trace(_regime(resonance=0.9, ontological=negative, protocol_b=True))
+            ),
+        ),
+        decode_row(
+            "s", 3, json.dumps(_trace(_regime(resonance=0.9, ontological=positive)))
+        ),
+        decode_row(
+            "s", 4, json.dumps(_trace(_regime(resonance=0.5, ontological=negative)))
+        ),
+    ]
+    block = census(rows)
+    assert block["negative_act"] == 3
+    assert block["act_branch_candidates"] == 1
+    assert block["act_branch_candidate_turns"] == ["s#1"]
+    assert block["protocol_b"] == 1
+
+
+@case("census: turns without resonance keep the non-gate counts")
+def _case_census_missing_resonance():
+    record = decode_row("s", 1, json.dumps(_trace(_regime(resonance=None))))
+    block = census([record])
+    assert block["turns"] == 0 and block["above_gate"] == 0
+    assert block["above_gate_share"] is None
+    assert block["resonance_histogram"] == {}
+
+
+@case("census: aggregate carries the block and the renderer prints it")
+def _case_census_aggregate():
+    records = [
+        decode_row("s", 1, json.dumps(_trace(_regime(resonance=0.9)))),
+    ]
+    result = aggregate(records, 1, 0)
+    result["db"] = "capture.db"
+    result["session_prefix"] = "cap-"
+    assert result["census"]["above_gate"] == 1
+    text = render_census(result)
+    assert "Gate census" in text and "act-branch candidates: 0" in text
+
+
 def self_test():
     failures = 0
     for name, fn in CASES:
@@ -689,6 +873,11 @@ def main(argv=None):
     parser.add_argument("--db", help="trace database (default: runtime resolution)")
     parser.add_argument("--session-prefix", default=None, help="only sessions starting with this")
     parser.add_argument("--verbose", action="store_true", help="per-turn table")
+    parser.add_argument(
+        "--census",
+        action="store_true",
+        help="descriptive census of the decision surfaces (gate saturation, act-branch candidates)",
+    )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--self-test", action="store_true", help="run the built-in cases")
     args = parser.parse_args(argv)
@@ -709,6 +898,8 @@ def main(argv=None):
         return 0
 
     print(render_summary(result, db_path, args.session_prefix))
+    if args.census:
+        print(render_census(result))
     if args.verbose:
         print(render_turns(result))
     return 0

@@ -242,7 +242,7 @@ echo "last_turn_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$META"
 # Report + structural gate
 # ---------------------------------------------------------------------------
 python3 "$ROOT/scripts/eval/user_regime_report.py" \
-  --db "$DB" --session-prefix "cap-$RUN_ID-" \
+  --db "$DB" --session-prefix "cap-$RUN_ID-" --census \
   >"$OUT_DIR/regime-report.txt"
 python3 "$ROOT/scripts/eval/user_regime_report.py" \
   --db "$DB" --session-prefix "cap-$RUN_ID-" --json \
