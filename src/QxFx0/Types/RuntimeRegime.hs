@@ -87,7 +87,11 @@ currentMathVersion :: Int
 -- move probe measured F1 = 0.00 as a degradation predictor
 -- ('moveDriftMargin' 0.10 -> 0.20; bare negative acts no longer fire
 -- without affirm-gate passage or earned drift).
-currentMathVersion = 4
+-- v5 (2026-11-15): user-R5 encoder v2 — the topic-continuity bit is
+-- normalized, whole-word and negation-safe (no constant changed;
+-- 'r5EncoderVersion' 1 -> 2).  Measured in
+-- @docs\/closure\/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md@.
+currentMathVersion = 5
 
 -- | Current CTS constitution version.
 -- Initial value 44 = CTS-44 (commitment promotion).

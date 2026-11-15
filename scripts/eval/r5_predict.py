@@ -30,11 +30,37 @@ usage::
     scripts/eval/r5_predict.py --corpus spec/eval/user_regime_probe_2026-11-14.tsv
     scripts/eval/r5_predict.py --corpus <tsv> --json
     scripts/eval/r5_predict.py --corpus <tsv> --topics-from reports/eval_runs/<run>
+    scripts/eval/r5_predict.py --corpus <tsv> --what-if
+    scripts/eval/r5_predict.py --corpus <tsv> --what-if --topics-from reports/eval_runs/<run>
+    scripts/eval/r5_predict.py --corpus <tsv> --what-if --what-if-reference v1
     scripts/eval/r5_predict.py --verify-capture reports/eval_runs/<run>
     scripts/eval/r5_predict.py --self-test
 
 Exit codes: ``0`` ok, ``1`` prediction/verification mismatch, ``2`` usage or
 source-parse error.
+
+Topic-continuity rules
+----------------------
+``encodeR5``'s topic bit is one line, and it is the one input the corpus
+cannot predict (``bestTopic`` is the runtime's intent focus, a raw surface
+word).  ``--what-if`` runs the same trajectory under every candidate rule so
+the delta is *measured* before a runtime change is pre-registered:
+
+* ``v1`` -- the frozen v1 runtime: ``lastTopic`` matched unnormalized, as a
+  substring of the un-blanked text;
+* ``normalized`` -- the topic side normalized (lowercase, ``ё`` -> ``е``,
+  whitespace collapsed) before the substring test;
+* ``boundary`` -- additionally requires whole words (a topic never matches
+  inside a longer word);
+* ``negation`` / ``negation2`` -- additionally reject an occurrence whose one
+  or two preceding words are a negation particle; an occurrence that is not
+  negated still counts.
+
+``CURRENT_TOPIC_MODE`` names the rule the runtime implements (encoder v2 =
+``negation``); ``--what-if-reference`` chooses the diff baseline, so a
+v1-referenced table stays reproducible after the flip.  ``--verify-capture``
+selects the rule from the trace's ``urtEncoderVersion`` (``ENCODER_RULES``),
+so a capture records which rule produced it.
 """
 
 from __future__ import annotations
@@ -138,6 +164,7 @@ def read_constants() -> dict[str, float]:
         "divergence_window": _number(r5, r"vcDivergenceWindow = ([0-9]+)", R5_TYPES_HS.name),
         "drift_margin": _number(move, r"moveDriftMargin = ([0-9.]+)", MOVE_HS.name),
         "resonance_gate": _number(onto, r"resonanceGateThreshold = ([0-9.]+)", ONTOLOGICAL_HS.name),
+        "encoder_version": _number(r5, r"r5EncoderVersion = ([0-9]+)", R5_TYPES_HS.name),
     }
     for key in ("Resonance", "Confidence", "Consolidation", "Atmosphere", "Counterfactual"):
         if key not in weights:
@@ -150,6 +177,7 @@ def read_constants() -> dict[str, float]:
         "divergence_window": 8.0,
         "drift_margin": 0.20,
         "resonance_gate": 0.55,
+        "encoder_version": 2.0,
         "w_resonance": 0.25,
         "w_confidence": 0.25,
         "w_consolidation": 0.20,
@@ -170,8 +198,61 @@ def read_constants() -> dict[str, float]:
 # ---------------------------------------------------------------------------
 
 
+#: Topic-continuity rules the tool can simulate (see the module docstring).
+TOPIC_MODES = ("v1", "normalized", "boundary", "negation", "negation2")
+#: The rule the *current* runtime implements.  Flipped only when the runtime
+#: fix lands; ``read_constants`` pins ``r5EncoderVersion`` so a silent bump
+#: fails loudly.
+CURRENT_TOPIC_MODE = "negation"
+#: Recorded encoder version -> rule that produced the capture.
+ENCODER_RULES = {1: "v1", 2: "negation"}
+#: Negation particles for the negation-safe candidate rules.  Deliberately
+#: narrow: the measured defect class is a negated verb («не хочу»), not every
+#: syntactic negation.
+NEGATION_WORDS = ("не", "ни", "нет")
+#: A word is a run of letters (Unicode-aware), so punctuation never joins or
+#: splits a token.
+WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+
 def normalize(text: str) -> str:
     return " ".join(text.replace("ё", "е").lower().split())
+
+
+def word_tokens(text: str) -> list[str]:
+    return WORD_RE.findall(text)
+
+
+def topic_match(norm: str, last_topic: str, mode: str) -> bool:
+    """The topic-continuity bit under one candidate rule.
+
+    ``norm`` is the already-normalized utterance; ``last_topic`` is the raw
+    value the runtime carries (``bestTopic`` of the previous turn).
+    """
+    if mode not in TOPIC_MODES:
+        raise PredictError(f"unknown topic mode: {mode!r}")
+    if not last_topic or len(last_topic) < 3:
+        return False
+    if mode == "v1":
+        return last_topic in norm
+    topic = normalize(last_topic)
+    if mode == "normalized":
+        return topic in norm
+    topic_words = word_tokens(topic)
+    if not topic_words:
+        return False
+    text_words = word_tokens(norm)
+    span = len(topic_words)
+    window = {"boundary": 0, "negation": 1, "negation2": 2}[mode]
+    for start in range(len(text_words) - span + 1):
+        if text_words[start : start + span] != topic_words:
+            continue
+        if window == 0:
+            return True
+        preceding = text_words[max(0, start - window) : start]
+        if not any(word in NEGATION_WORDS for word in preceding):
+            return True
+    return False
 
 
 def count_any(text: str, markers: list[str]) -> int:
@@ -192,9 +273,14 @@ def clamp01(value: float) -> float:
     return min(1.0, max(0.0, value))
 
 
-def encode(raw: str, last_topic: str, markers: dict[str, list[str]]) -> dict:
+def encode(
+    raw: str,
+    last_topic: str,
+    markers: dict[str, list[str]],
+    topic_mode: str = CURRENT_TOPIC_MODE,
+) -> dict:
     norm = normalize(raw)
-    topic_hit = bool(last_topic) and len(last_topic) >= 3 and normalize(last_topic) in norm
+    topic_hit = topic_match(norm, last_topic, topic_mode)
     question = "?" in raw
     exclamations = raw.count("!")
     shouty = sum(1 for word in raw.split() if is_shouty(word))
@@ -361,6 +447,7 @@ def simulate(
     markers: dict[str, list[str]],
     c: dict[str, float],
     topics: dict[tuple[str, int], str] | None = None,
+    topic_mode: str = CURRENT_TOPIC_MODE,
 ) -> list[dict]:
     """Predict one dialogue's trajectory.
 
@@ -378,7 +465,7 @@ def simulate(
             last_topic = ""
         else:
             last_topic = topics.get((row["dialogue"], row["turn"] - 1), "")
-        state = encode(row["prompt"], last_topic, markers)
+        state = encode(row["prompt"], last_topic, markers, topic_mode)
         value = score(state, c)
         onto = classify_ontological(row["prompt"], markers)
         exit_ = exit_class(baseline, state, value, c)
@@ -405,7 +492,7 @@ def simulate(
     return out
 
 
-def predict_corpus(path: Path, markers, c, topics=None) -> list[dict]:
+def predict_corpus(path: Path, markers, c, topics=None, topic_mode=CURRENT_TOPIC_MODE) -> list[dict]:
     rows = read_corpus(path)
     by_dialogue: dict[str, list[dict]] = {}
     for row in rows:
@@ -419,7 +506,7 @@ def predict_corpus(path: Path, markers, c, topics=None) -> list[dict]:
         # Default mode: the probe convention holds (no prompt after turn 1
         # repeats the carried topic word), so the topic bit is 0 from turn 2
         # on.  ``topics`` replays measured topics instead (diagnostic only).
-        predicted.extend(simulate(turns, markers, c, topics))
+        predicted.extend(simulate(turns, markers, c, topics, topic_mode))
     return predicted
 
 
@@ -450,6 +537,121 @@ def read_measured_topics(run_dir: Path, session_prefix: str = "") -> dict[tuple[
     if not topics:
         raise PredictError(f"{database}: no turns with session prefix {session_prefix!r}")
     return topics
+
+
+# ---------------------------------------------------------------------------
+# What-if: topic-rule candidates (measured delta, before any runtime change)
+# ---------------------------------------------------------------------------
+
+
+def what_if(
+    corpus: Path,
+    markers,
+    c,
+    topics=None,
+    modes=TOPIC_MODES,
+    reference_mode: str = CURRENT_TOPIC_MODE,
+) -> dict:
+    """Run one corpus under every topic rule and diff against a reference rule.
+
+    The baseline is recomputed per mode, so a changed topic bit propagates
+    through the EMA exactly as it would at runtime; a turn can therefore move
+    even when its own topic bit did not change.
+    """
+    reference = predict_corpus(corpus, markers, c, topics, reference_mode)
+    reference_index = {(r["dialogue"], r["turn"]): r for r in reference}
+    summary = []
+    deltas = []
+    for mode in modes:
+        predicted = reference if mode == reference_mode else predict_corpus(
+            corpus, markers, c, topics, mode
+        )
+        changed = 0
+        low = None
+        high = None
+        for row in predicted:
+            key = (row["dialogue"], row["turn"])
+            base = reference_index[key]
+            delta = row["score"] - base["score"]
+            low = delta if low is None else min(low, delta)
+            high = delta if high is None else max(high, delta)
+            exit_changed = row["exit_class"] != base["exit_class"]
+            move_changed = row["move"] != base["move"]
+            if abs(delta) > 1e-12 or exit_changed or move_changed:
+                changed += 1
+            deltas.append(
+                {
+                    "mode": mode,
+                    "dialogue": row["dialogue"],
+                    "turn": row["turn"],
+                    "reference_score": base["score"],
+                    "reference_exit": base["exit_class"],
+                    "reference_move": base["move"],
+                    "reference_topic": base["hits"]["topic"],
+                    "score": row["score"],
+                    "exit_class": row["exit_class"],
+                    "move": row["move"],
+                    "topic": row["hits"]["topic"],
+                    "delta": delta,
+                    "changed": abs(delta) > 1e-12 or exit_changed or move_changed,
+                }
+            )
+        summary.append(
+            {
+                "mode": mode,
+                "changed_turns": changed,
+                "exits": sum(1 for row in predicted if row["exit_class"]),
+                "moves": sum(1 for row in predicted if row["move"]),
+                "delta_min": low,
+                "delta_max": high,
+            }
+        )
+    return {
+        "corpus": str(corpus),
+        "topics": "measured" if topics is not None else "corpus convention",
+        "reference_mode": reference_mode,
+        "summary": summary,
+        "turns": deltas,
+    }
+
+
+def render_what_if(result: dict) -> str:
+    lines = [
+        f"# what-if: topic-continuity rules on {result['corpus']}",
+        f"# topics: {result['topics']}",
+        f"# reference: {result['reference_mode']} (the diff baseline)",
+        "",
+        "mode        changed   exits  moves   delta range",
+    ]
+    for row in result["summary"]:
+        low = "-" if row["delta_min"] is None else f"{row['delta_min']:+.4f}"
+        high = "-" if row["delta_max"] is None else f"{row['delta_max']:+.4f}"
+        lines.append(
+            f"{row['mode']:12s} {row['changed_turns']:7d} {row['exits']:7d} "
+            f"{row['moves']:6d}   {low} .. {high}"
+        )
+    detail = [row for row in result["turns"] if row["changed"]]
+    if detail:
+        lines += [
+            "",
+            "# per-turn deltas (only turns that move; a turn can move because an",
+            "# earlier turn changed the EMA baseline, not only through its own bit)",
+            "mode        dialogue            turn  ref score  ref exit  ref move          "
+            "cand score  cand exit  cand move         delta    topic",
+        ]
+        for row in detail:
+            lines.append(
+                f"{row['mode']:12s}{row['dialogue']:20s} {row['turn']:4d}  "
+                f"{row['reference_score']:+.4f}  "
+                f"{str(row['reference_exit'] or '-'):9s} "
+                f"{str(row['reference_move'] or '-'):17s} "
+                f"{row['score']:+.4f}  {str(row['exit_class'] or '-'):9s} "
+                f"{str(row['move'] or '-'):17s} {row['delta']:+.4f}  "
+                f"{'hit' if row['topic'] else '-'}"
+            )
+    else:
+        lines += ["", "# no turn moves under any candidate rule"]
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -484,7 +686,7 @@ def verify_capture(run_dir: Path, session_prefix: str, markers, c) -> dict:
     connection = sqlite3.connect(f"file:{run_dir / 'capture.db'}?mode=ro", uri=True)
     try:
         topics: dict[tuple[str, int], str] = {}
-        observed: dict[tuple[str, int], dict] = {}
+        observed: dict[tuple[str, int], tuple[dict, int]] = {}
         for session, turn, request, trace in connection.execute(
             "select session_id, turn, scene_request, replay_trace_json from turn_quality"
         ):
@@ -492,18 +694,26 @@ def verify_capture(run_dir: Path, session_prefix: str, markers, c) -> dict:
             regime = json.loads(trace).get("trace", {}).get("trcUserRegime") or {}
             r5 = regime.get("urtUserR5") or {}
             if r5:
-                observed[(session, turn)] = r5
+                observed[(session, turn)] = (r5, int(regime.get("urtEncoderVersion", 1)))
     finally:
         connection.close()
 
     mismatches = []
-    for (session, turn), r5 in sorted(observed.items()):
+    rules = set()
+    for (session, turn), (r5, version) in sorted(observed.items()):
         prompt = prompts.get((session, turn))
         if prompt is None:
             mismatches.append({"session": session, "turn": turn, "reason": "no prompt"})
             continue
+        rule = ENCODER_RULES.get(version)
+        if rule is None:
+            raise PredictError(
+                f"encoder version {version} is not mapped to a topic rule; "
+                f"add it to ENCODER_RULES (known: {sorted(ENCODER_RULES)})"
+            )
+        rules.add(rule)
         last_topic = topics.get((session, turn - 1), "")
-        state = encode(prompt, last_topic, markers)
+        state = encode(prompt, last_topic, markers, rule)
         expected_score = score(state, c)
         diffs = {}
         for axis_name in AXES:
@@ -523,6 +733,7 @@ def verify_capture(run_dir: Path, session_prefix: str, markers, c) -> dict:
     return {
         "run_dir": str(run_dir),
         "session_prefix": session_prefix,
+        "topic_rules": sorted(rules),
         "turns": len(observed),
         "exact_matches": len(observed) - len(mismatches),
         "mismatches": mismatches,
@@ -564,6 +775,8 @@ def _case_constants():
     assert c["absolute_floor"] == 0.05 and c["personal_margin"] == 0.25
     assert c["drift_margin"] == 0.20 and c["resonance_gate"] == 0.55
     assert c["w_counterfactual"] == 0.10
+    assert c["encoder_version"] == 2.0
+    assert ENCODER_RULES[int(c["encoder_version"])] == CURRENT_TOPIC_MODE
 
 
 @case("neutral utterance scores 0.24")
@@ -674,23 +887,108 @@ def _case_predictions():
     assert index[("probe-ema-adapts", 9)]["move"] is None
 
 
-@case("measured topics replay the topic bit the corpus convention misses")
+@case("measured topics: v1 substring hit, v2 whole-word miss")
 def _case_topics_from():
     markers, c = _load()
     path = ROOT / "spec/eval/user_regime_probe_2026-11-14.tsv"
     plain = {(r["dialogue"], r["turn"]): r for r in predict_corpus(path, markers, c)}
-    # The corpus convention assumes no prompt after turn 1 repeats the carried
-    # topic word.  probe-rel-exit turn 2 repeats "ответственность" in the
-    # instrumental case, so the measured topic IS a substring hit.
-    assert plain[("probe-rel-exit", 2)]["hits"]["topic"] is False
     topics = {("probe-rel-exit", 1): "ответственность"}
-    replayed = {
-        (r["dialogue"], r["turn"]): r for r in predict_corpus(path, markers, c, topics)
+    v2 = {(r["dialogue"], r["turn"]): r for r in predict_corpus(path, markers, c, topics)}
+    v1 = {
+        (r["dialogue"], r["turn"]): r
+        for r in predict_corpus(path, markers, c, topics, "v1")
     }
-    assert replayed[("probe-rel-exit", 2)]["hits"]["topic"] is True
-    # resonance clamps at 1.0, so the score moves by 0.0775, not 0.09
-    assert abs(replayed[("probe-rel-exit", 2)]["score"] - 0.507) < 1e-12
-    assert abs(plain[("probe-rel-exit", 2)]["score"] - 0.4295) < 1e-12
+    # The corpus convention assumes no prompt after turn 1 repeats the carried
+    # topic word; the runtime does, so the convention is not the measurement.
+    assert plain[("probe-rel-exit", 2)]["hits"]["topic"] is False
+    # v1 matched «ответственность» inside the instrumental «ответственностью»;
+    # v2 requires a whole word, so the same turn no longer counts.
+    assert v1[("probe-rel-exit", 2)]["hits"]["topic"] is True
+    assert v2[("probe-rel-exit", 2)]["hits"]["topic"] is False
+    # resonance clamps at 1.0 under v1, so the score moves by 0.0775, not 0.09
+    assert abs(v1[("probe-rel-exit", 2)]["score"] - 0.507) < 1e-12
+    assert abs(v2[("probe-rel-exit", 2)]["score"] - 0.4295) < 1e-12
+
+
+@case("topic rules: substring vs word boundary vs negation")
+def _case_topic_rules():
+    instrumental = "скажи, что такое выбор? это связано с ответственностью"
+    assert topic_match(instrumental, "ответственность", "v1") is True
+    assert topic_match(instrumental, "ответственность", "boundary") is False
+    assert topic_match("это связано с ответственность, да", "ответственность", "boundary") is True
+    negated = "мне грустно, не хочу ничего делать"
+    assert topic_match(negated, "хочу", "v1") is True
+    assert topic_match(negated, "хочу", "boundary") is True  # a whole word, but negated
+    assert topic_match(negated, "хочу", "negation") is False
+    assert topic_match(negated, "хочу", "negation2") is False
+    # an occurrence that is not negated still counts
+    assert topic_match("не хочу сейчас, но потом хочу", "хочу", "negation") is True
+    # the two-token window catches an adverb between the particle and the verb
+    assert topic_match("не очень хочу", "хочу", "negation") is True
+    assert topic_match("не очень хочу", "хочу", "negation2") is False
+    # punctuation never joins or splits a token
+    assert topic_match("что такое свобода?", "свобода", "boundary") is True
+
+
+@case("topic rules: normalization is the topic side only")
+def _case_topic_normalized():
+    text = normalize("Скажи, что такое СВОБОДА?")
+    assert topic_match(text, "СВОБОДА", "v1") is False
+    assert topic_match(text, "СВОБОДА", "normalized") is True
+    assert topic_match(text, "СВОБОДА", "boundary") is True
+
+
+#: Measured ``bestTopic`` per turn for the probe corpus (2026-11-14 capture,
+#: recorded in ``USER_REGIME_PROBE_PREREG_2026-11-14.md``).  The capture DB is
+#: gitignored, so the what-if pin replays the recorded values from here.
+PROBE_MEASURED_TOPICS = {
+    ("probe-rel-exit", 1): "ответственность",
+    ("probe-rel-exit", 2): "ответственность",
+    ("probe-rel-exit", 3): "грустно",
+    ("probe-rel-exit", 4): "разобраться",
+    ("probe-drift-move", 1): "ответственность",
+    ("probe-drift-move", 2): "тревожно",
+    ("probe-drift-move", 3): "разобраться",
+    ("probe-control", 1): "ответственность",
+    ("probe-control", 2): "хочу",
+    ("probe-control", 3): "разобраться",
+    ("probe-ema-adapts", 1): "ответственность",
+    ("probe-ema-adapts", 2): "хочу",
+    ("probe-ema-adapts", 3): "хочу",
+    ("probe-ema-adapts", 4): "хочу",
+    ("probe-ema-adapts", 5): "хочу",
+    ("probe-ema-adapts", 6): "хочу",
+    ("probe-ema-adapts", 7): "хочу",
+    ("probe-ema-adapts", 8): "хочу",
+    ("probe-ema-adapts", 9): "грустно",
+}
+
+
+@case("what-if: the negation rule moves the probe where the capture measured it")
+def _case_what_if():
+    markers, c = _load()
+    path = ROOT / "spec/eval/user_regime_probe_2026-11-14.tsv"
+    result = what_if(
+        path, markers, c, PROBE_MEASURED_TOPICS, ("v1", "boundary", "negation"), "v1"
+    )
+    turns = {(r["mode"], r["dialogue"], r["turn"]): r for r in result["turns"]}
+    # instrumental case: a substring hit under v1, no hit at a word boundary
+    rel2 = turns[("negation", "probe-rel-exit", 2)]
+    assert rel2["reference_topic"] is True and rel2["topic"] is False
+    assert abs(rel2["reference_score"] - 0.507) < 1e-12
+    assert abs(rel2["score"] - 0.4295) < 1e-12
+    # the adapted-baseline turn: the act branch closes, the drift branch opens
+    t9 = turns[("negation", "probe-ema-adapts", 9)]
+    assert t9["reference_topic"] is True and t9["topic"] is False
+    assert abs(t9["reference_score"] - 0.211) < 1e-12
+    assert abs(t9["score"] - 0.121) < 1e-12
+    assert t9["reference_move"] == "open_alternative" and t9["move"] == "mirror_state"
+    # a genuine whole-word repeat is not a defect and must not move
+    ctrl3 = turns[("negation", "probe-control", 3)]
+    assert ctrl3["topic"] is True and ctrl3["changed"] is False
+    # a word boundary alone does not close the negated-verb hit
+    t9_boundary = turns[("boundary", "probe-ema-adapts", 9)]
+    assert t9_boundary["topic"] is True and t9_boundary["move"] == "open_alternative"
 
 
 def self_test() -> int:
@@ -743,6 +1041,23 @@ def main(argv=None) -> int:
         help="capture run directory: replay measured best topics (post-hoc diagnostic)",
     )
     parser.add_argument("--session-prefix", default="", help="session-id prefix (default: cap-<run-directory-name>-)")
+    parser.add_argument(
+        "--topic-mode",
+        choices=TOPIC_MODES,
+        default=CURRENT_TOPIC_MODE,
+        help=f"topic-continuity rule (default: {CURRENT_TOPIC_MODE}, the runtime rule)",
+    )
+    parser.add_argument(
+        "--what-if",
+        action="store_true",
+        help="run every topic rule and diff the trajectories against a reference rule",
+    )
+    parser.add_argument(
+        "--what-if-reference",
+        choices=TOPIC_MODES,
+        default=CURRENT_TOPIC_MODE,
+        help=f"diff baseline for --what-if (default: {CURRENT_TOPIC_MODE})",
+    )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--self-test", action="store_true", help="run the built-in cases")
     args = parser.parse_args(argv)
@@ -758,6 +1073,7 @@ def main(argv=None) -> int:
             else:
                 print(f"run: {result['run_dir']}")
                 print(f"turns: {result['turns']}")
+                print(f"topic rules: {', '.join(result['topic_rules'])}")
                 print(f"exact matches: {result['exact_matches']}/{result['turns']}")
                 for mismatch in result["mismatches"][:10]:
                     print(f"  MISMATCH {mismatch}")
@@ -768,7 +1084,25 @@ def main(argv=None) -> int:
         topics = None
         if args.topics_from:
             topics = read_measured_topics(Path(args.topics_from), args.session_prefix)
-        predicted = predict_corpus(Path(args.corpus), markers, constants, topics)
+        if args.what_if:
+            result = what_if(
+                Path(args.corpus),
+                markers,
+                constants,
+                topics,
+                reference_mode=args.what_if_reference,
+            )
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            else:
+                if topics is not None:
+                    print(
+                        f"# diagnostic: best topics replayed from {args.topics_from};"
+                        " not a pre-registration prediction"
+                    )
+                print(render_what_if(result))
+            return 0
+        predicted = predict_corpus(Path(args.corpus), markers, constants, topics, args.topic_mode)
         if args.json:
             print(json.dumps(predicted, ensure_ascii=False, indent=2))
         else:
@@ -777,6 +1111,8 @@ def main(argv=None) -> int:
                     f"# diagnostic: best topics replayed from {args.topics_from};"
                     " not a pre-registration prediction"
                 )
+            if args.topic_mode != CURRENT_TOPIC_MODE:
+                print(f"# topic rule: {args.topic_mode} (what-if, not the runtime rule)")
             print(render_table(predicted))
         return 0
     except (PredictError, OSError, sqlite3.Error) as error:

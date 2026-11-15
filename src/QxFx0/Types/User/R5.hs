@@ -254,8 +254,13 @@ r5Distance a b =
 -- | Version of the frozen user-R5 encoder model.  Canonical home is
 -- this Types module so the replay trace can stamp it without an
 -- implementation import; @User.R5@ re-exports it.
+--
+-- v1 (2026-08-23): concept-v3 linear encoder, raw-substring topic bit.
+-- v2 (2026-11-15): topic continuity is normalized, whole-word and
+-- negation-safe (@QxFx0.User.R5.topicContinuity@); every constant and
+-- every axis formula is unchanged.
 r5EncoderVersion :: Int
-r5EncoderVersion = 1
+r5EncoderVersion = 2
 
 -- | Bounded drop-oldest push for the residual window (mirrors
 -- 'QxFx0.Self.SelfDivergence.pushDivergenceSample'): prepend the

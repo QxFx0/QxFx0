@@ -24,8 +24,9 @@ import Data.Aeson (Value (..), eitherDecode, encode, toJSON)
 import qualified Data.Aeson.KeyMap as KM
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
-import QxFx0.User.R5 (encodeR5)
+import QxFx0.User.R5 (encodeR5, topicContinuity)
 import QxFx0.Types.User.R5
+import QxFx0.Semantic.Ontological (resonanceGateThreshold)
 
 userR5Tests :: [Test]
 userR5Tests =
@@ -33,6 +34,64 @@ userR5Tests =
       assertEqual "same input must encode identically"
         (encodeR5 "я хочу понять, что такое свобода, или как ты это видишь?" "свобода")
         (encodeR5 "я хочу понять, что такое свобода, или как ты это видишь?" "свобода")
+    -- Encoder v2 (2026-11-15): the topic-continuity bit is normalized,
+    -- whole-word and negation-safe.  See
+    -- docs/closure/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md.
+  , TestLabel "topic v2: whole words only (no inflection)" $ TestCase $ do
+      assertBool "the instrumental case must not count as continuity"
+        (not (topicContinuity "как свобода связана с ответственностью?" "ответственность"))
+      assertBool "the nominative whole word must count"
+        (topicContinuity "как свобода связана с ответственность?" "ответственность")
+      assertBool "punctuation must not split a token"
+        (topicContinuity "что такое свобода?" "свобода")
+  , TestLabel "topic v2: no substring inside an unrelated word" $ TestCase $ do
+      assertBool "«смысл» must not match inside «бессмысленным»"
+        (not (topicContinuity "как ты думаешь, почему всё кажется бессмысленным?" "смысл"))
+      assertBool "the whole word still matches"
+        (topicContinuity "в чём смысл этого вопроса?" "смысл")
+  , TestLabel "topic v2: a negated verb is not continuity" $ TestCase $ do
+      assertBool "«хочу» must not match inside «не хочу»"
+        (not (topicContinuity "мне грустно, тяжело и одиноко, не хочу ничего делать" "хочу"))
+      assertBool "a non-negated occurrence still counts"
+        (topicContinuity "не хочу сейчас, но потом хочу" "хочу")
+      assertBool "«ни» is a particle too"
+        (not (topicContinuity "ни хочу, ни могу" "хочу"))
+      assertBool "a particle two words back is out of the v2 window"
+        (topicContinuity "не очень хочу" "хочу")
+  , TestLabel "topic v2: the topic side is normalized" $ TestCase $ do
+      assertBool "uppercase topic matches a lowercase utterance"
+        (topicContinuity "скажи, что такое свобода?" "СВОБОДА")
+      assertBool "ё and е are the same word"
+        (topicContinuity "что такое вселенная?" "ВСЕЛЁННАЯ")
+  , TestLabel "topic v2: multi-word topics match a contiguous run" $ TestCase $ do
+      assertBool "contiguous run matches"
+        (topicContinuity "что такое свобода воли?" "свобода воли")
+      assertBool "a split run does not match"
+        (not (topicContinuity "свобода и воля" "свобода воли"))
+  , TestLabel "topic v2: the topic bit is worth +0.09 on the score" $ TestCase $ do
+      let hit = encodeR5 "сегодня я хочу разобраться, потому что это важно" "хочу"
+          miss = encodeR5 "сегодня я хочу разобраться, потому что это важно" ""
+          hitScore = userConatusScore defaultUserConatusWeights hit
+          missScore = userConatusScore defaultUserConatusWeights miss
+      assertBool "a genuine whole-word repeat still counts"
+        (abs (r5Resonance hit - 0.70) < 1e-12)
+      assertBool "the bit is +0.09" (abs (hitScore - missScore - 0.09) < 1e-12)
+  , TestLabel "topic v2: the probe's adapted-baseline turn scores 0.121" $ TestCase $ do
+      -- probe-ema-adapts t9 with lastTopic «хочу»: v1 read the negated
+      -- verb as continuity (0.211) and opened the 0.55 affirm gate.
+      let state = encodeR5 "мне грустно, тяжело и одиноко, не хочу ничего делать" "хочу"
+          value = userConatusScore defaultUserConatusWeights state
+      assertBool "resonance stays at the neutral base" (abs (r5Resonance state - 0.50) < 1e-12)
+      assertBool "consolidation stays at the neutral base" (abs (r5Consolidation state - 0.50) < 1e-12)
+      assertBool "the score is 0.121" (abs (value - 0.121) < 1e-12)
+      assertBool "the affirm gate cannot be opened by the topic bit"
+        (r5Resonance state <= resonanceGateThreshold)
+  , TestLabel "topic v2: the 80-turn capture's false hit scores 0.3075" $ TestCase $ do
+      -- move-act t2 with lastTopic «смысл»: v1 matched the substring in
+      -- «бессмысленным» (0.385).
+      let state = encodeR5 "как ты думаешь, почему всё кажется бессмысленным?" "смысл"
+          value = userConatusScore defaultUserConatusWeights state
+      assertBool "the score is 0.3075" (abs (value - 0.3075) < 1e-12)
   , TestLabel "concept edge: «мне всё надоело» stays inside the contour" $ TestCase $ do
       let state = encodeR5 "мне всё надоело" ""
           score = userConatusScore defaultUserConatusWeights state

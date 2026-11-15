@@ -26,6 +26,7 @@ will not catch it — but the calibration tests will.
 | 2 | 2026-08-07 | A-slice: `ConatusComponents` gains `ccSelfDivergence`, self-consistency penalty as energy fraction, `SelfDivergenceTuning` (0.035/0.35/8) | A-slice A3 + `Test.Suite.SelfDivergence` | `src/QxFx0/Self/SelfDivergence.hs`, `src/QxFx0/Types/Self/SelfDivergence.hs` |
 | 3 | 2026-08-23 | Concept-v3: user-R5 encoder v1 (frozen), viability contour, move-graph effect matrix, `transitionUserR5` | concept-v3 regime + `Test.Suite.{CrisisGuard,UserR5,OntologicalAxis,MoveGraph}` | `src/QxFx0/User/R5.hs`, `src/QxFx0/Types/User/R5.hs`, `src/QxFx0/Semantic/MoveGraph.hs` |
 | 4 | 2026-09-20 | Move-layer tightening (pre-registered probe F1 = 0.00): `moveDriftMargin` 0.10 → 0.20, bare negative acts no longer fire without affirm-gate passage or earned drift | `docs/closure/MOVE_PROBE_PREREG.md` + human-v1 labels (30 turns) + `Test.Suite.MoveGraph` v4 pins | `src/QxFx0/Semantic/MoveGraph.hs`, `src/QxFx0/Types/RuntimeRegime.hs` |
+| 5 | 2026-11-15 | User-R5 encoder v2: topic continuity is normalized, whole-word and negation-safe (`topicContinuity`); no constant changed, `r5EncoderVersion` 1 → 2 | `docs/closure/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md` (what-if on both captures + post-fix re-captures) + `Test.Suite.UserR5` v2 pins | `src/QxFx0/User/R5.hs`, `src/QxFx0/Types/User/R5.hs`, `src/QxFx0/Types/RuntimeRegime.hs` |
 
 *Version 1 is the baseline — the correction that prompted this protocol.*
 

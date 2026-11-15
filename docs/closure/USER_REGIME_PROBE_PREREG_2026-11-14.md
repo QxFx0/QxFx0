@@ -310,6 +310,12 @@ recorded, not lost. Two views of the same turn, no missing anomaly.
 
 1. `topicBit` negation safety and semantic-topic matching — runtime
    change, needs pre-registration and a math-version bump.
+   **Landed 2026-11-15** for the measured defect class: encoder v2
+   (`QxFx0.User.R5.topicContinuity`) normalizes the topic side, matches
+   whole words only and rejects a negated occurrence;
+   `docs/closure/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md`. Semantic
+   topic matching (morphology / aboutness) remains open — v2 deliberately
+   loses two instrumental-case continuities.
 2. Whether the act branch should require address/question evidence, not
    only `resonance > 0.55` — the probe shows the gate can be opened by a
    repeated word alone. A design question, not a defect in the move

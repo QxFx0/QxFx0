@@ -272,7 +272,7 @@ checks = [
     # lexical trigger is a safety event the capture must never produce.
     ("hard-trigger Protocol B", hard_trigger_b, 0),
     ("protocol B == contour exits", report["protocol_b"], report["contour_exits"]),
-    ("encoder versions", report["encoder_versions"], [1]),
+    ("encoder versions", report["encoder_versions"], [2]),
     ("residual samples", report["residual"]["n"], rows - dialogues),
     ("window samples", report["window"]["n"], rows - dialogues),
 ]

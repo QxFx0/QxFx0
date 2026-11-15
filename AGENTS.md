@@ -1277,3 +1277,30 @@ re-observe before treating as real).
   exit 0, tree byte-identical start→end — unit 1846, fast 1939,
   property 244, integration 47, main runtime 106 + http 23, slow 190
   (runtime 106 / state 50 / http 23 / lifecycle 11) = **4 395 cases**.
+- **User-regime encoder v2 (topic continuity) landed 2026-11-15**: the
+  2026-11-14 probe's measured `topicBit` defect is fixed by a pre-registered
+  runtime change (`docs/closure/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md`).
+  `encodeR5`'s topic bit was a raw substring of the normalized-but-unblanked
+  text on an **unnormalized** topic, so «смысл» matched «бессмысленным»,
+  «ответственность» matched «ответственностью», and «хочу» matched «не хочу»
+  — the last one manufactured resonance `0.70`, opened the `0.55` act gate and
+  fired `open_alternative` (probe B7). v2 `topicContinuity` normalizes the
+  topic side, requires a contiguous run of whole words, and rejects an
+  occurrence immediately preceded by `не`/`ни`/`нет`; **no constant,
+  threshold or marker changed** (`r5EncoderVersion` 1→2, `currentMathVersion`
+  4→5, `MATH_CHANGE_PROTOCOL.md` row 5). What-if before the change (both
+  corpora, measured topics): 2 changed turns on each; `boundary` alone does
+  not fix the negated verb; the 1- and 2-token negation windows are
+  byte-identical, so the narrower one was chosen. Post-fix re-captures: probe
+  **19/19 exact** vs the pre-registered table, 1 relative exit, 2
+  `mirror_state` moves, act gate closed (**B7 as written still FAIL** — the
+  drift branch legitimately fires, `0.2451` below the adapted baseline,
+  earned by atmosphere `0.67`); 80-turn capture **80/80 exact**, same 2
+  `absolute_floor` exits and same 4 `mirror_state` moves, only `calm-def` t3
+  `0.388→0.298` and `move-act` t2 `0.385→0.3075` changed score, 0
+  hard-trigger Protocol B, encoder `[2]`, 0/80 topic changes. Accepted cost:
+  two genuine instrumental-case continuities lost (v2 has no morphology
+  pass; that and semantic topic matching stay open). Matrix 2026-11-15:
+  unit 1854, fast 1947, property 244, integration 47, main runtime 106 +
+  http 23, slow 190 (runtime 106 / state 50 / http 23 / lifecycle 11) =
+  **4 411 cases**, 10/10 steps exit 0, tree byte-identical start→end.

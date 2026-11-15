@@ -37,7 +37,9 @@ from pathlib import Path
 USER_RESIDUAL_ANOMALY_THRESHOLD = 0.35
 VC_ABSOLUTE_FLOOR = 0.05
 CONTOUR_EXIT_CAUSE = "contour_exit"
-R5_ENCODER_VERSION = 1
+#: Encoder version a fresh capture must record.  Bumped with the runtime
+#: (`r5EncoderVersion`); the capture driver's gate compares against it.
+R5_ENCODER_VERSION = 2
 
 MOVE_TAGS = (
     "MoveMirrorState",
@@ -425,7 +427,7 @@ def _regime(
     residual=None,
     window_mean=None,
     move=None,
-    encoder=1,
+    encoder=R5_ENCODER_VERSION,
 ):
     return {
         "urtCrisis": {
@@ -592,7 +594,7 @@ def _case_aggregate():
     assert abs(result["residual"]["mean"] - 0.3) < 1e-9
     assert result["residual"]["max"] == 0.4
     assert result["residual"]["over_threshold"] == 1
-    assert result["encoder_versions"] == [1]
+    assert result["encoder_versions"] == [R5_ENCODER_VERSION]
     assert result["flags"] == {"user_contour_exit": 1}
     assert [row["session"] for row in result["session_detail"]] == ["s1", "s2"]
 
