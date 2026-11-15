@@ -33,6 +33,8 @@ usage::
     scripts/eval/r5_predict.py --corpus <tsv> --what-if
     scripts/eval/r5_predict.py --corpus <tsv> --what-if --topics-from reports/eval_runs/<run>
     scripts/eval/r5_predict.py --corpus <tsv> --what-if --what-if-reference v1
+    scripts/eval/r5_predict.py --corpus <tsv> --what-if-mention
+    scripts/eval/r5_predict.py --corpus <tsv> --mention-mode attribution
     scripts/eval/r5_predict.py --verify-capture reports/eval_runs/<run>
     scripts/eval/r5_predict.py --self-test
 
@@ -61,6 +63,24 @@ the delta is *measured* before a runtime change is pre-registered:
 v1-referenced table stays reproducible after the flip.  ``--verify-capture``
 selects the rule from the trace's ``urtEncoderVersion`` (``ENCODER_RULES``),
 so a capture records which rule produced it.
+
+Mention-vs-use rules
+--------------------
+``classifyOntological`` reads a marker anywhere in the utterance as the
+speaker's act, including inside a report of someone else's claim («так
+утверждал Шопенгауэр»).  ``--what-if-mention`` runs the same trajectory under
+every candidate scope and diffs the ontological vector and the move:
+
+* ``off`` -- the current runtime: the whole utterance is the speaker's;
+* ``attribution`` -- a report (quotation, report phrase, or a third-party
+  attribution verb with a name-like token adjacent) resolves to the neutral
+  vector; a first-person token vetoes the rule, so the speaker's own act
+  survives inside a quotation.
+
+The rule touches the vector only: the score, the contour and the EMA baseline
+are identical by construction.  ``--mention-mode`` selects the rule for a
+table; ``CURRENT_MENTION_MODE`` names the runtime's (``off`` until the change
+lands).
 """
 
 from __future__ import annotations
@@ -213,6 +233,30 @@ NEGATION_WORDS = ("не", "ни", "нет")
 #: A word is a run of letters (Unicode-aware), so punctuation never joins or
 #: splits a token.
 WORD_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+#: Name-like token: an uppercase initial followed by at least one letter.
+CAPITALIZED_RE = re.compile(r"[А-ЯЁA-Z][а-яёa-z\-]+")
+#: Mention-vs-use rules the tool can simulate.  ``off`` is the current runtime;
+#: ``attribution`` treats a reported claim as a report, not as the speaker's act.
+MENTION_MODES = ("off", "attribution")
+#: The rule the *current* runtime implements (no mention scope yet).
+CURRENT_MENTION_MODE = "off"
+#: Third-party report verbs.  Deliberately finite: the measured defect class is
+#: a doctrinal attribution («так утверждал Шопенгауэр», «Камю писал»).
+ATTRIBUTION_VERBS = (
+    "писал", "писала", "считал", "считала", "говорил", "говорила",
+    "утверждал", "утверждала", "учил", "учила", "называл", "называла",
+    "полагал", "полагала", "доказывал", "замечал", "отмечал", "думал",
+)
+#: Unambiguous report phrases: they carry the attribution themselves.
+ATTRIBUTION_PHRASES = ("по мнению", "по словам", "согласно", "цитата", "говорят")
+#: First-person tokens.  A speaker present in the utterance is not a report,
+#: even when the utterance also quotes someone («Шопенгауэр утверждал, но я
+#: так не думаю»).
+FIRST_PERSON_WORDS = ("я", "мне", "меня", "мой", "моя", "мое", "мы", "нас", "наш")
+#: Third-person pronouns that can carry the attribution subject.
+THIRD_PERSON_WORDS = ("он", "она", "они", "его", "ее", "их")
+#: Quote characters.  A quoted span is a mention by construction.
+QUOTE_CHARS = ("«", "»", "„", "“", "”", '"')
 
 
 def normalize(text: str) -> str:
@@ -367,6 +411,56 @@ def classify_ontological(raw: str, markers: dict[str, list[str]]) -> dict[str, f
     }
 
 
+#: The neutral vector a report resolves to (the speaker performs no act).
+NEUTRAL_ONTOLOGICAL = {"being": 0.0, "striving": 0.0, "affirmation": 0.0}
+
+
+def mention_report(text: str) -> bool:
+    """True when the utterance *reports* a claim instead of making one.
+
+    Candidate v1 rule (not runtime yet): the utterance is a report when it
+    quotes a span, carries a report phrase, or has a third-party attribution
+    verb with a name-like token adjacent to it.  A first-person token vetoes
+    the rule — «Шопенгауэр утверждал, что жизнь бессмысленна, но я так не
+    думаю» keeps the speaker's own act.
+
+    Deliberately blunt: the whole utterance resolves to neutral, because the
+    corpus' post-position form («… — так утверждал Шопенгауэр») puts the
+    attribution *after* the claim, so clause-level blanking would keep the
+    claim.  Known limitation: a report plus a genuine act in one utterance
+    without a first-person token would be lost; no such turn exists in the
+    four captures.
+    """
+    raw = text.split()
+    tokens = [normalize(tok).strip(".,!?;:—–«»\"()") for tok in raw]
+    norm = " ".join(tokens)
+    if any(q in text for q in QUOTE_CHARS):
+        return True
+    if any(p in norm for p in ATTRIBUTION_PHRASES):
+        return True
+    verbs = [i for i, tok in enumerate(tokens) if tok in ATTRIBUTION_VERBS]
+    if not verbs:
+        return False
+    if any(tok in FIRST_PERSON_WORDS for tok in tokens):
+        return False
+    if any(tok in THIRD_PERSON_WORDS for tok in tokens):
+        return True
+    for index, tok in enumerate(raw):
+        cleaned = tok.strip(".,!?;:—–«»\"()")
+        if CAPITALIZED_RE.fullmatch(cleaned) and any(abs(index - j) <= 2 for j in verbs):
+            return True
+    return False
+
+
+def ontological_vector(text: str, markers: dict[str, list[str]], mention_mode: str) -> dict[str, float]:
+    """The vector the move layer consumes under a mention rule."""
+    if mention_mode not in MENTION_MODES:
+        raise PredictError(f"unknown mention mode {mention_mode!r} (known: {MENTION_MODES})")
+    if mention_mode == "attribution" and mention_report(text):
+        return dict(NEUTRAL_ONTOLOGICAL)
+    return classify_ontological(text, markers)
+
+
 # ---------------------------------------------------------------------------
 # The move layer (QxFx0.Semantic.MoveGraph)
 # ---------------------------------------------------------------------------
@@ -448,6 +542,7 @@ def simulate(
     c: dict[str, float],
     topics: dict[tuple[str, int], str] | None = None,
     topic_mode: str = CURRENT_TOPIC_MODE,
+    mention_mode: str = CURRENT_MENTION_MODE,
 ) -> list[dict]:
     """Predict one dialogue's trajectory.
 
@@ -467,7 +562,7 @@ def simulate(
             last_topic = topics.get((row["dialogue"], row["turn"] - 1), "")
         state = encode(row["prompt"], last_topic, markers, topic_mode)
         value = score(state, c)
-        onto = classify_ontological(row["prompt"], markers)
+        onto = ontological_vector(row["prompt"], markers, mention_mode)
         exit_ = exit_class(baseline, state, value, c)
         plan = None if exit_ else plan_move(state, onto, baseline, value, c)
         out.append(
@@ -485,6 +580,7 @@ def simulate(
                 "distance_before": None if plan is None else plan["distance_before"],
                 "distance_after": None if plan is None else plan["distance_after"],
                 "state": {axis_name: state[axis_name] for axis_name in AXES},
+                "onto": onto,
                 "hits": state["_hits"],
             }
         )
@@ -492,7 +588,14 @@ def simulate(
     return out
 
 
-def predict_corpus(path: Path, markers, c, topics=None, topic_mode=CURRENT_TOPIC_MODE) -> list[dict]:
+def predict_corpus(
+    path: Path,
+    markers,
+    c,
+    topics=None,
+    topic_mode=CURRENT_TOPIC_MODE,
+    mention_mode=CURRENT_MENTION_MODE,
+) -> list[dict]:
     rows = read_corpus(path)
     by_dialogue: dict[str, list[dict]] = {}
     for row in rows:
@@ -506,7 +609,7 @@ def predict_corpus(path: Path, markers, c, topics=None, topic_mode=CURRENT_TOPIC
         # Default mode: the probe convention holds (no prompt after turn 1
         # repeats the carried topic word), so the topic bit is 0 from turn 2
         # on.  ``topics`` replays measured topics instead (diagnostic only).
-        predicted.extend(simulate(turns, markers, c, topics, topic_mode))
+        predicted.extend(simulate(turns, markers, c, topics, topic_mode, mention_mode))
     return predicted
 
 
@@ -648,6 +751,104 @@ def render_what_if(result: dict) -> str:
                 f"{row['score']:+.4f}  {str(row['exit_class'] or '-'):9s} "
                 f"{str(row['move'] or '-'):17s} {row['delta']:+.4f}  "
                 f"{'hit' if row['topic'] else '-'}"
+            )
+    else:
+        lines += ["", "# no turn moves under any candidate rule"]
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# What-if: mention-vs-use candidates (ontological layer only)
+# ---------------------------------------------------------------------------
+
+
+def what_if_mention(
+    corpus: Path,
+    markers,
+    c,
+    topics=None,
+    topic_mode: str = CURRENT_TOPIC_MODE,
+    modes=MENTION_MODES,
+    reference_mode: str = CURRENT_MENTION_MODE,
+) -> dict:
+    """Run one corpus under every mention rule and diff the move layer.
+
+    The mention rule changes only ``classifyOntological``'s output, so the
+    score, the contour and the EMA baseline are identical by construction;
+    the diff is the ontological vector and the move it feeds.
+    """
+    reference = predict_corpus(corpus, markers, c, topics, topic_mode, reference_mode)
+    reference_index = {(r["dialogue"], r["turn"]): r for r in reference}
+    summary = []
+    deltas = []
+    for mode in modes:
+        predicted = reference if mode == reference_mode else predict_corpus(
+            corpus, markers, c, topics, topic_mode, mode
+        )
+        changed = 0
+        for row in predicted:
+            key = (row["dialogue"], row["turn"])
+            base = reference_index[key]
+            move_changed = row["move"] != base["move"]
+            vector_changed = row["onto"] != base["onto"]
+            if move_changed or vector_changed:
+                changed += 1
+            deltas.append(
+                {
+                    "mode": mode,
+                    "dialogue": row["dialogue"],
+                    "turn": row["turn"],
+                    "reference_move": base["move"],
+                    "reference_onto": base["onto"],
+                    "move": row["move"],
+                    "onto": row["onto"],
+                    "report": mention_report(row["prompt"]),
+                    "changed": move_changed or vector_changed,
+                }
+            )
+        summary.append(
+            {
+                "mode": mode,
+                "changed_turns": changed,
+                "moves": sum(1 for row in predicted if row["move"]),
+                "reports": sum(1 for row in predicted if mention_report(row["prompt"])),
+            }
+        )
+    return {
+        "corpus": str(corpus),
+        "topics": "measured" if topics is not None else "corpus convention",
+        "reference_mode": reference_mode,
+        "summary": summary,
+        "turns": deltas,
+    }
+
+
+def render_what_if_mention(result: dict) -> str:
+    lines = [
+        f"# what-if: mention-vs-use rules on {result['corpus']}",
+        f"# topics: {result['topics']}",
+        f"# reference: {result['reference_mode']} (the diff baseline)",
+        "",
+        "mode          changed   moves  reports",
+    ]
+    for row in result["summary"]:
+        lines.append(
+            f"{row['mode']:12s} {row['changed_turns']:7d} {row['moves']:6d} "
+            f"{row['reports']:8d}"
+        )
+    detail = [row for row in result["turns"] if row["changed"]]
+    if detail:
+        lines += [
+            "",
+            "# per-turn deltas (the score and the contour never move: the rule",
+            "# touches the ontological vector only)",
+            "mode        dialogue            turn  ref move          cand move         onto (ref -> cand)",
+        ]
+        for row in detail:
+            lines.append(
+                f"{row['mode']:12s}{row['dialogue']:20s} {row['turn']:4d}  "
+                f"{str(row['reference_move'] or '-'):17s} {str(row['move'] or '-'):17s} "
+                f"{row['reference_onto']} -> {row['onto']}"
             )
     else:
         lines += ["", "# no turn moves under any candidate rule"]
@@ -991,6 +1192,47 @@ def _case_what_if():
     assert t9_boundary["topic"] is True and t9_boundary["move"] == "open_alternative"
 
 
+@case("mention: attribution and quotation are reports, questions are not")
+def _case_mention_report():
+    assert mention_report("кажется, жизнь бессмысленна — так утверждал Шопенгауэр?") is True
+    assert mention_report("а Камю писал о самоубийстве как проблеме философии — это про абсурд?") is True
+    assert mention_report("Камю считал, что абсурд возникает из столкновения человека и мира?") is True
+    assert mention_report("«жизнь бессмысленна»") is True
+    assert mention_report("по мнению Шопенгауэра, жизнь бессмысленна") is True
+    # the speaker is present: the act stays the speaker's
+    assert mention_report("я считаю, что жизнь бессмысленна") is False
+    assert mention_report("Шопенгауэр утверждал, что жизнь бессмысленна, но я так не думаю") is False
+    # a question about a concept is not a report
+    assert mention_report("отчаяние — это когда нет смысла?") is False
+    assert mention_report("как ты думаешь, почему всё кажется бессмысленным?") is False
+    assert mention_report("мне грустно и одиноко") is False
+
+
+@case("mention what-if: one decoy move on the multi-turn corpus, none on the probe")
+def _case_what_if_mention():
+    markers, c = _load()
+    path = ROOT / "spec/eval/user_regime_multiturn_2026-11-13.tsv"
+    result = what_if_mention(path, markers, c)
+    summary = {row["mode"]: row for row in result["summary"]}
+    assert summary["off"]["moves"] == 4 and summary["attribution"]["moves"] == 3
+    assert summary["attribution"]["changed_turns"] == 1
+    assert summary["attribution"]["reports"] == 3
+    turns = {(r["mode"], r["dialogue"], r["turn"]): r for r in result["turns"]}
+    decoy2 = turns[("attribution", "decoy-pessimism", 2)]
+    assert decoy2["reference_move"] == "mirror_state" and decoy2["move"] is None
+    assert decoy2["report"] is True and decoy2["onto"]["being"] == 0.0
+    # the genuine act turn is untouched: no attribution, vector unchanged
+    act2 = turns[("attribution", "move-act", 2)]
+    assert act2["report"] is False and act2["move"] == "mirror_state"
+    assert act2["onto"]["being"] == -1.0
+    # the two concept-in-question decoys are not mentions and stay moves
+    for dialogue, turn in (("decoy-pessimism", 4), ("mixed-decoy", 6)):
+        row = turns[("attribution", dialogue, turn)]
+        assert row["report"] is False and row["move"] == "mirror_state"
+    probe = what_if_mention(ROOT / "spec/eval/user_regime_probe_2026-11-14.tsv", markers, c)
+    assert {row["mode"]: row for row in probe["summary"]}["attribution"]["changed_turns"] == 0
+
+
 def self_test() -> int:
     failures = 0
     for name, fn in CASES:
@@ -1058,6 +1300,17 @@ def main(argv=None) -> int:
         default=CURRENT_TOPIC_MODE,
         help=f"diff baseline for --what-if (default: {CURRENT_TOPIC_MODE})",
     )
+    parser.add_argument(
+        "--mention-mode",
+        choices=MENTION_MODES,
+        default=CURRENT_MENTION_MODE,
+        help=f"mention-vs-use rule (default: {CURRENT_MENTION_MODE}, the runtime rule)",
+    )
+    parser.add_argument(
+        "--what-if-mention",
+        action="store_true",
+        help="run every mention rule and diff the ontological vectors and moves",
+    )
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     parser.add_argument("--self-test", action="store_true", help="run the built-in cases")
     args = parser.parse_args(argv)
@@ -1084,6 +1337,25 @@ def main(argv=None) -> int:
         topics = None
         if args.topics_from:
             topics = read_measured_topics(Path(args.topics_from), args.session_prefix)
+        if args.what_if_mention:
+            result = what_if_mention(
+                Path(args.corpus),
+                markers,
+                constants,
+                topics,
+                topic_mode=args.topic_mode,
+                reference_mode=args.mention_mode,
+            )
+            if args.json:
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+            else:
+                if topics is not None:
+                    print(
+                        f"# diagnostic: best topics replayed from {args.topics_from};"
+                        " not a pre-registration prediction"
+                    )
+                print(render_what_if_mention(result))
+            return 0
         if args.what_if:
             result = what_if(
                 Path(args.corpus),
@@ -1102,7 +1374,9 @@ def main(argv=None) -> int:
                     )
                 print(render_what_if(result))
             return 0
-        predicted = predict_corpus(Path(args.corpus), markers, constants, topics, args.topic_mode)
+        predicted = predict_corpus(
+            Path(args.corpus), markers, constants, topics, args.topic_mode, args.mention_mode
+        )
         if args.json:
             print(json.dumps(predicted, ensure_ascii=False, indent=2))
         else:
@@ -1113,6 +1387,8 @@ def main(argv=None) -> int:
                 )
             if args.topic_mode != CURRENT_TOPIC_MODE:
                 print(f"# topic rule: {args.topic_mode} (what-if, not the runtime rule)")
+            if args.mention_mode != CURRENT_MENTION_MODE:
+                print(f"# mention rule: {args.mention_mode} (what-if, not the runtime rule)")
             print(render_table(predicted))
         return 0
     except (PredictError, OSError, sqlite3.Error) as error:
