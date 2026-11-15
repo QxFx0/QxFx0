@@ -75,11 +75,15 @@ Two readings matter:
    (`actNegative ∧ negativeEvidenceEarned ∧ score < baseline − margin`). The
    census counts only the first. On the 80-turn capture all four moves came
    through the gate-passed entry, so 4 candidates = 4 moves — and three of the
-   four candidates are the doctrinal-decoy turns (`decoy-pessimism` #2/#4,
-   `mixed-decoy` #6), i.e. the mention-vs-use defect. On the pre-fix probe the
-   single candidate was exactly the B7 defect turn (`probe-ema-adapts` t9);
-   after encoder v2 it is zero, and both of the probe's moves come from the
-   drift entry.
+   four candidates are turns the corpus labels as doctrinal decoys
+   (`decoy-pessimism` #2/#4, `mixed-decoy` #6). Only #2 is a *mention*
+   (attribution to Schopenhauer); #4 and #6 are the user's own questions about
+   a negative concept, and the corpus' one genuine act turn (`move-act` #2)
+   has the same surface shape as they do. See
+   `USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md` §1. On the pre-fix probe
+   the single candidate was exactly the B7 defect turn (`probe-ema-adapts`
+   t9); after encoder v2 it is zero, and both of the probe's moves come from
+   the drift entry.
 
 So the bit is not a minor score term: it is **sufficient** to open the gate
 the concept document's §5 ordering (mirror → resonance → affirm) relies on.
@@ -150,8 +154,9 @@ exactly on all 99 turns of the four captures (0 undecodable). It is set on
 | probe v2 | 0 | 0 | 0 | 2 (both drift entry) | 2 |
 
 - All four 80-turn moves carry a question, so neither B nor F removes any of
-  them. The three doctrinal decoys are a mention-vs-use problem (§6.2), not a
-  topic problem — this ADR alone does not fix them.
+  them. The three doctrinal decoys are an ontological-layer problem (§6.2),
+  not a topic problem — this ADR does not fix them, and only one of the three
+  is a mention (2026-11-16 pre-registration, §1).
 - No turn that carries the bit sits within `0.05` of a contour boundary, so
   B's score shift flips no contour verdict on these captures.
 - The only act candidate either rule removes is the pre-fix probe turn
@@ -205,10 +210,13 @@ Open:
 1. What is `bestTopic` when the intent has no focus word? Observed: it can be
    a modal («хочу»), which is a poor topic and was one of the measured
    false-hit sources before encoder v2.
-2. Mention-vs-use in `classifyOntological` (3 of 4 act-branch candidates in
-   the 80-turn capture are doctrinal decoys) is a separate defect class with
-   its own pre-registration; it is not a topic-signal question, and this ADR
-   does not fix it.
+2. `classifyOntological` reads a marker anywhere in the utterance as the
+   speaker's act. Of the four act-branch candidates in the 80-turn capture,
+   three are corpus-labelled decoys, but only one is a *mention*; the other
+   two are questions about a negative concept, indistinguishable at the
+   surface from the corpus' genuine act turn. A mention fix is pre-registered
+   (`USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md`); the rest needs labels.
+   Not a topic-signal question, and this ADR does not fix it.
 3. **No ADR records concept v3 as a whole.** The regime landed under
    `AGENTS.md` plus closure pre-registrations, while ADR-0048 requires an
    accepted ADR for new subsystems. This ADR covers the topic signal only; a
