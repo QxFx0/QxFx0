@@ -2,14 +2,14 @@
 
 **Deterministic philosophical dialogue runtime with formal foundations**
 
-QxFx0 is a research-grade conversational system that builds meaning through typed semantic graphs and morphological reconstruction — not templates, not stochastic sampling. Same input + state → same output, every time.
+QxFx0 is a research-grade conversational system that builds meaning through typed semantic graphs and morphological reconstruction — not templates, not stochastic sampling. The turn path is deterministic by construction: no sampling and no ambient inputs on the governed path. A global "same input + state → same output" claim is withheld until the persisted replay envelope lands (`docs/closure/REPLAY_GATE_SPEC.md`); the legitimacy path is already replayed from the trace (`Test.Suite.ReplayDeterminism`).
 
 ## What Makes QxFx0 Different
 
 Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
-- **Deterministic behavior** — Same input + state → same output, every time
-- **Typed semantic graphs** — 52 relation types, ~85 atoms, 6-case Russian morphology
+- **Deterministic turn path** — no sampling, no ambient inputs on the governed path; the global replay claim is withheld pending the persisted envelope
+- **Typed semantic graphs** — 53 relation types, ~85 atoms, 6-case Russian morphology
 - **Dialectical structure** — Every answer carries thesis → rationale → counter → synthesis
 - **Commitment memory** — System remembers and defends its positions across turns
 - **Challenge detection** — Recognizes reductive definitions and confronts them
@@ -21,12 +21,12 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 **Maturity**: Working release — multi-turn dialogue verified  
 **License**: MIT  
 **Language**: Russian (primary), English (experimental)  
-**Tests**: pre-fallback tree (2026-10-25/26, substrate era; full matrix below) — unit 1818, fast 1918, property 244, integration 47, main 1383, slow 190, 0 failures. Mapped-predicate fallback tree (committed `2144a6a`, 2026-10-28) — unit 1820, fast 1918, property 244, integration 47, main core 1254, 0 failures; runtime/http and slow were not re-run on that tree. GF-case + eval-instrumentation tree (working tree, 2026-10-28) — unit 1821/1821 green; other suites not re-run on that exact tree. CI Fast green on `2144a6a` (`40672419939`); CI Core Contract `40672419906` was still in progress at the last check. B3 mechanical gates 1-5 passing. Full single-process main remains unsupported on 15 GB with substrate.
+**Tests**: matrix 2026-11-16 (the `27b3af4` change set, frozen tree) — unit 1861, fast 1954, property 244, integration 47, main runtime 106 + http 23, slow 190 (runtime 106 / state 50 / http 23 / lifecycle 11) = 4 425 cases, 0 failures; 10/10 steps exit 0, tree byte-identical start→end. CI Fast and Core Contract green on `27b3af4`. Full single-process main remains unsupported on 15 GB with substrate — the matrix runs per group.
 
 ### Verified Capabilities
 
 - **Single-turn**: "что такое свобода?" → dialectical answer from typed graph
-- **Multi-turn**: 3-turn session — define → confront ("Я удерживаю позицию...") → reflect
+- **Multi-turn**: 12-turn bounded benchmark (M6-FELT mechanical; human leg pending) and an 80-turn capture (probe, not a sample) — define → confront ("Я удерживаю позицию...") → reflect
 - **Challenge detection**: "свобода это просто отсутствие ограничений" → hypothesis + counter-grounds (no strawman confrontation)
 - **Commitment memory**: `ssSemanticCommitments` wired into render path
 - **Calibration corpus**: 1030 records across 11 strata + 305 live-dialogue turns, all operator-confirmed (`data/calibration_corpus/`); executable semantic-IR gold (100 parses), freedom-cluster gold (500), 30 IR-annotated scenarios, 24 primitives, 6+ sense contracts, 16 rules, 20 minimal pairs, 41-task exit harness — all shadow-only (`data/semantic_ir/`, ADR-0054)
@@ -48,7 +48,7 @@ Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
 **Self Layer** (formal phenomenology):
 - `Conatus` — Spinozan energy functional: C(b,v) = w_m·log(1+m) + w_c·log(1+c) + w_t·log(1+t) − λ·|v|
-- `Adjunction` — Holistic ⊣ Formal categorical adjunction with verified triangle identities
+- `Adjunction` — Holistic ⊣ Formal categorical adjunction; triangle identities are verified by QuickCheck properties (no Agda proof yet)
 - `Field` — 5-component right-hemispheric observation (Resonance, Atmosphere, Confidence, Consolidation, Counterfactual)
 - `Essence` — Σ-typed commitment, unconditionally active
 
@@ -152,16 +152,16 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1821 (incl. IR + Stage-1 pins; +2 mapped-GF-fallback pins +1 GF case pin) | ✅ 0 failures (2026-10-28, GF-case tree; 1820 on committed fallback tree `2144a6a`) |
-| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | ✅ 0 failures by group (2026-10-25); core slice re-verified green on the fallback tree (2026-10-28), runtime/http not re-run |
-| qxfx0-test-property | 244 | ✅ 0 failures (2026-10-28, fallback tree) |
-| qxfx0-test-integration | 47 | ✅ 0 failures (2026-10-28, fallback tree; the earlier chained ENOSPC was environmental) |
-| qxfx0-test-fast | 1918 | ✅ 0 failures (2026-10-28, fallback tree) |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-10-25; not re-run on the fallback tree) |
+| qxfx0-test-unit | 1861 | ✅ 0 failures (2026-11-16, `27b3af4` change set) |
+| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | runtime 106 + http 23: ✅ 0 failures (2026-11-16); core slice 1254 last verified green 2026-10-28 on `2144a6a`, not re-run since |
+| qxfx0-test-property | 244 | ✅ 0 failures (2026-11-16) |
+| qxfx0-test-integration | 47 | ✅ 0 failures (2026-11-16) |
+| qxfx0-test-fast | 1954 | ✅ 0 failures (2026-11-16) |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-11-16) |
 
-Counts re-verified green with substrate active (`brain_kb.jsonl`, 53146 entries, gitignored external): main/slow by group on code HEAD `e7f749b` (2026-10-25; `f3ae49a` is docs-only); unit/fast/property/integration and the main core slice on the mapped-predicate fallback tree (working tree, 2026-10-28). Sequential runs only: `-M10G` for fast/property/main core, `-M6G` for unit/integration, main state `-M10G`, runtime/http/lifecycle `-M12G`. Never build while a runtime sample is in flight (relink kills it).
+Matrix 2026-11-16 (frozen tree, `27b3af4` change set, substrate active — `brain_kb.jsonl`, 53146 entries, gitignored external): 10/10 steps exit 0, tree byte-identical start→end, 4 425 cases = unit 1861 + fast 1954 + property 244 + integration 47 + main runtime 106 + http 23 + slow 190. The main core slice was not re-run (same OOM contour). Sequential runs only: `-M10G` for fast, `-M6G` for unit/property/integration, `-M10G` for slow state, `-M12G` for main runtime/http and slow runtime/http/lifecycle. Never build while a runtime sample is in flight (relink kills it).
 
-The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1918 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
+The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1954 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 
 ## Audit History
 

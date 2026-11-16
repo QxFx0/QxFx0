@@ -2,6 +2,12 @@
 
 All notable changes are documented in this file.
 
+> **Frozen at 2026-06-05.** This file records the technical-debt elimination
+> round only. Landings after that date — concept v3, the user-regime encoder
+> v1/v2, mention-vs-use, the GF slot batches, and the verification matrices —
+> are recorded in `docs/closure/` and `AGENTS.md`, which are the source of
+> truth for post-freeze history. Appending here requires an owner decision.
+
 ## [Unreleased] — Technical Debt Elimination — 2026-06-05
 
 ### Fixed
