@@ -1304,3 +1304,23 @@ re-observe before treating as real).
   unit 1854, fast 1947, property 244, integration 47, main runtime 106 +
   http 23, slow 190 (runtime 106 / state 50 / http 23 / lifecycle 11) =
   **4 411 cases**, 10/10 steps exit 0, tree byte-identical start→end.
+- **Mention-vs-use runtime rule landed 2026-11-16** (math v6):
+  `classifyOntological` resolves a /report/ of a third party's claim to the
+  neutral vector — quotation, report phrase (`по мнению`/`по словам`/
+  `согласно`/`цитата`/`говорят`), or an attribution verb with a name-like
+  token within two positions or a third-person pronoun; a first-person token
+  vetoes the attribution-verb branch only. Hand-set, lexical, deliberately
+  blunt (whole utterance → neutral) because the measured form puts the
+  attribution after the claim. No constant or lexicon changed;
+  `r5EncoderVersion` stays 2, `currentMathVersion` 5→6.
+  Pre-registration: `docs/closure/USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md`
+  (§9 records **two prediction misses** — negative-act census 11→10 because
+  the census counts any non-zero negative axis, and 7 residual values change
+  because `u5PredictedNext = transitionUserR5 (move) state` is
+  move-conditioned; B2 FAIL, everything else PASS). Red check: disabling the
+  rule fails exactly the 4 neutral-resolution pins. Haskell↔predictor
+  equivalence 99/99 on both corpora, exactly 3 reports
+  (`decoy-pessimism#2/#3`, `mixed-decoy#2`). Matrix 2026-11-16: unit 1861,
+  fast 1954, property 244, integration 47, main runtime 106 + http 23,
+  slow 190 (runtime 106 / state 50 / http 23 / lifecycle 11) = **4 425
+  cases**, 10/10 steps exit 0, tree byte-identical start→end.

@@ -91,7 +91,12 @@ currentMathVersion :: Int
 -- normalized, whole-word and negation-safe (no constant changed;
 -- 'r5EncoderVersion' 1 -> 2).  Measured in
 -- @docs\/closure\/USER_REGIME_TOPIC_BIT_PREREG_2026-11-15.md@.
-currentMathVersion = 5
+-- v6 (2026-11-16): mention is not use in 'classifyOntological' — a
+-- report of a third party's claim (quotation, report phrase, or an
+-- attribution verb with a name-like subject) resolves to the neutral
+-- vector.  Measured in
+-- @docs\/closure\/USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md@.
+currentMathVersion = 6
 
 -- | Current CTS constitution version.
 -- Initial value 44 = CTS-44 (commitment promotion).

@@ -215,8 +215,10 @@ Open:
    three are corpus-labelled decoys, but only one is a *mention*; the other
    two are questions about a negative concept, indistinguishable at the
    surface from the corpus' genuine act turn. A mention fix is pre-registered
-   (`USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md`); the rest needs labels.
-   Not a topic-signal question, and this ADR does not fix it.
+   and landed (`USER_REGIME_MENTION_VS_USE_PREREG_2026-11-16.md`; its §9
+   records two prediction misses — the negative-act count and the residual
+   audit); the rest needs labels. Not a topic-signal question, and this ADR
+   does not fix it.
 3. **No ADR records concept v3 as a whole.** The regime landed under
    `AGENTS.md` plus closure pre-registrations, while ADR-0048 requires an
    accepted ADR for new subsystems. This ADR covers the topic signal only; a

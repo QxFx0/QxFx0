@@ -90,6 +90,11 @@ The rule touches the ontological vector only, so the score, the contour, the
 EMA baseline and the residual are identical **by construction** — this is not
 a measured coincidence, it is a property of where the predicate sits.
 
+**Correction (2026-11-16, after measurement).** The last sentence is wrong
+about the residual: the vector feeds the move, the move conditions
+`transitionUserR5`, and the residual audit compares the predicted transition
+with the next observation. See §9.3.
+
 ## 4. Predictions (stated before the fix)
 
 - **P1 — the decoy turn.** In the 80-turn re-capture, `decoy-pessimism#2`
@@ -160,4 +165,110 @@ and leave `move-act#2`, `decoy-pessimism#4` and `mixed-decoy#6` green.
 
 ## 9. Result
 
-Filled after the post-fix captures. Not started.
+Filled after the post-fix captures (2026-11-16). Landing tree: HEAD `51c4a9d`
+plus the four uncommitted paths of this change set; capture binary sha256
+`d4413a80…cb2a7307`; math version 6, encoder version 2.
+
+Captures (gitignored): `reports/eval_runs/user-regime-20261116/` (80 turns) and
+`reports/eval_runs/user-regime-probe-20261116/` (19 turns). Both structural
+gates PASS every check (turns persisted, regime records, no hard-trigger
+Protocol B, encoder `[2]`, residual and window sample counts).
+
+### 9.1 P1–P7 (measured)
+
+| prediction | verdict | measured |
+|---|---|---|
+| P1 — `decoy-pessimism#2` neutral, no move, 3 moves total | **PASS** | vector `{0,0,0}`, `urtOntologicalMove = null`, 3 moves |
+| P2 — no other turn moves; surface differs on #2 only | **PASS** | exactly 1 vector diff, 1 move diff, 1 surface diff, all `decoy-pessimism#2` |
+| P3 — probe untouched | **PASS** | 0 diffs beyond session/request ids and the math stamp; 2 `mirror_state`, 1 `relative` exit |
+| P4 — candidates 4 → 3; saturation / negative-act rate / histogram unchanged | **PARTIAL** | candidates 4 → 3 ✓, gate 64/80 and histogram identical ✓, **negative act 11 → 10** ✗ |
+| P5 — every `ur5*` field identical; `--verify-capture` exact | **PARTIAL** | `--verify-capture` 80/80 and 19/19 ✓, axes/score/baseline/resonance identical ✓, **7 residual values changed** ✗ |
+| P6 — safety unchanged | **PASS** | 0 hard-trigger Protocol B; 2 `absolute_floor` (80-turn), 1 `relative` (probe) |
+| P7 — 3 reports, 0 in the probe | **PASS** | exactly `decoy-pessimism#2/#3`, `mixed-decoy#2` |
+
+### 9.2 P4 miss — the negative-act count
+
+The census counts a negative act as any non-zero negative axis, so removing
+`decoy-pessimism#2`'s `being −1` necessarily removes one act: **11 → 10**
+(14% → 12%). The prediction "negative-act rate unchanged" was wrong; the
+gate saturation (64/80, 80%) and the resonance histogram
+(`0.50×16, 0.70×44, 0.85×6, 0.90×13, 1.00×1`) are unchanged, and the probe's
+census is unchanged in every column (12/19 above gate, 2 negative acts,
+0 candidates).
+
+### 9.3 P5 miss — the residual is not identical
+
+Seven values changed, all in the `decoy-pessimism` dialogue:
+
+| turn | field | v2 | v3 |
+|---|---|---|---|
+| 3 | `ur5PredictionError` | 0.038 | 0.028 |
+| 3 | `ur5WindowMean` | 0.033 | 0.028 |
+| 4 | `ur5WindowMean` | 0.038 | 0.034666… |
+| 5 | `ur5WindowMean` | 0.049 | 0.0465 |
+| 6 | `ur5WindowMean` | 0.0496 | 0.0476 |
+| 7 | `ur5WindowMean` | 0.054666… | 0.053 |
+| 8 | `ur5WindowMean` | 0.058285… | 0.056857… |
+
+Mechanism (the one §3 missed): on turn *t* the runtime stores
+`u5PredictedNext = transitionUserR5 (ompMove <$> tiOntologicalMove ti) (tiUserR5 ti)`
+(`Finalize/State.hs`), i.e. the transition model is **move-conditioned**; on
+turn *t+1* the residual is `r5Distance` between that prediction and the
+observation (`Effects.hs`). Removing the move on turn 2 replaces a
+move-conditioned prediction with persistence, so the residual on turn 3
+changes, and the bounded window carries that one sample until it ages out
+(turns 3–8).
+
+Everything else is identical: all R5 axes, `ur5ConatusScore`, baseline,
+resonance, atmosphere, confidence, consolidation, counterfactual,
+outside-contour, the contour verdicts and the aggregate residual
+(mean 0.085, max 0.344, window max 0.202). `--verify-capture` stays
+**80/80** and **19/19** (it compares axes and score, which are untouched).
+
+This is a legitimate consequence, not a defect: the residual audit is
+supposed to measure whether the transition model is right, and the model
+changed its input. But the pre-registration claimed otherwise, and the claim
+is recorded as a miss.
+
+### 9.4 B3 — probe byte-identity
+
+The probe re-capture differs from `user-regime-probe-20261115` in exactly
+three fields per turn: `trcSessionId`, `trcRequestId` (identity, different by
+construction) and `trcRegimeVersion` (5 → 6). A deep diff of the parsed
+traces with those three fields normalized finds **0** differences across
+19 turns.
+
+### 9.5 Bars
+
+| bar | verdict | evidence |
+|---|---|---|
+| B1 — predictor reproduces §3 | **PASS** | `--self-test` 18/18 |
+| B2 — the re-capture reproduces P1–P7 exactly | **FAIL** | P4 and P5 partially missed (§9.2, §9.3); P1–P3, P6, P7 exact |
+| B3 — probe byte-identical except the math stamp | **PASS** | §9.4 |
+| B4 — red check | **PASS** | unit: disabling the rule fails exactly the 4 neutral-resolution pins; capture: the rule-off arm is the v2 capture (4 moves, `decoy#2` among them), and the only move diff in the new capture is `decoy#2` |
+| B5 — landing matrix green, tree fixed | **PASS** | §9.6: 10/10 steps exit 0, 4 425 cases, tree byte-identical start→end |
+| B6 — `--verify-capture` exact | **PASS** | 80/80 and 19/19 |
+
+### 9.6 Landing matrix
+
+Run on the frozen tree (HEAD `51c4a9d` plus the six uncommitted paths of this
+change set), 2026-11-16 13:26–18:46 UTC. All ten steps exit 0 and `git status`
+is byte-identical start→end:
+
+| step | cases | wall |
+|---|---|---|
+| unit | 1861 | 59 s |
+| fast | 1954 | 3162 s |
+| property | 244 | 16 s |
+| integration | 47 | 615 s |
+| main http | 23 | 539 s |
+| main runtime | 106 | 4940 s |
+| slow http | 23 | 544 s |
+| slow lifecycle | 11 | 444 s |
+| slow state | 50 | 3837 s |
+| slow runtime | 106 | 5009 s |
+| **total** | **4 425** | 5 h 19 min |
+
+4 425 = the 2026-11-15 matrix's 4 411 plus the seven new `OntologicalAxis`
+cases, counted once in unit and once in fast. Logs:
+`reports/eval_runs/_logs/matrix-20261116/` (gitignored).
