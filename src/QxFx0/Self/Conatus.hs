@@ -90,18 +90,16 @@ import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
 import QxFx0.Types.Self.Conatus
 import QxFx0.Types.Thresholds.Conatus
 
--- | Tunable coefficients of the Conatus functional. The defaults
--- in 'defaultConatusWeights' encode the editorial judgement that
--- morphological substance is the primary carrier of identity
--- (largest weight), accumulated identity claims are secondary, and
--- raw turn count is a weaker indicator (a long-running session of
--- empty turns says less than a short session with rich growth).
--- The violation penalty is intentionally large relative to any
--- single-axis logarithmic contribution: a structural rupture must
--- not be wallpapered over by mere accumulation.
 -- | The reference builtin weights used throughout the system unless an
 -- experiment overrides them via 'computeConatusEnergyWith' or
--- 'computeConatusGradientWith'.
+-- 'computeConatusGradientWith'. The defaults in 'defaultConatusWeights'
+-- encode the editorial judgement that morphological substance is the
+-- primary carrier of identity (largest weight), accumulated identity
+-- claims are secondary, and raw turn count is a weaker indicator (a
+-- long-running session of empty turns says less than a short session
+-- with rich growth). The violation penalty is intentionally large
+-- relative to any single-axis logarithmic contribution: a structural
+-- rupture must not be wallpapered over by mere accumulation.
 builtinConatusWeights :: ConatusWeights
 builtinConatusWeights = ConatusWeights
   { cwMorphology = conatusWeightMorphology
@@ -115,24 +113,6 @@ builtinConatusWeights = ConatusWeights
 defaultConatusWeights :: ConatusWeights
 defaultConatusWeights = builtinConatusWeights
 
--- | The decomposed scalar contribution of each axis. Kept separate
--- from 'ConatusEnergy' so that diagnostics and observability can
--- show which axis is carrying (or failing) the system, not only the
--- aggregate.
--- | The scalar value of the Conatus functional together with its
--- per-axis decomposition. Invariant: @ceScalar == sum of all five
--- 'ConatusComponents' fields@.
--- | The gradient of the smooth part of \(C\) at a blanket. Each
--- component is the partial derivative of \(C\) with respect to that
--- blanket axis, treating the blanket fields as real-valued for the
--- duration of the derivative. The violation penalty contributes
--- nothing because it is a step function in \(|v|\), not a smooth
--- function of \((m, c, t)\).
---
--- All components are strictly positive on any blanket whose
--- integer fields are non-negative (which is the universe of all
--- legitimately-constructed 'SelfBlanket' values), so the gradient
--- always points into the strictly-growing orthant.
 -- | Compute the Conatus energy of a blanket under the supplied
 -- violation list, using 'defaultConatusWeights'. Pure, total, and
 -- well-defined on every legitimately constructed blanket including

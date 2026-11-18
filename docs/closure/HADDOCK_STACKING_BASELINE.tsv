@@ -1,0 +1,36 @@
+# Rule [25] debt register: pre-existing stacked Haddock '-- |' sites.
+#
+# Format: path<TAB>declaration<TAB>blocks. Only the last '-- |' block in a
+# group is attached by Haddock; the earlier ones are silently dropped.
+#
+# The rule demands an exact match with this file: a new site fails, a site
+# whose block count changes fails, and an entry that no longer matches
+# fails. Fixing a site therefore shrinks this file; the file is debt, not
+# a permit.
+#
+# Landed 2026-11-18 (P0-4): the two Conatus.hs sites are fixed and are
+# deliberately absent here. The 21 rows below are pre-existing debt found
+# by the same scan on the same day; fixing them is a separate comments-only
+# pass, because each dropped block has to be attributed to its declaration
+# by reading the code, not by moving text mechanically.
+src/QxFx0/Learning/Calibration.hs	emptyCalibrationLog :: CalibrationLog	5
+src/QxFx0/Learning/Need.hs	emptyLearningNeedState :: LearningNeedState	3
+src/QxFx0/Runtime/Session/Bootstrap.hs	loadOwnershipLibraryAtBoot :: IO (M.Map Text FileOwnershipRow)	2
+src/QxFx0/Self/Deliberation.hs	defaultPlan :: Plan	3
+src/QxFx0/Self/Deliberation.hs	recoveryCauseSeverity :: Maybe LocalRecoveryCause -> Int	5
+src/QxFx0/Self/Essence.hs	collapseEssence :: Int -> EssenceTrajectory -> (EssenceTrajectory, EssenceResetEvent)	2
+src/QxFx0/Self/Essence.hs	renderEssenceViolation :: EssenceViolation -> Text	2
+src/QxFx0/Self/FamilyTargets.hs	mkTargetField :: Double -> Double -> Double -> Double -> Double -> Double -> Field	2
+src/QxFx0/Self/Field.hs	builtinFieldHeuristics :: FieldHeuristics	2
+src/QxFx0/Self/Field.hs	emptyField :: Field	2
+src/QxFx0/Self/Field.hs	mkResonance :: Double -> Resonance	6
+src/QxFx0/Self/Salience.hs	builtinSalienceWeights :: SalienceWeights	6
+src/QxFx0/Self/Salience.hs	computeSalience :: SalienceWeights -> ConatusEnergy -> Field -> Double -> Salience	2
+src/QxFx0/Self/Salience.hs	computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> Double -> SelfVerdict	2
+src/QxFx0/Self/Salience.hs	defaultSalienceModulation :: SalienceModulation	2
+src/QxFx0/Self/Salience.hs	salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Double -> Salience	2
+src/QxFx0/Self/Salience.hs	salienceFromConatusEnergy :: ConatusEnergy -> Field -> Double -> Salience	3
+src/QxFx0/Semantic/Content.hs	deadjectivalTopicStems :: [(Text, Text)]	2
+src/QxFx0/Semantic/Intent/Classifier.hs	trimClauseTail :: Text -> Text	2
+src/QxFx0/Semantic/ResponsePlan.hs	isSpeculativeRequestText :: Text -> Bool	2
+src/QxFx0/Types/User/R5.hs	r5EncoderVersion :: Int	2

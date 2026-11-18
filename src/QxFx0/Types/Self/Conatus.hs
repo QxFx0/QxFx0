@@ -24,6 +24,10 @@ data ConatusWeights = ConatusWeights
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, FromJSON, ToJSON)
 
+-- | The decomposed scalar contribution of each axis. Kept separate
+-- from 'ConatusEnergy' so that diagnostics and observability can
+-- show which axis is carrying (or failing) the system, not only the
+-- aggregate.
 data ConatusComponents = ConatusComponents
   { ccMorphology     :: !Double
   , ccIdentity       :: !Double
@@ -59,6 +63,9 @@ instance FromJSON ConatusComponents where
       <*> o .:? "ccPenalty" .!= 0.0
       <*> o .:? "ccSelfDivergence" .!= 0.0
 
+-- | The scalar value of the Conatus functional together with its
+-- per-axis decomposition. Invariant: @ceScalar == sum of all five
+-- 'ConatusComponents' fields@.
 data ConatusEnergy = ConatusEnergy
   { ceScalar     :: !Double
   , ceComponents :: !ConatusComponents
@@ -88,6 +95,17 @@ instance FromJSON ConatusEnergy where
       , ceComponents = comps
       }
 
+-- | The gradient of the smooth part of \(C\) at a blanket. Each
+-- component is the partial derivative of \(C\) with respect to that
+-- blanket axis, treating the blanket fields as real-valued for the
+-- duration of the derivative. The violation penalty contributes
+-- nothing because it is a step function in \(|v|\), not a smooth
+-- function of \((m, c, t)\).
+--
+-- All components are strictly positive on any blanket whose
+-- integer fields are non-negative (which is the universe of all
+-- legitimately-constructed 'SelfBlanket' values), so the gradient
+-- always points into the strictly-growing orthant.
 data ConatusGradient = ConatusGradient
   { cgMorphology :: !Double
   , cgIdentity   :: !Double

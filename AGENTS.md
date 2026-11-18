@@ -1366,3 +1366,39 @@ re-observe before treating as real).
   tree byte-identical start→end (12:20→17:43 UTC). The main core slice
   (1261) was not re-run.
 
+
+- **P0 truth pass (2026-11-18, docs/comments only, no behaviour change)**:
+  the showcase now matches its artifacts. `README.md:32` matches
+  `data/calibration_corpus/manifest.json` — 12 strata (was 11),
+  `source: synthetic_template_v1`, `labels_rated` 40, `labels_pre_rated`
+  90 counted as confirmed by the operator decision 2026-09-21
+  (`CALIBRATION_REPORT.md:718–725` records the deviation from
+  double-rate + kappa), `train_eligible` 125 — and states the measured
+  split of the 70 `rater: human-v1` rows in `corpus.jsonl`:
+  40 core + 15 `r5_negative` (separate `r5_labeled` counter) + 15 probe
+  rows (5 each `probe_uncovered` / `probe_oov` / `probe_r5`). The
+  manifest `note` no longer calls the 15 `r5_negative` rows "pending"
+  while `r5_labeled: 15`; no numeric field changed. `README.md:5` no
+  longer claims "not templates" (it contradicted line 62's preserved
+  template/assembly fallbacks); it now says GF-constrained surface
+  generation with curated fallbacks and no stochastic sampling on the
+  governed path. `Self/Conatus.hs` had two stacked-doc sites (2 and 4
+  `-- |` blocks); the three orphaned type docs moved to
+  `Types/Self/Conatus.hs` (`ConatusComponents` / `ConatusEnergy` /
+  `ConatusGradient`) and the two weight-rationale blocks merged. New
+  rule [25] (`scripts/check_haddock_stacking.py`, `--self-test`,
+  wired into `check_architecture.sh`) fails on a new stacked site, on a
+  changed block count, and on a stale baseline entry; Haddock code
+  blocks (`-- @`) are ignored so diagrams do not trip it. The scan found
+  **21 pre-existing sites** beyond Conatus; they are registered as debt
+  in `docs/closure/HADDOCK_STACKING_BASELINE.tsv` and are **not fixed**
+  in this pass — each dropped block has to be attributed by reading the
+  code, which is a separate comments-only change set. Red checks:
+  detector on the pre-fix Conatus file → exactly 2 sites, exit 1;
+  baseline entry removed → 1 new-site violation; count changed → 1
+  mismatch; fake entry → 1 stale. Struck from the plan after reading the
+  code: P0-3a (`README.md:51` already says "verified by QuickCheck
+  properties (no Agda proof yet)") and P0-5 (`fieldConfidence = 1.0` is
+  never claimed as a constant; ADR-0009:107 is value semantics and
+  `Effects.hs:771` already derives it). No build was run; the diff
+  contains no non-comment source line.

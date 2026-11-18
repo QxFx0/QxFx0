@@ -758,6 +758,30 @@ for tool in "$ROOT"/scripts/eval/*.py; do
   fi
 done
 
+echo "  [25] Haddock: no stacked '-- |' blocks before one declaration..."
+# Only the last '-- |' block in a group is attached; earlier ones are
+# silently dropped. Pre-existing sites are registered in
+# docs/closure/HADDOCK_STACKING_BASELINE.tsv and the rule demands an exact
+# match, so new debt fails and fixed debt must shrink the baseline.
+HADDOCK_STACKING="$ROOT/scripts/check_haddock_stacking.py"
+HADDOCK_BASELINE="$ROOT/docs/closure/HADDOCK_STACKING_BASELINE.tsv"
+if ! python3 "$HADDOCK_STACKING" --self-test >/dev/null 2>&1; then
+  fail_violation "rule [25] self-test failed (stacked Haddock detector)"
+elif [ ! -f "$HADDOCK_BASELINE" ]; then
+  fail_violation "rule [25] baseline missing: docs/closure/HADDOCK_STACKING_BASELINE.tsv"
+else
+  HADDOCK_STACK_STATUS=0
+  HADDOCK_STACK_OUTPUT="$(python3 "$HADDOCK_STACKING" --baseline "$HADDOCK_BASELINE" "$SRC" "$APP" 2>&1)" || HADDOCK_STACK_STATUS=$?
+  if [ -n "$HADDOCK_STACK_OUTPUT" ] && [ "$HADDOCK_STACK_STATUS" -ne 0 ]; then
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      fail_violation "stacked Haddock blocks: $line"
+    done <<< "$HADDOCK_STACK_OUTPUT"
+  elif [ "$HADDOCK_STACK_STATUS" -ne 0 ]; then
+    fail_violation "rule [25] detector failed with exit $HADDOCK_STACK_STATUS"
+  fi
+fi
+
 if [ "$VIOLATIONS" -gt 0 ]; then
   echo "Architecture check failed: $VIOLATIONS violation(s)"
   exit 1

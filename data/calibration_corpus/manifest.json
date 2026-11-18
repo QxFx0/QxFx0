@@ -18,7 +18,7 @@
  "source": "synthetic_template_v1",
  "labels_rated": 40,
  "train_eligible": 125,
- "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels. 55 rated_responses (40 labeled incl. 5 adjudicated-resolved, 15 r5_negative pending labels). Batch2: 45 relation-bearing (distinction/relation/challenge) assistant-pre ratings, human-agreed frame; train-eligibility pending human per-record confirmation.",
+ "note": "seed v1: synthetic templates, prelabel-only; no promotion on prelabels. 55 rated_responses (40 labeled incl. 5 adjudicated-resolved; 15 r5_negative labeled and counted as r5_labeled, not in labels_rated). Batch2: 45 relation-bearing (distinction/relation/challenge) assistant-pre ratings, human-agreed frame; train-eligibility pending human per-record confirmation. corpus.jsonl carries 70 rows with rater=human-v1 = 40 core + 15 r5_negative + 15 probe rows (5 each probe_uncovered/probe_oov/probe_r5); the probe rows are not counted in labels_rated.",
  "rated_responses": 160,
  "r5_unlabeled": 0,
  "r5_labeled": 15,
