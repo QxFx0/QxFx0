@@ -449,10 +449,12 @@ is a **regression**: the discipline is broken.
 ## 12. Effect-replay snapshot (`trcEffectSnapshot`) — 2026-06-05
 
 **Field:** `trcEffectSnapshot :: Maybe EffectSnapshot`
-**Sub-record:** `EffectSnapshot { esApiHealthy :: !Bool }`
-**Source:** `buildTurnProjection` copies `tsApiHealthy ts`
-            (`Finalize/Projection.hs`).
-**Consumed by:** `QxFx0.Core.PipelineIO.Replay.mkReplayPipelineIO`.
+**Sub-record:** `EffectSnapshot { esApiHealthy :: !Bool
+                               , esCurrentTime :: !(Maybe UTCTime) }`
+**Source:** `buildTurnProjection` copies `tsApiHealthy ts` and
+            `Just (tiStartTime ti)` (`Finalize/Projection.hs`).
+**Consumed by:** `QxFx0.Core.PipelineIO.Replay.mkReplayPipelineIO` /
+`mkReplayPipelineIOWith`.
 
 Unlike every other field in this document, `trcEffectSnapshot` is **not**
 an observability `trc*` field — it is the first trace field that is a
@@ -467,28 +469,47 @@ re-probing the live world. Record ≡ consume by construction: both
 — it is `AtomTrace.atCurrentLoad`, a pure EMA over the input atom set and
 prior trace, both in `SystemState`. It needs no snapshot.
 
+Replay envelope v1 (2026-11-17) adds `esCurrentTime`: the turn's
+`tiStartTime`, i.e. the value resolved through `TurnReqCurrentTime`.
+`mkReplayPipelineIOWith` replays it alongside `esApiHealthy` and
+`trcRequestId` (see §14). A pre-v1 snapshot decodes with
+`esCurrentTime = Nothing`, and the overlay delegates the clock to the
+base interpreter — old traces are explicitly **not** time-replayable
+instead of silently frozen.
+
 (The §-header "94 `trc*` fields" predates the FMAR and effect-snapshot
 additions; the live count should be read from `check_replay_gate.sh`, not
 hand-maintained here.)
 
 ### Determinism scope (honest)
 
-- **Proven now:** legitimacy-path determinism for `apiHealthy`, by
-  `test/Test/Suite/ReplayDeterminism.hs` — **P1** (replay reads trace,
-  not world), **P2** (`legitimacyScore` reproduces the recorded value and
-  differs from the live-degraded value), **P3** (end-to-end through the
-  real `buildTurnProjection`: `esApiHealthy` tracks the consumed
-  `tsApiHealthy` for *both* polarities, and `mkReplayPipelineIO` reads
-  each value back).
-- **Pending (wide path / item #1):** production replay round-trip —
-  loading a *persisted* trace from the DB blob. `EffectSnapshot` derives
-  `ToJSON` only; a `FromJSON` + DB-load→replay path does not exist yet.
-  Replay is proven for an in-memory trace, not a stored one.
-- **Not claimed:** global turn determinism. Only `apiHealthy` is pinned.
-  Other live effects (embedding, intuition, consciousness, nix) still
-  resolve to test-harness defaults under `mkReplayPipelineIO`; time/UUID
-  are not pinned. The narrow fix makes the **legitimacy path** honest,
-  not the whole turn.
+- **Proven now (2026-11-17):** the narrow replay path for the three
+  recorded ambient inputs — `apiHealthy`, turn time, request id — plus
+  the raw input text (`trcReplayEnvelope`, §14). `Test.Suite.
+  ReplayEnvelope` runs a 3-turn session twice in fresh DBs and asserts
+  3/3 identical surfaces and 3/3 identical full traces; the opt-in
+  12-turn leg (`QXFX0_REPLAY_12_TURN=1`) measured 12/12 and 12/12.
+  The recorded envelope/snapshot is the only source of those inputs in
+  run B.
+  `Test.Suite.ReplayDeterminism` pins the `apiHealthy`/legitimacy path
+  (P1–P3), and the persisted-blob round-trip
+  (`StatePersistence.testReplayTraceDbRoundTripFeedsReplayPipeline`)
+  covers blob → decode → replay.
+- **Narrowing, stated (2026-11-18):** because the clock is now recorded,
+  the persisted trace is deterministic **modulo the recorded clock**. Two
+  fresh live-clock sessions with the same input differ in
+  `trcEffectSnapshot.esCurrentTime` and nowhere else (measured: identical
+  6 178 449-character blobs, single differing field). The live-clock pins
+  normalize it like `trcSessionId`/`trcRequestId`; the fixed-time pin
+  (`QXFX0_TEST_FIXED_TIME`) keeps exact equality including the clock. See
+  `REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md` §8, miss M1.
+- **Pending (wide path):** every other live effect (embedding, intuition,
+  consciousness, nix, shadow, GF, Agda witness, checkpoints, feedback
+  mirror) is re-executed on replay, not recorded. A difference there isa finding, not a silent pass.
+- **Not claimed:** global turn determinism. The claim is limited to the
+  three recorded ambient inputs plus the input text, for the same binary
+  and resources. Old traces without the envelope are not replayable at
+  all (no input text, no turn time).
 
 Old traces (pre-2026-06-05) serialise `trcEffectSnapshot` as `Nothing`;
 `mkReplayPipelineIO` falls back to `apiHealthy = False` for them, so they
@@ -536,3 +557,45 @@ means "not disclosed", never "no substitution".
 JSON is backward-compatible: absent → `Nothing`. Old traces stay
 readable; new fields never widen the top-level god-record (sub-record
 discipline, `trcUserRegime` / `trcOwnershipCompare` precedent).
+
+---
+
+## 14. Replay envelope (`trcReplayEnvelope`) — 2026-11-17
+
+**Field:** `trcReplayEnvelope :: Maybe ReplayEnvelope`
+**Sub-record:** `ReplayEnvelope { reEnvelopeVersion :: !Int
+                               , reInputText :: !Text }`
+**Source:** `buildTurnProjection` copies `ipfRawText (tiFrame ti)`
+            (`Finalize/Projection.hs`); version is
+            `currentReplayEnvelopeVersion = 1`.
+**Consumed by:** replay drivers that reconstruct the turn input. The
+runtime opt-in is `RuntimeContext.rcReplayTrace` (set via
+`withRuntimeReplayTrace`); `toPipelineIO` applies
+`mkReplayPipelineIOWith` when it is `Just`.
+
+Why it exists: the DB never stored the prompt. `turn_quality.
+scene_request` is `tiBestTopic` (a topic label, not the raw text), so a
+persisted turn could not be re-executed from the DB alone. The envelope
+is the smallest field that closes that gap without a persistence-schema
+migration — it lives inside the already persisted
+`replay_trace_json`.
+
+Values:
+
+- `reEnvelopeVersion` — `1`. A consumer that meets an unknown version must
+  reject it instead of guessing. No production consumer exists yet (the
+  runtime opt-in replays the ambient values from `trcEffectSnapshot` /
+  `trcRequestId`); the test suite asserts the version and round-trips it.
+- `reInputText` — the exact raw input (`ipfRawText`), not the
+  normalized/lemmatized form.
+
+Scope (honest): v1 records **only** the input text; the ambient effects
+are in `trcEffectSnapshot` (§12) and the request id is the existing
+`trcRequestId`. Nix guard, shadow, embedding, GF linearization, the
+Agda witness, checkpoints and the feedback mirror are **re-executed** on
+replay, not recorded. Old traces decode with `Nothing` and cannot be
+replayed exactly.
+
+JSON is backward-compatible: absent → `Nothing`; the field is inserted
+right after `trcEffectSnapshot` in the manual `FromJSON` constructor
+order.

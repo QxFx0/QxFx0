@@ -17,6 +17,8 @@ module QxFx0.Types.TurnProjection
   , PreActorFailureKind(..)
   , PreActorFailureEvent(..)
   , EffectSnapshot(..)
+  , ReplayEnvelope(..)
+  , currentReplayEnvelopeVersion
   , TurnFamilyDerivationStep(..)
   , GenerationAttempt(..)
   , TurnProjection(..)
@@ -64,6 +66,7 @@ import qualified Data.Aeson.Types as Aeson
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import Data.Text (Text)
+import Data.Time.Clock (UTCTime)
 import GHC.Generics (Generic)
 import QxFx0.Types.RuntimeMode (RuntimeMode(..))
 import QxFx0.Types.FMAR (FmarMode(..))
@@ -91,8 +94,33 @@ data PreActorFailureEvent = PreActorFailureEvent
 -- after this field was added carry the snapshot.
 data EffectSnapshot = EffectSnapshot
   { esApiHealthy :: !Bool
+  , esCurrentTime :: !(Maybe UTCTime)
+    -- ^ Replay envelope v1: the turn's @tiStartTime@ (resolved through
+    --   'TurnReqCurrentTime').  'Nothing' on pre-v1 traces, which are
+    --   explicitly not time-replayable.
+  } deriving stock (Show, Eq, Generic)
+    deriving anyclass (ToJSON)
+
+instance FromJSON EffectSnapshot where
+  parseJSON = withObject "EffectSnapshot" $ \o ->
+    EffectSnapshot
+      <$> o .: "esApiHealthy"
+      <*> o .:? "esCurrentTime"
+
+-- | Replay envelope v1: the persisted turn input needed to replay a
+-- recorded turn.  The ambient effect values live in 'EffectSnapshot';
+-- the request id is already 'trcRequestId'.
+data ReplayEnvelope = ReplayEnvelope
+  { reEnvelopeVersion :: !Int
+  , reInputText       :: !Text
+    -- ^ Exact raw input, copied from 'ipfRawText'.  This is the field
+    --   the DB never stored ('tqpSceneRequest' is the topic, not the
+    --   prompt).
   } deriving stock (Show, Eq, Generic)
     deriving anyclass (ToJSON, FromJSON)
+
+currentReplayEnvelopeVersion :: Int
+currentReplayEnvelopeVersion = 1
 
 -- | One step in the family derivation chain from routing to rendering.
 data TurnFamilyDerivationStep = TurnFamilyDerivationStep
@@ -459,6 +487,11 @@ data TurnReplayTrace = TurnReplayTrace
     --   Consumed by replay to make legitimacy-score deterministic.
     --   'Nothing' for traces recorded before this field was added
     --   (pre-vX — not apiHealthy-deterministic).
+  , trcReplayEnvelope :: !(Maybe ReplayEnvelope)
+    -- ^ Replay envelope v1: the raw input text needed to replay the
+    --   recorded turn.  'Nothing' on pre-v1 traces, which cannot be
+    --   replayed from the DB alone.  See
+    --   @docs/closure/REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md@.
   , trcEvidenceAdmissibility :: !EvidenceAdmissibility
     -- ^ SLICE-012: evidence admissibility classification based on guard
     --   availability. 'EvidenceGoverned' when guard was present; 
@@ -826,6 +859,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcGenerationTrace" .!= []
       <*> o .: "trcMorphologyVersion"
       <*> o .:? "trcEffectSnapshot"
+      <*> o .:? "trcReplayEnvelope"
       <*> o .: "trcEvidenceAdmissibility"
       <*> o .:? "trcIntentType"
       <*> o .:? "trcFrameType"

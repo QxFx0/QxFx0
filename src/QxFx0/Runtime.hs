@@ -20,6 +20,8 @@ module QxFx0.Runtime
   , ensureSchemaMigrations
   , RuntimeContext
   , withRuntimeDb
+  , withRuntimeReplayTrace
+  , withRuntimeTimeSource
   , checkHealth
   , probeRuntimeReadiness
   , SystemHealth(..)
@@ -40,6 +42,8 @@ import QxFx0.Bridge.AgdaWitness (AgdaWitnessReport(..), readAgdaWitnessReport, w
 import QxFx0.Runtime.Wiring
   ( RuntimeContext
   , withRuntimeDb
+  , withRuntimeReplayTrace
+  , withRuntimeTimeSource
   )
 import QxFx0.Runtime.Paths
   ( resolveDbPath

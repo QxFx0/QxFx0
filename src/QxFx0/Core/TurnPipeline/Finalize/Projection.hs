@@ -467,6 +467,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
           , trcMorphologyVersion = if rrRglMorphologyActive (ssCurrentRegime nextSs) then 1 else 0
           , trcEffectSnapshot = Just EffectSnapshot
               { esApiHealthy = tsApiHealthy ts
+              , esCurrentTime = Just (tiStartTime ti)
+              }
+          , trcReplayEnvelope = Just ReplayEnvelope
+              { reEnvelopeVersion = currentReplayEnvelopeVersion
+              , reInputText = ipfRawText (tiFrame ti)
               }
           , trcEvidenceAdmissibility = evidenceAdmissibility
           , trcIntentType = extractIntentTag (taDerivationTags ta)

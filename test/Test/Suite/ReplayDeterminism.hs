@@ -12,9 +12,12 @@ legitimacy-score path is deterministic under replay.
 -}
 module Test.Suite.ReplayDeterminism
   ( replayDeterminismTests
+  , minimalReplayTraceWith
   ) where
 
 import qualified Data.Sequence as Seq
+import Data.Text (Text)
+import Data.Time.Clock (UTCTime)
 import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..))
 import Test.HUnit (Test (..), assertBool, assertEqual)
 
@@ -53,7 +56,7 @@ import QxFx0.Types.State.SemanticCommitment (MatchKind(..), emptyCommitmentEngag
 import QxFx0.Types.Memory.Episodic (EpisodicTurnDelta(..))
 
 import QxFx0.Core.TurnPipeline.Finalize.Projection (buildTurnProjection)
-import QxFx0.Core.TurnPipeline (TurnSignals(..))
+import QxFx0.Core.TurnPipeline (TurnInput(..), TurnSignals(..))
 import Test.Support.TurnPipelineFixtures (buildRenderedFixture)
 
 -- | Audit 2026-10-16 п.14: these fixtures project a turn with no episodic
@@ -65,9 +68,14 @@ noEpisodicDelta = EpisodicTurnDelta [] 0 Nothing
 -- All other fields use safe defaults so the record's strict fields
 -- do not force evaluation of 'undefined'.
 minimalReplayTrace :: Bool -> TurnReplayTrace
-minimalReplayTrace apiHealthy =
+minimalReplayTrace apiHealthy = minimalReplayTraceWith apiHealthy Nothing "test"
+
+-- | Same, with an explicit captured time and request id — used by the
+-- replay-envelope overlay tests.
+minimalReplayTraceWith :: Bool -> Maybe UTCTime -> Text -> TurnReplayTrace
+minimalReplayTraceWith apiHealthy mCurrentTime requestId =
   TurnReplayTrace
-    { trcRequestId = "test"
+    { trcRequestId = requestId
     , trcSessionId = "test"
     , trcRuntimeMode = StrictRuntime
     , trcShadowPolicy = "observe"
@@ -202,7 +210,8 @@ minimalReplayTrace apiHealthy =
     , trcFmarMode = Nothing
     , trcFamilyDerivationChain = []
     , trcGenerationTrace = []
-    , trcEffectSnapshot = Just EffectSnapshot { esApiHealthy = apiHealthy }
+    , trcEffectSnapshot = Just EffectSnapshot { esApiHealthy = apiHealthy, esCurrentTime = mCurrentTime }
+    , trcReplayEnvelope = Nothing
     , trcEvidenceAdmissibility = EvidenceGoverned
     , trcIntentType = Nothing
     , trcFrameType = Nothing
@@ -323,9 +332,9 @@ testSnapshotSurvivesSerialization =
              >>= parseEither (withObject "trace" (\o -> o .:? "trcEffectSnapshot")))
             :: Either String (Maybe EffectSnapshot)
     assertEqual "snapshot survives DB-column round-trip (recorded True)"
-               (Right (Just (EffectSnapshot True)))  (decodeSnapshot (projOf True))
+               (Right (Just (EffectSnapshot True (Just (tiStartTime ti)))))  (decodeSnapshot (projOf True))
     assertEqual "snapshot survives DB-column round-trip (recorded False)"
-               (Right (Just (EffectSnapshot False))) (decodeSnapshot (projOf False))
+               (Right (Just (EffectSnapshot False (Just (tiStartTime ti))))) (decodeSnapshot (projOf False))
 
 -- | P5 (audit D): the FULL TurnReplayTrace round-trips through the exact
 -- serialization the DB column uses. 'persistTurnQuality' stores a versioned

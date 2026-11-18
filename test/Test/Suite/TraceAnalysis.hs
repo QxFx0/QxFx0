@@ -220,6 +220,7 @@ minimalTrace = TurnReplayTrace
   , trcFamilyDerivationChain = []
   , trcGenerationTrace = []
   , trcEffectSnapshot = Nothing
+  , trcReplayEnvelope = Nothing
   , trcEvidenceAdmissibility = EvidenceGoverned
   , trcIntentType = Nothing
   , trcFrameType = Nothing

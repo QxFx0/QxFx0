@@ -2,13 +2,13 @@
 
 **Deterministic philosophical dialogue runtime with formal foundations**
 
-QxFx0 is a research-grade conversational system that builds meaning through typed semantic graphs and morphological reconstruction — not templates, not stochastic sampling. The turn path is deterministic by construction: no sampling and no ambient inputs on the governed path. A global "same input + state → same output" claim is withheld until the persisted replay envelope lands (`docs/closure/REPLAY_GATE_SPEC.md`); the legitimacy path is already replayed from the trace (`Test.Suite.ReplayDeterminism`).
+QxFx0 is a research-grade conversational system that builds meaning through typed semantic graphs and morphological reconstruction — not templates, not stochastic sampling. The turn path is deterministic by construction: no sampling and no ambient inputs on the governed path. A recorded session can be replayed through replay envelope v1: the recorded turn time, request id, `apiHealthy` and raw input text are re-fed, and the surface plus the full `TurnReplayTrace` reproduce on a bounded 3-turn CI leg and a 12-turn opt-in leg (`Test.Suite.ReplayEnvelope`; `docs/closure/REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md`). The suite is the driver — no CLI replay command ships yet. The claim is scoped to the same binary and resources — effects the envelope does not record (nix, shadow, embedding, GF, Agda witness, checkpoints) are re-executed, not replayed, so this is not a global "same input + state → same output" claim. The legitimacy path is separately replayed from the trace (`Test.Suite.ReplayDeterminism`).
 
 ## What Makes QxFx0 Different
 
 Most conversational AI optimizes for fluency and breadth. QxFx0 optimizes for:
 
-- **Deterministic turn path** — no sampling, no ambient inputs on the governed path; the global replay claim is withheld pending the persisted envelope
+- **Deterministic turn path** — no sampling, no ambient inputs on the governed path; a recorded session replays to the same surface and full trace on the bounded 3-turn and 12-turn legs (replay envelope v1), with unrecorded effects re-executed, not replayed
 - **Typed semantic graphs** — 53 relation types, ~85 atoms, 6-case Russian morphology
 - **Dialectical structure** — Every answer carries thesis → rationale → counter → synthesis
 - **Commitment memory** — System remembers and defends its positions across turns
@@ -152,14 +152,14 @@ src/QxFx0/
 
 | Suite | Tests | Status |
 |-------|-------|--------|
-| qxfx0-test-unit | 1861 | ✅ 0 failures (2026-11-16, `27b3af4` change set) |
-| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | runtime 106 + http 23: ✅ 0 failures (2026-11-16); core slice 1254 last verified green 2026-10-28 on `2144a6a`, not re-run since |
-| qxfx0-test-property | 244 | ✅ 0 failures (2026-11-16) |
-| qxfx0-test-integration | 47 | ✅ 0 failures (2026-11-16) |
-| qxfx0-test-fast | 1954 | ✅ 0 failures (2026-11-16) |
-| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-11-16) |
+| qxfx0-test-unit | 1861 | ✅ 0 failures (2026-11-18, replay-envelope change set) |
+| qxfx0-test | 1390 measured (runtime 106 + http 23 — run via `QXFX0_AGGREGATE_GROUP`, full single-process unsupported on 15 GB) | runtime 106 + http 23: ✅ 0 failures (2026-11-18); core slice 1261 (1254 + 7 `ReplayEnvelope` cases) not re-run, last verified green 2026-10-28 on `2144a6a` |
+| qxfx0-test-property | 244 | ✅ 0 failures (2026-11-18) |
+| qxfx0-test-integration | 47 | ✅ 0 failures (2026-11-18) |
+| qxfx0-test-fast | 1962 | ✅ 0 failures (2026-11-18) |
+| qxfx0-test-slow (runtime/state/http/lifecycle) | 106 / 50 / 23 / 11 (= 190) | ✅ 0 failures by group (2026-11-18) |
 
-Matrix 2026-11-16 (frozen tree, `27b3af4` change set, substrate active — `brain_kb.jsonl`, 53146 entries, gitignored external): 10/10 steps exit 0, tree byte-identical start→end, 4 425 cases = unit 1861 + fast 1954 + property 244 + integration 47 + main runtime 106 + http 23 + slow 190. The main core slice was not re-run (same OOM contour). Sequential runs only: `-M10G` for fast, `-M6G` for unit/property/integration, `-M10G` for slow state, `-M12G` for main runtime/http and slow runtime/http/lifecycle. Never build while a runtime sample is in flight (relink kills it).
+Matrix 2026-11-18 (frozen tree, replay-envelope change set on `7f10674` + 22 paths, substrate active — `brain_kb.jsonl`, 53146 entries, gitignored external): 10/10 steps exit 0, tree byte-identical start→end, 4 433 cases = unit 1861 + fast 1962 + property 244 + integration 47 + main runtime 106 + http 23 + slow 190. The main core slice was not re-run (same OOM contour). The first run of this matrix (2026-11-17) was red on one real finding — recording the clock in the trace narrowed the fresh-session determinism pins to "modulo the recorded clock" (`REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md` §8, miss M1); the fix is test-only and the numbers above are the re-run. Sequential runs only: `-M10G` for fast, `-M6G` for unit/property/integration, `-M10G` for slow state, `-M12G` for main runtime/http and slow runtime/http/lifecycle. Never build while a runtime sample is in flight (relink kills it).
 
 The fast suite is a full-fidelity gate, not a seconds-scale smoke: 1954 cases include full runtime session bootstraps (substrate-era cold bootstrap ~19 s vs ~11 s without), measured locally at ~20–50 min wall-clock depending on substrate and load. Run suites **sequentially** — two concurrent suites on a 16 GB machine can OOM-kill each other. CI runs the same suite with `-O0`, `-j1`, capped QuickCheck (`QXFX0_QUICKCHECK_MAX_SUCCESS=10`) and an 8 GB swap file.
 

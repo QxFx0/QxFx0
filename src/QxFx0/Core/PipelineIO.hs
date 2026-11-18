@@ -9,6 +9,7 @@ module QxFx0.Core.PipelineIO
   , defaultTestPipelineConfig
   , mkTestPipelineIO
   , mkReplayPipelineIO
+  , mkReplayPipelineIOWith
   , pipelineRuntimeMode
   , pipelineRuntimeModeText
   , pipelineRuntimeModeAsRuntimeMode
@@ -69,4 +70,5 @@ import QxFx0.Core.PipelineIO.Test
   )
 import QxFx0.Core.PipelineIO.Replay
   ( mkReplayPipelineIO
+  , mkReplayPipelineIOWith
   )

@@ -16,6 +16,8 @@ module QxFx0.Runtime.Wiring.Context
   , TimeSource
   , initRuntimeContext
   , releaseRuntimeContext
+  , withRuntimeReplayTrace
+  , withRuntimeTimeSource
   , withRuntimeSession
   , readApiHealth
   , readEmbeddingHealth
@@ -58,7 +60,7 @@ import QxFx0.Runtime.Mode (RuntimeMode, resolveRuntimeMode)
 import QxFx0.Runtime.PGF (newPgfCache)
 import QxFx0.Semantic.Embedding (APIHealthCache, EmbeddingHealth, checkApiHealthWithManager, checkEmbeddingHealthWithManager)
 import qualified PGF2 as PGF
-import QxFx0.Types (SystemState, ssIntuitionState, ssTurnCount)
+import QxFx0.Types (SystemState, TurnReplayTrace, ssIntuitionState, ssTurnCount)
 import Network.HTTP.Client (Manager, closeManager, newManager)
 import Network.HTTP.Client.TLS (tlsManagerSettings)
 
@@ -99,6 +101,11 @@ data RuntimeContext = RuntimeContext
   , rcLocks      :: !RuntimeLocks
   , rcTurn       :: !TurnRuntime
   , rcTimeSource :: !TimeSource
+  , rcReplayTrace :: !(Maybe TurnReplayTrace)
+    -- ^ Replay envelope v1 opt-in.  'Nothing' in production.  When
+    --   'Just', 'toPipelineIO' replays the recorded ambient effects
+    --   (time, request id, apiHealthy) from this trace; every other
+    --   effect keeps the live handler.
   }
 
 initRuntimeContext :: FilePath -> IO RuntimeContext
@@ -174,7 +181,19 @@ buildRuntimeContext path runtimeMode healthCache nixCache pgfCache dbPool httpMa
         , rtrSoufflePath = soufflePathVar
         }
     , rcTimeSource = timeSource
+    , rcReplayTrace = Nothing
     }
+
+-- | Opt-in session replay: the next turns through this context read
+-- their ambient effects from the recorded trace.  Production never
+-- sets this; the replay test/driver sets it per turn.
+withRuntimeReplayTrace :: Maybe TurnReplayTrace -> RuntimeContext -> RuntimeContext
+withRuntimeReplayTrace mtrace ctx = ctx { rcReplayTrace = mtrace }
+
+-- | Override the context's clock (test/driver hook; production keeps
+-- the resolved system clock).
+withRuntimeTimeSource :: TimeSource -> RuntimeContext -> RuntimeContext
+withRuntimeTimeSource ts ctx = ctx { rcTimeSource = ts }
 
 withRuntimeSession :: RuntimeContext -> Text -> IO a -> IO a
 withRuntimeSession ctx sessionId action = do

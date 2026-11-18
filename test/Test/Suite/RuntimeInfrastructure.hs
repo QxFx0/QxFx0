@@ -12,6 +12,7 @@ import QxFx0.Core.CommitmentStoreAdmission (CommitmentStoreAdmissionDecision(..)
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import Data.Aeson (Value(..), decode, eitherDecode, eitherDecodeStrict', encode)
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import Test.HUnit hiding (Testable)
 import Test.QuickCheck
@@ -1989,6 +1990,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcFamilyDerivationChain = []
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
+                 , trcReplayEnvelope = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
                  , trcIntentType = Nothing
                   , trcFrameType = Nothing
@@ -2603,6 +2605,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcFamilyDerivationChain = []
                  , trcGenerationTrace = []
                  , trcEffectSnapshot = Nothing
+                 , trcReplayEnvelope = Nothing
                  , trcEvidenceAdmissibility = EvidenceGoverned
                  , trcIntentType = Nothing
                   , trcFrameType = Nothing
@@ -3015,9 +3018,30 @@ normalizeReplayTraceValue (Object objectValue) =
     Nothing ->
       Object
         ( KeyMap.insert "trcSessionId" (String "<normalized-session>")
-        $ KeyMap.insert "trcRequestId" (String "<normalized-request>") objectValue
+        $ KeyMap.insert "trcRequestId" (String "<normalized-request>")
+        $ KeyMap.mapWithKey normalizeSnapshotField objectValue
         )
 normalizeReplayTraceValue other = other
+
+normalizeSnapshotField :: Aeson.Key -> Value -> Value
+normalizeSnapshotField k v
+  | k == "trcEffectSnapshot" = normalizeRecordedClock v
+  | otherwise = v
+
+-- | Replay envelope v1 records the turn time (@esCurrentTime@), which is an
+-- ambient input like the request id: two fresh sessions at different
+-- wall-clock times legitimately differ there, so the live-clock pin
+-- normalizes it.  The exact-equality guarantee (clock included) lives in
+-- the fixed-time pin (@QXFX0_TEST_FIXED_TIME@).
+normalizeRecordedClock :: Value -> Value
+normalizeRecordedClock (Object snapshot) =
+  Object (KeyMap.mapWithKey normalizeTimeField snapshot)
+normalizeRecordedClock other = other
+
+normalizeTimeField :: Aeson.Key -> Value -> Value
+normalizeTimeField k v
+  | k == "esCurrentTime" = String "<normalized-time>"
+  | otherwise = v
 
 quickCheckTest :: Testable prop => Int -> String -> prop -> Test
 quickCheckTest maxCases label prop = TestCase $ do

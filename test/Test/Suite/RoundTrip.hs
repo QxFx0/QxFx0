@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 
@@ -128,7 +129,10 @@ testPreActorFailureEventRT = TestList
 
 testEffectSnapshotRT :: Test
 testEffectSnapshotRT = TestList
-  [ TestCase $ assertRoundTrip "snapshot" (EffectSnapshot True) ]
+  [ TestCase $ assertRoundTrip "snapshot (pre-v1, no time)" (EffectSnapshot True Nothing)
+  , TestCase $ assertRoundTrip "snapshot (v1, captured time)"
+      (EffectSnapshot False (Just (posixSecondsToUTCTime 1800000000)))
+  ]
 
 testTurnFamilyDerivationStepRT :: Test
 testTurnFamilyDerivationStepRT = TestList

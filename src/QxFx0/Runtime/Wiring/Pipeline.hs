@@ -7,6 +7,7 @@ import QxFx0.Core.PipelineIO
   ( PipelineIO
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
+  , mkReplayPipelineIOWith
   )
 import QxFx0.Core.PipelineIO.Internal (PipelineIO(..), defaultConatusPrior)
 import QxFx0.Runtime.Mode (RuntimeMode(..))
@@ -23,18 +24,23 @@ import QxFx0.Runtime.AuthorityParse (parseAuthoritySurfaceIO)
 import QxFx0.Types.Recovery (LocalRecoveryPolicy(..))
 
 toPipelineIO :: RuntimeContext -> PipelineIO
-toPipelineIO ctx = PipelineIO
-  { pioRuntimeMode = case rcMode ctx of
-      StrictRuntime -> RuntimeStrict
-      DegradedRuntime -> RuntimeDegraded
-  , pioShadowPolicy = case rcMode ctx of
-      StrictRuntime -> ShadowBlockOnUnavailableOrDivergence
-      DegradedRuntime -> ShadowObserve
-  , pioLocalRecoveryPolicy = LocalRecoveryEnabled
-  , pioInterpreter = handleTurnEffect ctx
-  , pioUpdateHistory = updateHistoryStrict
-  , pioModifyConsciousLoop = modifyConsciousLoop ctx
-  , pioModifyIntuition = modifyIntuition ctx
-  , pioConatusPrior = defaultConatusPrior
-  , pioParseAuthoritySurface = parseAuthoritySurfaceIO (rtcPgf (rcCaches ctx))
-  }
+toPipelineIO ctx =
+  case rcReplayTrace ctx of
+    Nothing -> live
+    Just trace -> mkReplayPipelineIOWith live trace
+  where
+    live = PipelineIO
+      { pioRuntimeMode = case rcMode ctx of
+          StrictRuntime -> RuntimeStrict
+          DegradedRuntime -> RuntimeDegraded
+      , pioShadowPolicy = case rcMode ctx of
+          StrictRuntime -> ShadowBlockOnUnavailableOrDivergence
+          DegradedRuntime -> ShadowObserve
+      , pioLocalRecoveryPolicy = LocalRecoveryEnabled
+      , pioInterpreter = handleTurnEffect ctx
+      , pioUpdateHistory = updateHistoryStrict
+      , pioModifyConsciousLoop = modifyConsciousLoop ctx
+      , pioModifyIntuition = modifyIntuition ctx
+      , pioConatusPrior = defaultConatusPrior
+      , pioParseAuthoritySurface = parseAuthoritySurfaceIO (rtcPgf (rcCaches ctx))
+      }

@@ -350,6 +350,7 @@ passingTrace = TurnReplayTrace
   , trcFamilyDerivationChain = []
   , trcGenerationTrace = []
   , trcEffectSnapshot = Nothing
+  , trcReplayEnvelope = Nothing
   , trcEvidenceAdmissibility = EvidenceGoverned
   , trcIntentType = Just "IntentDefine"
   , trcFrameType = Just "definition"

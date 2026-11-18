@@ -654,15 +654,16 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1383 (core 1254 + runtime 106 + http 23; re-verified by
-group on HEAD 2026-10-25; full single-process unsupported on 15 GB with
-substrate — run via QXFX0_AGGREGATE_GROUP) |
-| qxfx0-test-fast | 1918 |
-| qxfx0-test-unit | 1821 (GF-case tree 2026-10-28; 1820 on committed fallback `2144a6a`; 1818 on the pre-fallback tree) |
+| qxfx0-test | 1390 measured = runtime 106 + http 23 (green 2026-11-18) +
+core slice 1261 not re-run (1254 + 7 `ReplayEnvelope` cases; last
+full core-slice green 2026-10-28 on `2144a6a`); full single-process
+unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP |
+| qxfx0-test-fast | 1962 (2026-11-18) |
+| qxfx0-test-unit | 1861 (2026-11-18; 1821 on the GF-case tree 2026-10-28, 1820 on committed fallback `2144a6a`, 1818 on the pre-fallback tree) |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
-per-group green on HEAD 2026-10-25, all exit 0 — runtime 106 ran as ONE
+per-group green 2026-11-18, all exit 0 — runtime 106 ran as ONE
 process (no stall); the 2026-10-18 batch-2 run had self-recovered from a
 ~9.7 h stall at test #57 — known wart class, see batch-2 ops notes;
 unbuffered output required to judge the long runtime test) |
@@ -1324,3 +1325,44 @@ re-observe before treating as real).
   fast 1954, property 244, integration 47, main runtime 106 + http 23,
   slow 190 (runtime 106 / state 50 / http 23 / lifecycle 11) = **4 425
   cases**, 10/10 steps exit 0, tree byte-identical start→end.
+- **Replay envelope v1 landed 2026-11-17 (no math change)**: the DB never
+  stored the prompt (`turn_quality.scene_request` is `tiBestTopic`), so a
+  persisted turn could not be re-executed. New optional trace sub-record
+  `trcReplayEnvelope { reEnvelopeVersion, reInputText }`
+  (`Types/TurnProjection.hs`, `TRACE_SCHEMA.md` §14) and
+  `EffectSnapshot.esCurrentTime`; `mkReplayPipelineIOWith` overlays the
+  recorded turn time / request id / `apiHealthy` on a live base, and
+  `RuntimeContext.rcReplayTrace` (`withRuntimeReplayTrace`) is the opt-in
+  session replay (`toPipelineIO` is byte-identical when it is `Nothing`).
+  Old traces decode with `Nothing` and are explicitly not time-replayable.
+  Pinned by `Test.Suite.ReplayEnvelope`: 3/3 surfaces and 3/3 full traces
+  identical on the bounded CI leg; 12/12 + 12/12 on the opt-in 12-turn leg
+  (`QXFX0_REPLAY_12_TURN=1`; ~14 min, 1.28 GB max residency, `-M12G`).
+  Red checks A/B/C fail exactly the predicted pins (A: overlay time +
+  `trcEffectSnapshot`; B: `live turn must record a replay envelope`;
+  C: `trcEffectSnapshot` + `trcRequestId`). Test-design miss (reported):
+  session-level `apiHealthy` cannot discriminate under the
+  local-deterministic backend (it short-circuits the health cache); the
+  discriminating pin is the overlay test. Operational trap: `-O0` test
+  binaries link the **default** library archive via the inplace package db,
+  so a library edit must be measured in the default profile.
+  **Miss M1 (found by the 2026-11-17 matrix, fixed 2026-11-18)**: recording
+  the clock breaks the two pre-existing fresh-session pins
+  (`RuntimeInfrastructure` QuickCheck property + `StatePersistence` test),
+  which compare two live-clock sessions normalizing only session/request id
+  — the blobs are identical except `esCurrentTime` (6 178 449 chars, single
+  differing field). Real narrowing: the persisted trace is now deterministic
+  **modulo the recorded clock**. Fix is test-only (`normalizeRecordedClock` in
+  both suites); the fixed-time pin keeps exact equality including the clock.
+  Pre-reg: `docs/closure/REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md`. Matrix
+  2026-11-17 (first run, tree `7f10674` + 22 paths): unit 1861, fast 1962,
+  property 244, integration 47, main-http 23, slow-http 23,
+  slow-lifecycle 11 — all exit 0; main-runtime / slow-state / slow-runtime
+  exit 1 on the M1 pin only (1 failure each), tree byte-identical
+  start→end. Re-run after the M1 fix (matrix 2026-11-17b, tree `7f10674`
+  + 22 paths): unit 1861, fast 1962, property 244, integration 47,
+  main-http 23, slow-http 23, slow-lifecycle 11, main-runtime 106,
+  slow-state 50, slow-runtime 106 = **4 433 cases**, 10/10 steps exit 0,
+  tree byte-identical start→end (12:20→17:43 UTC). The main core slice
+  (1261) was not re-run.
+

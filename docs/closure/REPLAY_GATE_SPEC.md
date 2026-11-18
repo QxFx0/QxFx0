@@ -73,6 +73,14 @@ carries:
 - `commitments :: Object` (Package 2)
 - `envelopeVersion :: Int` (bumped on breaking change)
 
+**Status (2026-11-17).** This full wire envelope is **not implemented** as a
+persisted record: the DB stores `replay_trace_json`, and the only implemented
+replay envelope is the trace sub-record `trcReplayEnvelope` (v1:
+`reEnvelopeVersion`, `reInputText`) plus `EffectSnapshot.esCurrentTime` — see
+`docs/closure/TRACE_SCHEMA.md` §14 and
+`docs/closure/REPLAY_ENVELOPE_V1_PREREG_2026-11-17.md`. The remaining fields
+listed here stay aspirational until a session-level envelope lands.
+
 ### 3.2 The closure-plan additions
 
 Package 3 extends the envelope with three new fields, gated on
