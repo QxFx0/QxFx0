@@ -8,6 +8,7 @@ Description : canonical — P4 OpinionCore / PerspectiveOperator pure layer.
 module QxFx0.Self.Perspective
   ( PerspectiveOperationResult(..)
   , assemblePerspectiveInput
+  , assemblePerspectiveInputWith
   , opinionCore
   , evaluatePerspectiveAdmissibility
   , decidePerspectivePromotion
@@ -15,6 +16,7 @@ module QxFx0.Self.Perspective
   , buildPerspectiveProjection
   , buildActivePerspectiveProjections
   , applyPerspectiveOperator
+  , applyPerspectiveOperatorWith
   ) where
 
 import QxFx0.Types.State.SelfState (SelfState(..))
@@ -99,8 +101,16 @@ data PerspectiveOperationResult = PerspectiveOperationResult
   }
   deriving stock (Eq, Show)
 
-assemblePerspectiveInput :: SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
-assemblePerspectiveInput ss conatusEnergy conatusGateFired field =
+-- | Assemble the operator input with the P2 Conatus ablation switch.
+--
+-- @conatusStabilityAblated = True@ removes the Conatus contribution
+-- from 'csStability' only (see 'conatusSlice').  Every other field —
+-- including 'csEnergy', which the perspective admissibility gate reads
+-- at 'evaluatePerspectiveAdmissibility' — keeps the true value.
+-- Measurement hook, default-off: 'assemblePerspectiveInput' is the
+-- @False@ case.
+assemblePerspectiveInputWith :: Bool -> SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
+assemblePerspectiveInputWith conatusStabilityAblated ss conatusEnergy conatusGateFired field =
   let scope = selectPerspectiveScope ss
       registry = selfPerspectiveRegistry (ssSelfState ss)
       normativeProfile = activeNormativeProfile scope registry
@@ -112,11 +122,15 @@ assemblePerspectiveInput ss conatusEnergy conatusGateFired field =
       , pibEvidence = evidenceForScope scope (ssKnowledgeTree ss) (ssDialogueOutcomeLearning ss)
       , pibStanceSlice = stanceSliceForScope scope beliefStore
       , pibIdentitySlice = identitySlice ss
-      , pibConatusSlice = conatusSlice conatusEnergy conatusGateFired field
+      , pibConatusSlice = conatusSlice conatusStabilityAblated conatusEnergy conatusGateFired field
       , pibNormativeProfile = normativeProfile
       , pibCounterarguments = counterarguments
       , pibRevisionLineage = lineage
       }
+
+-- | No ablation: the production input bundle.
+assemblePerspectiveInput :: SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
+assemblePerspectiveInput = assemblePerspectiveInputWith False
 
 opinionCore :: PerspectiveInputBundle -> PerspectiveCandidate
 opinionCore bundle =
@@ -193,9 +207,18 @@ decidePerspectivePromotion registry bundle candidate admissibility =
       | stableCorroboration bundle candidate -> PpdPromoteEndorsed
       | otherwise -> PpdAcceptBounded
 
-applyPerspectiveOperator :: SystemState -> ConatusEnergy -> Bool -> Field -> SystemState
-applyPerspectiveOperator ss conatusEnergy conatusGateFired field =
-  let bundle = assemblePerspectiveInput ss conatusEnergy conatusGateFired field
+-- | Apply the operator with the P2 Conatus ablation switch.
+--
+-- @conatusStabilityAblated = True@ removes the Conatus contribution
+-- from 'csStability' only.  'csEnergy', 'csGateFired' and
+-- 'csFieldConfidence' keep the true values, so the admissibility gate
+-- still sees the real scalar.  The candidate scores
+-- ('pcConfidence', 'pcNormativeAlignment', 'pcInternalTension') are
+-- derived from 'csStability' and therefore do move — that is the
+-- channel the P2 measurement reads.
+applyPerspectiveOperatorWith :: Bool -> SystemState -> ConatusEnergy -> Bool -> Field -> SystemState
+applyPerspectiveOperatorWith conatusStabilityAblated ss conatusEnergy conatusGateFired field =
+  let bundle = assemblePerspectiveInputWith conatusStabilityAblated ss conatusEnergy conatusGateFired field
       candidate = opinionCore bundle
       admissibility = evaluatePerspectiveAdmissibility bundle candidate
       registry0 = selfPerspectiveRegistry (ssSelfState ss)
@@ -232,6 +255,10 @@ applyPerspectiveOperator ss conatusEnergy conatusGateFired field =
                 ss { ssGovernanceRuntimeFault = Just GrfRebuildMismatch }
               Left err ->
                 ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }
+
+-- | No ablation: the production operator application.
+applyPerspectiveOperator :: SystemState -> ConatusEnergy -> Bool -> Field -> SystemState
+applyPerspectiveOperator = applyPerspectiveOperatorWith False
 
 selectPerspectiveScope :: SystemState -> PerspectiveScope
 selectPerspectiveScope ss =
@@ -350,14 +377,23 @@ identitySlice ss =
       , isTurnCount = ssTurnCount ss
       }
 
-conatusSlice :: ConatusEnergy -> Bool -> Field -> ConatusSlice
-conatusSlice energy gateFired field =
+-- | Build the Conatus slice of the operator input.
+--
+-- @conatusStabilityAblated@ is the P2 measurement hook
+-- (docs/closure/P2_ABLATION_PREREG_2026-11-18.md): it zeroes only the
+-- Conatus term of 'csStability', leaving 'csEnergy' truthful.  The
+-- production callers pass 'False'.
+conatusSlice :: Bool -> ConatusEnergy -> Bool -> Field -> ConatusSlice
+conatusSlice conatusStabilityAblated energy gateFired field =
   let fieldConf = unFieldConfidence (fieldConfidence field)
+      stabilityBonus
+        | conatusStabilityAblated = 0.0
+        | otherwise = min 0.25 (max 0.0 (ceScalar energy / 80.0))
   in ConatusSlice
       { csEnergy = ceScalar energy
       , csGateFired = gateFired
       , csFieldConfidence = fieldConf
-      , csStability = clampUnit (fieldConf + min 0.25 (max 0.0 (ceScalar energy / 80.0)))
+      , csStability = clampUnit (fieldConf + stabilityBonus)
       }
 
 invalidRevisionStep :: PerspectiveInputBundle -> PerspectiveCandidate -> Bool

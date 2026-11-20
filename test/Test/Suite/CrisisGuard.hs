@@ -284,6 +284,28 @@ crisisGuardTests =
              Nothing
              (detectCrisisTrigger prompt))
         prompts
+  , TestLabel "P2 baseline corpus stays in Protocol A" $ TestCase $ do
+      let corpusPath = "spec/eval/p2_baseline_2026-11-18.tsv"
+      exists <- doesFileExist corpusPath
+      assertBool ("P2 corpus must exist: " <> corpusPath) exists
+      corpus <- readFile corpusPath
+      let prompts =
+            [ fields !! 2
+            | line <- T.lines (T.pack corpus)
+            , not (T.null line)
+            , not ("#" `T.isPrefixOf` line)
+            , let fields = T.splitOn "\t" line
+            , length fields == 4
+            ]
+      assertEqual "P2 corpus must keep its 200 authored prompts"
+        200 (length prompts)
+      mapM_
+        (\prompt ->
+           assertEqual
+             ("P2 prompt must not fire the hard gate: " <> T.unpack prompt)
+             Nothing
+             (detectCrisisTrigger prompt))
+        prompts
   , TestLabel "CrisisGuardTrace JSON roundtrip" $ TestCase $ do
       let trace = CrisisGuardTrace
             { cgtProtocolB = True

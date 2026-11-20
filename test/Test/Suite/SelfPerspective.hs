@@ -11,10 +11,11 @@ import qualified Data.Text as T
 import Test.HUnit
 
 import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
-import QxFx0.Self.Field (emptyField)
+import QxFx0.Self.Field (FieldConfidence(..), emptyField, fieldConfidence)
 import QxFx0.Self.Perspective
   ( applyPerspectiveDecision
   , assemblePerspectiveInput
+  , assemblePerspectiveInputWith
   , buildPerspectiveProjection
   , decidePerspectivePromotion
   , evaluatePerspectiveAdmissibility
@@ -62,7 +63,34 @@ selfPerspectiveTests =
   , TestLabel "SelfPerspective rollback restores prior projection" testPerspectiveRollbackRestoresPriorProjection
   , TestLabel "SelfPerspective projection is explainable and safe" testPerspectiveProjectionIsExplainableAndSafe
   , TestLabel "SelfPerspective candidate is NaN-safe" testPerspectiveCandidateIsNaNSafe
+  , TestLabel "SelfPerspective Conatus ablation touches only csStability" testPerspectiveConatusStabilityAblation
   ]
+
+-- | P2 measurement hook (docs/closure/P2_ABLATION_PREREG_2026-11-18.md):
+-- the ablation must zero exactly the Conatus bonus of 'csStability' and
+-- leave every other slice field — above all 'csEnergy', which the
+-- admissibility gate reads — truthful.
+testPerspectiveConatusStabilityAblation :: Test
+testPerspectiveConatusStabilityAblation = TestCase $ do
+  let ce = ConatusEnergy 14.09 (ConatusComponents 0 0 0 0 0.0)
+      -- 'emptyField' carries confidence 1.0, where 'clampUnit' saturates
+      -- the stability term; use an unsaturated field to measure it.
+      field = emptyField { fieldConfidence = FieldConfidence 0.5 }
+      base = pibConatusSlice (assemblePerspectiveInputWith False emptySystemState ce False field)
+      ablated = pibConatusSlice (assemblePerspectiveInputWith True emptySystemState ce False field)
+      expectedBonus = min 0.25 (max 0.0 (14.09 / 80.0))
+      wrapper = pibConatusSlice (assemblePerspectiveInput emptySystemState ce False field)
+      saturated = pibConatusSlice (assemblePerspectiveInputWith False emptySystemState ce False emptyField)
+  assertEqual "ablation must leave csEnergy truthful" (csEnergy base) (csEnergy ablated)
+  assertEqual "ablation must leave csGateFired" (csGateFired base) (csGateFired ablated)
+  assertEqual "ablation must leave csFieldConfidence" (csFieldConfidence base) (csFieldConfidence ablated)
+  assertBool "ablation must remove exactly the Conatus bonus"
+    (abs ((csStability base - csStability ablated) - expectedBonus) < 1e-9)
+  assertBool "the Conatus bonus must be the expected 14.09/80 term"
+    (abs ((csStability base - csFieldConfidence base) - expectedBonus) < 1e-9)
+  assertEqual "default wrapper must be the non-ablated bundle" base wrapper
+  assertEqual "a confidence-1.0 field saturates, so the term is invisible there"
+    1.0 (csStability saturated)
 
 testPerspectiveAdmissibilityRejectsInsufficientEvidence :: Test
 testPerspectiveAdmissibilityRejectsInsufficientEvidence = TestCase $ do

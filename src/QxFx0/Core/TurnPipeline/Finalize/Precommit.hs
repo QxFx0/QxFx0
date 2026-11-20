@@ -46,7 +46,7 @@ import QxFx0.Memory.Episodic (episodicTurnDelta)
 import QxFx0.Core.TurnPipeline.Finalize.Types
 import QxFx0.Core.TurnPipeline.Types
 import QxFx0.Learning.DialogueDevelopment (applyDialogueDevelopment)
-import QxFx0.Self.Perspective (applyPerspectiveOperator)
+import QxFx0.Self.Perspective (applyPerspectiveOperatorWith)
 import QxFx0.Core.EvidenceAdmissibility (classifyEvidenceIO)
 import QxFx0.Types.Evidence (EvidenceAdmissibility(..))
 import QxFx0.ExceptionPolicy (QxFx0Exception(..))
@@ -60,6 +60,18 @@ import QxFx0.Core.TurnPipeline.Types (tiAtomSet)
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
 import QxFx0.Types.State.SelfState (SelfState(..))
+
+-- | P2 measurement hook (docs/closure/P2_ABLATION_PREREG_2026-11-18.md):
+-- read 'QXFX0_ABLATE_CONATUS_STABILITY' once per turn.  'Nothing' / any
+-- value other than @"1"@ means the ablation is inactive, so the default
+-- turn is byte-identical to the pre-hook runtime.
+readConatusStabilityAblation :: PipelineIO -> IO Bool
+readConatusStabilityAblation pipelineIO = do
+  result <- resolveTurnEffect pipelineIO (TurnReqReadEnv conatusStabilityAblationEnvVar)
+  pure (case result of TurnResReadEnv (Just "1") -> True; _ -> False)
+
+conatusStabilityAblationEnvVar :: Text
+conatusStabilityAblationEnvVar = "QXFX0_ABLATE_CONATUS_STABILITY"
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
 planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =
@@ -107,6 +119,7 @@ resolveFinalizePrecommit pipelineIO plan = do
           , (PelFmarMode, TurnReqReadEnv "QXFX0_FMAR")
           , (PelFeedbackLoop, TurnReqReadEnv "QXFX0_FEEDBACK_LOOP")
           ]
+  conatusStabilityAblated <- readConatusStabilityAblation pipelineIO
   resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
     result <- resolveTurnEffect pipelineIO request
     pure (label, result)
@@ -137,6 +150,7 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled
       , fprFmarMode = fmarMode
       , fprFeedbackLoopActive = feedbackLoopActive
+      , fprConatusStabilityAblated = conatusStabilityAblated
       }
 
 buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
@@ -178,7 +192,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
       -- ADR-0032: record dialogue outcome, speech-policy pressure, and
       -- belief stance after base/external learning state has settled.
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
-      nextSystemState = applyPerspectiveOperator nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
+      nextSystemState = applyPerspectiveOperatorWith (fprConatusStabilityAblated precommitResults) nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
   let guardStatus = tdGuardStatus (taDecision turnArtifacts)
   evidenceAdmissibility <- classifyEvidenceIO guardStatus
   when (evidenceAdmissibility == EvidenceInadmissible) $

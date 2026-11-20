@@ -30,12 +30,12 @@ empty, every entry carries:
 
 ## 1. The allowlist
 
-**Status 2026-11-14:** §1 is no longer empty. Eleven eval-only tools are
+**Status 2026-11-19:** §1 is no longer empty. Twelve eval-only tools are
 registered below: the five pre-existing pilot tools plus
 `scripts/eval/prompt_frame_500.py`, `scripts/eval/gf_slot_gap.py`,
 `scripts/eval/gf_slot_realizability.py`,
-`scripts/eval/user_regime_report.py`, `scripts/eval/m7_compare.py` and
-`scripts/eval/r5_predict.py`. They are
+`scripts/eval/user_regime_report.py`, `scripts/eval/m7_compare.py`,
+`scripts/eval/r5_predict.py` and `scripts/eval/p2_ablation_report.py`. They are
 quarantined by
 `scripts/eval/NON_AUTHORITY.txt`, carry `--self-test` (enforced by
 `scripts/check_architecture.sh` rule [24]), and are not on any authority
@@ -56,8 +56,9 @@ closure-plan pass.
 | `scripts/eval/user_regime_report.py` | `eval-only` | Read-only report over `turn_quality.replay_trace_json` for the concept-v3 user regime (protocol, contour exits, prediction residual and bounded window, ontological move); `--census` adds a descriptive count of the decision surfaces (gate saturation, negative-act rate, act-branch candidates, moves, exits); opens the DB `mode=ro`, never writes, mirrors `analyzeUserRegime` and pins the mirrored constants against the Haskell source; self-tested (20 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the regime report is ported to Haskell or the capture is retired. |
 | `scripts/eval/m7_compare.py` | `eval-only` | Compares two M7 run directories on predicate choice (`derivation_rules`) and rendered surface (last parseable JSON line of `raw/<id>.log`, skipping the optional RTS report); used by `run_m7_batch.sh` for the replica leg and for baseline-vs-candidate regression checks; read-only, writes no artifact, treats a missing raw log as a blind comparison (FAIL); self-tested (10 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the M7 determinism check is ported to Haskell or the M7 packet is retired. |
 | `scripts/eval/r5_predict.py` | `eval-only` | Predicts the concept-v3 user regime (`encodeR5` → score → contour → move search) for an authored probe corpus *before* a capture, so a pre-registration's numbers are reproducible instead of hand-transcribed; parses the marker lexicons from `Semantic/Markers.hs`, pins every contour/move constant against the Haskell source, and validates itself against a recorded capture (`--verify-capture`, 80/80 exact on `user-regime-20261115`); `--what-if` diffs candidate topic-continuity rules and `--what-if-mention` diffs mention-vs-use scopes in the ontological layer; read-only, opens the DB `mode=ro`, writes no artifact; self-tested (18 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the regime prediction is ported to Haskell or the probe corpora are retired. |
+| `scripts/eval/p2_ablation_report.py` | `eval-only` | Compares the two P2 capture arms (baseline vs `QXFX0_ABLATE_CONATUS_STABILITY=1`) path by path over the persisted replay trace, the rendered surface and the final `PerspectiveRegistry`, and censuses the Conatus threshold consumers and the dead self-divergence channel; pins every threshold against the Haskell source (a moved constant aborts the report instead of silently measuring a different number); opens both DBs `mode=ro`, writes no artifact unless `--json` is given; flags a vacuous registry bar when both arms persist zero threads; self-tested (19 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the Conatus-consumer ablation is ported to Haskell or the P2 corpus is retired. |
 
-**Empty allowlist remains the closure goal.** The eleven entries above are
+**Empty allowlist remains the closure goal.** The twelve entries above are
 open retentions; they must be reviewed at every closure-plan pass.
 
 ## 2. The pre-closure inventory (transition reference)

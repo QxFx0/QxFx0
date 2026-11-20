@@ -622,7 +622,7 @@ ADR-0013 — that number was retired in the 0013-collision renumbering):
   utterance set; a learning-targets ADR for transition learning;
   absorption of the flag-off `ssUserModel` Bayesian niche.
 
-## Test counts (updated 2026-10-26)
+## Test counts (updated 2026-11-19)
 
 Per-suite HUnit case counts (QuickCheck properties included in the
 suites that run them). unit/fast/integration re-verified green on HEAD
@@ -654,16 +654,16 @@ available list); unset = byte-identical full run. Slow keeps its
 
 | Suite | Cases |
 |---|---|
-| qxfx0-test | 1390 measured = runtime 106 + http 23 (green 2026-11-18) +
+| qxfx0-test | 1390 measured = runtime 106 + http 23 (green 2026-11-19) +
 core slice 1261 not re-run (1254 + 7 `ReplayEnvelope` cases; last
 full core-slice green 2026-10-28 on `2144a6a`); full single-process
 unsupported on 15 GB with substrate — run via QXFX0_AGGREGATE_GROUP |
-| qxfx0-test-fast | 1962 (2026-11-18) |
-| qxfx0-test-unit | 1861 (2026-11-18; 1821 on the GF-case tree 2026-10-28, 1820 on committed fallback `2144a6a`, 1818 on the pre-fallback tree) |
+| qxfx0-test-fast | 1964 (2026-11-19; 1962 on 2026-11-18) |
+| qxfx0-test-unit | 1863 (2026-11-19; 1861 on 2026-11-18, 1821 on the GF-case tree 2026-10-28, 1820 on committed fallback `2144a6a`, 1818 on the pre-fallback tree) |
 | qxfx0-test-property | 244 |
 | qxfx0-test-integration | 47 |
 | qxfx0-test-slow | 190 (runtime 106 + state 50 + http 23 + lifecycle 11;
-per-group green 2026-11-18, all exit 0 — runtime 106 ran as ONE
+per-group green 2026-11-19, all exit 0 — runtime 106 ran as ONE
 process (no stall); the 2026-10-18 batch-2 run had self-recovered from a
 ~9.7 h stall at test #57 — known wart class, see batch-2 ops notes;
 unbuffered output required to judge the long runtime test) |
@@ -1402,3 +1402,33 @@ re-observe before treating as real).
   never claimed as a constant; ADR-0009:107 is value semantics and
   `Effects.hs:771` already derives it). No build was run; the diff
   contains no non-comment source line.
+
+- **P2 Conatus-consumer ablation landed 2026-11-19**: `csStability`
+  (`Self/Perspective.hs:607`, weight 0.20 in `computeNormativeAlignment`)
+  is the only *continuous* consumer of `ceScalar`; the other seven
+  consumers are floors 0.0–7.0 and stay unreachable. New default-off
+  hook `QXFX0_ABLATE_CONATUS_STABILITY` removes only the
+  `ceScalar / 80.0` term (`assemblePerspectiveInputWith` /
+  `applyPerspectiveOperatorWith`, read once per turn in
+  `Finalize/Precommit.hs`, key registered in `allowedReadEnvKeys`).
+  Equivalence lock: 12 turns, same session id, pre-hook vs flag-unset
+  = 0 differing trace paths, identical surfaces. Two 200-turn arms on
+  `spec/eval/p2_baseline_2026-11-18.tsv` (sha256 `49b6d6c3…444b7`,
+  Protocol A pin in `CrisisGuard`): surface 200/200, full trace
+  200/200, 0/200 threshold reachability, dead self-divergence channel
+  200/200. **Two pre-registered claims missed**: `csStability` *is*
+  persisted in the governance payload (31/31 events differ, mean Δ
+  −0.179945), and the sensitivity coefficient is 0.34, not 0.16
+  (measured max |Δconf| 0.01247). **P2 and P4 are vacuous**:
+  projections are empty 0/200 in both arms (quarantine never sets an
+  active version) and `canonicalizePersistedState` strips the registry
+  on save (`StatePersistence.hs:505`); a substantive P4 rebuilt from
+  history misses by `epConfidence` 0.012128 on the single
+  `p2-chal-01` thread. Near miss: the ablation crossed
+  `pcConfidence < 0.30` on `p2-terse-01` t7 and `p2-pess-01` t10, but
+  both were already `insufficient_evidence` (guard order). Tool
+  `scripts/eval/p2_ablation_report.py` (self-test 19/19, allowlist §1);
+  result `docs/closure/P2_ABLATION_RESULT_2026-11-19.md`;
+  pre-registration `docs/closure/P2_ABLATION_PREREG_2026-11-18.md`;
+  matrix `matrix-20261119`, 10/10 exit 0, **4 437** cases, tree
+  byte-identical start→end.
