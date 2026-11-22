@@ -181,6 +181,8 @@ dialogueSemanticSelectionTests =
   , TestLabel "genitive keeps inflected adjective intact" testGenitiveAdjectivePassthrough
   , TestLabel "genitive maps reflexive verbs to action" testGenitiveReflexiveVerb
   , TestLabel "genitive still inflects plain nouns" testGenitivePlainNoun
+  , TestLabel "contact frame greeting avoids distress framing" testContactFrameGreetingNoDistress
+  , TestLabel "repair frame keeps grounding" testRepairFrameKeepsGrounding
   ]
 
 testFormatSelectedPredicatesEmpty :: Test
@@ -567,6 +569,26 @@ testGenitivePlainNoun :: Test
 testGenitivePlainNoun = TestCase $ do
   assertEqual "plain noun still inflects"
     "свободы" (heuristicGenitive "свобода")
+
+-- | P3-2: a greeting must not receive the grounding/distress line.
+-- The live degraded path reaches 'FT.ContactFrame', which previously
+-- appended «Слышу, что сейчас нужна опора» to «Привет».
+testContactFrameGreetingNoDistress :: Test
+testContactFrameGreetingNoDistress = TestCase $ do
+  let result = runFrame (FT.ContactFrame "Привет") emptyContentSelector
+  assertBool "a greeting must not receive the grounding line"
+    (not ("нужна опора" `T.isInfixOf` result))
+  assertBool "a greeting keeps a healthy contact surface"
+    ("на связи" `T.isInfixOf` result)
+
+-- | Anti-overreach pin for P3-2: the distress line must survive where
+-- it belongs. A repair signal still asks for grounding; the greeting
+-- fix must not silence distress handling.
+testRepairFrameKeepsGrounding :: Test
+testRepairFrameKeepsGrounding = TestCase $ do
+  let result = runFrame FT.RepairFrame emptyContentSelector
+  assertBool "a repair signal keeps the grounding line"
+    ("восстановим опору" `T.isInfixOf` result)
 
 -- | 2026-09-20: covered topics with no composition route and no
 -- distinction content must name the missing link, not render the

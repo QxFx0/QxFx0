@@ -104,6 +104,7 @@ responsePlanTests =
   , TestLabel "covered topic claim keeps canonical mode" testCoveredClaimKeepsCanonicalMode
   , TestLabel "claim mode mapping is total and hypothetical-safe" testClaimModeMappingTotal
   , TestLabel "generated predicate under covered topic is hypothesis" testGeneratedPredicateUnderCoveredTopicIsHypothesis
+  , TestLabel "tautological basis is not rendered as evidence" testTautologicalBasisIsNotEvidence
   ]
 
 testNoTopic :: Test
@@ -180,6 +181,51 @@ testPlanRendering = TestCase $ do
   assertEqual "valid plan has no quality issues" [] (responsePlanQualityIssues plan)
   where
      contains needle haystack = needle `elem` T.words haystack || needle `T.isInfixOf` haystack
+
+-- | P3-1: a generated basis that repeats the thesis verbatim is not
+-- evidence. A known claim abstains; a hypothetical claim keeps the
+-- thesis but names the circular basis and asks for the frame criterion.
+testTautologicalBasisIsNotEvidence :: Test
+testTautologicalBasisIsNotEvidence = TestCase $ do
+  let tautologicalClaim =
+        PlannedClaim "claim-1" ClaimHypothetical
+          "усталость требует восстановления"
+          ["усталость требует восстановления"]
+          EvidenceSelectedPredicate 0.8
+      tautologicalPlan =
+        planWith tautologicalClaim (Just "усталость")
+          [PropositionPredicate "" "усталость требует восстановления" ""]
+          Nothing Nothing
+      rendered = renderResponseSemanticPlan tautologicalPlan
+  assertBool "a basis that repeats the thesis must not be rendered as evidence"
+    (not ("(основание: усталость требует восстановления)" `T.isInfixOf` rendered))
+  assertBool "the turn must ask for the missing frame criterion"
+    ("критерий" `T.isInfixOf` rendered)
+  let distinctClaim =
+        PlannedClaim "claim-2" ClaimHypothetical
+          "свобода предполагает выбор"
+          ["свобода ограничена ответственностью"]
+          EvidenceSelectedPredicate 0.8
+      distinctPlan =
+        planWith distinctClaim (Just "свобода")
+          [PropositionPredicate "" "свобода предполагает выбор" ""]
+          Nothing Nothing
+  assertBool "a distinct basis still renders as evidence"
+    ("(основание:" `T.isInfixOf` renderResponseSemanticPlan distinctPlan)
+  let knownClaim =
+        PlannedClaim "claim-3" ClaimKnown
+          "усталость требует восстановления"
+          ["усталость требует восстановления"]
+          EvidenceSelectedPredicate 0.8
+      knownPlan =
+        planWith knownClaim (Just "усталость")
+          [PropositionPredicate "" "усталость требует восстановления" ""]
+          Nothing Nothing
+      knownRendered = renderResponseSemanticPlan knownPlan
+  assertBool "a known claim with only a circular basis must abstain"
+    (not ("усталость требует восстановления" `T.isInfixOf` knownRendered))
+  assertBool "the abstention asks for the criterion"
+    ("критерий" `T.isInfixOf` knownRendered)
 
 testPlanRoundTrip :: Test
 testPlanRoundTrip = TestCase $ do

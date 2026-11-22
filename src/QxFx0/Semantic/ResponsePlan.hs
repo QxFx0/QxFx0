@@ -25,7 +25,7 @@ module QxFx0.Semantic.ResponsePlan
   , isSpeculativeRequestText
   ) where
 
-import Data.Char (isAlphaNum)
+import Data.Char (isAlphaNum, isSpace)
 import Data.List (find, sortOn)
 import Data.Maybe (fromMaybe, isJust, listToMaybe, mapMaybe, maybeToList)
 import qualified Data.Map.Strict as M
@@ -628,15 +628,50 @@ renderResponseSemanticPlan plan =
         [] -> "Я не могу построить содержательный план ответа без основания."
         claim:_ ->
           let proposition = fromMaybeText (pcText claim) (listToMaybe (rspPropositions plan))
+              thesisText = renderSemanticProposition proposition
               basis = T.intercalate "; " (pcPredicateRefs claim)
-              headline = responseLabel (rspGoal plan) <> ": "
-                <> ensureSentence (renderSemanticProposition proposition <> basisSuffix basis)
-              counterpointText = case rspCounterpoint plan of
-                Nothing -> Nothing
-                Just point -> Just ("Контрпроверка: " <> ensureSentence (pcText point))
-              nextMoveText = ("Следующий ход: " <>) . ensureSentence <$> rspNextMove plan
-              fragments = headline : mapMaybe id [counterpointText, nextMoveText]
-          in T.intercalate " " (take (dpMaxSentences (rspDiscourse plan)) fragments)
+              selfProving = basisRepeatsThesis thesisText basis
+          in if selfProving && pcMode claim == ClaimKnown
+               then selfProofRefusal
+               else
+                 let evidenceSuffix
+                       | selfProving = selfProofSuffix
+                       | otherwise = basisSuffix basis
+                     headline = responseLabel (rspGoal plan) <> ": "
+                       <> ensureSentence (thesisText <> evidenceSuffix)
+                     counterpointText = case rspCounterpoint plan of
+                       Nothing -> Nothing
+                       Just point -> Just ("Контрпроверка: " <> ensureSentence (pcText point))
+                     nextMoveText = ("Следующий ход: " <>) . ensureSentence <$> rspNextMove plan
+                     fragments = headline : mapMaybe id [counterpointText, nextMoveText]
+                 in T.intercalate " " (take (dpMaxSentences (rspDiscourse plan)) fragments)
+
+-- | P3-1: a generated basis that repeats the thesis verbatim is not
+-- evidence — it is a self-proof. Comparison is case-, punctuation- and
+-- whitespace-insensitive, so a trailing full stop cannot dodge the
+-- guard. Pure; pinned by 'testTautologicalBasisIsNotEvidence'.
+basisRepeatsThesis :: Text -> Text -> Bool
+basisRepeatsThesis thesis basis =
+  let norm = T.unwords . T.words . T.map keep
+      keep c = if isAlphaNum c || isSpace c then c else ' '
+      normalizedThesis = T.toLower (norm thesis)
+      normalizedBasis = T.toLower (norm basis)
+  in not (T.null normalizedBasis) && normalizedThesis == normalizedBasis
+
+-- | A /known/ claim whose only offered basis is the claim itself has no
+-- evidence at all, so the turn abstains and asks for the frame criterion
+-- instead of asserting a self-proved definition.
+selfProofRefusal :: Text
+selfProofRefusal =
+  "Основание совпало с тезисом дословно, поэтому я не выдаю его как подтверждение. Уточни рамку: какой критерий должен подтвердить тезис?"
+
+-- | A /hypothetical/ claim is already marked as unproven, so it is kept;
+-- the circular basis is named as such and an external criterion is
+-- requested. The plan may still carry a legitimate counterpoint and next
+-- move, and dropping the whole turn would lose them.
+selfProofSuffix :: Text
+selfProofSuffix =
+  " (основание совпадает с тезисом; нужен внешний критерий)"
 
 renderSemanticProposition :: SemanticProposition -> Text
 renderSemanticProposition proposition = case proposition of

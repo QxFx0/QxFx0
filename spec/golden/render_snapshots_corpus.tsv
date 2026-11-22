@@ -1,0 +1,18 @@
+# QxFx0 golden render snapshot corpus (P3-4, 2026-11-20 owner plan).
+# Strict mode, one fresh DB per session, one process per turn, substrate
+# disabled via QXFX0_BRAIN_KB_PATH -> missing file.
+# Columns: id<TAB>session<TAB>turn<TAB>input
+# Sessions are state trajectories: turns run in order against the state left
+# by the previous turn, so a turn number must be contiguous from 1.
+id	session	turn	input
+greeting-hello	s-greeting	1	привет
+filler-hm	s-filler	1	хм
+tautology-ustalost	s-tautology	1	усталость
+freedom-define	s-freedom	1	что такое свобода?
+freedom-challenge	s-freedom	2	это неверно, свобода не требует осознанности
+freedom-recover	s-freedom	3	тогда объясни, что такое ответственность?
+reflection-time	s-reflection	1	расскажи о времени
+distinction-pair	s-distinction	1	в чём разница между свободой и ответственностью?
+repair-misunderstanding	s-repair	1	я не понимаю, что ты имеешь в виду
+repair-smalltalk	s-repair	2	как жизнь?
+generative-thesis	s-generative	1	придумай тезис о свободе

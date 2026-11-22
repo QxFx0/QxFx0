@@ -105,7 +105,10 @@ import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Self.Field (Field(..))
 import QxFx0.Render.Dialogue
   ( DialogueRenderArtifact(..)
+  , GenerationAttempt(..)
+  , contentlessSurface
   , hasStructuredDialogueSurface
+  , isContentlessUtterance
   , renderArtifactViaAssemblyWithActiveQuestion
   , renderDialogueArtifactWithActiveQuestion
   , generateFromFrameWithActivation
@@ -442,12 +445,26 @@ planRenderEffectsForRuntimeImpl rp runtimeMode localRecoveryPolicy ss ti ts tp =
       viaAssembly = renderArtifactViaAssemblyWithActiveQuestion mActiveQuestion rp ss (tiFrame ti) rmpAfterLegit rcpFinal
                         bestTopic identityClaims (ssMorphology ss) (rcpStyle rcpFinal) (emptyParsedInput input) mNarrative mGeodesicPlan (tiField ti) renderSelector
       assemblyFallbackReason = fromMaybe "assembly_empty_fallback" (draFallbackReason viaAssembly)
-      dialogueArtifact
+      dialogueArtifact0
         | Just semanticArtifact <- viaSemantic = semanticArtifact
         | not (T.null (draRenderedText viaAssembly)) = viaAssembly
         | otherwise =
             (renderDialogueArtifactWithActiveQuestion mActiveQuestion (tiFrame ti) rmpAfterLegit rcpFinal bestTopic identityClaims (ssMorphology ss) (ssRuntimeParadigms ss) (tiField ti) renderSelector mActivationArtifact)
               { draFallbackReason = Just assemblyFallbackReason }
+      -- P3-3: a contentless utterance has no proposition to define,
+      -- ground or reflect. Replace the glued fragments (style prefix +
+      -- micro-plan preface + topic-less hold) with one coherent line.
+      dialogueArtifact
+        | isContentlessUtterance input =
+            dialogueArtifact0
+              { draRenderedText = contentlessSurface
+              , draTemplateBodyText = contentlessSurface
+              , draDerivationTags =
+                  "surface=contentless_filler"
+                    : filter (not . T.isPrefixOf "surface=") (draDerivationTags dialogueArtifact0)
+              , draGenerationTrace = GenerationAttempt "contentless_guard" "fired" : draGenerationTrace dialogueArtifact0
+              }
+        | otherwise = dialogueArtifact0
       forceFinalized =
         if structuredSurface
           then draRenderedText dialogueArtifact

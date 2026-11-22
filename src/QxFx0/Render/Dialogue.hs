@@ -19,6 +19,8 @@ module QxFx0.Render.Dialogue
   , renderOperatorAwareDialogue
   , moveToText
   , isVapidTopic
+  , isContentlessUtterance
+  , contentlessSurface
   , cleanTopic
   , stancePrefix
   , linearizeClaimAstRus
@@ -1284,6 +1286,30 @@ isVapidTopic :: Text -> Bool
 isVapidTopic t = let low = T.toLower (T.strip t) in
   T.null low || low `elem` vapidWords
 
+-- | P3-3: an utterance that carries no proposition — only interjections,
+-- punctuation or whitespace. Such a turn has nothing to define, ground or
+-- reflect; gluing a plan preface onto it produced noise like
+-- «Образно: Сначала задам определение Держу это как точку разбора.»
+--
+-- Deliberately narrow: a single content token is enough to keep the
+-- normal path, so «хм, а что такое свобода?» is not affected.
+isContentlessUtterance :: Text -> Bool
+isContentlessUtterance raw =
+  let tokens = tokenizeKeywordText (T.toLower raw)
+  in null tokens || all (`elem` contentlessTokens) tokens
+
+contentlessTokens :: [Text]
+contentlessTokens =
+  [ "хм", "мм", "эм", "ээ", "ага", "угу", "ох", "ах"
+  , "hmm", "mm", "mhm", "uh", "um", "er", "erm"
+  ]
+
+-- | The honest surface for a contentless turn: one coherent line that
+-- does not invent a topic and does not pretend to answer a proposition.
+contentlessSurface :: Text
+contentlessSurface =
+  "Я здесь. Скажи, о чём хочешь поговорить, — и я отвечу по существу."
+
 cleanTopic :: Text -> Text
 cleanTopic t = if isVapidTopic t then "" else T.strip t
 
@@ -1738,13 +1764,21 @@ contactGreetingSurface frame
   | hasAny greetingTokens ["как", "дела", "жизнь", "настроение"] =
       "Я на связи. Если коротко: рабочее состояние стабильное, можем сразу перейти к твоему вопросу."
   | hasAny greetingTokens ["привет", "здравствуй", "здравствуйте", "салют", "хай", "hello", "hi"] =
-      "Привет. Я на связи и готов к нормальному диалогу: можешь задать вопрос, выбрать тему или просто продолжить разговор."
+      "Привет. " <> healthyContactSurface
   | hasAny greetingTokens ["поговорим", "обсудим"] =
       "Да, давай. Предложи тему или задай один конкретный вопрос, и продолжим без лишних шагов."
   | otherwise =
       "Контакт есть. Готов продолжать: можешь задать вопрос, выбрать тему или уточнить рамку."
   where
     greetingTokens = tokenizeKeywordText (T.toLower (T.strip (ipfRawText frame)))
+
+-- | P3-2: a greeting is not a distress signal. The contact surface states
+-- availability and invites the next turn; it must never claim that the
+-- user needs grounding. Shared by the template contact path and the
+-- semantic-first 'ContactFrame' path.
+healthyContactSurface :: Text
+healthyContactSurface =
+  "Я на связи и готов к нормальному диалогу: можешь задать вопрос, выбрать тему или просто продолжить разговор."
 
 isAffectiveState :: Text -> Bool
 isAffectiveState lemma =
@@ -2220,7 +2254,7 @@ generateFromFrameWithActivation cs field mArtifact runtimeGraph ss frame morph =
     ("Вижу сигнал перегруза в текущем ходе. Я не буду наращивать интерпретации: сначала восстановим опору. Коротко укажи, где именно ответ сломался для тебя, и я переформулирую точечно.", [], [])
 
   FT.ContactFrame greeting ->
-    (greeting <> ". Слышу, что сейчас нужна опора. Давай упростим: выделим одну точку напряжения и выберем один короткий шаг на ближайшее время.", [], [])
+    (greeting <> ". " <> healthyContactSurface, [], [])
 
   FT.ReflectFrame topic ->
     let topicNom = toNominative morph topic

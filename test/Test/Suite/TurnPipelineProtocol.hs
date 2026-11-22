@@ -450,6 +450,7 @@ turnPipelineProtocolTests =
      , testAffectiveHelpQuestionUsesContactWithoutLexicalFallback
      , testGreetingSmallTalkUsesContactWithoutDistressFallback
      , testSmallTalkHowLifeUsesContactWithoutDistressFallback
+     , testContentlessFillerGetsCoherentReply
      , testPurposeQuestionUsesObjectTopicWithoutCaseRegression
      , testPurposeQuestionHandsAvoidsBrokenGenitive
      , testPurposeQuestionExistenceAvoidsInfinitiveGenitive
@@ -1446,6 +1447,23 @@ testSmallTalkHowLifeUsesContactWithoutDistressFallback = TestCase $
     assertEqual "small-talk life question should keep contact family" CMContact (tpFinalFamily tp)
     assertBool "small-talk should avoid distress framing" (not ("нужна опора" `T.isInfixOf` lowered))
     assertBool "small-talk should keep healthy contact response" ("на связи" `T.isInfixOf` lowered)
+
+-- | P3-3: a contentless filler must not be glued into
+-- «Образно: Сначала задам определение Держу это как точку разбора.»
+-- It gets one minimal coherent reply instead.
+testContentlessFillerGetsCoherentReply :: Test
+testContentlessFillerGetsCoherentReply = TestCase $
+  withDeterministicEmbedding $ do
+    (_ss, _ti, _ts, _tp, ta) <- buildRenderedFixture "хм"
+    let lowered = T.toLower (taRendered ta)
+    assertBool "filler must not be glued into a move preface"
+      (not ("сначала задам определение" `T.isInfixOf` lowered))
+    assertBool "filler must not be answered with a topic-less hold"
+      (not ("держу это как точку разбора" `T.isInfixOf` lowered))
+    assertBool "filler still gets a non-empty surface"
+      (not (T.null (T.strip lowered)))
+    assertEqual "the guard leaves exactly one surface tag"
+      1 (length (filter (T.isPrefixOf "surface=") (taDerivationTags ta)))
 
 testPurposeQuestionUsesObjectTopicWithoutCaseRegression :: Test
 testPurposeQuestionUsesObjectTopicWithoutCaseRegression = TestCase $
