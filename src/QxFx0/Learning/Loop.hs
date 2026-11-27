@@ -103,8 +103,8 @@ import QxFx0.Types.State.AdaptiveMutation
   )
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Invariants (checkInitialBlanket)
-import QxFx0.Self.Conatus (computeConatusEnergyWith, ceScalar)
-import QxFx0.Types.State.SelfState (selfConatusWeights)
+import QxFx0.Self.StateIntegrity (computeStateIntegrityEnergyWith, siScalar)
+import QxFx0.Types.State.SelfState (selfStateIntegrityWeights)
 
 -- | Telemetry emitted by one learning-loop iteration.
 data LearningTelemetry = LearningTelemetry
@@ -211,7 +211,7 @@ runLearningStepEnabled ss tool need query mResult =
       -- tool identity is the responder ('eqrToolName resp'), which may differ
       -- from the planned 'tool'. Telemetry and all reliability mutations on
       -- this branch attribute to the executed tool, never the planned one.
-      let preProxy = conatusProxyFromState ss
+      let preProxy = stateIntegrityProxyFromState ss
           executedTool = eqrToolName resp
           respTelemetry = baseTelemetry { ltExternalTool = Just executedTool }
       in case parseLLMResponseToFruit resp of
@@ -230,7 +230,7 @@ runLearningStepEnabled ss tool need query mResult =
           -- Predictive authority is LOCALLY derived from the received payload's
           -- quality (definition/morphology/need-alignment), clamped to a bounded
           -- range — NOT trusted from the remote's self-asserted predictiveDelta,
-          -- which a peer could inflate (e.g. 999.0). Mirrors the conatus path,
+          -- which a peer could inflate (e.g. 999.0). Mirrors the state-integrity path,
           -- which is already derived from local state change rather than payload.
           let derivedPredictive = aadPredictiveDelta (deriveAdmissionAuthorityDeltas ss payload) in
           case validateFruitPayload payload morph of
@@ -238,7 +238,7 @@ runLearningStepEnabled ss tool need query mResult =
               let rel1 = updateToolReliability executedTool False rel0
                   ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
                   -- ss1 does not yet contain the quarantined fruit; add 0.01 proxy for tree growth
-                  postProxy = conatusProxyFromState ss1 + 0.01
+                  postProxy = stateIntegrityProxyFromState ss1 + 0.01
                   fruit = payloadToFruit payload turn False (postProxy - preProxy) derivedPredictive
                   tree1 = quarantineFruit fruit tree0
                   ss2   = ss1 { ssKnowledgeTree = tree1 }
@@ -258,7 +258,7 @@ runLearningStepEnabled ss tool need query mResult =
                 SandboxReject metrics reason ->
                   let rel1 = updateToolReliability executedTool False rel0
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1 }
-                      postProxy = conatusProxyFromState ss1
+                      postProxy = stateIntegrityProxyFromState ss1
                       fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy) derivedPredictive
                       tree1 = quarantineFruit fruit tree0
                       ss2   = ss1 { ssKnowledgeTree = tree1 }
@@ -278,7 +278,7 @@ runLearningStepEnabled ss tool need query mResult =
                   let rel1 = updateToolReliability executedTool True rel0
                       morph1 = mergeMorphologyPayload morph validatedPayload
                       ss1  = ss { ssKnowledgeTree = tree0, ssToolReliability = rel1, ssMorphology = morph1 }
-                      postProxy = conatusProxyFromState ss1 + 0.01
+                      postProxy = stateIntegrityProxyFromState ss1 + 0.01
                       fruit = payloadToFruit validatedPayload turn True (postProxy - preProxy) derivedPredictive
                       tree1 = graftFruit (renderNeedTag need) fruit tree0
                       llmNetwork = applyLLMResponseToSemanticNetwork need resp
@@ -297,34 +297,34 @@ runLearningStepEnabled ss tool need query mResult =
                         }
                   in (appendAdaptiveMutationRecords records ss2, tel)
 
--- | Compute a proxy Conatus scalar from the current SystemState.
--- Includes the actual ConatusEnergy from SelfBlanket plus a small
+-- | Compute a proxy state-integrity scalar from the current SystemState.
+-- Includes the actual StateIntegrity from SelfBlanket plus a small
 -- knowledge-tree-size term so that graft/quarantine changes are visible.
-conatusProxyFromState :: SystemState -> Double
-conatusProxyFromState s =
+stateIntegrityProxyFromState :: SystemState -> Double
+stateIntegrityProxyFromState s =
   let blanket = computeSelfBlanket s
       violations = checkInitialBlanket blanket
-      energy = ceScalar (computeConatusEnergyWith
-        (selfConatusWeights (ssSelfState s)) blanket violations)
+      energy = siScalar (computeStateIntegrityEnergyWith
+        (selfStateIntegrityWeights (ssSelfState s)) blanket violations)
       tree = ssKnowledgeTree s
       treeSize = sum (map length (M.elems (ktBranches tree))) + length (ktQuarantine tree)
   in energy + 0.01 * fromIntegral treeSize
 
 -- | Convert a validated payload into a 'KnowledgeFruit'.
 -- BOTH authority deltas are derived locally rather than trusted from the
--- external payload: the conatus delta from actual state change (pre vs post),
+-- external payload: the state-integrity delta from actual state change (pre vs post),
 -- and the predictive delta (passed in) from 'deriveAdmissionAuthorityDeltas'
 -- over the payload's quality, clamped. The payload's self-asserted
 -- @kfpPredictiveDelta@ is deliberately NOT stored — a remote peer must not be
 -- able to write its own authority into the knowledge tree.
 payloadToFruit :: KnowledgeFruitPayload -> Int -> Bool -> Double -> Double -> KnowledgeFruit
-payloadToFruit payload turn validated conatusDelta predictiveDelta =
+payloadToFruit payload turn validated stateIntegrityDelta predictiveDelta =
   KnowledgeFruit
     { kfProposition     = kfpProposition payload
     , kfWord            = kfpWord payload
     , kfSource          = kfpSource payload
     , kfValidated       = validated
-    , kfConatusDelta    = conatusDelta
+    , kfStateIntegrityDelta    = stateIntegrityDelta
     , kfPredictiveDelta = predictiveDelta
     , kfGraftedTurn     = if validated then Just turn else Nothing
     , kfObservedTurn    = turn
@@ -428,14 +428,14 @@ renderValidationError (VeInvalidField f r) = T.concat ["field:", f, "=", r]
 renderSandboxMetrics :: SandboxMetrics -> Text
 renderSandboxMetrics m =
   T.concat
-    [ "conatus=", T.pack (show (sbConatusTrend m))
+    [ "conatus=", T.pack (show (sbStateIntegrityTrend m))
     , ";unc=", T.pack (show (sbUncertaintyTrend m))
     , ";loop=", T.pack (show (sbRepairLoopFreq m))
     , ";net=", T.pack (show (sbNetScore m))
     ]
 
 renderSandboxRejectReason :: SandboxRejectReason -> Text
-renderSandboxRejectReason SbrDegradingConatus   = "degrading_conatus"
+renderSandboxRejectReason SbrDegradingStateIntegrity   = "degrading_conatus"
 renderSandboxRejectReason SbrRisingUncertainty  = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk = "repair_loop"
 renderSandboxRejectReason SbrNegativeNetScore   = "negative_net"

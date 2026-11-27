@@ -202,7 +202,7 @@ relationTypeBias fp rt =
     RelTransforms     -> 0.4 * max consolid reson
     RelCreatedFrom    -> 0.3 * consolid
 
-    -- Direction/action (Conatus-adjacent)
+    -- Direction/action (state-integrity-adjacent)
     RelDirectedAt     -> 0.4 * consolid
     RelOrientsToward  -> 0.3 * reson
     RelPrescribes     -> 0.4 * consolid

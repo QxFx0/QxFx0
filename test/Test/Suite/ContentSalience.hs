@@ -26,7 +26,7 @@ import QxFx0.Self.Salience
   , Salience(..)
   )
 import QxFx0.Self.Field (Field, emptyField, fieldResonance, mkResonance)
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Core.ContentCluster
   ( ClusterInsight(..)
   , contentSalienceActive
@@ -56,8 +56,8 @@ contentSalienceTests =
     TestLabel "WP-C: content saliency parameter affects salience score" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 5.0 3.0 2.0 0.0 0.0
-            energy = ConatusEnergy 10.0 components
+            components = StateIntegrityComponents 5.0 3.0 2.0 0.0 0.0
+            energy = StateIntegrity 10.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             
             -- Compute salience with low content saliency
@@ -75,8 +75,8 @@ contentSalienceTests =
       TestCase $ do
         let weights = defaultSalienceWeights
             -- Low conatus energy and low field signals
-            components = ConatusComponents 0.5 0.3 0.2 0.0 0.0
-            energy = ConatusEnergy 1.0 components
+            components = StateIntegrityComponents 0.5 0.3 0.2 0.0 0.0
+            energy = StateIntegrity 1.0 components
             field = emptyField { fieldResonance = mkResonance 0.1 }
             
             -- High content saliency
@@ -86,7 +86,7 @@ contentSalienceTests =
         -- With high content saliency and low other signals, content saliency
         -- should be able to become the dominant driver
         assertBool "content saliency can be dominant driver"
-          (driver == DrivenByContentSaliency || driver /= DrivenByConatusGate)
+          (driver == DrivenByContentSaliency || driver /= DrivenByStateIntegrityGate)
 
     -- The flag is now on (promoted 2026-06-04).
   , TestLabel "WP-C: content saliency is promoted to default-on" $
@@ -98,8 +98,8 @@ contentSalienceTests =
   , TestLabel "WP-C anti-rot: content saliency influences holistic bias" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 2.5 1.5 1.0 0.0 0.0
-            energy = ConatusEnergy 5.0 components
+            components = StateIntegrityComponents 2.5 1.5 1.0 0.0 0.0
+            energy = StateIntegrity 5.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             
             salience0 = computeSalience weights energy field 0.0
@@ -116,8 +116,8 @@ contentSalienceTests =
   , TestLabel "WP-C: confidence accounts for content saliency contribution" $
       TestCase $ do
         let weights = defaultSalienceWeights
-            components = ConatusComponents 2.5 1.5 1.0 0.0 0.0
-            energy = ConatusEnergy 5.0 components
+            components = StateIntegrityComponents 2.5 1.5 1.0 0.0 0.0
+            energy = StateIntegrity 5.0 components
             field = emptyField { fieldResonance = mkResonance 0.5 }
             
             salienceLow = computeSalience weights energy field 0.0

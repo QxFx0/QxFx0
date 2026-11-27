@@ -43,7 +43,8 @@ import QxFx0.Types.Sense (SenseAxis, SenseOperator, RhetoricalMove)
 import QxFx0.Types.State.DialogueDevelopment (DialoguePhase)
 import QxFx0.Types.Domain.User (IdentityClaimRef)
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
-import QxFx0.Types.Self.Conatus (ConatusEnergy)
+import QxFx0.Types.Self.StateIntegrity (StateIntegrity)
+import QxFx0.Types.Self.ConatusContour (ConatusContour)
 
 import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.Self.Essence (EssenceResetEvent)
@@ -298,8 +299,8 @@ data TurnReplayTrace = TurnReplayTrace
   , trcPerspectiveProjections :: ![PerspectiveProjection]
     -- ^ P4: bounded list of active safe projections, preserving the fact
     --   that the canonical registry may contain multiple active scopes.
-  , trcConatusEnergy :: !ConatusEnergy
-    -- ^ P3: full ConatusEnergy record (ceScalar + ceComponents) from the
+  , trcConatusEnergy :: !StateIntegrity
+    -- ^ P3: full StateIntegrity record (siScalar + siComponents) from the
     --   current turn's PrepareStatic. Replay can reconstruct the scalar
     --   and per-axis decomposition from this field alone.
   , trcSelfDivergenceTotal :: !(Maybe Double)
@@ -307,7 +308,7 @@ data TurnReplayTrace = TurnReplayTrace
     --   witness -> diff).  @Nothing@ on the first turn (no prediction
     --   anchor yet) and whenever the prediction anchor is absent.
   , trcSelfDivergencePenalty :: !Double
-    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    -- ^ A-slice: the state-integrity penalty share (<= 0) applied this turn
     --   from the previous turn's divergence.  @0@ when no previous
     --   measurement existed or divergence was below the threshold.
   , trcSelfDivergenceWindowMean :: !(Maybe Double)
@@ -319,8 +320,13 @@ data TurnReplayTrace = TurnReplayTrace
     --   prediction (i.e. a previous Field observation existed).
   , trcConatusGateFired :: !Bool
     -- ^ P3: True when the structural-energy gate fired this turn
-    --   (conatusGateFires). Together with trcConatusEnergy enables
-    --   replay-time explanation of Conatus-driven behaviour.
+    --   (stateIntegrityGateFires). Together with trcConatusEnergy enables
+    --   replay-time explanation of StateIntegrity-driven behaviour.
+  , trcConatusContour :: !(Maybe ConatusContour)
+    -- ^ P4 (2026-11-23): the four self-maintenance facts of this turn
+    --   (blanket integrity, recovery events, essence commitment, crisis
+    --   availability).  Observational only: nothing reads it.  @Nothing@
+    --   on traces recorded before P4.
   , trcField :: !Field
     -- ^ P3: full Field Σ-type (resonance, atmosphere, confidence,
     --   consolidation, counterfactual) from the current turn.
@@ -822,6 +828,7 @@ instance FromJSON TurnReplayTrace where
       <*> o .:? "trcSelfDivergenceWindowMean"
       <*> o .:? "trcSelfDivergencePredictionActive" .!= False
       <*> o .: "trcConatusGateFired"
+      <*> o .:? "trcConatusContour"
       <*> o .: "trcField"
       <*> o .:? "trcIdentityClaims" .!= []
       <*> o .:? "trcEpisodicEncoding" .!= []

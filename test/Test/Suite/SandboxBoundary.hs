@@ -34,7 +34,7 @@ sandboxBoundaryTests =
 
 -- Helper to create a test payload with specific deltas
 makeTestPayload :: Double -> Double -> KnowledgeFruitPayload
-makeTestPayload conatusDelta predictiveDelta = KnowledgeFruitPayload
+makeTestPayload stateIntegrityDelta predictiveDelta = KnowledgeFruitPayload
   { kfpProposition = "test proposition"
   , kfpWord = "тест"
   , kfpDefinition = "A test definition with sufficient words to pass validation"
@@ -44,7 +44,7 @@ makeTestPayload conatusDelta predictiveDelta = KnowledgeFruitPayload
       , mpCases = Just $ M.fromList [("nom", "тест"), ("gen", "теста")]
       }
   , kfpSource = SourceLLM
-  , kfpConatusDelta = conatusDelta
+  , kfpStateIntegrityDelta = stateIntegrityDelta
   , kfpPredictiveDelta = predictiveDelta
   }
 
@@ -70,7 +70,7 @@ testRejectsBelowFloor = TestCase $ do
       result = runSandboxGateWithConfig cfg ss payload
 
   case result of
-    SandboxReject _ SbrDegradingConatus ->
+    SandboxReject _ SbrDegradingStateIntegrity ->
       assertBool "Score below floor must be rejected" True
     _ ->
       assertFailure $ "Expected rejection for score below safety floor, got: " ++ show result
@@ -90,7 +90,7 @@ testRejectsAtFloor = TestCase $ do
       result = runSandboxGateWithConfig cfg ss payload
   
   case result of
-    SandboxReject _ SbrDegradingConatus ->
+    SandboxReject _ SbrDegradingStateIntegrity ->
       assertBool "Score at or near floor must be rejected (non-regression)" True
     _ ->
       -- This is acceptable if the actual computation doesn't hit exactly at floor
@@ -115,14 +115,14 @@ testAcceptsAboveFloor = TestCase $ do
     SandboxReject _ reason ->
       -- May be rejected for other reasons (net score, uncertainty, etc.)
       -- but not for conatus floor
-      assertBool ("Rejected for: " ++ show reason) (reason /= SbrDegradingConatus)
+      assertBool ("Rejected for: " ++ show reason) (reason /= SbrDegradingStateIntegrity)
 
 -- | Test that the boundary condition uses <= (not <) by verifying the comment
 -- and behavior. This is a meta-test that documents the expected behavior.
 testBoundaryUsesLessOrEqual :: Test
 testBoundaryUsesLessOrEqual = TestCase $ do
   -- This test documents that the boundary check in Sandbox.hs line 169
-  -- uses `projectedConatus <= scSafetyFloor cfg` (not <)
+  -- uses `projectedStateIntegrity <= scSafetyFloor cfg` (not <)
   -- This ensures that scores exactly at the floor are rejected,
   -- implementing the non-regression criterion correctly.
   assertBool "Boundary condition uses <= for non-regression semantics" True

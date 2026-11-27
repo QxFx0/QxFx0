@@ -18,7 +18,7 @@ import Data.Text (Text)
 
 data InterpretationAdmissionInput = InterpretationAdmissionInput
   { iaiTruthContractStatus :: !TruthContractStatus
-  , iaiConatusGateFired :: !Bool
+  , iaiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data InterpretationAdmissionDecision
@@ -36,7 +36,7 @@ data AdmittedInterpretation = AdmittedInterpretation
 
 admitInterpretationCandidate :: InterpretationAdmissionInput -> CanonicalMoveFamily -> InputPropositionFrame -> AdmittedInterpretation
 admitInterpretationCandidate input recommendedFamily frame
-  | iaiConatusGateFired input && ipfConfidence frame < parserHighConfidenceThreshold =
+  | iaiStateIntegrityGateFired input && ipfConfidence frame < parserHighConfidenceThreshold =
       if interpretationAlreadyWeakOrAmbiguous recommendedFamily frame
         then AdmittedInterpretation recommendedFamily frame IadPreserveAmbiguous
         else narrowed "conatus_gate" IadFallbackClarify

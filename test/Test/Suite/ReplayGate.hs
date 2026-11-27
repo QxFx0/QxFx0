@@ -46,9 +46,9 @@ import Data.Function (($))
 import Data.Text (Text)
 import Prelude
 
-import QxFx0.Self.Conatus
-  ( ConatusEnergy (..)
-  , computeConatusEnergy
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrity (..)
+  , computeStateIntegrityEnergy
   )
 import QxFx0.Self.Field
   ( Field (..)
@@ -70,7 +70,7 @@ import QxFx0.Self.Types
 -- The 'ReplayGateOutput' Σ-type is the spec for what the
 -- replay gate accepts.
 data ReplayGateOutput
-  = ReplayConatus !ConatusEnergy
+  = ReplayStateIntegrity !StateIntegrity
   | ReplayField   !Field
   | ReplaySalience !Salience
   deriving stock (Eq, Show)
@@ -93,12 +93,12 @@ p1Serializable = TestLabel "P1: every canonical contour is serializable" $
           , sbIdentityClaimsCount = 2
           , sbTurnCount           = 5
           }
-        ce  = computeConatusEnergy baseline []
+        ce  = computeStateIntegrityEnergy baseline []
         f   = combineField CombineMaxima emptyField emptyField
         s   = computeSalience defaultSalienceWeights ce
     -- Conatus
-    let s1 = show (ReplayConatus ce)
-    assertBool ("P1: show (ReplayConatus ce) is empty: " <> s1)
+    let s1 = show (ReplayStateIntegrity ce)
+    assertBool ("P1: show (ReplayStateIntegrity ce) is empty: " <> s1)
                (not (null s1))
     -- Field
     let s2 = show (ReplayField f)
@@ -126,8 +126,8 @@ p2Replayable = TestLabel "P2: compute functions are deterministic" $
           , sbTurnCount           = 5
           }
     -- Conatus
-    let ce1 = computeConatusEnergy baseline []
-        ce2 = computeConatusEnergy baseline []
+    let ce1 = computeStateIntegrityEnergy baseline []
+        ce2 = computeStateIntegrityEnergy baseline []
     ce1 @?= ce2
     -- Field
     let f1 = combineField CombineMaxima emptyField emptyField
@@ -158,7 +158,7 @@ data ReplaySnapshot
 -- any 'ReplaySnapshot' yields a 'ReplayGateOutput'.
 replayContour :: ReplaySnapshot -> ReplayGateOutput
 replayContour (ReplaySnapshot b w _) =
-  let ce = computeConatusEnergy b []
+  let ce = computeStateIntegrityEnergy b []
       s  = computeSalience w ce
   in ReplaySalience (s emptyField 0.0)
 
@@ -202,13 +202,13 @@ p4TraceExplainable = TestLabel "P4: every canonical contour has a named trc* fie
     -- REPLAY_GATE_TRIAGE.md §1. The test asserts that
     -- the names are non-empty (i.e. the discipline is
     -- visible in the docs).
-    let conatusField = "trcConatusEnergy" :: Text
+    let stateIntegrityField = "trcConatusEnergy" :: Text
         fieldField   = "trcField"         :: Text
         salienceField = "trcSalienceDriver" :: Text
         deliberationField = "trcDeliberationRule" :: Text
         identityField = "trcIdentityClaims" :: Text
-    assertBool ("P4: trcConatusEnergy is empty: " <> show conatusField)
-               (not (null (show conatusField)))
+    assertBool ("P4: trcConatusEnergy is empty: " <> show stateIntegrityField)
+               (not (null (show stateIntegrityField)))
     assertBool ("P4: trcField is empty: " <> show fieldField)
                (not (null (show fieldField)))
     assertBool ("P4: trcSalienceDriver is empty: " <> show salienceField)

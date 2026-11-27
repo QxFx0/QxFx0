@@ -12,9 +12,9 @@ import QxFx0.Runtime.Session
   , governanceAuthorityStatus
   )
 import QxFx0.Types.Observability (TruthContractStatus(..))
-import QxFx0.Self.Conatus
-  ( ConatusComponents(..)
-  , ConatusEnergy(..)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents(..)
+  , StateIntegrity(..)
   )
 import QxFx0.Self.Field
   ( defaultFieldHeuristics
@@ -83,7 +83,7 @@ import QxFx0.Types.State.Governance
   )
 import QxFx0.Types.State.Perspective
   ( ClaimStanceRef(..)
-  , ConatusSlice(..)
+  , StateIntegritySlice(..)
   , CounterargumentRef(..)
   , EvidenceRef(..)
   , IdentitySlice(..)
@@ -264,7 +264,7 @@ testPerspectiveOperatorAtomicOnAppendFailure = TestCase $ do
         , ssSelfState = (ssSelfState emptySystemState)
             { selfPerspectiveRegistry = registry1 }
         }
-      after = applyPerspectiveOperator before positiveConatus False emptyField
+      after = applyPerspectiveOperator before positiveStateIntegrity False emptyField
   assertEqual "append failure leaves canonical history unchanged"
     (ssGovernanceHistory before)
     (ssGovernanceHistory after)
@@ -697,7 +697,7 @@ mkPerspectiveBundle turn evidence stance counterarguments profile lineage = Pers
       , isIdentityClaimCount = 0
       , isTurnCount = turn
       }
-  , pibConatusSlice = ConatusSlice
+  , pibStateIntegritySlice = StateIntegritySlice
       { csEnergy = 10.0
       , csGateFired = False
       , csFieldConfidence = 1.0
@@ -902,14 +902,14 @@ assertLinePresent :: String -> T.Text -> [T.Text] -> IO ()
 assertLinePresent label expected lines' =
   assertBool label (expected `elem` lines')
 
-positiveConatus :: ConatusEnergy
-positiveConatus = ConatusEnergy
-  { ceScalar = 10.0
-  , ceComponents = ConatusComponents
-      { ccMorphology = 0.0
-      , ccIdentity = 0.0
-      , ccTurns = 10.0
-      , ccPenalty = 0.0
-      , ccSelfDivergence = 0.0
+positiveStateIntegrity :: StateIntegrity
+positiveStateIntegrity = StateIntegrity
+  { siScalar = 10.0
+  , siComponents = StateIntegrityComponents
+      { sicMorphology = 0.0
+      , sicIdentity = 0.0
+      , sicTurns = 10.0
+      , sicPenalty = 0.0
+      , sicSelfDivergence = 0.0
       }
 }

@@ -31,6 +31,7 @@ import QxFx0.Core.TopicDrift.Pressure (buildDreamOutcome)
 import QxFx0.Core.Observability
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Self.SelfDivergence (windowMeanDivergence)
+import QxFx0.Self.ConatusContour (computeConatusContour, crisisPackAvailable)
 import QxFx0.Types.Self.SelfDivergence (SelfDivergenceE(..))
 import QxFx0.Core.TruthContract
   ( normalizedReplayProvenanceStatus
@@ -89,7 +90,7 @@ import QxFx0.Types.ExternalQuery (renderExternalQueryError)
 import QxFx0.Types.RuntimeRegime (rrFamilyDivergenceActive, rrMathVersion, rrRglMorphologyActive)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), scsActive, scsQuarantine)
 import QxFx0.Semantic.Network.Types (ActivationArtifact(..), ActivationStep(..), EdgeSource(..))
-import QxFx0.Safety.CrisisGuard (crisisResourceVersion)
+import QxFx0.Safety.CrisisGuard (crisisResourceVersion, crisisResourcesRu)
 import QxFx0.Types.Safety.Crisis
   ( CrisisCause(..)
   , CrisisGuardTrace(..)
@@ -228,6 +229,11 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
             (Nothing, Nothing, [])
       traceSalience = turnInputSalience ti
       postEssence = selfEssence (ssSelfState nextSs)
+      conatusContour = computeConatusContour
+        (tiBlanketViolationCount ti)
+        (taLocalRecoveryCause ta)
+        postEssence
+        (crisisPackAvailable crisisResourcesRu)
       perspectiveProjections = buildActivePerspectiveProjections (selfPerspectiveRegistry (ssSelfState nextSs))
       learningVerdict = deriveLearningReplayVerdict nextSs ta
       -- P8: Audit trail visibility fields
@@ -407,7 +413,7 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
                 projection:_ -> Just projection
                 [] -> Nothing
           , trcPerspectiveProjections = perspectiveProjections
-          , trcConatusEnergy = tiConatusEnergy ti
+          , trcConatusEnergy = tiStateIntegrity ti
           , trcSelfDivergenceTotal =
               sdeTotalDivergence <$> selfLastDivergence (ssSelfState nextSs)
           , trcSelfDivergencePenalty = tiSelfDivergencePenalty ti
@@ -415,7 +421,8 @@ buildTurnProjection runtimeMode shadowPolicy localRecoveryPolicy semanticIntrosp
               let w = selfDivergenceWindow (ssSelfState nextSs)
               in if null w then Nothing else Just (windowMeanDivergence w)
           , trcSelfDivergencePredictionActive = maybe False (const True) (tiSelfPrediction ti)
-          , trcConatusGateFired = tiConatusGateFired ti
+          , trcConatusGateFired = tiStateIntegrityGateFired ti
+          , trcConatusContour = Just conatusContour
           , trcField = tiField ti
           , trcIdentityClaims = ssIdentityClaims nextSs
           , trcEpisodicEncoding = etdEncodedIds episodicDelta

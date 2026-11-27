@@ -27,7 +27,7 @@ import QxFx0.Types (TruthContractStatus)
 
 data CommitmentAdmissionInput = CommitmentAdmissionInput
   { caiTruthContractStatus :: !TruthContractStatus
-  , caiConatusGateFired :: !Bool
+  , caiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data CommitmentAdmissionDecision
@@ -97,7 +97,7 @@ deriveDialogueCommitmentLedger existing frame =
 deriveDialogueCommitmentCandidate :: UtteranceSemanticFrame -> Maybe DialogueCommitment
 deriveDialogueCommitmentCandidate frame =
   -- This stage builds a semantic commitment candidate from local dialogue
-  -- content only. Constitutional contours (truth contract, conatus gate,
+  -- content only. Constitutional contours (truth contract, state-integrity gate,
   -- recovery/non-authoritative state, route legality, and post-turn
   -- admissibility) still govern whether that candidate later strengthens,
   -- stays unresolved, is contested, or is suspended inside canonical
@@ -117,7 +117,7 @@ mergeDialogueCommitmentCandidate (DialogueCommitmentLedger existing) mCandidate 
 
 admitDialogueCommitmentCandidate :: CommitmentAdmissionInput -> DialogueCommitment -> (DialogueCommitment, CommitmentAdmissionDecision)
 admitDialogueCommitmentCandidate input candidate
-  | caiConatusGateFired input =
+  | caiStateIntegrityGateFired input =
       case dcStatus candidate of
         CsAccepted -> (candidate { dcStatus = CsSuspended }, CadSuspendStrengthening)
         CsContested -> (candidate { dcStatus = CsSuspended }, CadSuspendStrengthening)

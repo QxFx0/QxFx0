@@ -90,7 +90,7 @@ import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Types.SemanticConfig (SemanticConfig)
 import QxFx0.Semantic.DialogAtom (DialogAtoms)
 import QxFx0.Self.Blanket (computeSelfBlanket)
-import QxFx0.Self.Conatus (ConatusEnergy, computeConatusEnergyWith)
+import QxFx0.Self.StateIntegrity (StateIntegrity, computeStateIntegrityEnergyWith)
 import QxFx0.Self.Field
   ( Field (..)
   , FieldHeuristics
@@ -108,7 +108,7 @@ import QxFx0.Self.Salience
   ( SalienceWeights
   , SelfVerdict
   , computeSelfVerdict
-  , conatusGateFires
+  , stateIntegrityGateFires
   )
 import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from Spectral, WP-I Tier-0)
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), defaultEssenceModulation)
@@ -244,8 +244,8 @@ import Data.Time.Clock (UTCTime)
 data TurnEffectRequest
   = TurnReqEmbedding !Text
   | TurnReqNixGuard !Text !Double !Double
-  | TurnReqConsciousness !SemanticInput !Double !Double !ConatusEnergy !SalienceWeights
-  | TurnReqIntuition !Text !Double !Double !Int !ConatusEnergy !SalienceWeights !SemanticConfig
+  | TurnReqConsciousness !SemanticInput !Double !Double !StateIntegrity !SalienceWeights
+  | TurnReqIntuition !Text !Double !Double !Int !StateIntegrity !SalienceWeights !SemanticConfig
   | TurnReqApiHealth
   | TurnReqShadow !CanonicalMoveFamily !IllocutionaryForce ![AtomTag]
   | TurnReqAgdaVerify
@@ -313,27 +313,27 @@ data PrepareStatic = PrepareStatic
     --   correction rewrite). Stored by Finalize; trace-only.
   , psResonance :: !Double
   , psAtomLoad :: !Double
-  , psConatusEnergy :: !ConatusEnergy
-    -- ^ Phase 2.5 (M2d): the runtime Conatus energy computed
+  , psStateIntegrity :: !StateIntegrity
+    -- ^ Phase 2.5 (M2d): the runtime state-integrity energy computed
     --   from the current 'SelfBlanket' and its 'BlanketViolation's.
     --   Stored once per turn so downstream recovery-decision call
     --   sites (e.g. 'buildLocalRecoveryPlan' in
     --   'QxFx0.Core.TurnPipeline.Route.Render') can priority-check
-    --   the Conatus gate without recomputing from 'SystemState'.
+    --   the state-integrity gate without recomputing from 'SystemState'.
   , psBlanketViolationCount :: !Int
     -- ^ Phase 6 (M6): the count of 'BlanketViolation's reported
     --   by 'checkInitialBlanket' on the current 'SelfBlanket'.
-    --   Stored alongside 'psConatusEnergy' so the recovery-plan
+    --   Stored alongside 'psStateIntegrity' so the recovery-plan
     --   evidence line @"blanket_violations=N"@ at the
     --   render-stage call site can be reconstructed without a
     --   second 'computeSelfBlanket' + 'checkInitialBlanket' pass.
-  , psConatusGateFired :: !Bool
+  , psStateIntegrityGateFired :: !Bool
     -- ^ Phase 6 addendum (M6.1): single-source-of-truth flag for
-    --   the Conatus gate.  Computed once in 'buildPrepareEffectPlan'
-    --   by 'conatusGateFires', then read by both the salience
+    --   the state-integrity gate.  Computed once in 'buildPrepareEffectPlan'
+    --   by 'stateIntegrityGateFires', then read by both the salience
     --   controller and the recovery-decision site in
     --   'buildLocalRecoveryPlan'.  Eliminates the previous
-    --   duplicate call to 'conatusGateFires'.
+    --   duplicate call to 'stateIntegrityGateFires'.
   , psField :: !Field
     -- ^ Per-turn 'QxFx0.Self.Field.Field' snapshot.  All five
     --   components are populated from runtime signals:
@@ -358,7 +358,7 @@ data PrepareStatic = PrepareStatic
     --   (e.g. salience computation) can read the same record.
   , psSelfVerdict :: !SelfVerdict
     -- ^ Canonical aggregated self-layer verdict for the pre-turn state.
-    --   Computed once from the same 'ConatusEnergy' and 'Field' carried
+    --   Computed once from the same 'StateIntegrity' and 'Field' carried
     --   in this record so route/finalize stages do not recompute salience
     --   and its discrete dispatch classification independently.
   , psCurrentTime :: !UTCTime
@@ -387,7 +387,7 @@ data PrepareStatic = PrepareStatic
     --   observation yet).  Threaded through 'tiSelfPrediction' so
     --   Finalize can measure the divergence without recomputing.
   , psSelfDivergencePenalty :: !Double
-    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    -- ^ A-slice: the state-integrity penalty share (<= 0) applied this turn
     --   from the previous turn's divergence.  @0@ when the previous
     --   turn had no measurement or divergence was below the
     --   'sdtThreshold'.  Threaded through 'tiSelfDivergencePenalty'
@@ -425,8 +425,8 @@ data PrepareStatic = PrepareStatic
 data PrepareEffectRequest
   = PrepareReqEmbedding !Text
   | PrepareReqNixGuard !Text !Double !Double
-  | PrepareReqConsciousness !SemanticInput !Double !Double !ConatusEnergy !SalienceWeights
-  | PrepareReqIntuition !Text !Double !Double !Int !ConatusEnergy !SalienceWeights !SemanticConfig
+  | PrepareReqConsciousness !SemanticInput !Double !Double !StateIntegrity !SalienceWeights
+  | PrepareReqIntuition !Text !Double !Double !Int !StateIntegrity !SalienceWeights !SemanticConfig
   | PrepareReqApiHealth
   deriving stock (Eq, Show)
 
@@ -694,19 +694,19 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       atomLoad = asLoad atomSet
       blanket = computeSelfBlanket ss
       violations = checkInitialBlanket blanket
-      conatusEnergy0 = computeConatusEnergyWith
-        (selfConatusWeights (ssSelfState ss)) blanket violations
+      stateIntegrityEnergy0 = computeStateIntegrityEnergyWith
+        (selfStateIntegrityWeights (ssSelfState ss)) blanket violations
       -- A-slice: apply the previous turn's measured divergence as a
-      -- Conatus penalty (one-turn delayed).  The pure penalty share
+      -- state-integrity penalty (one-turn delayed).  The pure penalty share
       -- (<= 0) is threaded through 'psSelfDivergencePenalty' so the
       -- Finalize stage can record it on the trace without
       -- recomputing.
-      (conatusEnergy, divergencePenalty) =
+      (stateIntegrityEnergy, divergencePenalty) =
         case selfLastDivergence (ssSelfState ss) of
-          Nothing -> (conatusEnergy0, 0.0)
+          Nothing -> (stateIntegrityEnergy0, 0.0)
           Just divE ->
             selfConsistencyPenalty
-              defaultSelfDivergenceTuning divE conatusEnergy0
+              defaultSelfDivergenceTuning divE stateIntegrityEnergy0
       -- A-slice: deterministic prediction of this turn's Field,
       -- anchored on the previous observed Field.  @Nothing@ on the
       -- first turn (no previous observation yet).
@@ -717,7 +717,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
             let preTurnAngst = etAngstLevel (essenceTrajectoryOf (selfEssence (ssSelfState ss)))
             in Just (predictSelf defaultEssenceModulation prevField preTurnAngst)
       violationCount = length violations
-      conatusGateFired = conatusGateFires conatusEnergy
+      stateIntegrityGateFired = stateIntegrityGateFires stateIntegrityEnergy
       -- Concept v3 §4/§6: decode the user's R5 state from the raw
       -- signal, audit it against the previous turn's deterministic
       -- prediction, and resolve the two-protocol verdict.  The hard
@@ -771,20 +771,20 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         { fieldConfidence = deriveFieldConfidence preparedField0
         }
       contentSaliency = computeContentSaliency (ssMeaningGraph ss)  -- WP-C
-      selfVerdict = computeSelfVerdict (selfSalienceWeights (ssSelfState ss)) conatusEnergy preparedField contentSaliency
+      selfVerdict = computeSelfVerdict (selfSalienceWeights (ssSelfState ss)) stateIntegrityEnergy preparedField contentSaliency
       commitmentAdmissionInput = CommitmentAdmissionInput
         { caiTruthContractStatus = ssTruthContractStatus ss
-        , caiConatusGateFired = conatusGateFired
+        , caiStateIntegrityGateFired = stateIntegrityGateFired
         }
       semanticFrameAdmissionInput = SemanticFrameAdmissionInput
         { sfaiTruthContractStatus = ssTruthContractStatus ss
-        , sfaiConatusGateFired = conatusGateFired
+        , sfaiStateIntegrityGateFired = stateIntegrityGateFired
         }
       admittedSemantic = admitSemanticFrame semanticFrameAdmissionInput rawSemanticFrame
       admittedSemanticFrame = asfFrame admittedSemantic
       routeHintAdmissionInput = RouteHintAdmissionInput
         { rhaiTruthContractStatus = ssTruthContractStatus ss
-        , rhaiConatusGateFired = conatusGateFired
+        , rhaiStateIntegrityGateFired = stateIntegrityGateFired
         , rhaiRawText = input
         }
       admittedRouteHint = admitRouteHint routeHintAdmissionInput (usfRouteHint admittedSemanticFrame)
@@ -794,13 +794,13 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       frame = parsePropositionWithFrameWithMorphology (ssMorphology ss) input routeHintAdmittedSemanticFrame
       propositionAdmissionInput = PropositionAdmissionInput
         { paiTruthContractStatus = ssTruthContractStatus ss
-        , paiConatusGateFired = conatusGateFired
+        , paiStateIntegrityGateFired = stateIntegrityGateFired
         }
       admittedProposition = admitPropositionFrame propositionAdmissionInput frame
       admittedBaseFrame = apfFrame admittedProposition
       semanticContributionAdmissionInput = SemanticContributionAdmissionInput
         { scaiTruthContractStatus = ssTruthContractStatus ss
-        , scaiConatusGateFired = conatusGateFired
+        , scaiStateIntegrityGateFired = stateIntegrityGateFired
         , scaiFrame = admittedBaseFrame
         }
       admittedSemanticContributions = admitSemanticContributions semanticContributionAdmissionInput logicResults
@@ -808,7 +808,7 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       admittedSortedLogic = L.sortBy (\(_, w1) (_, w2) -> compare w2 w1) admittedLogicResults
       semanticLogicAdmissionInput = SemanticLogicAdmissionInput
         { slaiTruthContractStatus = ssTruthContractStatus ss
-        , slaiConatusGateFired = conatusGateFired
+        , slaiStateIntegrityGateFired = stateIntegrityGateFired
         , slaiFrame = admittedBaseFrame
         }
       admittedSemanticLogic = admitSemanticLogicWeighting semanticLogicAdmissionInput admittedSortedLogic
@@ -820,20 +820,20 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         if hasChallengeMarker input && not repairDisabled then CMConfront else recommendedFamily
       earlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
         { efaiTruthContractStatus = ssTruthContractStatus ss
-        , efaiConatusGateFired = conatusGateFired
+        , efaiStateIntegrityGateFired = stateIntegrityGateFired
         }
       admittedEarlyFamily = admitEarlyFamilyRecommendation earlyFamilyAdmissionInput challengeAdjustedRecommendedFamily admittedBaseFrame
       admittedRecommendedFamily = aefFamily admittedEarlyFamily
       interpretationAdmissionInput = InterpretationAdmissionInput
         { iaiTruthContractStatus = ssTruthContractStatus ss
-        , iaiConatusGateFired = conatusGateFired
+        , iaiStateIntegrityGateFired = stateIntegrityGateFired
         }
       admittedInterpretation = admitInterpretationCandidate interpretationAdmissionInput admittedRecommendedFamily admittedBaseFrame
       admittedFamily = aiRecommendedFamily admittedInterpretation
       admittedFrame = aiFrame admittedInterpretation
       senseVectorAdmissionInput = SenseVectorAdmissionInput
         { svaiTruthContractStatus = ssTruthContractStatus ss
-        , svaiConatusGateFired = conatusGateFired
+        , svaiStateIntegrityGateFired = stateIntegrityGateFired
         }
       admittedSense = admitSenseVector senseVectorAdmissionInput rawSenseVector
       admittedSenseVector = asvVector admittedSense
@@ -861,9 +861,9 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
         , psOwnershipJournalNext = ownershipJournalNext
         , psResonance = resonance
         , psAtomLoad = atomLoad
-        , psConatusEnergy = conatusEnergy
+        , psStateIntegrity = stateIntegrityEnergy
         , psBlanketViolationCount = violationCount
-      , psConatusGateFired = conatusGateFired
+      , psStateIntegrityGateFired = stateIntegrityGateFired
       , psField = preparedField
       , psFieldHeuristics = fieldHeuristics
         -- ^ Phase 6.7: heuristics used to build 'psField'.
@@ -892,9 +892,9 @@ buildPrepareEffectPlan repairDisabled ss input currentTime =
       , pepEmbeddingRequest = PrepareReqEmbedding input
       , pepNixGuardRequest = PrepareReqNixGuard conceptToCheck resonance atomLoad
       , pepConsciousnessRequest =
-          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance conatusEnergy (selfSalienceWeights (ssSelfState ss))
+          PrepareReqConsciousness semanticInput (egoAgency (ssEgo ss)) resonance stateIntegrityEnergy (selfSalienceWeights (ssSelfState ss))
       , pepIntuitionRequest =
-          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) conatusEnergy (selfSalienceWeights (ssSelfState ss)) (ssSemanticConfig ss)
+          PrepareReqIntuition input resonance (egoTension (ssEgo ss)) (ssTurnCount ss + 1) stateIntegrityEnergy (selfSalienceWeights (ssSelfState ss)) (ssSemanticConfig ss)
       , pepApiHealthRequest = PrepareReqApiHealth
       }
   where

@@ -40,7 +40,7 @@ import QxFx0.Core.PipelineIO.Internal
   ( PipelineIO(..)
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
-  , defaultConatusPrior
+  , defaultStateIntegrityPrior
   )
 import QxFx0.Core.PipelineIO.Test
   ( defaultTestInterpreter
@@ -107,6 +107,6 @@ statelessTestBase = PipelineIO
   -- impurity back in.  The wide path threads a live base instead.
   , pioModifyConsciousLoop = \f -> snd <$> f initialLoop
   , pioModifyIntuition = \f -> snd <$> f defaultIntuitiveState
-  , pioConatusPrior = defaultConatusPrior
+  , pioStateIntegrityPrior = defaultStateIntegrityPrior
   , pioParseAuthoritySurface = pure . parseAuthoritySurfacePattern
   }

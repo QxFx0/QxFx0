@@ -1432,3 +1432,45 @@ re-observe before treating as real).
   pre-registration `docs/closure/P2_ABLATION_PREREG_2026-11-18.md`;
   matrix `matrix-20261119`, 10/10 exit 0, **4 437** cases, tree
   byte-identical start→end.
+
+- **P4 StateIntegrity rename + trace-only contour landed 2026-11-26**
+  (owner decision 2026-11-20; prereg
+  `docs/closure/P4_STATE_INTEGRITY_PREREG_2026-11-23.md`, result
+  `docs/closure/P4_STATE_INTEGRITY_RESULT_2026-11-25.md`). The self-scalar
+  is `StateIntegrity` (`Self/StateIntegrity.hs`,
+  `Types/Self/StateIntegrity.hs`,
+  `Types/Thresholds/StateIntegrity.hs`); `Conatus` survives only as the
+  typed observational contour `ConatusContour = { blanketIntegrity,
+  recoveryEvents, essenceCommitments, crisisAvailability }` on the replay
+  trace (`trcConatusContour`, write-only; no decision reads it). **All
+  JSON wire keys are frozen**: `trcConatusEnergy`, `ceScalar`/
+  `ceComponents`, `cc*`/`cw*`/`cg*`, `selfConatusWeights`, `ftMinConatus`,
+  `scConatusTrend`, `etConatusFloor`, `ewConatusScalar`,
+  `conatusGateThreshold`, `conatusDelta`, `tasConatus`, the lowercase tags
+  (`conatus_gate`, `conatus_erosion`, `conatus_override`, …), the config
+  `conatus_weights.json` and the env value
+  `QXFX0_ABLATE_CONATUS_STABILITY`; only Haskell identifiers, modules and
+  suites were renamed, and the eight nested persisted surfaces carry
+  hand-written instances through `Internal.WireCompat.legacyConatusLabel`.
+  25 new pins (`Test.Suite.ConatusContour` 12 +
+  `Test.Suite.StateIntegrityWire` 13). Equivalence: golden snapshots
+  11/11; 11-turn pre-rename-vs-post-rename trace identity after the five
+  known per-run/clock/contour exclusions. 200-turn census on
+  `spec/eval/p2_baseline_2026-11-18.tsv` (degraded, binary `63b62802…`,
+  dirty tree): C1/C2/C5/C6 pass 200/200; **C3 is a prediction miss**
+  (0/200 essence commitments, `witnessing` on every turn and the same
+  0/200 in the pre-rename P2 baseline — the prereg's degraded-mode
+  assumption was wrong, not the contour); C4's non-empty leg is trivial
+  (`runtime_degraded` 151 / `learning_need` 45 / `render_blocked` 4) and
+  its substantive `conatus_gate` leg is 0/200. The supplementary 200-turn
+  comparator against the pre-P3 P2 baseline shows 170/200 identical and
+  all 30 differences attributable to P3 (basis suffix 29, contentless
+  guard 1), none to the rename. Scope boundaries: `AntiConatus*` and
+  `userConatus*`/`UserConatusWeights` are not renamed; historical
+  ADRs/dates keep the old name. Tooling: `trace_equivalence.py` (17
+  self-test cases) and `p4_contour_census.py` (12);
+  `p2_ablation_report.py` repointed; `data/calibration/ranges.json`
+  repointed so the codomain gate is now green (it was red on `88389c2`).
+  Matrix `matrix-20261126`, 10/10 exit 0, **4 493** cases, tree
+  byte-identical start→end (`eb56f413…`, content hash); the two P4
+  suites also ran 25/25 through the main core selector.

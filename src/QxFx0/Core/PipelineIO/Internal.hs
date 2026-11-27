@@ -7,8 +7,8 @@ module QxFx0.Core.PipelineIO.Internal
   , LocalRecoveryPolicy(..)
   , ShadowPolicy(..)
   , ShadowResult(..)
-  , ConatusPrior
-  , defaultConatusPrior
+  , StateIntegrityPrior
+  , defaultStateIntegrityPrior
   , TurnEffectInterpreter
   , PipelineIO(..)
   ) where
@@ -16,7 +16,7 @@ module QxFx0.Core.PipelineIO.Internal
 import QxFx0.Core.TurnPipeline.Effects (TurnEffectRequest(..), TurnEffectResult)
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 import QxFx0.Core.Intuition (IntuitiveState)
-import QxFx0.Self.Conatus (ConatusEnergy(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..))
 import QxFx0.Types (CanonicalMoveFamily, IllocutionaryForce)
 import QxFx0.Types.Decision (ShadowStatus(..))
 import QxFx0.Types.Recovery (LocalRecoveryPolicy(..))
@@ -50,15 +50,15 @@ data ShadowResult = ShadowResult
 
 type TurnEffectInterpreter = TurnEffectRequest -> IO TurnEffectResult
 
-type ConatusPrior = ConatusEnergy -> TurnEffectRequest -> Double
+type StateIntegrityPrior = StateIntegrity -> TurnEffectRequest -> Double
 
-defaultConatusPrior :: ConatusPrior
-defaultConatusPrior conatus request =
-  let conatusBias
-        | ceScalar conatus < 0 = 100
-        | ceScalar conatus < 0.5 = 10
+defaultStateIntegrityPrior :: StateIntegrityPrior
+defaultStateIntegrityPrior stateIntegrity request =
+  let stateIntegrityBias
+        | siScalar stateIntegrity < 0 = 100
+        | siScalar stateIntegrity < 0.5 = 10
         | otherwise = 0
-  in conatusBias + intrinsicPriority request
+  in stateIntegrityBias + intrinsicPriority request
   where
     intrinsicPriority req =
       case req of
@@ -92,6 +92,6 @@ data PipelineIO = PipelineIO
   , pioUpdateHistory    :: Text -> Seq Text -> Seq Text
   , pioModifyConsciousLoop :: forall a. (ConsciousnessLoop -> IO (ConsciousnessLoop, a)) -> IO a
   , pioModifyIntuition :: forall a. (IntuitiveState -> IO (IntuitiveState, a)) -> IO a
-  , pioConatusPrior     :: !ConatusPrior
+  , pioStateIntegrityPrior     :: !StateIntegrityPrior
   , pioParseAuthoritySurface :: AuthoritySurface -> IO (Maybe FactualClaimPayload)
   }

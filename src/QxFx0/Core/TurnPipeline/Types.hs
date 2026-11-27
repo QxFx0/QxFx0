@@ -42,7 +42,7 @@ import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop)
 -- import QxFx0.Types.Intuition (IntuitiveFlash)
 import QxFx0.Core.Observability (TurnMetrics)
 import qualified QxFx0.Core.Guard as Guard
-import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.StateIntegrity (StateIntegrity)
 import QxFx0.Self.Deliberation (Deliberation)
 import QxFx0.Self.Field (Field, FieldHeuristics)
 import QxFx0.Self.Salience (SelfVerdict)
@@ -146,22 +146,22 @@ data TurnInput = TurnInput
   , tiOwnershipCompare :: !(Maybe OwnershipCompareTrace)
   , tiOwnershipJournalNext :: ![OwnershipJournalEntry]
   , tiMetrics :: !TurnMetrics
-  , tiConatusEnergy :: !ConatusEnergy
-    -- ^ Phase 6 (M6): runtime Conatus energy carried from
-    --   'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy'.
+  , tiStateIntegrity :: !StateIntegrity
+    -- ^ Phase 6 (M6): runtime state-integrity energy carried from
+    --   'QxFx0.Core.TurnPipeline.Effects.psStateIntegrity'.
     --   Single source of truth across the turn: route-stage
     --   ('buildLocalRecoveryPlan') and finalize-stage trace
     --   ('buildTurnProjection') previously each recomputed
-    --   'computeConatusEnergy' independently; now both reads
+    --   'computeStateIntegrityEnergy' independently; now both reads
     --   funnel through this field for the pre-turn state.
   , tiBlanketViolationCount :: !Int
     -- ^ Phase 6 (M6): violation count from
     --   'QxFx0.Core.TurnPipeline.Effects.psBlanketViolationCount',
     --   used by 'buildLocalRecoveryPlan' to construct the
     --   @"blanket_violations=N"@ evidence line.
-  , tiConatusGateFired :: !Bool
-    -- ^ Phase 6 addendum (M6.1): precomputed Conatus gate flag
-    --   from 'psConatusGateFired'.  Single source of truth for
+  , tiStateIntegrityGateFired :: !Bool
+    -- ^ Phase 6 addendum (M6.1): precomputed state-integrity gate flag
+    --   from 'psStateIntegrityGateFired'.  Single source of truth for
     --   both recovery and salience decisions.
   , tiField :: !Field
     -- ^ Per-turn 'QxFx0.Self.Field.Field' carried from
@@ -182,7 +182,7 @@ data TurnInput = TurnInput
     --   same record without reconstructing defaults.
   , tiSelfVerdict :: !SelfVerdict
     -- ^ Canonical aggregated self-layer verdict, computed once in the
-    --   prepare stage from 'tiConatusEnergy' and 'tiField'. Downstream
+    --   prepare stage from 'tiStateIntegrity' and 'tiField'. Downstream
     --   route/finalize stages should consume this instead of rebuilding
     --   salience and its discrete verdict ad hoc.
   , tiSenseVector :: !SenseVector
@@ -219,7 +219,7 @@ data TurnInput = TurnInput
     --   angst.  @Nothing@ on the first turn (no previous
     --   observation yet).  Mirrors 'psSelfPrediction'.
   , tiSelfDivergencePenalty :: !Double
-    -- ^ A-slice: the Conatus penalty share (<= 0) applied this turn
+    -- ^ A-slice: the state-integrity penalty share (<= 0) applied this turn
     --   from the previous turn's measured divergence.  Mirrors
     --   'psSelfDivergencePenalty'; recorded on the trace by the
     --   Finalize stage without recomputing.

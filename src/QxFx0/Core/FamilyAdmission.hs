@@ -34,14 +34,14 @@ data AdmittedFamily = AdmittedFamily
 admitFamilyCrystallization :: FamilyAdmissionInput -> CanonicalMoveFamily -> InputPropositionFrame -> AdmittedFamily
 admitFamilyCrystallization input family frame
   | not (familyAdmissionInScope frame) = AdmittedFamily family FadAdmitRaw
-  | conatusGate && not (familyAlreadyWeak family) = AdmittedFamily CMClarify FadCapClarify
+  | stateIntegrityGate && not (familyAlreadyWeak family) = AdmittedFamily CMClarify FadCapClarify
   | not (truthContractIsAuthoritative (faiTruthContractStatus input))
       && not (familyAlreadyWeak family) = AdmittedFamily CMClarify FadCapClarify
-  | conatusGate || not (truthContractIsAuthoritative (faiTruthContractStatus input)) =
+  | stateIntegrityGate || not (truthContractIsAuthoritative (faiTruthContractStatus input)) =
       AdmittedFamily family FadPreserveAmbiguous
   | otherwise = AdmittedFamily family FadAdmitRaw
   where
-    conatusGate = salienceDriver (svSalience (faiSelfVerdict input)) == DrivenByConatusGate
+    stateIntegrityGate = salienceDriver (svSalience (faiSelfVerdict input)) == DrivenByStateIntegrityGate
 
 familyAlreadyWeak :: CanonicalMoveFamily -> Bool
 familyAlreadyWeak family = family `elem` [CMClarify, CMRepair, CMAnchor, CMContact]

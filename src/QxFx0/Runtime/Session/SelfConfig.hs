@@ -20,7 +20,7 @@ import System.IO (hPutStrLn, stderr)
 import Paths_qxfx0 (getDataFileName)
 
 import QxFx0.ExceptionPolicy (tryIO)
-import QxFx0.Self.Conatus (ConatusWeights, defaultConatusWeights)
+import QxFx0.Self.StateIntegrity (StateIntegrityWeights, defaultStateIntegrityWeights)
 import QxFx0.Self.FamilyTargets (FamilyTarget, familyTargets)
 import QxFx0.Self.Field (FieldHeuristics, defaultFieldHeuristics)
 import QxFx0.Self.Salience (SalienceWeights, defaultSalienceWeights)
@@ -31,7 +31,7 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 data SelfBootstrapConfig = SelfBootstrapConfig
   { sbcSalienceWeights :: !SalienceWeights
   , sbcFieldHeuristics :: !FieldHeuristics
-  , sbcConatusWeights  :: !ConatusWeights
+  , sbcStateIntegrityWeights  :: !StateIntegrityWeights
   , sbcFamilyTargets   :: ![FamilyTarget]
   } deriving stock (Eq, Show)
 
@@ -40,7 +40,7 @@ defaultSelfBootstrapConfig :: SelfBootstrapConfig
 defaultSelfBootstrapConfig = SelfBootstrapConfig
   { sbcSalienceWeights = defaultSalienceWeights
   , sbcFieldHeuristics = defaultFieldHeuristics
-  , sbcConatusWeights = defaultConatusWeights
+  , sbcStateIntegrityWeights = defaultStateIntegrityWeights
   , sbcFamilyTargets = familyTargets
   }
 
@@ -104,16 +104,16 @@ loadSelfBootstrapConfig = do
     "resources/config/tuned_field_heuristics.json"
     "resources/config/field_heuristics.json"
     defaultFieldHeuristics
-  conatus <- loadConfigOrBuiltinIO
+  stateIntegrity <- loadConfigOrBuiltinIO
     "resources/config/conatus_weights.json"
-    defaultConatusWeights
+    defaultStateIntegrityWeights
   targets <- loadConfigOrBuiltinIO
     "resources/config/family_targets.json"
     familyTargets
   pure SelfBootstrapConfig
     { sbcSalienceWeights = salience
     , sbcFieldHeuristics = field
-    , sbcConatusWeights = conatus
+    , sbcStateIntegrityWeights = stateIntegrity
     , sbcFamilyTargets = targets
     }
 
@@ -122,7 +122,7 @@ applySelfBootstrapConfig :: SelfBootstrapConfig -> SelfState -> SelfState
 applySelfBootstrapConfig config selfState = selfState
   { selfSalienceWeights = sbcSalienceWeights config
   , selfFieldHeuristics = sbcFieldHeuristics config
-  , selfConatusWeights = sbcConatusWeights config
+  , selfStateIntegrityWeights = sbcStateIntegrityWeights config
   , selfFamilyTargets = sbcFamilyTargets config
   }
 

@@ -2,19 +2,19 @@
 
 {-|
 Module      : Test.Suite.PhaseM2d
-Description : Unit tests for Phase 2.5 (M2d) + 5.5e + RecoveryConatusGate.
+Description : Unit tests for Phase 2.5 (M2d) + 5.5e + RecoveryStateIntegrityGate.
 
 Pure tests covering the artefacts introduced by:
 
   * /Phase 2.5 (M2d)/ — runtime Conatus replaces the placeholder
-    in 'PrepareEffectPlan' construction; 'psConatusEnergy' carries
+    in 'PrepareEffectPlan' construction; 'psStateIntegrity' carries
     the canonical per-turn energy; 'PrepareReqConsciousness' \/
     'PrepareReqIntuition' carry the energy through to the handlers.
 
   * /Phase 5.5e/ — 'renderSalienceDriver' exposes a stable
     snake_case tag for every 'SalienceDriver' variant.
 
-  * /RecoveryConatusGate/ — dedicated 'LocalRecoveryCause' variant
+  * /RecoveryStateIntegrityGate/ — dedicated 'LocalRecoveryCause' variant
     and matching 'renderLocalRecoveryCause' \/ 'ToJSON' rendering.
 
 Tests are pure and require no IO or pipeline fixtures beyond
@@ -23,7 +23,7 @@ Tests are pure and require no IO or pipeline fixtures beyond
 See:
   * @docs\/adr\/0010-salience-controller.md@ §5
   * @docs\/THEORY.md@ §4.1
-  * commits e70fade (M2d), fc4cc0a (5.5e), 2be7506 (RecoveryConatusGate)
+  * commits e70fade (M2d), fc4cc0a (5.5e), 2be7506 (RecoveryStateIntegrityGate)
 -}
 module Test.Suite.PhaseM2d
   ( phaseM2dTests
@@ -42,9 +42,9 @@ import QxFx0.Core.TurnPipeline
   , buildPrepareEffectPlan
   )
 import QxFx0.Self.Blanket (computeSelfBlanket)
-import QxFx0.Self.Conatus
-  ( ConatusEnergy (..)
-  , computeConatusEnergy
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrity (..)
+  , computeStateIntegrityEnergy
   )
 import QxFx0.Self.Invariants (checkInitialBlanket)
 import QxFx0.Self.Salience
@@ -97,17 +97,17 @@ phaseM2dTests =
         renderSalienceDriver DrivenByConsolidation   @?= "consolidation"
         renderSalienceDriver DrivenByCounterfactual  @?= "counterfactual"
         renderSalienceDriver DrivenByFieldConfidence @?= "field_confidence"
-        renderSalienceDriver DrivenByConatusGate     @?= "conatus_gate"
+        renderSalienceDriver DrivenByStateIntegrityGate     @?= "conatus_gate"
         renderSalienceDriver DrivenByDefault         @?= "default"
 
-    -- RecoveryConatusGate — text rendering and JSON tag
+    -- RecoveryStateIntegrityGate — text rendering and JSON tag
   , TestLabel "renderLocalRecoveryCause RecoveryConatusGate renders to conatus_gate" $
       TestCase $
-        renderLocalRecoveryCause RecoveryConatusGate @?= "conatus_gate"
+        renderLocalRecoveryCause RecoveryStateIntegrityGate @?= "conatus_gate"
 
   , TestLabel "ToJSON RecoveryConatusGate produces String \"conatus_gate\"" $
       TestCase $
-        toJSON RecoveryConatusGate @?= String "conatus_gate"
+        toJSON RecoveryStateIntegrityGate @?= String "conatus_gate"
 
   , TestLabel "renderLocalRecoveryCause RecoveryRuntimeDegraded preserves runtime_degraded after split" $
       TestCase $
@@ -130,19 +130,19 @@ phaseM2dTests =
       TestCase $
         toJSON StrategySelfReanchoring @?= String "self_reanchoring"
 
-    -- Phase 2.5 (M2d) — psConatusEnergy invariant
-  , TestLabel "buildPrepareEffectPlan stores psConatusEnergy matching direct computation" $
+    -- Phase 2.5 (M2d) — psStateIntegrity invariant
+  , TestLabel "buildPrepareEffectPlan stores psStateIntegrity matching direct computation" $
       TestCase $ do
         let plan       = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
             blanket    = computeSelfBlanket viableSystemState
             violations = checkInitialBlanket blanket
-            expected   = computeConatusEnergy blanket violations
-        psConatusEnergy (pepStatic plan) @?= expected
+            expected   = computeStateIntegrityEnergy blanket violations
+        psStateIntegrity (pepStatic plan) @?= expected
 
   , TestLabel "buildPrepareEffectPlan threads conatusEnergy into PrepareReqConsciousness" $
       TestCase $ do
         let plan     = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
-            expected = psConatusEnergy (pepStatic plan)
+            expected = psStateIntegrity (pepStatic plan)
         case pepConsciousnessRequest plan of
           PrepareReqConsciousness _ _ _ ce _ ->
             ce @?= expected
@@ -152,7 +152,7 @@ phaseM2dTests =
   , TestLabel "buildPrepareEffectPlan threads conatusEnergy into PrepareReqIntuition" $
       TestCase $ do
         let plan     = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
-            expected = psConatusEnergy (pepStatic plan)
+            expected = psStateIntegrity (pepStatic plan)
         case pepIntuitionRequest plan of
           PrepareReqIntuition _ _ _ _ ce _ _ ->
             ce @?= expected
@@ -162,10 +162,10 @@ phaseM2dTests =
   , TestLabel "viable SystemState yields a healthy ConatusEnergy (gate does not fire)" $
       TestCase $ do
         let plan = buildPrepareEffectPlan False viableSystemState "пробный ввод" testEpochZero
-            ce   = psConatusEnergy (pepStatic plan)
+            ce   = psStateIntegrity (pepStatic plan)
         assertBool
-          ("ceScalar should be >= 0 on a viable state, got " ++ show (ceScalar ce))
-          (ceScalar ce >= 0.0)
+          ("ceScalar should be >= 0 on a viable state, got " ++ show (siScalar ce))
+          (siScalar ce >= 0.0)
   ]
 
 testEpochZero :: UTCTime

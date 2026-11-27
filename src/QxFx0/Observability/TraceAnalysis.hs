@@ -28,7 +28,7 @@ and enable observability of the Self layer.
 This module consumes:
 
 * Recovery: 'trcLocalRecoveryPolicy', 'trcRecoveryCause', 'trcRecoveryStrategy', 'trcRecoveryEvidence'
-* Conatus: 'trcConatusEnergy', 'trcConatusGateFired'
+* StateIntegrity: 'trcConatusEnergy', 'trcConatusGateFired'
 * Field: 'trcField' (5 components)
 * Essence: 'trcEssenceMode', 'trcEssenceCommitted', 'trcEssenceAngstLevel', 'trcEssenceTrigger'
 * Deliberation: 'trcDeliberationRule', 'trcDeliberationAgreement', 'trcDeliberationDivergence'
@@ -45,7 +45,7 @@ This module consumes:
 module QxFx0.Observability.TraceAnalysis
   ( -- * Analysis types
     RecoveryAnalysis(..)
-  , ConatusAnalysis(..)
+  , StateIntegrityAnalysis(..)
   , FieldAnalysis(..)
   , EssenceAnalysis(..)
   , DeliberationAnalysis(..)
@@ -55,7 +55,7 @@ module QxFx0.Observability.TraceAnalysis
   , TraceAnalysisSummary(..)
     -- * Analysis functions
   , analyzeRecoveryPattern
-  , analyzeConatusDynamics
+  , analyzeStateIntegrityDynamics
   , analyzeFieldState
   , analyzeEssenceCommitment
   , analyzeDeliberation
@@ -65,7 +65,7 @@ module QxFx0.Observability.TraceAnalysis
   , analyzeTrace
     -- * Anomaly detection
   , hasRecoveryAnomaly
-  , hasConatusAnomaly
+  , hasStateIntegrityAnomaly
   , hasFieldAnomaly
   , hasEssenceAnomaly
   , hasDeliberationAnomaly
@@ -92,7 +92,7 @@ import QxFx0.Types.User.R5 (UserR5Trace(..))
 import QxFx0.Types.Self.SelfDivergence (defaultSelfDivergenceTuning, sdtThreshold)
 import QxFx0.Types.Self.Essence (EssenceResetEvent(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ceScalar, lowEnergyThreshold)
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), siScalar, lowEnergyThreshold)
 import QxFx0.Self.Field
   ( Field(..)
   , Resonance(..)
@@ -126,17 +126,17 @@ data RecoveryAnalysis = RecoveryAnalysis
     -- ^ Number of evidence items
   , raTriggered :: !Bool
     -- ^ Whether recovery was triggered
-  , raConatusGateTriggered :: !Bool
-    -- ^ Whether Conatus gate specifically triggered recovery
+  , raStateIntegrityGateTriggered :: !Bool
+    -- ^ Whether state-integrity gate specifically triggered recovery
   , raAnomaly :: !(Maybe Text)
     -- ^ Anomaly description if detected
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
 
--- | Conatus dynamics analysis
-data ConatusAnalysis = ConatusAnalysis
-  { caEnergy :: !ConatusEnergy
-    -- ^ Full Conatus energy record
+-- | State-integrity dynamics analysis
+data StateIntegrityAnalysis = StateIntegrityAnalysis
+  { caEnergy :: !StateIntegrity
+    -- ^ Full state-integrity record
   , caScalar :: !Double
     -- ^ Scalar energy value
   , caGateFired :: !Bool
@@ -217,7 +217,7 @@ data SalienceAnalysis = SalienceAnalysis
 -- | Complete trace analysis summary
 data TraceAnalysisSummary = TraceAnalysisSummary
   { tasRecovery :: !RecoveryAnalysis
-  , tasConatus :: !ConatusAnalysis
+  , tasConatus :: !StateIntegrityAnalysis
   , tasField :: !FieldAnalysis
   , tasEssence :: !EssenceAnalysis
   , tasDeliberation :: !DeliberationAnalysis
@@ -240,8 +240,8 @@ analyzeRecoveryPattern trace =
       triggered = case cause of
         Nothing -> False
         Just _ -> True
-      conatusGate = case cause of
-        Just RecoveryConatusGate -> True
+      stateIntegrityGate = case cause of
+        Just RecoveryStateIntegrityGate -> True
         _ -> False
       anomaly = detectRecoveryAnomaly policy cause strategy evidenceCount
   in RecoveryAnalysis
@@ -250,7 +250,7 @@ analyzeRecoveryPattern trace =
        , raStrategy = strategy
        , raEvidenceCount = evidenceCount
        , raTriggered = triggered
-       , raConatusGateTriggered = conatusGate
+       , raStateIntegrityGateTriggered = stateIntegrityGate
        , raAnomaly = anomaly
        }
 
@@ -270,15 +270,15 @@ detectRecoveryAnomaly _policy cause strategy evidenceCount
       Just "evidence_without_cause"
   | otherwise = Nothing
 
--- | Analyze Conatus dynamics from trace
-analyzeConatusDynamics :: TurnReplayTrace -> ConatusAnalysis
-analyzeConatusDynamics trace =
+-- | Analyze state-integrity dynamics from trace
+analyzeStateIntegrityDynamics :: TurnReplayTrace -> StateIntegrityAnalysis
+analyzeStateIntegrityDynamics trace =
   let energy = trcConatusEnergy trace
-      scalar = ceScalar energy
+      scalar = siScalar energy
       gateFired = trcConatusGateFired trace
       trend = classifyEnergyTrend scalar gateFired
-      anomaly = detectConatusAnomaly scalar gateFired
-  in ConatusAnalysis
+      anomaly = detectStateIntegrityAnomaly scalar gateFired
+  in StateIntegrityAnalysis
        { caEnergy = energy
        , caScalar = scalar
        , caGateFired = gateFired
@@ -286,11 +286,11 @@ analyzeConatusDynamics trace =
        , caAnomaly = anomaly
        }
 
--- | Conatus 'ceScalar' lives on a production log-scale codomain
+-- | The state-integrity scalar 'ceScalar' lives on a production log-scale codomain
 -- (@0.5 * log(1+m) + ...@), not the unit interval encoded by
--- early-hand-coded thresholds (see `QxFx0.Self.Conatus.computeConatusEnergyWith`).
+-- early-hand-coded thresholds (see `QxFx0.Self.StateIntegrity.computeStateIntegrityEnergyWith`).
 -- The low end is single-sourced from the runtime law
--- ('QxFx0.Self.Conatus.lowEnergyThreshold'), so "degraded" means
+-- ('QxFx0.Self.StateIntegrity.lowEnergyThreshold'), so "degraded" means
 -- "below the gate moment", not an arbitrary 0.3.
 --
 -- The high end has no law constant (energy accumulates without a hard
@@ -300,8 +300,8 @@ analyzeConatusDynamics trace =
 -- with substance).  A conservative ceiling of 30.0 keeps genuinely
 -- surprising runaways visible without flagging every productive
 -- session.
-conatusExcessiveCeiling :: Double
-conatusExcessiveCeiling = 30.0
+stateIntegrityExcessiveCeiling :: Double
+stateIntegrityExcessiveCeiling = 30.0
 
 -- | Classify energy trend
 classifyEnergyTrend :: Double -> Bool -> Text
@@ -310,14 +310,14 @@ classifyEnergyTrend scalar gateFired
   | scalar < lowEnergyThreshold = "degraded"
   | otherwise = "healthy"
 
--- | Detect Conatus anomalies
-detectConatusAnomaly :: Double -> Bool -> Maybe Text
-detectConatusAnomaly scalar gateFired
-  | gateFired && scalar > conatusExcessiveCeiling =
+-- | Detect state-integrity anomalies
+detectStateIntegrityAnomaly :: Double -> Bool -> Maybe Text
+detectStateIntegrityAnomaly scalar gateFired
+  | gateFired && scalar > stateIntegrityExcessiveCeiling =
       Just "gate_fired_with_high_energy"
   | scalar < 0.0 =
       Just "negative_conatus_energy"
-  | scalar > conatusExcessiveCeiling =
+  | scalar > stateIntegrityExcessiveCeiling =
       Just "excessive_conatus_energy"
   | otherwise = Nothing
 
@@ -561,17 +561,17 @@ hasSelfLayerAnomaly analysis = slaAnomaly analysis /= Nothing
 analyzeTrace :: TurnReplayTrace -> TraceAnalysisSummary
 analyzeTrace trace =
   let recovery = analyzeRecoveryPattern trace
-      conatus = analyzeConatusDynamics trace
+      stateIntegrity = analyzeStateIntegrityDynamics trace
       field = analyzeFieldState trace
       essence = analyzeEssenceCommitment trace
       deliberation = analyzeDeliberation trace
       salience = analyzeSalience trace
       userRegime = analyzeUserRegime trace
       selfLayer = analyzeSelfLayer trace
-      anomalyCount = countAnomalies recovery conatus field essence deliberation salience userRegime selfLayer
+      anomalyCount = countAnomalies recovery stateIntegrity field essence deliberation salience userRegime selfLayer
   in TraceAnalysisSummary
        { tasRecovery = recovery
-       , tasConatus = conatus
+       , tasConatus = stateIntegrity
        , tasField = field
        , tasEssence = essence
        , tasDeliberation = deliberation
@@ -582,11 +582,11 @@ analyzeTrace trace =
        }
 
 -- | Count total anomalies
-countAnomalies :: RecoveryAnalysis -> ConatusAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> UserRegimeAnalysis -> SelfLayerAnalysis -> Int
-countAnomalies recovery conatus field essence deliberation salience userRegime selfLayer =
+countAnomalies :: RecoveryAnalysis -> StateIntegrityAnalysis -> FieldAnalysis -> EssenceAnalysis -> DeliberationAnalysis -> SalienceAnalysis -> UserRegimeAnalysis -> SelfLayerAnalysis -> Int
+countAnomalies recovery stateIntegrity field essence deliberation salience userRegime selfLayer =
   length $ filter (/= Nothing)
     [ raAnomaly recovery
-    , caAnomaly conatus
+    , caAnomaly stateIntegrity
     , faAnomaly field
     , eaAnomaly essence
     , daAnomaly deliberation
@@ -599,9 +599,9 @@ countAnomalies recovery conatus field essence deliberation salience userRegime s
 hasRecoveryAnomaly :: RecoveryAnalysis -> Bool
 hasRecoveryAnomaly = (/= Nothing) . raAnomaly
 
--- | Check if Conatus has anomaly
-hasConatusAnomaly :: ConatusAnalysis -> Bool
-hasConatusAnomaly = (/= Nothing) . caAnomaly
+-- | Check if state integrity has an anomaly
+hasStateIntegrityAnomaly :: StateIntegrityAnalysis -> Bool
+hasStateIntegrityAnomaly = (/= Nothing) . caAnomaly
 
 -- | Check if Field has anomaly
 hasFieldAnomaly :: FieldAnalysis -> Bool
@@ -628,7 +628,7 @@ emitTraceMetrics :: MetricRegistry -> TurnReplayTrace -> TraceAnalysisSummary ->
 emitTraceMetrics registry trace summary = do
   let tags = Map.fromList [("session_id", trcSessionId trace)]
   
-  -- Conatus metrics
+  -- State-integrity metrics
   recordGauge registry "conatus_energy" (caScalar $ tasConatus summary) tags
   recordCounter registry "conatus_gate_fired" (if caGateFired (tasConatus summary) then 1 else 0) tags
   
@@ -672,7 +672,7 @@ logTraceAnomalies trace summary = do
     Just anomaly -> logWarn ("Recovery anomaly: " <> anomaly) baseCtx
     Nothing -> pure ()
   
-  -- Log Conatus anomalies
+  -- Log state-integrity anomalies
   case caAnomaly (tasConatus summary) of
     Just anomaly -> logWarn ("Conatus anomaly: " <> anomaly) $
                     addContext "energy" (T.pack $ show $ caScalar $ tasConatus summary) baseCtx

@@ -101,7 +101,8 @@ library
     QxFx0.Types.ExternalQuery
     QxFx0.Types.RuntimeMode
     QxFx0.Types.RuntimeRegime
-    QxFx0.Types.Self.Conatus
+    QxFx0.Types.Self.StateIntegrity
+    QxFx0.Types.Self.ConatusContour
     QxFx0.Types.Self.Deliberation
     QxFx0.Types.Self.Essence
     QxFx0.Types.Self.FamilyTargets
@@ -138,7 +139,8 @@ library
     QxFx0.ExceptionPolicy
     QxFx0.Self.Types
     QxFx0.Self.Blanket
-    QxFx0.Self.Conatus
+    QxFx0.Self.StateIntegrity
+    QxFx0.Self.ConatusContour
     QxFx0.Self.Invariants
     QxFx0.Self.Field
     QxFx0.Self.Adjunction
@@ -432,6 +434,7 @@ library
       QxFx0.Core.TurnPipeline.Route.Render
       QxFx0.Internal.AtomicFile
       QxFx0.Internal.FilePath
+      QxFx0.Internal.WireCompat
 
       QxFx0.Types.PropositionType
     QxFx0.Types.PropositionFallbackAdmission
@@ -497,7 +500,7 @@ library
     QxFx0.Types.Thresholds.Routing
     QxFx0.Types.Thresholds.Dream
     QxFx0.Types.Thresholds.Anomaly
-    QxFx0.Types.Thresholds.Conatus
+    QxFx0.Types.Thresholds.StateIntegrity
     QxFx0.Types.Thresholds.Selection
     QxFx0.Types.Thresholds.Constants
     QxFx0.Policy.Contracts
@@ -707,7 +710,7 @@ common test-common
     Test.Suite.ControlAAblation
     Test.Suite.EgoRead
     Test.Suite.SelfBlanket
-    Test.Suite.SelfConatus
+    Test.Suite.SelfStateIntegrity
     Test.Suite.SelfAdjunction
     Test.Suite.SelfField
     Test.Suite.SelfAdaptivePosition
@@ -719,6 +722,8 @@ common test-common
     Test.Suite.SelfEssenceCommit
     Test.Suite.SelfDivergence
     Test.Suite.EssenceCollapse
+    Test.Suite.ConatusContour
+    Test.Suite.StateIntegrityWire
     Test.Suite.CrisisGuard
     Test.Suite.UserR5
     Test.Suite.OntologicalAxis
@@ -807,7 +812,7 @@ common test-common
     Test.Suite.PromotionRuntime
     Test.Suite.AtomStore
     Test.Suite.AuthoritySurface
-    Test.Suite.ConatusGate
+    Test.Suite.StateIntegrityGate
     Test.Suite.ConfigExternalize
     Test.Suite.CorpusTuning
     Test.Suite.GeneratedPredicateGate

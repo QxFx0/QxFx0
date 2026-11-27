@@ -27,7 +27,7 @@ import GHC.Generics (Generic)
 
 import QxFx0.Types.Self.Salience (SalienceWeights)
 import QxFx0.Types.Self.Field (FieldHeuristics)
-import QxFx0.Types.Self.Conatus (ConatusWeights)
+import QxFx0.Types.Self.StateIntegrity (StateIntegrityWeights)
 import QxFx0.Types.Self.FamilyTargets (FamilyTarget)
 import QxFx0.Types.Self.Field (Field)
 import QxFx0.Types.Self.SelfDivergence (SelfDivergenceE)
@@ -50,8 +50,8 @@ data SelfState = SelfState
   , selfFieldHeuristics :: !FieldHeuristics
     -- ^ Phase B: mutable field heuristics for post-commitment
     --   bounded self-tuning. Initialised to 'defaultFieldHeuristics'.
-  , selfConatusWeights :: !ConatusWeights
-    -- ^ Conatus functional coefficients captured at bootstrap and persisted
+  , selfStateIntegrityWeights :: !StateIntegrityWeights
+    -- ^ state-integrity functional coefficients captured at bootstrap and persisted
     --   so replay never consults ambient files.
   , selfFamilyTargets :: ![FamilyTarget]
     -- ^ FMAR target configuration captured at bootstrap and persisted.
@@ -70,7 +70,7 @@ data SelfState = SelfState
     --   @Nothing@ when no previous turn has finished (bootstrap).
   , selfLastDivergence :: !(Maybe SelfDivergenceE)
     -- ^ A-slice: the 'SelfDivergenceE' measured on the previous turn.
-    --   Consumed by the Prepare stage (one-turn delayed Conatus
+    --   Consumed by the Prepare stage (one-turn delayed state-integrity
     --   penalty).  @Nothing@ when the previous turn had no
     --   prediction anchor yet.
   , selfDivergenceWindow :: ![Double]

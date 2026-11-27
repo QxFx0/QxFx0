@@ -15,7 +15,7 @@ machine-visible rather than purely doctrinal.
 == Regime versioning rule
 
 When any of the following changes, bump 'currentMathVersion':
-- Conatus weight coefficients (@ConatusWeights@)
+- State-integrity weight coefficients (@StateIntegrityWeights@)
 - Salience weight defaults (@defaultSalienceWeights@)
 - Essence modulation parameters (@EssenceModulation@)
 - Field heuristic sourcing rules (@FieldHeuristics@)
@@ -65,10 +65,10 @@ data RuntimeRegime = RuntimeRegime
   deriving anyclass (NFData, FromJSON, ToJSON)
 
 -- | Current math version. Bump when any calibration-relevant constant changes.
--- Initial value 1 = post-ADR-0012 correction (emConatusStructuralFloor 0.5 → 7.0).
+-- Initial value 1 = post-ADR-0012 correction (emStateIntegrityStructuralFloor 0.5 → 7.0).
 -- Version 2 = A-slice self-divergence contour landed (predict → witness →
--- diff → allergen → Conatus): new Conatus component channel
--- @ccSelfDivergence@, new tunables @sdtScaling@/@sdtThreshold@/@sdtWindow@,
+-- diff → allergen → state-integrity): new state-integrity component channel
+-- @sicSelfDivergence@, new tunables @sdtScaling@/@sdtThreshold@/@sdtWindow@,
 -- and the one-turn-delayed energy-fraction penalty enter the runtime math.
 -- Version 3 = concept v3 two-protocol regime landed: frozen v1 user-side
 -- R5 encoder (@QxFx0.User.R5@), the linear user viability contour

@@ -60,6 +60,14 @@ now treated as direct violations.
 
 ## 2. Conatus (OK)
 
+> **2026-11-23 (P4 rename).** The Haskell identifiers in this section
+> changed (`ConatusEnergy` → `StateIntegrity`, `tiConatusEnergy` →
+> `tiStateIntegrity`, `ceScalar` → `siScalar`, …); the **wire names are
+> frozen** (`trcConatusEnergy`, `trcConatusGateFired`, `ceScalar`,
+> `ceComponents`, `cc*`) and still mean exactly what the text below
+> says. The word `Conatus` now names only the trace-only contour of
+> §15. Contract: `docs/closure/P4_STATE_INTEGRITY_PREREG_2026-11-23.md`.
+
 **Module:** `QxFx0.Self.Conatus` (Phase 1-2)
 **Compute sites:** `QxFx0.Core.TurnPipeline.Prepare.Build`
   (computes `tiConatusEnergy` and `tiConatusGateFired`)
@@ -599,3 +607,49 @@ replayed exactly.
 JSON is backward-compatible: absent → `Nothing`; the field is inserted
 right after `trcEffectSnapshot` in the manual `FromJSON` constructor
 order.
+
+## 15. Self-maintenance contour (`trcConatusContour`) — 2026-11-23
+
+The P4 landing adds a trace-only sub-record with four facts the turn
+already carries. **Nothing reads it** — routing, recovery and rendering
+are untouched; per-component ablation hooks are deliberately deferred
+until a consumer exists (an ablation of a write-only field is provably
+inert).
+
+```
+trcConatusContour :: !(Maybe ConatusContour)
+
+data BlanketIntegrity = BlanketIntegrity
+  { biInvariantsHold :: !Bool
+  , biViolationCount :: !Int
+  }
+
+data ConatusContour = ConatusContour
+  { ctcBlanketIntegrity   :: !BlanketIntegrity
+  , ctcRecoveryEvents     :: ![LocalRecoveryCause]
+  , ctcEssenceCommitments :: !Int
+  , ctcCrisisAvailability :: !Bool
+  }
+```
+
+Sources, all already on the turn:
+
+- `ctcBlanketIntegrity` — `tiBlanketViolationCount`
+  (`Core/TurnPipeline/Types.hs:157`); `biInvariantsHold = count == 0`.
+  A persisted turn is expected to carry `0`: a violation aborts the turn
+  in `Finalize/Commit`, so the field makes the contract machine-visible.
+- `ctcRecoveryEvents` — `taLocalRecoveryCause`, the same fact as
+  `trcRecoveryCause`; `[]` when no local recovery fired. The wire values
+  are the frozen `LocalRecoveryCause` tags (`conatus_gate`,
+  `runtime_degraded`, …), so `RecoveryStateIntegrityGate` renders as
+  `conatus_gate` like every other Contour enum value (§2).
+- `ctcEssenceCommitments` — `1` when the post-turn essence is
+  `EssenceCommitted`, `0` otherwise.
+- `ctcCrisisAvailability` — `crVersion crisisResourcesRu > 0` and a
+  non-empty resource list (`Safety/CrisisGuard.hs`). The hard gate is
+  lexical and cannot be unavailable; the field exposes that structural
+  fact.
+
+JSON is backward-compatible: absent → `Nothing` (`.:?`), so pre-P4
+traces decode. Every new turn carries `Just`. Census tool:
+`scripts/eval/p4_contour_census.py` (read-only, self-tested).

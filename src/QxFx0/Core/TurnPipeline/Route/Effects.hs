@@ -75,7 +75,7 @@ planRouteEffects ss ti ts =
           intuitPosterior
           (tiField ti)
           (tiSelfVerdict ti)
-          (tiConatusEnergy ti)
+          (tiStateIntegrity ti)
           (tiDoubtScore ti)
           courtesyPred
           (tiRetrievedEpisodes ti)
@@ -92,7 +92,7 @@ resolveRouteEffects :: PipelineIO -> RouteEffectPlan -> IO RouteEffectResults
 resolveRouteEffects pio effectPlan = do
   let scheduledRequests :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledRequests =
-        scheduleTurnEffects pio (tiConatusEnergy (repRouteTurnInput effectPlan))
+        scheduleTurnEffects pio (tiStateIntegrity (repRouteTurnInput effectPlan))
           ( [ (PelShadow, TurnReqShadow family force atomTags)
             | RouteReqShadow family force atomTags <- [repShadowRequest effectPlan]
             ]

@@ -79,19 +79,19 @@ handleTurnEffect ctx request =
       nixPath <- resolveNixPath ctx
       status <- checkNixWithCache (rtcNix (rcCaches ctx)) nixPath concept agency tension
       pure (TurnResNixGuard status)
-    TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do
+    TurnReqConsciousness semanticInput humanTheta resonance stateIntegrityEnergy salienceWeights -> do
       cl <- readConsciousLoop ctx
       let contentSaliency = 0.0  -- WP-C: default for runtime handler
-          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
+          salience = computeSalience salienceWeights stateIntegrityEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience cl semanticInput humanTheta resonance
           currentNarrative = clLastNarrative nextLoop
           narrativeFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop currentNarrative narrativeFragment)
-    TurnReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig -> do
+    TurnReqIntuition inputText resonance tension turnNumber stateIntegrityEnergy salienceWeights semanticConfig -> do
       intuitive <- readIntuition ctx
       let contentSaliency = 0.0  -- WP-C: default for runtime handler
-          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
+          salience = computeSalience salienceWeights stateIntegrityEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (mFlash, intuitionState) =
             checkIntuitionWithInputAndSalience
               salience semanticConfig inputText resonance tension turnNumber intuitive

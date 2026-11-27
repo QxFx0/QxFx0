@@ -41,7 +41,7 @@ import Data.List (foldl')
 import Data.Aeson (decode, encode)
 import qualified Data.Sequence as Seq
 import qualified Data.Set as Set
-import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+import QxFx0.Self.StateIntegrity (StateIntegrity (..), StateIntegrityComponents (..))
 import QxFx0.Core.TurnPipeline.Protocol (FinalizePrecommitBundle (..))
 import QxFx0.Types.State.System (SystemState (..))
 import QxFx0.Types.State.SelfState (SelfState (..))
@@ -127,7 +127,7 @@ selfEssenceCommitTests =
 
     -- §4 — Conatus floor unit-mismatch correction
   , TestLabel "corrected Conatus floor triggers on realistic post-violation scalar" $
-      TestCase testConatusErosionFiresUnderCorrectedFloor
+      TestCase testStateIntegrityErosionFiresUnderCorrectedFloor
 
   , TestLabel "missing deliberation violation is explicit" $
       TestCase testMissingDeliberationViolationIsExplicit
@@ -194,7 +194,7 @@ arbitrarySalienceDriver = elements
   , DrivenByConsolidation
   , DrivenByCounterfactual
   , DrivenByFieldConfidence
-  , DrivenByConatusGate
+  , DrivenByStateIntegrityGate
   , DrivenByDefault
   ]
 
@@ -212,7 +212,7 @@ arbitrarySalience = do
 arbitraryReconcileRule :: Gen ReconcileRule
 arbitraryReconcileRule = elements
   [ RuleAgreement
-  , RuleConatusOverride
+  , RuleStateIntegrityOverride
   , RuleSalienceLead
   , RuleHolisticAdvantage
   , RuleFormalAdvantage
@@ -252,12 +252,12 @@ arbitraryPlan = do
     , planConfidence    = conf
     }
 
-arbitraryConatusEnergy :: Gen ConatusEnergy
-arbitraryConatusEnergy = do
+arbitraryStateIntegrityEnergy :: Gen StateIntegrity
+arbitraryStateIntegrityEnergy = do
   s <- arbitraryUnitDouble
-  pure $ ConatusEnergy
-    { ceScalar     = s
-    , ceComponents = ConatusComponents 0 0 0 0 0.0
+  pure $ StateIntegrity
+    { siScalar     = s
+    , siComponents = StateIntegrityComponents 0 0 0 0 0.0
     }
 
 arbitraryEssenceWitness :: Gen EssenceWitness
@@ -275,7 +275,7 @@ arbitraryEssenceWitness = do
     , ewReconcileRule   = rule
     , ewAgreement       = agr
     , ewDivergence      = divg
-    , ewConatusScalar   = cscalar
+    , ewStateIntegrityScalar   = cscalar
     , ewFieldSignature  = sig
     }
 
@@ -288,7 +288,7 @@ arbitraryEssenceTrajectory = do
   pure $ EssenceTrajectory
     { etWitnesses    = Seq.fromList witnesses
     , etAngstLevel   = angst
-    , etConatusFloor = floor_
+    , etStateIntegrityFloor = floor_
     , etCapacity     = emTrajectoryCapacity defaultEssenceModulation
     }
 
@@ -316,7 +316,7 @@ arbitraryDeliberation = do
 arbitraryEssenceCommitment :: Gen EssenceCommitment
 arbitraryEssenceCommitment = do
   mode    <- elements [EssenceContemplative, EssenceDialogical, EssenceIntegrative]
-  trigger <- elements [TriggerAngstThreshold, TriggerConatusErosion]
+  trigger <- elements [TriggerAngstThreshold, TriggerStateIntegrityErosion]
   turnOrd <- choose (1, 100)
   pure $ EssenceCommitment
     { ecMode        = mode
@@ -354,7 +354,7 @@ propStickyCommitment =
          EssenceUncommitted _  -> counterexample "commitment lost" False
   where
     arbitraryStepInput =
-      (,,) <$> arbitraryConatusEnergy <*> arbitraryField <*> arbitraryDeliberation
+      (,,) <$> arbitraryStateIntegrityEnergy <*> arbitraryField <*> arbitraryDeliberation
 
 -- | E7a — CMRepair is in every admissible-family set.
 propRepairAlwaysAdmissible :: Property
@@ -374,20 +374,20 @@ propSlidingWindowExactSemantics =
   forAll (choose (1, 6)) $ \window ->
   forAll (vectorOf window arbitraryEssenceWitness) $ \ws ->
   forAll arbitraryUnitDouble $ \angst ->
-    let em = defaultEssenceModulation { emConatusFloorWindow = window
-                                      , emConatusStructuralFloor = 0.5
+    let em = defaultEssenceModulation { emStateIntegrityFloorWindow = window
+                                      , emStateIntegrityStructuralFloor = 0.5
                                       , emAngstCommitmentThreshold = 1.1
                                       }
         traj = EssenceTrajectory
           { etWitnesses    = Seq.fromList ws
           , etAngstLevel   = angst  -- below threshold so angst never fires
-          , etConatusFloor = 0.0
+          , etStateIntegrityFloor = 0.0
           , etCapacity     = emTrajectoryCapacity em
           }
-        allSubFloor = all (\w -> ewConatusScalar w < 0.5) ws
+        allSubFloor = all (\w -> ewStateIntegrityScalar w < 0.5) ws
         lenOK       = length ws >= window
     in shouldCommit em traj == if allSubFloor && lenOK
-                                 then Just TriggerConatusErosion
+                                 then Just TriggerStateIntegrityErosion
                                  else Nothing
 
 -- | C1 — reconcile courtesy never widens admissible family set.
@@ -454,7 +454,7 @@ testFlagOnCommitmentFires = do
       -- Build a trajectory with angst just below threshold
       traj0 = emptyTrajectory { etAngstLevel = 0.45 }
       fd = emptyField
-      ce = ConatusEnergy 0.5 (ConatusComponents 0 0 0 0 0.0)
+      ce = StateIntegrity 0.5 (StateIntegrityComponents 0 0 0 0 0.0)
       -- One divergence witness to push angst over threshold.
       -- dtAgreement must NOT be Agree, otherwise extractMode counts
       -- the witness as Integrative regardless of dtRule.
@@ -507,23 +507,23 @@ isLeft _        = False
 
 -- | §4 calibration — corrected Conatus floor unit mismatch.
 --
--- 'computeConatusEnergy' produces a log-scale unbounded scalar
+-- 'computeStateIntegrityEnergy' produces a log-scale unbounded scalar
 -- (healthy range ~14-15).  The Phase 9 floor of 0.5 was calibrated
 -- against 'arbitraryUnitDouble' ([0,1]) generators and could never
 -- fire in production.  The corrected floor (7.0, ≈ half healthy)
 -- triggers on realistic post-violation values (~5).  This test also
 -- regression-locks against reverting to the buggy Phase 9 floor.
-testConatusErosionFiresUnderCorrectedFloor :: IO ()
-testConatusErosionFiresUnderCorrectedFloor = do
-  let -- 8 witnesses (== 'emConatusFloorWindow') all with
-      -- 'ewConatusScalar' = 5.0 (post-violation state).
+testStateIntegrityErosionFiresUnderCorrectedFloor :: IO ()
+testStateIntegrityErosionFiresUnderCorrectedFloor = do
+  let -- 8 witnesses (== 'emStateIntegrityFloorWindow') all with
+      -- 'ewStateIntegrityScalar' = 5.0 (post-violation state).
       mkWitness scalar = EssenceWitness
         { ewTurnOrdinal     = 1
         , ewSalienceDriver  = DrivenByDefault
         , ewReconcileRule   = RuleAgreement
         , ewAgreement       = Agree
         , ewDivergence      = 0.0
-        , ewConatusScalar   = scalar
+        , ewStateIntegrityScalar   = scalar
         , ewFieldSignature  = fieldSignature defaultEssenceModulation emptyField
         }
       ws = replicate 8 (mkWitness 5.0)
@@ -531,7 +531,7 @@ testConatusErosionFiresUnderCorrectedFloor = do
   -- With 'defaultEssenceModulation' (floor = 7.0), all witnesses
   -- are sub-floor → Conatus erosion fires.
   case shouldCommit defaultEssenceModulation traj of
-    Just TriggerConatusErosion -> pure ()
+    Just TriggerStateIntegrityErosion -> pure ()
     other -> assertFailure
       ("expected Just TriggerConatusErosion under corrected floor, got "
        ++ show other)
@@ -539,7 +539,7 @@ testConatusErosionFiresUnderCorrectedFloor = do
   -- the base record itself carries the live 7.0 since the 2026-10-15
   -- collapse), 5.0 is NOT sub-floor → no trigger.  Regression lock
   -- against accidental reversion.
-  let buggyPhase9 = phase9EssenceModulation { emConatusStructuralFloor = 0.5 }
+  let buggyPhase9 = phase9EssenceModulation { emStateIntegrityStructuralFloor = 0.5 }
   case shouldCommit buggyPhase9 traj of
     Nothing -> pure ()
     other -> assertFailure

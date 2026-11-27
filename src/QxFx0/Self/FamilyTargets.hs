@@ -10,7 +10,7 @@ Description : canonical — FMAR Phase-3 — per-family target Fields and Field-
 Each 'CanonicalMoveFamily' is paired with a 'Field' signature describing
 the system state in which executing that family is most authentic — its
 equilibrium. The 14 targets here are EDITORIAL HYPOTHESES drawn from the
-move-family semantics in @AGENTS.md@ and the Conatus-threshold semantics
+move-family semantics in @AGENTS.md@ and the state-integrity threshold semantics
 in @docs\/THEORY.md@ §9–10. They are initial guesses, to be replaced by
 empirical per-family averages once an F-09/F-10 production-trace corpus
 exists.
@@ -53,7 +53,7 @@ import QxFx0.Types.Domain.R5 (CanonicalMoveFamily (..))
 import QxFx0.Types.Self.FamilyTargets
 
 -- | A move family together with the Field state characteristic of it and
--- the Conatus/counterfactual admissibility bounds used during selection.
+-- the state-integrity/counterfactual admissibility bounds used during selection.
 -- | Build a target Field from raw component values, routing each through
 -- its smart constructor so the result is always in range.
 mkTargetField :: Double -> Double -> Double -> Double -> Double -> Double -> Field
@@ -221,13 +221,13 @@ closestFamilyByField pos targets =
           pick best cand = if dist cand < dist best then cand else best
        in ftFamily (foldl' pick t0 ts)
 
--- | Rescue selection: choose the closest family from the Conatus-permitted
--- subset (those whose @ftMinConatus <= apConatusEnergy@). Falls back to
--- 'CMContact' when no family is permitted — @CMContact@'s @ftMinConatus@ is
+-- | Rescue selection: choose the closest family from the state-integrity-permitted
+-- subset (those whose @ftMinStateIntegrity <= apStateIntegrityEnergy@). Falls back to
+-- 'CMContact' when no family is permitted — @CMContact@'s @ftMinStateIntegrity@ is
 -- @0.0@, so it is always admissible and is the safest restorative move.
 fmarSelectFamilyRescue :: AdaptivePosition -> [FamilyTarget] -> CanonicalMoveFamily
 fmarSelectFamilyRescue pos targets =
-  let permitted = filter (\t -> ftMinConatus t <= apConatusEnergy pos) targets
+  let permitted = filter (\t -> ftMinStateIntegrity t <= apStateIntegrityEnergy pos) targets
    in case permitted of
         [] -> CMContact
         ts -> closestFamilyByField pos ts

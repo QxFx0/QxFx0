@@ -5,28 +5,22 @@
 {-# LANGUAGE StrictData #-}
 
 {-|
-Module      : QxFx0.Self.Conatus
-Description : canonical — Phase-2 Conatus functional over the SelfBlanket.
+Module      : QxFx0.Self.StateIntegrity
+Description : canonical — structural integrity functional over the SelfBlanket.
 
-A typed, pure realisation of the scalar functional named in
-@docs\/THEORY.md@ §4.2 and elaborated in @docs\/adr\/0007-dual-mode-conatus.md@.
+A typed, pure scalar functional over the structural self-identity
+snapshot.  The historical name "Conatus" was retired from this module on
+2026-11-23 (P4): the functional does not measure a drive, an endeavour
+or a vitality.  It measures the structural integrity of the blanket —
+how much morphology, identity and history the system currently carries,
+minus a discrete penalty for each violated invariant.  The name
+"Conatus" now belongs only to 'QxFx0.Self.ConatusContour', a typed
+record of four self-maintenance facts that is measured, not claimed.
+See @docs\/closure\/P4_STATE_INTEGRITY_PREREG_2026-11-23.md@.
 
-== Theoretical Sketch
+== Definition
 
-Following the Spinozan reading committed in @docs\/THEORY.md@, every
-finite mode persists by an inner endeavour — a /conatus/. We do not
-claim the present implementation possesses anything like the conatus
-of a living substance; we claim only that the system's structural
-self-identity can be summarised by a scalar functional whose
-behaviour mirrors the formal /shape/ of conatus:
-
-* It is positive when the system is intact as /this system/.
-* It decreases — strictly, by a fixed step — for each
-  structural invariant the system has violated.
-* It admits a gradient pointing in the direction of fastest increase,
-  which serves as a /direction of recovery/ in Phase 2.5.
-
-Concretely, we project a 'QxFx0.Self.Types.SelfBlanket' \(b = (m, c, t)\)
+We project a 'QxFx0.Self.Types.SelfBlanket' \(b = (m, c, t)\)
 together with a list of 'QxFx0.Self.Types.BlanketViolation's \(v\) to:
 
 \[
@@ -35,7 +29,7 @@ C(b, v) = w_m \cdot \log(1 + m) + w_c \cdot \log(1 + c) + w_t \cdot \log(1 + t) 
 
 where \(m, c, t\) are the morphology size, identity-claim count, and
 turn count from the blanket, and \(w_m, w_c, w_t, \lambda\) are
-tunable coefficients ('ConatusWeights'). The logarithmic shape
+tunable coefficients ('StateIntegrityWeights'). The logarithmic shape
 captures /diminishing returns/: a system gains a great deal of
 identity by acquiring its first hundred morphological entries and
 proportionally less by acquiring its next hundred. The penalty term
@@ -52,7 +46,7 @@ is computed analytically (no automatic-differentiation dependency).
 Each component is strictly positive on non-degenerate blankets and
 /decreases/ as its axis grows — operationally: when several axes
 have degraded, recovery should preferentially restore the one whose
-current value is smallest, because the marginal gain in Conatus is
+current value is smallest, because the marginal gain in integrity is
 largest there.
 
 == Scope and Honesty
@@ -65,34 +59,34 @@ have a single principled scalar/gradient to consult instead of
 hand-coded heuristics. See @docs\/THEORY.md@ §5 for the explicit
 list of what we do /not/ claim.
 -}
-module QxFx0.Self.Conatus
+module QxFx0.Self.StateIntegrity
   ( -- * Weights
-    ConatusWeights (..)
-  , defaultConatusWeights
+    StateIntegrityWeights (..)
+  , defaultStateIntegrityWeights
     -- * Scalar energy
-  , ConatusComponents (..)
-  , ConatusEnergy (..)
-  , computeConatusEnergy
-  , computeConatusEnergyWith
+  , StateIntegrityComponents (..)
+  , StateIntegrity (..)
+  , computeStateIntegrityEnergy
+  , computeStateIntegrityEnergyWith
     -- * Gradient
-  , ConatusGradient (..)
-  , computeConatusGradient
-  , computeConatusGradientWith
+  , StateIntegrityGradient (..)
+  , computeStateIntegrityGradient
+  , computeStateIntegrityGradientWith
     -- * Derived quantities
   , gradientMagnitude
   , gradientNormalize
-  , conatusViolationPenalty
+  , stateIntegrityViolationPenalty
     -- * Thresholds
   , lowEnergyThreshold
   ) where
 
 import QxFx0.Self.Types (BlanketViolation, SelfBlanket (..))
-import QxFx0.Types.Self.Conatus
-import QxFx0.Types.Thresholds.Conatus
+import QxFx0.Types.Self.StateIntegrity
+import QxFx0.Types.Thresholds.StateIntegrity
 
 -- | The reference builtin weights used throughout the system unless an
--- experiment overrides them via 'computeConatusEnergyWith' or
--- 'computeConatusGradientWith'. The defaults in 'defaultConatusWeights'
+-- experiment overrides them via 'computeStateIntegrityEnergyWith' or
+-- 'computeStateIntegrityGradientWith'. The defaults in 'defaultStateIntegrityWeights'
 -- encode the editorial judgement that morphological substance is the
 -- primary carrier of identity (largest weight), accumulated identity
 -- claims are secondary, and raw turn count is a weaker indicator (a
@@ -100,104 +94,104 @@ import QxFx0.Types.Thresholds.Conatus
 -- with rich growth). The violation penalty is intentionally large
 -- relative to any single-axis logarithmic contribution: a structural
 -- rupture must not be wallpapered over by mere accumulation.
-builtinConatusWeights :: ConatusWeights
-builtinConatusWeights = ConatusWeights
-  { cwMorphology = conatusWeightMorphology
-  , cwIdentity   = conatusWeightIdentity
-  , cwTurns      = conatusWeightTurns
-  , cwViolation  = conatusWeightViolation
+builtinStateIntegrityWeights :: StateIntegrityWeights
+builtinStateIntegrityWeights = StateIntegrityWeights
+  { siwMorphology = stateIntegrityWeightMorphology
+  , siwIdentity   = stateIntegrityWeightIdentity
+  , siwTurns      = stateIntegrityWeightTurns
+  , siwViolation  = stateIntegrityWeightViolation
   }
 
 -- | Pure reference weights. Runtime configuration is loaded explicitly by
 -- session bootstrap and injected into 'SelfState'.
-defaultConatusWeights :: ConatusWeights
-defaultConatusWeights = builtinConatusWeights
+defaultStateIntegrityWeights :: StateIntegrityWeights
+defaultStateIntegrityWeights = builtinStateIntegrityWeights
 
--- | Compute the Conatus energy of a blanket under the supplied
--- violation list, using 'defaultConatusWeights'. Pure, total, and
+-- | Compute the state-integrity scalar of a blanket under the supplied
+-- violation list, using 'defaultStateIntegrityWeights'. Pure, total, and
 -- well-defined on every legitimately constructed blanket including
 -- the degenerate \((0, 0, 0)\) case.
-computeConatusEnergy :: SelfBlanket -> [BlanketViolation] -> ConatusEnergy
-computeConatusEnergy = computeConatusEnergyWith defaultConatusWeights
+computeStateIntegrityEnergy :: SelfBlanket -> [BlanketViolation] -> StateIntegrity
+computeStateIntegrityEnergy = computeStateIntegrityEnergyWith defaultStateIntegrityWeights
 
--- | Compute the Conatus energy under explicit weights. Used by
+-- | Compute the state-integrity scalar under explicit weights. Used by
 -- tests and experiments that perturb the coefficients; production
--- code should call 'computeConatusEnergy'.
-computeConatusEnergyWith :: ConatusWeights -> SelfBlanket -> [BlanketViolation] -> ConatusEnergy
-computeConatusEnergyWith w b violations =
+-- code should call 'computeStateIntegrityEnergy'.
+computeStateIntegrityEnergyWith :: StateIntegrityWeights -> SelfBlanket -> [BlanketViolation] -> StateIntegrity
+computeStateIntegrityEnergyWith w b violations =
   let m         = fromIntegral (sbMorphologyTotalSize b) :: Double
       c         = fromIntegral (sbIdentityClaimsCount b) :: Double
       t         = fromIntegral (sbTurnCount           b) :: Double
-      mComp     = cwMorphology w * log1p m
-      cComp     = cwIdentity   w * log1p c
-      tComp     = cwTurns      w * log1p t
-      penalty   = negate (cwViolation w * fromIntegral (length violations))
-      comps     = ConatusComponents
-        { ccMorphology     = mComp
-        , ccIdentity       = cComp
-        , ccTurns          = tComp
-        , ccPenalty        = penalty
-        , ccSelfDivergence = 0.0
+      mComp     = siwMorphology w * log1p m
+      cComp     = siwIdentity   w * log1p c
+      tComp     = siwTurns      w * log1p t
+      penalty   = negate (siwViolation w * fromIntegral (length violations))
+      comps     = StateIntegrityComponents
+        { sicMorphology     = mComp
+        , sicIdentity       = cComp
+        , sicTurns          = tComp
+        , sicPenalty        = penalty
+        , sicSelfDivergence = 0.0
         }
-   in ConatusEnergy
-        { ceScalar     = mComp + cComp + tComp + penalty
-        , ceComponents = comps
+   in StateIntegrity
+        { siScalar     = mComp + cComp + tComp + penalty
+        , siComponents = comps
         }
 
--- | Compute the gradient of the smooth part of Conatus at a blanket,
--- using 'defaultConatusWeights'. Independent of the violation set.
-computeConatusGradient :: SelfBlanket -> ConatusGradient
-computeConatusGradient = computeConatusGradientWith defaultConatusWeights
+-- | Compute the gradient of the smooth part of state integrity at a blanket,
+-- using 'defaultStateIntegrityWeights'. Independent of the violation set.
+computeStateIntegrityGradient :: SelfBlanket -> StateIntegrityGradient
+computeStateIntegrityGradient = computeStateIntegrityGradientWith defaultStateIntegrityWeights
 
 -- | Compute the gradient under explicit weights.
-computeConatusGradientWith :: ConatusWeights -> SelfBlanket -> ConatusGradient
-computeConatusGradientWith w b =
+computeStateIntegrityGradientWith :: StateIntegrityWeights -> SelfBlanket -> StateIntegrityGradient
+computeStateIntegrityGradientWith w b =
   let m = fromIntegral (sbMorphologyTotalSize b) :: Double
       c = fromIntegral (sbIdentityClaimsCount b) :: Double
       t = fromIntegral (sbTurnCount           b) :: Double
-   in ConatusGradient
-        { cgMorphology = cwMorphology w / (1 + m)
-        , cgIdentity   = cwIdentity   w / (1 + c)
-        , cgTurns      = cwTurns      w / (1 + t)
+   in StateIntegrityGradient
+        { sigMorphology = siwMorphology w / (1 + m)
+        , sigIdentity   = siwIdentity   w / (1 + c)
+        , sigTurns      = siwTurns      w / (1 + t)
         }
 
--- | Euclidean magnitude of a Conatus gradient. Useful as an
+-- | Euclidean magnitude of a state-integrity gradient. Useful as an
 -- /urgency/ scalar: a recovery system can compare magnitudes to
 -- decide whether the current state warrants intervention at all.
-gradientMagnitude :: ConatusGradient -> Double
+gradientMagnitude :: StateIntegrityGradient -> Double
 gradientMagnitude g =
-  sqrt (cgMorphology g ^ (2 :: Int) + cgIdentity g ^ (2 :: Int) + cgTurns g ^ (2 :: Int))
+  sqrt (sigMorphology g ^ (2 :: Int) + sigIdentity g ^ (2 :: Int) + sigTurns g ^ (2 :: Int))
 
 -- | Normalise a gradient to unit Euclidean magnitude. Returns
 -- @Nothing@ when the gradient is the zero vector (which can only
 -- happen if all weights are zero, since blanket fields contribute
 -- @1 / (1 + x) > 0@ for any finite \(x \geq 0\)).
-gradientNormalize :: ConatusGradient -> Maybe ConatusGradient
+gradientNormalize :: StateIntegrityGradient -> Maybe StateIntegrityGradient
 gradientNormalize g =
   let mag = gradientMagnitude g
    in if mag == 0
         then Nothing
-        else Just ConatusGradient
-          { cgMorphology = cgMorphology g / mag
-          , cgIdentity   = cgIdentity   g / mag
-          , cgTurns      = cgTurns      g / mag
+        else Just StateIntegrityGradient
+          { sigMorphology = sigMorphology g / mag
+          , sigIdentity   = sigIdentity   g / mag
+          , sigTurns      = sigTurns      g / mag
           }
 
--- | The signed scalar drop in Conatus attributable to a list of
+-- | The signed scalar drop in state integrity attributable to a list of
 -- violations under given weights. Exposed for diagnostics; the same
--- value already appears as 'ccPenalty' in any 'ConatusEnergy'
+-- value already appears as 'sicPenalty' in any 'StateIntegrity'
 -- record computed under matching weights.
-conatusViolationPenalty :: ConatusWeights -> [BlanketViolation] -> Double
-conatusViolationPenalty w vs = negate (cwViolation w * fromIntegral (length vs))
+stateIntegrityViolationPenalty :: StateIntegrityWeights -> [BlanketViolation] -> Double
+stateIntegrityViolationPenalty w vs = negate (siwViolation w * fromIntegral (length vs))
 
--- | Threshold below which Conatus energy is considered "low" and
+-- | Threshold below which the state-integrity scalar is considered "low" and
 -- triggers self-preservation routing restrictions. When
--- @ceScalar < lowEnergyThreshold@, the system prohibits high-risk
+-- @siScalar < lowEnergyThreshold@, the system prohibits high-risk
 -- families (CMConfront, CMHypothesis, CMDistinguish) and allows
 -- only restorative families (CMContact, CMAnchor, CMRepair).
 --
 -- The default value of @3.0@ is calibrated against the log-scale
--- codomain of 'ceScalar': a healthy blanket with moderate
+-- codomain of 'siScalar': a healthy blanket with moderate
 -- morphology (e.g., 20 entries), some identity claims (e.g., 5),
 -- and a few turns (e.g., 10) yields:
 --
@@ -211,7 +205,7 @@ conatusViolationPenalty w vs = negate (cwViolation w * fromIntegral (length vs))
 --
 -- See ADR-0045 for the integration rationale.
 lowEnergyThreshold :: Double
-lowEnergyThreshold = conatusLowEnergy
+lowEnergyThreshold = stateIntegrityLowEnergy
 
 -- | Numerically robust \(\log(1 + x)\) for \(x \geq 0\). Avoids
 -- catastrophic cancellation for small \(x\), and is well-defined

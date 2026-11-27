@@ -12,9 +12,9 @@ Verifies the laws asserted in the FMAR plan, Phase 3:
   * 'closestFamilyByField' is deterministic;
   * self-consistency: positioning the system exactly at a family's target
     Field classifies to that family (each target is closest to itself);
-  * 'fmarSelectFamilyRescue' returns a family whose @ftMinConatus@ is
+  * 'fmarSelectFamilyRescue' returns a family whose @ftMinStateIntegrity@ is
     satisfied by the position's energy, or 'CMContact' when none is;
-  * 'CMContact' is always admissible (its @ftMinConatus@ is @0@).
+  * 'CMContact' is always admissible (its @ftMinStateIntegrity@ is @0@).
 -}
 module Test.Suite.SelfFamilyTargets
   ( selfFamilyTargetsTests
@@ -74,7 +74,7 @@ selfFamilyTargetsTests =
   , TestLabel "CMContact is always admissible (ftMinConatus == 0)" $
       TestCase $ do
         let contact = head (filter ((== CMContact) . ftFamily) familyTargets)
-        assertBool "min conatus 0" (ftMinConatus contact <= 0.0)
+        assertBool "min conatus 0" (ftMinStateIntegrity contact <= 0.0)
   , TestLabel "closestFamilyByField is deterministic" $
       quickCheckProperty "closest deterministic" propClosestDeterministic
   , TestLabel "self-consistency: each target Field classifies to its family" $
@@ -115,7 +115,7 @@ positionFromField f =
   AdaptivePosition
     { apField         = f
     , apSpectral      = SpectralEncoding 0.0 0.0 0.0
-    , apConatusEnergy = 100.0
+    , apStateIntegrityEnergy = 100.0
     }
 
 targetFieldInRange :: FamilyTarget -> Bool

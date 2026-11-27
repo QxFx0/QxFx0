@@ -26,7 +26,7 @@ import qualified Data.Text as T
 
 data RouteHintAdmissionInput = RouteHintAdmissionInput
   { rhaiTruthContractStatus :: !TruthContractStatus
-  , rhaiConatusGateFired :: !Bool
+  , rhaiStateIntegrityGateFired :: !Bool
   , rhaiRawText :: !T.Text
   } deriving stock (Eq, Show)
 
@@ -64,7 +64,7 @@ softenHint input hint =
 
 markHintAmbiguous :: RouteHintAdmissionInput -> InputRouteHint -> InputRouteHint
 markHintAmbiguous input hint =
-  let reason = if rhaiConatusGateFired input then "conatus_gate" else "non_authoritative"
+  let reason = if rhaiStateIntegrityGateFired input then "conatus_gate" else "non_authoritative"
   in hint
       { irhEvidence = take 8 (irhEvidence hint ++ ["route_hint_admission=" <> reason])
       }
@@ -75,7 +75,7 @@ admitRouteHint input hint =
   where
     config = LowerConfConfig
       { lccGetTruthContract = rhaiTruthContractStatus
-      , lccConatusFired = rhaiConatusGateFired
+      , lccStateIntegrityFired = rhaiStateIntegrityGateFired
       , lccInScope = hintAdmissionInScope
       , lccAlreadyWeak = hintAlreadyWeakOrAmbiguous
       , lccSoften = softenHint

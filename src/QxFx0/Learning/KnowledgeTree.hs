@@ -204,7 +204,7 @@ pruneFruits _currentTurn t =
       )
 
 authoritativeNetDelta :: KnowledgeFruit -> Double
-authoritativeNetDelta f = kfConatusDelta f + kfPredictiveDelta f
+authoritativeNetDelta f = kfStateIntegrityDelta f + kfPredictiveDelta f
 
 -- | Trend of average branch health over the tree.
 branchHealthTrend :: KnowledgeTree -> Double

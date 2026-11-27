@@ -191,7 +191,7 @@ import QxFx0.Core.TurnPipeline.Route.Anomaly
   , selfReferentialCollapse
   )
 import QxFx0.Types.State.Stance (StanceState(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import qualified Data.Set as Set
@@ -257,7 +257,7 @@ import QxFx0.Core.SemanticLogicAdmission
   , admitSemanticLogicWeighting
   )
 import QxFx0.Core.SensePlan (buildResponseSensePlan)
-import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+import QxFx0.Self.StateIntegrity (StateIntegrityComponents(..), StateIntegrity(..))
 import QxFx0.Self.Deliberation
   ( Deliberation(..)
   , DeliberationTrace(..)
@@ -389,7 +389,7 @@ turnPipelineProtocolTests =
   , testReplayEnvelopeJsonDeterministicProperty
   , testBlockedConceptsRetentionIsBoundedAndDeduplicated
   , testPrepareEffectsResolveConcurrently
-  , testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical
+  , testScheduleTurnEffectsPrioritizesCheapChecksWhenStateIntegrityCritical
   , testPrepareMetricsExposeHonestPhaseNames
   , testRouteEffectsResolveConcurrently
   , testRouteEffectsFailOnAgdaInStrictRuntime
@@ -500,15 +500,15 @@ turnPipelineProtocolTests =
        -- P1-1 (Phase 7): FMAR behavioral integration — FmarLive must override cascade routing
        , testFmarLiveOverridesRouting
       -- P1-1: empty/fresh state must NOT fire the Conatus gate (energy starts non-negative)
-      , testConatusGateDoesNotFireFromEmptyState
-      , testConatusGateFiresRecoveryConatusGate
+      , testStateIntegrityGateDoesNotFireFromEmptyState
+      , testStateIntegrityGateFiresRecoveryStateIntegrityGate
       , testSustainedSelfDivergenceFiresRecoverySelfDivergence
-     , testConatusGateFlagDrivesLocalRecoveryPlan
-     , testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause
-     , testConatusGradientMorphologyDominant
-     , testConatusGradientIdentityDominant
-     , testConatusGradientTemporalDominant
-     , testConatusGradientDegenerateTie
+     , testStateIntegrityGateFlagDrivesLocalRecoveryPlan
+     , testStateIntegrityGateEnergyWithoutFlagDoesNotProduceStateIntegrityCause
+     , testStateIntegrityGradientMorphologyDominant
+     , testStateIntegrityGradientIdentityDominant
+     , testStateIntegrityGradientTemporalDominant
+     , testStateIntegrityGradientDegenerateTie
      , testDeliberationRecoveryNotSilenced
      , testFinalizePrecommitResolveConcurrently
      , testPrepareCurrentTimeDeterministicInjection
@@ -522,38 +522,38 @@ turnPipelineProtocolTests =
       , testNoActionExternalReason
        , testConstitutionAdmissibleCommitmentStrengthens
        , testNonAuthoritativeCommitmentCandidateCappedBeforePlanning
-       , testConatusGatedCommitmentCandidateSuspendedBeforePlanning
+       , testStateIntegrityGatedCommitmentCandidateSuspendedBeforePlanning
        , testNonAuthoritativeFinalizeDoesNotStrengthenCommitment
        , testConstitutionAdmissibleInterpretationPreservesRawRouteInput
        , testNonAuthoritativeInterpretationNarrowsBeforeRouteCrystallization
-       , testConatusGatedInterpretationFallsBackBeforeRouteCrystallization
+       , testStateIntegrityGatedInterpretationFallsBackBeforeRouteCrystallization
        , testConstitutionAdmissiblePropositionPreservesRawFrame
        , testNonAuthoritativePropositionFrameSoftensBeforeInterpretationAdmission
-       , testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission
+       , testStateIntegrityGatedPropositionFrameSoftensBeforeInterpretationAdmission
        , testConstitutionAdmissibleSemanticFramePreservesRawFrame
        , testNonAuthoritativeSemanticFrameSoftensBeforePropositionAdmission
-       , testConatusGatedSemanticFrameSoftensBeforePropositionAdmission
+       , testStateIntegrityGatedSemanticFrameSoftensBeforePropositionAdmission
        , testConstitutionAdmissibleSenseVectorPreservesRawVector
        , testNonAuthoritativeSenseVectorNarrowsBeforeMeaningShaping
-       , testConatusGatedSenseVectorNarrowsBeforeMeaningShaping
+       , testStateIntegrityGatedSenseVectorNarrowsBeforeMeaningShaping
        , testConstitutionAdmissibleRouteHintPreservesRawHint
        , testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission
-       , testConatusGatedRouteHintSoftensBeforePropositionAdmission
+       , testStateIntegrityGatedRouteHintSoftensBeforePropositionAdmission
        , testConstitutionAdmissibleFamilyPreservesRawCrystallization
        , testNonAuthoritativeFamilyCrystallizationCapsBeforeRouteDecision
-       , testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision
+       , testStateIntegrityGatedFamilyCrystallizationCapsBeforeRouteDecision
        , testRoutePlanConsumesAdmittedFamilyCrystallization
        , testConstitutionAdmissibleEarlyFamilyPreservesRawRecommendation
        , testNonAuthoritativeEarlyFamilyCapsBeforeLaterCrystallization
-       , testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization
+       , testStateIntegrityGatedEarlyFamilyCapsBeforeLaterCrystallization
        , testPrepareConsciousnessUsesAdmittedEarlyFamily
        , testConstitutionAdmissibleSemanticLogicPreservesRawWeighting
        , testNonAuthoritativeSemanticLogicCapsBeforeEarlyFamilyAdmission
-       , testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission
+       , testStateIntegrityGatedSemanticLogicCapsBeforeEarlyFamilyAdmission
        , testPrepareUsesAdmittedSemanticLogicFamily
        , testConstitutionAdmissibleSemanticContributionPreservesRawContributions
        , testNonAuthoritativeSemanticContributionSoftensBeforeWeightingAdmission
-       , testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission
+       , testStateIntegrityGatedSemanticContributionSoftensBeforeWeightingAdmission
        , testPrepareUsesAdmittedSemanticContributionPlane
        , testConstitutionAdmissibleAtomContributionPreservesRawAtoms
        , testNonAuthoritativeAtomContributionCapsStrongAtoms
@@ -805,22 +805,22 @@ testPrepareEffectsResolveConcurrently = TestCase $ do
   maxActive <- readIORef maxRef
   assertBool "prepare effects should overlap instead of running strictly one-by-one" (maxActive >= 3)
 
-testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical :: Test
-testScheduleTurnEffectsPrioritizesCheapChecksWhenConatusCritical = TestCase $ do
-  let criticalConatus = ConatusEnergy
-        { ceScalar = -1.0
-        , ceComponents = ConatusComponents
-            { ccMorphology = 0.0
-            , ccIdentity = 0.0
-            , ccTurns = 0.0
-            , ccPenalty = 1.0
-            , ccSelfDivergence = 0.0
+testScheduleTurnEffectsPrioritizesCheapChecksWhenStateIntegrityCritical :: Test
+testScheduleTurnEffectsPrioritizesCheapChecksWhenStateIntegrityCritical = TestCase $ do
+  let criticalStateIntegrity = StateIntegrity
+        { siScalar = -1.0
+        , siComponents = StateIntegrityComponents
+            { sicMorphology = 0.0
+            , sicIdentity = 0.0
+            , sicTurns = 0.0
+            , sicPenalty = 1.0
+            , sicSelfDivergence = 0.0
             }
 }
       scheduled =
         scheduleTurnEffects
           testProtocolPipelineIO
-          criticalConatus
+          criticalStateIntegrity
           [ ("embedding", TurnReqEmbedding "тест")
           , ("api", TurnReqApiHealth)
           , ("nix", TurnReqNixGuard "concept" 0.1 0.1)
@@ -1180,7 +1180,7 @@ testResolveCollisionsKeepsNovel = TestCase $ do
 -- persistence threshold is met.
 testLearningNeedRaisedOnPersistentPattern :: Test
 testLearningNeedRaisedOnPersistentPattern = TestCase $ do
-  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)
+  let stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 0 0 0 0 0.0)
         -- ^ High conatus: old logic would suppress lexicon need.
         --   WP6.1 decouples learning from conatus health.
       field = emptyField
@@ -1192,7 +1192,7 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
         { lpcStagnationTurns = 1
         , lpcMinUnknownCount = 1
         }
-      step turn st = detectLearningNeedWithPressure cfg conatus field 0 3 turn st True 0
+      step turn st = detectLearningNeedWithPressure cfg stateIntegrity field 0 3 turn st True 0
         -- ^ isTopicUnknown=True, currentGraftedCount=0 (stagnation)
       st0 = emptyLearningNeedState { lnsWindowStartTurn = 1, lnsUnknownWindowCount = 2 }
       st1 = step 2 st0
@@ -1212,14 +1212,14 @@ testLearningNeedRaisedOnPersistentPattern = TestCase $ do
 -- | WP1: single-turn noise must not create a learning need.
 testLearningNeedNotRaisedOnNoise :: Test
 testLearningNeedNotRaisedOnNoise = TestCase $ do
-  let conatus = ConatusEnergy 0.3 (ConatusComponents 0 0 0 0 0.0)
+  let stateIntegrity = StateIntegrity 0.3 (StateIntegrityComponents 0 0 0 0 0.0)
       field = emptyField
         { fieldConfidence = FieldConfidence 0.3
         , fieldCounterfactual = Counterfactual 0.6
         , fieldConsolidation = Consolidation 0.2
         }
-      st1 = detectLearningNeed conatus field 0 3 1 emptyLearningNeedState
-      st2 = detectLearningNeed conatus field 0 3 2 st1
+      st1 = detectLearningNeed stateIntegrity field 0 3 1 emptyLearningNeedState
+      st2 = detectLearningNeed stateIntegrity field 0 3 2 st1
   assertEqual "noise turn 1 must stay NeedNone"
     NeedNone (lnsCurrentNeed st1)
   assertEqual "noise turn 2 must stay NeedNone (below persistence threshold=3)"
@@ -1254,8 +1254,8 @@ testLearningNeedHighDeficitTriggersRequestStrategy = TestCase $
         ss = ss0 { ssLearningNeedState = highDeficitNeed }
         -- Ensure no higher-priority recovery drivers fire
         ti = ti0
-          { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
+          { tiStateIntegrityGateFired = False
+          , tiStateIntegrity = StateIntegrity 1.0 (StateIntegrityComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     case repLocalRecoveryPlan renderPlan of
@@ -1280,8 +1280,8 @@ testLearningNeedLowDeficitDoesNotTriggerRequest = TestCase $
           }
         ss = ss0 { ssLearningNeedState = lowDeficitNeed }
         ti = ti0
-          { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
+          { tiStateIntegrityGateFired = False
+          , tiStateIntegrity = StateIntegrity 1.0 (StateIntegrityComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     -- With no other recovery drivers, and learningNeedActive = False,
@@ -1298,8 +1298,8 @@ testLearningNeedNoneDoesNotTriggerRequest = TestCase $
     let noNeed = emptyLearningNeedState
         ss = ss0 { ssLearningNeedState = noNeed }
         ti = ti0
-          { tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
+          { tiStateIntegrityGateFired = False
+          , tiStateIntegrity = StateIntegrity 1.0 (StateIntegrityComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "NeedNone must not produce learning-driven recovery"
@@ -1852,21 +1852,21 @@ testFmarLiveOverridesRouting = TestCase $
       (tpFinalFamily tpOff /= tpFinalFamily tpLive)
 
 -- | An empty/fresh system state must NOT fire the Conatus gate. By design the
--- gate trips only when @ceScalar < conatusGateThreshold@ (== 0), which requires
+-- gate trips only when @siScalar < stateIntegrityGateThreshold@ (== 0), which requires
 -- accumulated blanket violations to drive energy negative. A fresh fixture
 -- starts with non-negative energy, so the gate stays closed and no
--- ConatusGate-caused recovery plan is produced. (The firing path is exercised
--- separately by 'testConatusGateFiresRecoveryConatusGate', which forces a
+-- StateIntegrityGate-caused recovery plan is produced. (The firing path is exercised
+-- separately by 'testStateIntegrityGateFiresRecoveryStateIntegrityGate', which forces a
 -- negative energy.) This corrects an earlier premise that wrongly assumed the
 -- empty state self-triggers the gate.
-testConatusGateDoesNotFireFromEmptyState :: Test
-testConatusGateDoesNotFireFromEmptyState = TestCase $
+testStateIntegrityGateDoesNotFireFromEmptyState :: Test
+testStateIntegrityGateDoesNotFireFromEmptyState = TestCase $
   withDeterministicEmbedding $ do
     (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
     assertBool "empty system state must NOT fire Conatus gate"
-      (not (tiConatusGateFired ti))
+      (not (tiStateIntegrityGateFired ti))
     assertBool "Conatus energy must be non-negative with empty state"
-      (ceScalar (tiConatusEnergy ti) >= 0)
+      (siScalar (tiStateIntegrity ti) >= 0)
     let renderPlan = planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
     case repLocalRecoveryPlan renderPlan of
       Nothing -> pure ()
@@ -1874,41 +1874,41 @@ testConatusGateDoesNotFireFromEmptyState = TestCase $
         assertBool
           ("empty state must not produce a ConatusGate recovery plan, got: "
             <> show (lrpCause recoveryPlan))
-          (lrpCause recoveryPlan /= RecoveryConatusGate)
+          (lrpCause recoveryPlan /= RecoveryStateIntegrityGate)
 
-testConatusGateFiresRecoveryConatusGate :: Test
-testConatusGateFiresRecoveryConatusGate = TestCase $
+testStateIntegrityGateFiresRecoveryStateIntegrityGate :: Test
+testStateIntegrityGateFiresRecoveryStateIntegrityGate = TestCase $
   withDeterministicEmbedding $ do
-    -- Phase 2.5 (M2d) + RecoveryConatusGate integration test:
+    -- Phase 2.5 (M2d) + RecoveryStateIntegrityGate integration test:
     -- when the runtime Conatus energy drops below the gate
     -- threshold (default 0.0), 'buildLocalRecoveryPlan' inside
     -- 'planRenderEffectsForRuntime' must emit the dedicated
-    -- 'RecoveryConatusGate' cause with 'StrategySafeRecovery'
+    -- 'RecoveryStateIntegrityGate' cause with 'StrategySafeRecovery'
     -- as the highest-priority recovery driver, regardless of
     -- the runtime mode being 'RuntimeStrict' (so this is /not/
     -- the environmental 'RecoveryRuntimeDegraded' path).
     --
     -- Strategy: build a viable fixture, then forcibly override
-    -- only 'tiConatusEnergy' to a negative scalar. This is the
-    -- single field 'conatusGateFires' inspects, and is the
+    -- only 'tiStateIntegrity' to a negative scalar. This is the
+    -- single field 'stateIntegrityGateFires' inspects, and is the
     -- canonical M6 single-source-of-truth threading site, so
     -- the override is enough to drive the entire decision
     -- branch without rebuilding the rest of the fixture.
     (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -1.0
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -1.0
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -1917,7 +1917,7 @@ testConatusGateFiresRecoveryConatusGate = TestCase $
         assertFailure "Conatus gate firing must expose a visible local recovery plan"
       Just recoveryPlan -> do
         assertEqual "Conatus gate must produce RecoveryConatusGate cause"
-          RecoveryConatusGate
+          RecoveryStateIntegrityGate
           (lrpCause recoveryPlan)
         assertEqual "Conatus gate must force StrategySafeRecovery"
           StrategySafeRecovery
@@ -1970,25 +1970,25 @@ testSustainedSelfDivergenceFiresRecoverySelfDivergence = TestCase $
 
 -- | F2-lock (regression): conatus gate *flag* must drive the recovery plan.
 -- This pins the M6 single-source-of-truth invariant: the energy scalar
--- alone is not enough; tiConatusGateFired must be True.
-testConatusGateFlagDrivesLocalRecoveryPlan :: Test
-testConatusGateFlagDrivesLocalRecoveryPlan = TestCase $
+-- alone is not enough; tiStateIntegrityGateFired must be True.
+testStateIntegrityGateFlagDrivesLocalRecoveryPlan :: Test
+testStateIntegrityGateFlagDrivesLocalRecoveryPlan = TestCase $
   withDeterministicEmbedding $ do
     (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -0.1
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -0.1
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -1997,7 +1997,7 @@ testConatusGateFlagDrivesLocalRecoveryPlan = TestCase $
         assertFailure "Conatus gate flag=True must expose a visible local recovery plan"
       Just recoveryPlan -> do
         assertEqual "Conatus gate flag must produce RecoveryConatusGate cause"
-          RecoveryConatusGate
+          RecoveryStateIntegrityGate
           (lrpCause recoveryPlan)
         assertEqual "Conatus gate must force StrategySafeRecovery"
           StrategySafeRecovery
@@ -2006,26 +2006,26 @@ testConatusGateFlagDrivesLocalRecoveryPlan = TestCase $
           ("conatus_gate_fired" `elem` lrpEvidence recoveryPlan)
 
 -- | F2-lock (regression): energy below threshold WITHOUT the flag must NOT
--- produce RecoveryConatusGate. This proves the flag is the actual driver,
+-- produce RecoveryStateIntegrityGate. This proves the flag is the actual driver,
 -- not the scalar alone.
-testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause :: Test
-testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause = TestCase $
+testStateIntegrityGateEnergyWithoutFlagDoesNotProduceStateIntegrityCause :: Test
+testStateIntegrityGateEnergyWithoutFlagDoesNotProduceStateIntegrityCause = TestCase $
   withDeterministicEmbedding $ do
     (ss, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -0.1
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -0.1
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = False
+          , tiStateIntegrityGateFired      = False
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -2033,22 +2033,22 @@ testConatusGateEnergyWithoutFlagDoesNotProduceConatusCause = TestCase $
       Nothing -> pure ()  -- acceptable: no recovery plan at all
       Just recoveryPlan ->
          assertBool "energy below threshold without gate flag must NOT produce RecoveryConatusGate"
-           (lrpCause recoveryPlan /= RecoveryConatusGate)
+           (lrpCause recoveryPlan /= RecoveryStateIntegrityGate)
 
 -- | WP1 (GAP1): morphology-dominant Conatus gradient → StrategyMorphologyExpansion.
 -- ∂m = 1.0/(1+0) = 1.0, ∂c = 0.5/(1+9) = 0.05, ∂t = 0.25/(1+0) = 0.25.
-testConatusGradientMorphologyDominant :: Test
-testConatusGradientMorphologyDominant = TestCase $
+testStateIntegrityGradientMorphologyDominant :: Test
+testStateIntegrityGradientMorphologyDominant = TestCase $
   withDeterministicEmbedding $ do
     (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -1.0
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -1.0
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
@@ -2057,9 +2057,9 @@ testConatusGradientMorphologyDominant = TestCase $
           , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = replicate 9 dummyClaim }
           }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -2075,18 +2075,18 @@ testConatusGradientMorphologyDominant = TestCase $
 
 -- | WP1 (GAP1): identity-dominant Conatus gradient → StrategyIdentityReinforcement.
 -- ∂m = 1.0/(1+9) = 0.1, ∂c = 0.5/(1+0) = 0.5, ∂t = 0.25/(1+0) = 0.25.
-testConatusGradientIdentityDominant :: Test
-testConatusGradientIdentityDominant = TestCase $
+testStateIntegrityGradientIdentityDominant :: Test
+testStateIntegrityGradientIdentityDominant = TestCase $
   withDeterministicEmbedding $ do
     (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -1.0
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -1.0
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         ss = ss0
@@ -2096,9 +2096,9 @@ testConatusGradientIdentityDominant = TestCase $
           , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = [] }
           }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -2112,18 +2112,18 @@ testConatusGradientIdentityDominant = TestCase $
 
 -- | WP1 (GAP1): temporal-dominant Conatus gradient → StrategyTemporalDeepening.
 -- ∂m = 1.0/(1+4) = 0.2, ∂c = 0.5/(1+2) ≈ 0.167, ∂t = 0.25/(1+0) = 0.25.
-testConatusGradientTemporalDominant :: Test
-testConatusGradientTemporalDominant = TestCase $
+testStateIntegrityGradientTemporalDominant :: Test
+testStateIntegrityGradientTemporalDominant = TestCase $
   withDeterministicEmbedding $ do
     (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -1.0
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -1.0
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
@@ -2134,9 +2134,9 @@ testConatusGradientTemporalDominant = TestCase $
           , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = replicate 2 dummyClaim }
           }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -2150,18 +2150,18 @@ testConatusGradientTemporalDominant = TestCase $
 
 -- | WP1 (GAP1): degenerate (three-way tie) gradient → StrategySafeRecovery fallback.
 -- ∂m = 1.0/(1+3) = 0.25, ∂c = 0.5/(1+1) = 0.25, ∂t = 0.25/(1+0) = 0.25.
-testConatusGradientDegenerateTie :: Test
-testConatusGradientDegenerateTie = TestCase $
+testStateIntegrityGradientDegenerateTie :: Test
+testStateIntegrityGradientDegenerateTie = TestCase $
   withDeterministicEmbedding $ do
     (ss0, ti0, ts, tp) <- buildPlannedFixture "что такое свобода"
-    let forcedConatus = ConatusEnergy
-          { ceScalar     = -1.0
-          , ceComponents = ConatusComponents
-              { ccMorphology = 0.0
-              , ccIdentity   = 0.0
-              , ccTurns      = 0.0
-              , ccPenalty    = 1.0
-              , ccSelfDivergence = 0.0
+    let forcedStateIntegrity = StateIntegrity
+          { siScalar     = -1.0
+          , siComponents = StateIntegrityComponents
+              { sicMorphology = 0.0
+              , sicIdentity   = 0.0
+              , sicTurns      = 0.0
+              , sicPenalty    = 1.0
+              , sicSelfDivergence = 0.0
               }
 }
         dummyClaim = IdentityClaimRef "" "" 0.0 "" ""
@@ -2172,9 +2172,9 @@ testConatusGradientDegenerateTie = TestCase $
           , ssIdentity   = (ssIdentity ss0) { idsIdentityClaims = [dummyClaim] }
           }
         ti = ti0
-          { tiConatusEnergy         = forcedConatus
+          { tiStateIntegrity         = forcedStateIntegrity
           , tiBlanketViolationCount = 2
-          , tiConatusGateFired      = True
+          , tiStateIntegrityGateFired      = True
           }
         renderPlan =
           planRenderEffectsForRuntime RuntimeStrict LocalRecoveryEnabled ss ti ts tp
@@ -2196,9 +2196,9 @@ testDeliberationRecoveryNotSilenced = TestCase $
   withDeterministicEmbedding $ do
     (ss, ti, ts, tp) <- buildPlannedFixture "что такое свобода"
     let syntheticDelib = Deliberation
-          { delibHolistic = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
-          , delibFormal   = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
-          , delibReconciled = defaultPlan { planRecoveryCause = Just RecoveryConatusGate }
+          { delibHolistic = defaultPlan { planRecoveryCause = Just RecoveryStateIntegrityGate }
+          , delibFormal   = defaultPlan { planRecoveryCause = Just RecoveryStateIntegrityGate }
+          , delibReconciled = defaultPlan { planRecoveryCause = Just RecoveryStateIntegrityGate }
           , delibTrace = DeliberationTrace
               { dtAgreement = Agree
               , dtDivergence = 0.0
@@ -2215,7 +2215,7 @@ testDeliberationRecoveryNotSilenced = TestCase $
     renderResults <- resolveRenderEffects testProtocolPipelineIO renderPlan
     let turnArtifacts = buildTurnArtifacts ss ti ts tp' renderPlan renderResults
     assertEqual "deliberation recovery cause must survive even when local plan is absent"
-      (Just RecoveryConatusGate)
+      (Just RecoveryStateIntegrityGate)
       (taLocalRecoveryCause turnArtifacts)
 
 testParserLowConfidenceUsesDistinguishCandidates :: Test
@@ -2821,10 +2821,10 @@ testProtocolInterpreter request =
       TurnResEmbedding <$> Emb.textToEmbeddingResult inputText
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard Allowed)
-    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy _salienceWeights -> do
+    TurnReqConsciousness semanticInput humanTheta resonance _stateIntegrityEnergy _salienceWeights -> do
       let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
       pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
-    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
+    TurnReqIntuition inputText resonance tension turnNumber _stateIntegrityEnergy _salienceWeights _semanticConfig -> do
       let (mFlash, intuitionState) =
             Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
       pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)
@@ -3146,12 +3146,12 @@ testNonAuthoritativeCommitmentCandidateCappedBeforePlanning = TestCase $ do
     Clarifying
     (tiDialoguePhase ti)
 
-testConatusGatedCommitmentCandidateSuspendedBeforePlanning :: Test
-testConatusGatedCommitmentCandidateSuspendedBeforePlanning = TestCase $ do
+testStateIntegrityGatedCommitmentCandidateSuspendedBeforePlanning :: Test
+testStateIntegrityGatedCommitmentCandidateSuspendedBeforePlanning = TestCase $ do
   let startSs = emptySystemState { ssTruthContractStatus = CanonicalSurfacePreserved }
   (_ss, ti, _ts) <- buildPreparedFixtureWithState startSs "свобода это хорошо"
   assertBool "fixture should trigger the conatus gate"
-    (tiConatusGateFired ti)
+    (tiStateIntegrityGateFired ti)
   assertEqual "conatus-gated contour must suspend accepted candidate before planning"
     (Just CsSuspended)
     (latestCommitmentStatus (tiDialogueCommitmentLedger ti))
@@ -3195,8 +3195,8 @@ testNonAuthoritativeInterpretationNarrowsBeforeRouteCrystallization = TestCase $
     IadCapClarify
     (aiDecision admitted)
 
-testConatusGatedInterpretationFallsBackBeforeRouteCrystallization :: Test
-testConatusGatedInterpretationFallsBackBeforeRouteCrystallization = TestCase $ do
+testStateIntegrityGatedInterpretationFallsBackBeforeRouteCrystallization :: Test
+testStateIntegrityGatedInterpretationFallsBackBeforeRouteCrystallization = TestCase $ do
   let admitted = admitInterpretationCandidate (InterpretationAdmissionInput CanonicalSurfacePreserved True) CMDescribe gatedInterpretationFrame
   assertBool "conatus-gated contour should no longer preserve the stronger raw recommended family"
     (aiRecommendedFamily admitted /= CMDescribe)
@@ -3232,8 +3232,8 @@ testNonAuthoritativePropositionFrameSoftensBeforeInterpretationAdmission = TestC
     PadLowerConfidence
     (apfDecision admitted)
 
-testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission :: Test
-testConatusGatedPropositionFrameSoftensBeforeInterpretationAdmission = TestCase $ do
+testStateIntegrityGatedPropositionFrameSoftensBeforeInterpretationAdmission :: Test
+testStateIntegrityGatedPropositionFrameSoftensBeforeInterpretationAdmission = TestCase $ do
   let admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) strongInterpretationFrame
       admittedInterpretation = admitInterpretationCandidate (InterpretationAdmissionInput CanonicalSurfacePreserved True) CMDescribe (apfFrame admittedFrame)
   assertBool "conatus-gated contour should lower proposition confidence before later admission"
@@ -3273,8 +3273,8 @@ testNonAuthoritativeSemanticFrameSoftensBeforePropositionAdmission = TestCase $ 
   assertBool "proposition confidence should already be softened before CTS-03"
     (ipfConfidence admittedProp < ipfConfidence rawProp)
 
-testConatusGatedSemanticFrameSoftensBeforePropositionAdmission :: Test
-testConatusGatedSemanticFrameSoftensBeforePropositionAdmission = TestCase $ do
+testStateIntegrityGatedSemanticFrameSoftensBeforePropositionAdmission :: Test
+testStateIntegrityGatedSemanticFrameSoftensBeforePropositionAdmission = TestCase $ do
   let rawAdmitted = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput
       admittedFrame = admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved True) semanticFrameInput
       rawProp = parsePropositionWithFrame semanticFrameInput (asfFrame rawAdmitted)
@@ -3319,8 +3319,8 @@ testNonAuthoritativeSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
   assertBool "non-authoritative contour should not widen operator set"
     (length (svOperators (asvVector admitted)) <= length (svOperators rawVec))
 
-testConatusGatedSenseVectorNarrowsBeforeMeaningShaping :: Test
-testConatusGatedSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
+testStateIntegrityGatedSenseVectorNarrowsBeforeMeaningShaping :: Test
+testStateIntegrityGatedSenseVectorNarrowsBeforeMeaningShaping = TestCase $ do
   let rawFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
       rawVec = extractSenseVector rawFrame
       admitted = admitSenseVector (SenseVectorAdmissionInput CanonicalSurfacePreserved True) rawVec
@@ -3367,8 +3367,8 @@ testNonAuthoritativeRouteHintSoftensBeforePropositionAdmission = TestCase $ do
   assertBool "proposition confidence should not strengthen after admitted route-hint"
     (ipfConfidence admittedProp <= ipfConfidence rawProp)
 
-testConatusGatedRouteHintSoftensBeforePropositionAdmission :: Test
-testConatusGatedRouteHintSoftensBeforePropositionAdmission = TestCase $ do
+testStateIntegrityGatedRouteHintSoftensBeforePropositionAdmission :: Test
+testStateIntegrityGatedRouteHintSoftensBeforePropositionAdmission = TestCase $ do
   let semanticFrame = asfFrame (admitSemanticFrameForInput (SemanticFrameAdmissionInput CanonicalSurfacePreserved False) semanticFrameInput)
       rawHint = AdmittedRouteHint (InputRouteHint RouteTypeDescribe TagSelfState "self_state_question" 0.9 0.9 0.7 0.0 ["route_seed"] 0.9) RhdAdmitRaw
       admitted = admitRouteHint (RouteHintAdmissionInput CanonicalSurfacePreserved True semanticFrameInput) (arhHint rawHint)
@@ -3387,8 +3387,8 @@ testConatusGatedRouteHintSoftensBeforePropositionAdmission = TestCase $ do
 strongFamilySelfVerdict :: SelfVerdict
 strongFamilySelfVerdict = SelfVerdict (Salience 0.5 1.0 DrivenByDefault) Tied
 
-conatusGateSelfVerdict :: SelfVerdict
-conatusGateSelfVerdict = SelfVerdict (Salience 0.1 1.0 DrivenByConatusGate) (PreferFormal 1.0)
+stateIntegrityGateSelfVerdict :: SelfVerdict
+stateIntegrityGateSelfVerdict = SelfVerdict (Salience 0.1 1.0 DrivenByStateIntegrityGate) (PreferFormal 1.0)
 
 testConstitutionAdmissibleFamilyPreservesRawCrystallization :: Test
 testConstitutionAdmissibleFamilyPreservesRawCrystallization = TestCase $ do
@@ -3410,9 +3410,9 @@ testNonAuthoritativeFamilyCrystallizationCapsBeforeRouteDecision = TestCase $ do
     FadCapClarify
     (afDecision admitted)
 
-testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision :: Test
-testConatusGatedFamilyCrystallizationCapsBeforeRouteDecision = TestCase $ do
-  let admitted = admitFamilyCrystallization (FamilyAdmissionInput CanonicalSurfacePreserved conatusGateSelfVerdict) CMDescribe gatedInterpretationFrame
+testStateIntegrityGatedFamilyCrystallizationCapsBeforeRouteDecision :: Test
+testStateIntegrityGatedFamilyCrystallizationCapsBeforeRouteDecision = TestCase $ do
+  let admitted = admitFamilyCrystallization (FamilyAdmissionInput CanonicalSurfacePreserved stateIntegrityGateSelfVerdict) CMDescribe gatedInterpretationFrame
   assertEqual "conatus-gated contour should cap strong family crystallization"
     CMClarify
     (afFamily admitted)
@@ -3455,8 +3455,8 @@ testNonAuthoritativeEarlyFamilyCapsBeforeLaterCrystallization = TestCase $ do
     EfdCapClarify
     (aefDecision admitted)
 
-testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization :: Test
-testConatusGatedEarlyFamilyCapsBeforeLaterCrystallization = TestCase $ do
+testStateIntegrityGatedEarlyFamilyCapsBeforeLaterCrystallization :: Test
+testStateIntegrityGatedEarlyFamilyCapsBeforeLaterCrystallization = TestCase $ do
   let admitted = admitEarlyFamilyRecommendation (EarlyFamilyAdmissionInput CanonicalSurfacePreserved True) CMDescribe gatedInterpretationFrame
   assertEqual "conatus-gated contour should cap strong early family recommendation"
     CMClarify
@@ -3503,8 +3503,8 @@ testNonAuthoritativeSemanticLogicCapsBeforeEarlyFamilyAdmission = TestCase $ do
   assertBool "CTS-08 should still receive a valid admitted family downstream"
     (aefDecision admittedFamily `elem` [EfdCapClarify, EfdPreserveAmbiguous, EfdAdmitRaw])
 
-testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission :: Test
-testConatusGatedSemanticLogicCapsBeforeEarlyFamilyAdmission = TestCase $ do
+testStateIntegrityGatedSemanticLogicCapsBeforeEarlyFamilyAdmission :: Test
+testStateIntegrityGatedSemanticLogicCapsBeforeEarlyFamilyAdmission = TestCase $ do
   let rawWeighting = [(CMDescribe, 0.9), (CMGround, 0.4)]
       admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) gatedInterpretationFrame
       admitted = admitSemanticLogicWeighting (SemanticLogicAdmissionInput CanonicalSurfacePreserved True (apfFrame admittedFrame)) rawWeighting
@@ -3550,8 +3550,8 @@ testNonAuthoritativeSemanticContributionSoftensBeforeWeightingAdmission = TestCa
     ScdCapClarify
     (ascDecision admitted)
 
-testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission :: Test
-testConatusGatedSemanticContributionSoftensBeforeWeightingAdmission = TestCase $ do
+testStateIntegrityGatedSemanticContributionSoftensBeforeWeightingAdmission :: Test
+testStateIntegrityGatedSemanticContributionSoftensBeforeWeightingAdmission = TestCase $ do
   let rawContributions = [(CMDescribe, 0.9), (CMGround, 0.4)]
       admittedFrame = admitPropositionFrame (PropositionAdmissionInput CanonicalSurfacePreserved True) gatedInterpretationFrame
       admitted = admitSemanticContributions (SemanticContributionAdmissionInput CanonicalSurfacePreserved True (apfFrame admittedFrame)) rawContributions
@@ -4701,8 +4701,8 @@ testDedupAntiOverblockingAllowsNoisyKnownTopic = TestCase $
           }
         ti = ti0
           { tiBestTopic = "в"
-          , tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
+          , tiStateIntegrityGateFired = False
+          , tiStateIntegrity = StateIntegrity 1.0 (StateIntegrityComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "noisy known topic must NOT be dedup-skipped"
@@ -4726,8 +4726,8 @@ testDedupBlocksCleanKnownTopic = TestCase $
           }
         ti = ti0
           { tiBestTopic = "книга"
-          , tiConatusGateFired = False
-          , tiConatusEnergy = ConatusEnergy 1.0 (ConatusComponents 0 0 0 0 0.0)
+          , tiStateIntegrityGateFired = False
+          , tiStateIntegrity = StateIntegrity 1.0 (StateIntegrityComponents 0 0 0 0 0.0)
           }
         renderPlan = planRenderEffects LocalRecoveryEnabled ss ti ts tp
     assertEqual "clean known topic must be dedup-skipped"
@@ -5331,8 +5331,8 @@ testAntiConatusChoiceDetection = TestCase $
           }
     (_ss, ti, _ts) <- buildPreparedFixtureWithState ss0 "что такое свобода"
     -- Override conatus to be low
-    let tiLowConatus = ti { tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0) }
-    let mAnomaly = detectAntiConatusChoice ss0 tiLowConatus
+    let tiLowStateIntegrity = ti { tiStateIntegrity = StateIntegrity 3.0 (StateIntegrityComponents 1.0 1.0 1.0 0.0 0.0) }
+    let mAnomaly = detectAntiConatusChoice ss0 tiLowStateIntegrity
     -- Inconsistent stance + low conatus + high angst should trigger
     assertBool "inconsistent stance with low conatus should trigger anti-conatus"
       (case mAnomaly of
@@ -5465,7 +5465,7 @@ testDoubtTraceCarriesHonestZero = TestCase $
           }
     (_ss, ti, _ts, _tp, _ta, bundle) <- buildFinalizeFixtureWithState ss0 "да, это верно"
     assertEqual "scenario setup: the Conatus gate must stay unfired"
-      False (tiConatusGateFired ti)
+      False (tiStateIntegrityGateFired ti)
     assertEqual "scenario setup: suppressed weights make the honest doubt zero"
       0.0 (tiDoubtScore ti)
     let replayTrace = tqpReplayTrace (fpbProjection bundle)

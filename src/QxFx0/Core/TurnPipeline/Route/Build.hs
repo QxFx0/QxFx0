@@ -178,7 +178,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
 
       -- FMAR Phase-4+7: override cascade family when Field-driven routing is active.
       fmarActive = isFmarActive fmarMode
-      fmarPos = computeAdaptivePosition (tiField ti) (rdToMs rd) (tiConatusEnergy ti)
+      fmarPos = computeAdaptivePosition (tiField ti) (rdToMs rd) (tiStateIntegrity ti)
       runtimeFamilyTargets = selfFamilyTargets (ssSelfState ss)
       targetFor = familyTargetForWith runtimeFamilyTargets
       fmarFamily =
@@ -243,8 +243,8 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
             , mdClause            = clauseFormForIF (forceForFamily fmarFamily)
             , mdLayer             = layerForFamily fmarFamily
             , mdWarranted         = warrantedForFamily fmarFamily
-            , mdConatusGateOk     = not (tiConatusGateFired ti)
-            , mdRescueUsed        = tiConatusGateFired ti
+            , mdStateIntegrityGateOk     = not (tiStateIntegrityGateFired ti)
+            , mdRescueUsed        = tiStateIntegrityGateFired ti
             , mdFieldDistance     = fieldDistance fmarPos (ftTargetField (targetFor fmarFamily))
             , mdAbstractionBudget = 0
             , mdMaxWordsHint      = 0
@@ -313,7 +313,7 @@ buildRouteTurnPlan fmarMode shadowPolicy mDetectedAnomaly semanticFirstDisabled 
 
 derivePreRenderTruthContractStatus :: TurnInput -> ShadowContext -> ShadowResolution -> CanonicalMoveFamily -> TruthContractStatus
 derivePreRenderTruthContractStatus ti sc shadowResolution family
-  | tiConatusGateFired ti = NonExpansiveRecoverySurface
+  | tiStateIntegrityGateFired ti = NonExpansiveRecoverySurface
   | srGateTriggered shadowResolution = NonExpansiveRecoverySurface
   | family == CMRepair = NonExpansiveRecoverySurface
   | scShadowStatus sc `elem` [ShadowDiverged, ShadowUnavailable] = ExplicitFallbackSurface

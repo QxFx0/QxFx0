@@ -45,7 +45,7 @@ For each module the table below records:
 |---|---|---|---|---|---|---|
 | `Self.Adjunction` | 3 | `production` | 2026-05-17 (ADR-0008 addendum) | indirectly via `Deliberation` | hand-set (algebra, not tunable) | n/a — algebraic backbone |
 | `Self.Blanket` | 1 | `production` | Phase 1, see commits `62d0338`, `a5fad49` | yes (`IdentityRupture` trace) | n/a (predicate, not tunable) | n/a |
-| `Self.Conatus` | 2 | `production` (canonical signal source) | 2026-05-17 (M6 single-source-of-truth) | yes (`trcSalienceDriver` etc.) | weights in `ConatusWeights` are hand-set; ADR-0012 §15.1 corrected `emConatusStructuralFloor` to 7.0 | promotion: n/a. demotion: never (gate priority). |
+| `Self.StateIntegrity` (renamed from `Self.Conatus` 2026-11-23, P4) | 2 | `production` (canonical signal source) | 2026-11-23 (P4 rename; wire keys frozen) | yes (`trcSalienceDriver` etc.; `trcConatusEnergy` keeps its historical key) | weights in `StateIntegrityWeights` are hand-set; ADR-0012 §15.1 corrected `emStateIntegrityStructuralFloor` to 7.0 | promotion: n/a. demotion: never (gate priority). |
 | `Self.Deliberation` | 8 | `production` | 2026-05-18 (Packages A–D) | yes (`trcDeliberationRule`, `trcDeliberationAgreement`, `trcDeliberationDivergence`, `trcDeliberationNarrativeTone`) | severity ladder is pinned, not calibrated (ADR-0011 §9) | promotion: n/a. demotion: never (reconcile is the merge point). |
 | `Self.Field` | 4 | `production` | 2026-05-17 (Phase 5.5d wiring) | indirectly via Salience | 5 components are hand-set; field per-component sourcing calibrated in ADR-0009 addendum 2026-05-17 | promotion: n/a. demotion: would regress Salience. |
 | `Self.Invariants` | (continuous) | `production` | current | n/a (pure property assertions) | n/a | n/a |
@@ -112,7 +112,7 @@ under default flags.
 |---|---|---|
 | `Self.Adjunction` | yes | consumed by `Self.Deliberation`, which is in the runtime path. |
 | `Self.Blanket` | yes | guard for `IdentityRupture`. |
-| `Self.Conatus` | yes | gate in `Route/Render.buildLocalRecoveryPlan`. |
+| `Self.StateIntegrity` (was `Self.Conatus`) | yes | gate in `Route/Render.buildLocalRecoveryPlan`. |
 | `Self.Deliberation` | yes | reconcile is the merge point. |
 | `Self.Essence` | **yes** | Law-driven, unconditionally active since 2026-05-19 (Policy A, 2026-06-17). `essenceCommitmentEnabled` was never implemented. |
 | `Self.Field` | yes | consumed by Salience. |

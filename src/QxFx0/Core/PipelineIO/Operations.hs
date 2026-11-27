@@ -38,7 +38,7 @@ import QxFx0.Core.PipelineIO.Internal
   )
 import QxFx0.Render.Authority (AuthoritySurface(..))
 import QxFx0.Types.State.SemanticCommitment (FactualClaimPayload(..))
-import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.StateIntegrity (StateIntegrity)
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
   , TurnEffectResult(..)
@@ -97,13 +97,13 @@ pipelineLocalRecoveryPolicy = pioLocalRecoveryPolicy
 localRecoveryPolicyText :: LocalRecoveryPolicy -> Text
 localRecoveryPolicyText = renderLocalRecoveryPolicy
 
-scheduleTurnEffects :: PipelineIO -> ConatusEnergy -> [(a, TurnEffectRequest)] -> [(a, TurnEffectRequest)]
-scheduleTurnEffects pio conatus requests =
+scheduleTurnEffects :: PipelineIO -> StateIntegrity -> [(a, TurnEffectRequest)] -> [(a, TurnEffectRequest)]
+scheduleTurnEffects pio stateIntegrity requests =
   map snd (sortBy compareScheduled scoredRequests)
   where
     scoredRequests =
       zipWith
-        (\idx request -> ((pioConatusPrior pio conatus (snd request), idx), request))
+        (\idx request -> ((pioStateIntegrityPrior pio stateIntegrity (snd request), idx), request))
         [(0 :: Int)..]
         requests
     compareScheduled ((priority1, idx1), _) ((priority2, idx2), _) =

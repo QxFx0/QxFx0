@@ -26,7 +26,7 @@ data KnowledgeFruit = KnowledgeFruit
   , kfWord            :: !Text
   , kfSource          :: !KnowledgeSource
   , kfValidated       :: !Bool
-  , kfConatusDelta    :: !Double
+  , kfStateIntegrityDelta    :: !Double
   , kfPredictiveDelta :: !Double
   , kfGraftedTurn     :: !(Maybe Int)
   , kfObservedTurn    :: !Int
@@ -39,7 +39,7 @@ instance ToJSON KnowledgeFruit where
     , "word" .= kfWord f
     , "source" .= kfSource f
     , "validated" .= kfValidated f
-    , "conatusDelta" .= kfConatusDelta f
+    , "conatusDelta" .= kfStateIntegrityDelta f
     , "predictiveDelta" .= kfPredictiveDelta f
     , "graftedTurn" .= kfGraftedTurn f
     , "observedTurn" .= kfObservedTurn f

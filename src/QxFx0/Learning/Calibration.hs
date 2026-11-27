@@ -74,7 +74,7 @@ verifyProposal blocked proposal =
 -- | Simulate a proposal against a lightweight synthetic signal.
 --
 -- For weights / heuristics: apply them to a neutral synthetic
--- 'ConatusEnergy' and verify the result does not flip the gate
+-- 'StateIntegrity' and verify the result does not flip the gate
 -- (i.e. energy must not become *more* negative).
 --
 -- For rules / concepts: succeed trivially in this stub; real trace
@@ -92,7 +92,7 @@ simulateProposal proposal =
             ]
       if any (< 0.0) coeffs || any (> 2.0) coeffs
         then Left "salience_weights_out_of_range"
-        else if conatusGateThreshold weights < (-1.0) || conatusGateThreshold weights > 1.0
+        else if stateIntegrityGateThreshold weights < (-1.0) || stateIntegrityGateThreshold weights > 1.0
           then Left "conatus_gate_threshold_out_of_range"
           else if verdictThreshold weights < 0.0 || verdictThreshold weights > 0.5
             then Left "verdict_threshold_out_of_range"

@@ -14,7 +14,7 @@ Verifies the laws asserted in the FMAR plan, Phase 4:
     detector recommended a far-away family Y, FMAR moves toward X;
   * the result is always one of the 14 canonical families;
   * a viability guard: the override never proposes a family whose
-    @ftMinConatus@ exceeds the position energy (unless it is the
+    @ftMinStateIntegrity@ exceeds the position energy (unless it is the
     recommendation kept as-is, or the CMContact fallback).
 -}
 module Test.Suite.FMARCore
@@ -135,7 +135,7 @@ fmarCoreTests =
               , mdClause = Declarative
               , mdLayer = ContactLayer
               , mdWarranted = AlwaysWarranted
-              , mdConatusGateOk = True
+              , mdStateIntegrityGateOk = True
               , mdRescueUsed = False
               , mdFieldDistance = 0.0
               , mdAbstractionBudget = 0
@@ -178,11 +178,11 @@ recommendationPreservedAtTarget =
 overrideToConfront :: CanonicalMoveFamily
 overrideToConfront =
   let confrontTarget = familyTargetFor CMConfront
-      pos = (positionAt (ftTargetField confrontTarget)) { apConatusEnergy = 100.0 }
+      pos = (positionAt (ftTargetField confrontTarget)) { apStateIntegrityEnergy = 100.0 }
    in fmarSelectFamily pos CMContact familyTargets
 
 -- | When the recommendation is overridden, the chosen family must either be
--- CMContact (the fallback) or have its @ftMinConatus@ satisfied by the
+-- CMContact (the fallback) or have its @ftMinStateIntegrity@ satisfied by the
 -- position energy. We test with positions whose recommendation is forced far
 -- by using a low-confidence field that is distant from most targets.
 propViabilityRespected :: Property
@@ -192,7 +192,7 @@ propViabilityRespected = forAll genPosition $ \pos ->
         target = familyTargetFor chosen
      in chosen == rec
           || chosen == CMContact
-          || ftMinConatus target <= apConatusEnergy pos
+          || ftMinStateIntegrity target <= apStateIntegrityEnergy pos
 
 -- ---------------------------------------------------------------------------
 -- Helpers
@@ -204,7 +204,7 @@ positionAt f =
   AdaptivePosition
     { apField         = f
     , apSpectral      = SpectralEncoding 0.0 0.0 0.0
-    , apConatusEnergy = 10.0
+    , apStateIntegrityEnergy = 10.0
     }
 
 -- ---------------------------------------------------------------------------
@@ -302,7 +302,7 @@ scenarioPos f =
   AdaptivePosition
     { apField         = f
     , apSpectral      = SpectralEncoding 0.0 0.0 0.0
-    , apConatusEnergy = 10.0
+    , apStateIntegrityEnergy = 10.0
     }
 
 -- | Assert a scenario: the geometric classifier must map the given Field

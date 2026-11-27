@@ -10,7 +10,7 @@ module QxFx0.Core.TurnRouting
   , identityFamilyHint
   , applyPrincipledFamily
   , applyGuardGating
-  , applyConatusGateRestriction
+  , applyStateIntegrityGateRestriction
   , RoutingPhase(..)
   , FamilyCascade(..)
   , computeRoutingPhase
@@ -31,7 +31,7 @@ import QxFx0.Core.TurnRender
   , renderStyleFromDecision
   , applySalienceToStyle
   )
-import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.StateIntegrity (StateIntegrity)
 import QxFx0.Self.Deliberation
   ( Plan(..)
   , defaultPlan
@@ -55,7 +55,7 @@ import QxFx0.Core.ContentCluster (computeContentSaliency)  -- WP-C (renamed from
 import QxFx0.Memory.Episodic (EpisodicEvent)
 import QxFx0.Types.State.SemanticCommitment (CommitmentEngagement(..), MatchKind(..))
 import QxFx0.Core.TurnRouting.Cascade
-  ( applyConatusGateRestriction
+  ( applyStateIntegrityGateRestriction
   , applyGuardGating
   , applyPrincipledFamily
   , buildGuardReport
@@ -95,20 +95,20 @@ supportsHolisticFamilyDivergence family =
 
 
 -- | Phase 6 (M6) + Phase 5.5d: 'routeFamily' takes the per-turn
--- 'ConatusEnergy' and 'Field' precomputed by the Prepare stage
--- (see 'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy' \/
--- 'psField', threaded through 'tiConatusEnergy' \/ 'tiField').
+-- 'StateIntegrity' and 'Field' precomputed by the Prepare stage
+-- (see 'QxFx0.Core.TurnPipeline.Effects.psStateIntegrity' \/
+-- 'psField', threaded through 'tiStateIntegrity' \/ 'tiField').
 -- The previous local computeSelfBlanket \/ checkInitialBlanket
 -- \/ salienceFromBlanket triple was already collapsed in M6;
 -- this commit additionally replaces the @emptyField@ default in
--- 'salienceFromConatusEnergy' with the canonical pre-turn
+-- 'salienceFromStateIntegrityEnergy' with the canonical pre-turn
 -- 'Field' carrying the runtime Resonance component.
 routeFamily :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
             -> SystemState -> [Text] -> Text -> Bool -> Text
-            -> Maybe ConsciousnessNarrative -> Double -> ConatusEnergy -> Field
+            -> Maybe ConsciousnessNarrative -> Double -> StateIntegrity -> Field
             -> Double -> Maybe (Plan -> Bool) -> [EpisodicEvent]
             -> RoutingDecision
-routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior conatusEnergy preparedField doubt mCourtesy retrievedEpisodes =
+routeFamily recommendedFamily frame atomSet nextUserState ss history input isNixBlocked currentTopic mNarrative intuitPosterior stateIntegrityEnergy preparedField doubt mCourtesy retrievedEpisodes =
   let contentSaliency = computeContentSaliency (ssMeaningGraph ss)  -- WP-C: top-down content signal
   in routeFamilyWithSelfVerdict
     recommendedFamily
@@ -123,18 +123,18 @@ routeFamily recommendedFamily frame atomSet nextUserState ss history input isNix
     mNarrative
     intuitPosterior
     preparedField
-    (computeSelfVerdict (selfSalienceWeights (ssSelfState ss)) conatusEnergy preparedField contentSaliency)
-    conatusEnergy
+    (computeSelfVerdict (selfSalienceWeights (ssSelfState ss)) stateIntegrityEnergy preparedField contentSaliency)
+    stateIntegrityEnergy
     doubt
     mCourtesy
     retrievedEpisodes
 
 routeFamilyWithSelfVerdict :: CanonicalMoveFamily -> InputPropositionFrame -> AtomSet -> UserState
                           -> SystemState -> [Text] -> Text -> Bool -> Text
-                          -> Maybe ConsciousnessNarrative -> Double -> Field -> SelfVerdict -> ConatusEnergy
+                          -> Maybe ConsciousnessNarrative -> Double -> Field -> SelfVerdict -> StateIntegrity
                           -> Double -> Maybe (Plan -> Bool) -> [EpisodicEvent]
                           -> RoutingDecision
-routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss history input isNixBlocked currentTopic mNarrative intuitPosterior preparedField selfVerdict conatusEnergy doubt mCourtesy retrievedEpisodes =
+routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss history input isNixBlocked currentTopic mNarrative intuitPosterior preparedField selfVerdict stateIntegrityEnergy doubt mCourtesy retrievedEpisodes =
   let phase@RoutingPhase{..} = computeRoutingPhase recommendedFamily frame atomSet nextUserState ss history input
       routingSalience = svSalience selfVerdict
       commitmentEngagement =
@@ -144,7 +144,7 @@ routeFamilyWithSelfVerdict recommendedFamily frame atomSet nextUserState  ss his
                 topics = [currentTopic] ++ nouns
             in detectCommitmentEngagement store (engagementTopicFor store topics) input atomSet
           Nothing    -> CommitmentEngagement [] False NoMatch
-      cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience conatusEnergy doubt retrievedEpisodes commitmentEngagement
+      cascade = runFamilyCascade phase ss nextUserState frame atomSet history input mNarrative intuitPosterior isNixBlocked routingSalience stateIntegrityEnergy doubt retrievedEpisodes commitmentEngagement
       FamilyCascade{..} = cascade
 
       -- Phase 8 (M1/M2): build hemispheric proposals and reconcile.

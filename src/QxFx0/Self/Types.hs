@@ -14,7 +14,7 @@ self-identity: the Markov-blanket-style record whose simultaneous
 preservation across operations defines "this system, persisting".
 
 The types here are intentionally minimal in P1. The full P2+ design
-will extend this with conatus-functional carriers and
+will extend this with state-integrity carriers and
 adjunction-pair witnesses; for now we record only what is needed to
 detect identity rupture under existing operations.
 

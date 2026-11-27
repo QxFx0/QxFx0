@@ -25,11 +25,11 @@ src/QxFx0/Self/Field.hs	builtinFieldHeuristics :: FieldHeuristics	2
 src/QxFx0/Self/Field.hs	emptyField :: Field	2
 src/QxFx0/Self/Field.hs	mkResonance :: Double -> Resonance	6
 src/QxFx0/Self/Salience.hs	builtinSalienceWeights :: SalienceWeights	6
-src/QxFx0/Self/Salience.hs	computeSalience :: SalienceWeights -> ConatusEnergy -> Field -> Double -> Salience	2
-src/QxFx0/Self/Salience.hs	computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> Double -> SelfVerdict	2
+src/QxFx0/Self/Salience.hs	computeSalience :: SalienceWeights -> StateIntegrity -> Field -> Double -> Salience	2
+src/QxFx0/Self/Salience.hs	computeSelfVerdict :: SalienceWeights -> StateIntegrity -> Field -> Double -> SelfVerdict	2
 src/QxFx0/Self/Salience.hs	defaultSalienceModulation :: SalienceModulation	2
 src/QxFx0/Self/Salience.hs	salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Double -> Salience	2
-src/QxFx0/Self/Salience.hs	salienceFromConatusEnergy :: ConatusEnergy -> Field -> Double -> Salience	3
+src/QxFx0/Self/Salience.hs	salienceFromStateIntegrityEnergy :: StateIntegrity -> Field -> Double -> Salience	3
 src/QxFx0/Semantic/Content.hs	deadjectivalTopicStems :: [(Text, Text)]	2
 src/QxFx0/Semantic/Intent/Classifier.hs	trimClauseTail :: Text -> Text	2
 src/QxFx0/Semantic/ResponsePlan.hs	isSpeculativeRequestText :: Text -> Bool	2

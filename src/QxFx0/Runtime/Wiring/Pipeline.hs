@@ -9,7 +9,7 @@ import QxFx0.Core.PipelineIO
   , ShadowPolicy(..)
   , mkReplayPipelineIOWith
   )
-import QxFx0.Core.PipelineIO.Internal (PipelineIO(..), defaultConatusPrior)
+import QxFx0.Core.PipelineIO.Internal (PipelineIO(..), defaultStateIntegrityPrior)
 import QxFx0.Runtime.Mode (RuntimeMode(..))
 import QxFx0.Runtime.Wiring.Handlers (handleTurnEffect)
 import QxFx0.Runtime.Wiring.Context
@@ -41,6 +41,6 @@ toPipelineIO ctx =
       , pioUpdateHistory = updateHistoryStrict
       , pioModifyConsciousLoop = modifyConsciousLoop ctx
       , pioModifyIntuition = modifyIntuition ctx
-      , pioConatusPrior = defaultConatusPrior
+      , pioStateIntegrityPrior = defaultStateIntegrityPrior
       , pioParseAuthoritySurface = parseAuthoritySurfaceIO (rtcPgf (rcCaches ctx))
       }

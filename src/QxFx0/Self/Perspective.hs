@@ -36,7 +36,7 @@ import QxFx0.Learning.DialogueDevelopment
   ( isWeakAcknowledgementText
   , normalizeDialogueText
   )
-import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Self.StateIntegrity (StateIntegrity, siScalar)
 import QxFx0.Self.Field (Field, FieldConfidence(..), fieldConfidence)
 import QxFx0.Self.Perspective.Reduce
   ( applyPerspectiveDecision
@@ -101,16 +101,16 @@ data PerspectiveOperationResult = PerspectiveOperationResult
   }
   deriving stock (Eq, Show)
 
--- | Assemble the operator input with the P2 Conatus ablation switch.
+-- | Assemble the operator input with the P2 state-integrity ablation switch.
 --
--- @conatusStabilityAblated = True@ removes the Conatus contribution
--- from 'csStability' only (see 'conatusSlice').  Every other field —
+-- @stateIntegrityStabilityAblated = True@ removes the state-integrity contribution
+-- from 'csStability' only (see 'stateIntegritySlice').  Every other field —
 -- including 'csEnergy', which the perspective admissibility gate reads
 -- at 'evaluatePerspectiveAdmissibility' — keeps the true value.
 -- Measurement hook, default-off: 'assemblePerspectiveInput' is the
 -- @False@ case.
-assemblePerspectiveInputWith :: Bool -> SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
-assemblePerspectiveInputWith conatusStabilityAblated ss conatusEnergy conatusGateFired field =
+assemblePerspectiveInputWith :: Bool -> SystemState -> StateIntegrity -> Bool -> Field -> PerspectiveInputBundle
+assemblePerspectiveInputWith stateIntegrityStabilityAblated ss stateIntegrityEnergy stateIntegrityGateFired field =
   let scope = selectPerspectiveScope ss
       registry = selfPerspectiveRegistry (ssSelfState ss)
       normativeProfile = activeNormativeProfile scope registry
@@ -122,14 +122,14 @@ assemblePerspectiveInputWith conatusStabilityAblated ss conatusEnergy conatusGat
       , pibEvidence = evidenceForScope scope (ssKnowledgeTree ss) (ssDialogueOutcomeLearning ss)
       , pibStanceSlice = stanceSliceForScope scope beliefStore
       , pibIdentitySlice = identitySlice ss
-      , pibConatusSlice = conatusSlice conatusStabilityAblated conatusEnergy conatusGateFired field
+      , pibStateIntegritySlice = stateIntegritySlice stateIntegrityStabilityAblated stateIntegrityEnergy stateIntegrityGateFired field
       , pibNormativeProfile = normativeProfile
       , pibCounterarguments = counterarguments
       , pibRevisionLineage = lineage
       }
 
 -- | No ablation: the production input bundle.
-assemblePerspectiveInput :: SystemState -> ConatusEnergy -> Bool -> Field -> PerspectiveInputBundle
+assemblePerspectiveInput :: SystemState -> StateIntegrity -> Bool -> Field -> PerspectiveInputBundle
 assemblePerspectiveInput = assemblePerspectiveInputWith False
 
 opinionCore :: PerspectiveInputBundle -> PerspectiveCandidate
@@ -140,7 +140,7 @@ opinionCore bundle =
       lineage = pibRevisionLineage bundle
       np = pibNormativeProfile bundle
       counterPressure = clampUnit (fromIntegral counterCount / 4.0)
-      normativeAlignment = computeNormativeAlignment np counterPressure (pibConatusSlice bundle)
+      normativeAlignment = computeNormativeAlignment np counterPressure (pibStateIntegritySlice bundle)
       internalTension = clampUnit (0.55 * counterPressure + 0.45 * (1.0 - normativeAlignment))
       supportScore = clampUnit ((fromIntegral evidenceCount * 0.28) + (fromIntegral stanceCount * 0.14))
       confidence = clampUnit (0.18 + supportScore + (0.25 * normativeAlignment) - (0.35 * counterPressure) - (0.20 * internalTension))
@@ -168,7 +168,7 @@ evaluatePerspectiveAdmissibility bundle candidate
       PerspectiveInadmissible "insufficient_evidence"
   | T.null (isSessionId (pibIdentitySlice bundle)) =
       PerspectiveInadmissible "identity_violation:empty_session"
-  | csGateFired (pibConatusSlice bundle) || csEnergy (pibConatusSlice bundle) < 0.0 =
+  | csGateFired (pibStateIntegritySlice bundle) || csEnergy (pibStateIntegritySlice bundle) < 0.0 =
       PerspectiveInadmissible "conatus_violation"
   | pcCounterargumentPressure candidate > 0.74 =
       PerspectiveInadmissible "excessive_counterargument_pressure"
@@ -207,18 +207,18 @@ decidePerspectivePromotion registry bundle candidate admissibility =
       | stableCorroboration bundle candidate -> PpdPromoteEndorsed
       | otherwise -> PpdAcceptBounded
 
--- | Apply the operator with the P2 Conatus ablation switch.
+-- | Apply the operator with the P2 state-integrity ablation switch.
 --
--- @conatusStabilityAblated = True@ removes the Conatus contribution
+-- @stateIntegrityStabilityAblated = True@ removes the state-integrity contribution
 -- from 'csStability' only.  'csEnergy', 'csGateFired' and
 -- 'csFieldConfidence' keep the true values, so the admissibility gate
 -- still sees the real scalar.  The candidate scores
 -- ('pcConfidence', 'pcNormativeAlignment', 'pcInternalTension') are
 -- derived from 'csStability' and therefore do move — that is the
 -- channel the P2 measurement reads.
-applyPerspectiveOperatorWith :: Bool -> SystemState -> ConatusEnergy -> Bool -> Field -> SystemState
-applyPerspectiveOperatorWith conatusStabilityAblated ss conatusEnergy conatusGateFired field =
-  let bundle = assemblePerspectiveInputWith conatusStabilityAblated ss conatusEnergy conatusGateFired field
+applyPerspectiveOperatorWith :: Bool -> SystemState -> StateIntegrity -> Bool -> Field -> SystemState
+applyPerspectiveOperatorWith stateIntegrityStabilityAblated ss stateIntegrityEnergy stateIntegrityGateFired field =
+  let bundle = assemblePerspectiveInputWith stateIntegrityStabilityAblated ss stateIntegrityEnergy stateIntegrityGateFired field
       candidate = opinionCore bundle
       admissibility = evaluatePerspectiveAdmissibility bundle candidate
       registry0 = selfPerspectiveRegistry (ssSelfState ss)
@@ -257,7 +257,7 @@ applyPerspectiveOperatorWith conatusStabilityAblated ss conatusEnergy conatusGat
                 ss { ssGovernanceRuntimeFault = Just (GrfRebuildUnavailable err) }
 
 -- | No ablation: the production operator application.
-applyPerspectiveOperator :: SystemState -> ConatusEnergy -> Bool -> Field -> SystemState
+applyPerspectiveOperator :: SystemState -> StateIntegrity -> Bool -> Field -> SystemState
 applyPerspectiveOperator = applyPerspectiveOperatorWith False
 
 selectPerspectiveScope :: SystemState -> PerspectiveScope
@@ -377,20 +377,20 @@ identitySlice ss =
       , isTurnCount = ssTurnCount ss
       }
 
--- | Build the Conatus slice of the operator input.
+-- | Build the state-integrity slice of the operator input.
 --
--- @conatusStabilityAblated@ is the P2 measurement hook
+-- @stateIntegrityStabilityAblated@ is the P2 measurement hook
 -- (docs/closure/P2_ABLATION_PREREG_2026-11-18.md): it zeroes only the
--- Conatus term of 'csStability', leaving 'csEnergy' truthful.  The
+-- state-integrity term of 'csStability', leaving 'csEnergy' truthful.  The
 -- production callers pass 'False'.
-conatusSlice :: Bool -> ConatusEnergy -> Bool -> Field -> ConatusSlice
-conatusSlice conatusStabilityAblated energy gateFired field =
+stateIntegritySlice :: Bool -> StateIntegrity -> Bool -> Field -> StateIntegritySlice
+stateIntegritySlice stateIntegrityStabilityAblated energy gateFired field =
   let fieldConf = unFieldConfidence (fieldConfidence field)
       stabilityBonus
-        | conatusStabilityAblated = 0.0
-        | otherwise = min 0.25 (max 0.0 (ceScalar energy / 80.0))
-  in ConatusSlice
-      { csEnergy = ceScalar energy
+        | stateIntegrityStabilityAblated = 0.0
+        | otherwise = min 0.25 (max 0.0 (siScalar energy / 80.0))
+  in StateIntegritySlice
+      { csEnergy = siScalar energy
       , csGateFired = gateFired
       , csFieldConfidence = fieldConf
       , csStability = clampUnit (fieldConf + stabilityBonus)
@@ -598,7 +598,7 @@ adaptiveDecisionForPromotion decision =
     PpdSuspendActive -> AdaptiveQuarantined
     PpdRollbackPrior -> AdaptiveRolledBack
 
-computeNormativeAlignment :: NormativeProfile -> Double -> ConatusSlice -> Double
+computeNormativeAlignment :: NormativeProfile -> Double -> StateIntegritySlice -> Double
 computeNormativeAlignment np counterPressure cs =
   let safety = M.findWithDefault 1.0 "safety" (npPriorities np)
       stability = M.findWithDefault 0.9 "stability" (npPriorities np)

@@ -104,7 +104,7 @@ parseFruitPayload = withObject "KnowledgeFruitPayload" $ \o -> do
     , kfpDefinition      = def
     , kfpMorphology      = morph
     , kfpSource          = parseSourceTag srcTag
-    , kfpConatusDelta    = cDelta
+    , kfpStateIntegrityDelta    = cDelta
     , kfpPredictiveDelta = pDelta
     }
 
@@ -151,7 +151,7 @@ parseStructuredTextToFruit txt = do
     , kfpDefinition      = definition
     , kfpMorphology      = Nothing
     , kfpSource          = SourceLLM
-    , kfpConatusDelta    = cDelta
+    , kfpStateIntegrityDelta    = cDelta
     , kfpPredictiveDelta = pDelta
     }
 

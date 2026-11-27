@@ -20,7 +20,7 @@ constraint-respecting) — should /lead/. Concretely it is a pure
 morphism
 
 @
-'Field' \\(\\times\\) 'ConatusEnergy' -> 'Salience'
+'Field' \\(\\times\\) 'StateIntegrity' -> 'Salience'
 @
 
 producing a structured verdict that carries:
@@ -52,15 +52,15 @@ raw =
   - weightFieldConfidence * fieldConfidence    f      -- inverse
 @
 
-Conatus gate: if @ceScalar < conatusGateThreshold@, the controller
+State-integrity gate: if @siScalar < stateIntegrityGateThreshold@, the controller
 short-circuits to a 'PreferFormal' verdict with confidence @1.0@
-and driver 'DrivenByConatusGate'. Otherwise the raw score is
+and driver 'DrivenByStateIntegrityGate'. Otherwise the raw score is
 squashed to @[0, 1]@ by a logistic and the dominant driver is
 the input whose absolute contribution to @raw@ was largest.
 
 The exact functional forms (sigmoid temperature, dispersion-based
 confidence) are implementation choices; the algebraic shape and
-its laws (totality, range, monotonicity, Conatus-gate priority,
+its laws (totality, range, monotonicity, state-integrity gate priority,
 determinism) are the contract.
 
 == Anti-correlation discipline
@@ -77,8 +77,8 @@ invariants:
   around @0.5@, dispatched deterministically to the documented
   default ('PreferFormal' fallback) so that near-tied fields do
   not cause the system to flap between modes under noise.
-* The Conatus gate has uncontested priority: when
-  @ceScalar < conatusGateThreshold@, no Field-derived signal
+* The state-integrity gate has uncontested priority: when
+  @siScalar < stateIntegrityGateThreshold@, no Field-derived signal
   contributes to the verdict.
 
 == Honest scope
@@ -106,11 +106,11 @@ module QxFx0.Self.Salience
   , salienceVerdict
     -- * Adjunction-aware dispatch
   , chooseBranch
-    -- * Phase-2.5 runtime-Conatus helpers
-  , salienceFromConatusEnergy
-  , salienceFromConatusResonance
+    -- * Phase-2.5 runtime state-integrity helpers
+  , salienceFromStateIntegrityEnergy
+  , salienceFromStateIntegrityResonance
   , salienceFromBlanket
-  , conatusGateFires
+  , stateIntegrityGateFires
     -- * Trace rendering (Phase 5.5e)
   , renderSalienceDriver
     -- * Family classification (Holistic / Formal)
@@ -122,10 +122,10 @@ module QxFx0.Self.Salience
 import Data.Text (Text)
 
 import QxFx0.Self.Adjunction (Formal, Holistic, rightAdjunct)
-import QxFx0.Self.Conatus
-  ( ConatusComponents (..)
-  , ConatusEnergy (..)
-  , computeConatusEnergy
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents (..)
+  , StateIntegrity (..)
+  , computeStateIntegrityEnergy
   )
 import QxFx0.Self.Types (BlanketViolation, SelfBlanket)
 import QxFx0.Self.Field
@@ -153,7 +153,7 @@ import QxFx0.Types.Self.Salience
 --
 -- * @0 \\<= salienceHolisticBias \\<= 1@
 -- * @0 \\<= salienceConfidence   \\<= 1@
--- * Identical @(SalienceWeights, ConatusEnergy, Field)@ inputs
+-- * Identical @(SalienceWeights, StateIntegrity, Field)@ inputs
 --   produce identical 'Salience' values, including the discrete
 --   'salienceDriver' tag.
 -- | The dispatched form of a 'Salience' value.
@@ -187,7 +187,7 @@ builtinSalienceWeights = SalienceWeights
   , weightCounterfactual  = 0.75
   , weightFieldConfidence = 0.5
   , weightContentSaliency = 0.6  -- WP-C: moderate weight, pending Phase II calibration
-  , conatusGateThreshold  = 0.0  -- @ceScalar@ can be negative under heavy violation; gate trips at 0
+  , stateIntegrityGateThreshold  = 0.0  -- @siScalar@ can be negative under heavy violation; gate trips at 0
   , verdictThreshold      = 0.05 -- 5% dead band each side of 0.5
   , sigmoidTemperature    = 1.0
   }
@@ -233,10 +233,10 @@ defaultSalienceModulation = SalienceModulation
 -- Total, deterministic, pure. Identical inputs produce identical
 -- 'Salience' values, including the discrete 'salienceDriver' tag.
 --
--- The Conatus gate fires unconditionally when
--- @ceScalar c \\< conatusGateThreshold w@, returning a
+-- The state-integrity gate fires unconditionally when
+-- @siScalar c \\< stateIntegrityGateThreshold w@, returning a
 -- 'PreferFormal'-shaped verdict with full confidence and
--- 'DrivenByConatusGate'. Otherwise the rule of ADR-0010 §3 is
+-- 'DrivenByStateIntegrityGate'. Otherwise the rule of ADR-0010 §3 is
 -- applied.
 -- | WP-C: Compute the salience verdict with optional content saliency.
 --
@@ -244,13 +244,13 @@ defaultSalienceModulation = SalienceModulation
 -- clustering of the meaning graph (range @[0,1]@, computed by
 -- 'QxFx0.Core.ContentCluster.computeContentSaliency'). When
 -- 'QxFx0.Core.ContentCluster.contentSalienceActive' is @False@, pass @0.0@.
-computeSalience :: SalienceWeights -> ConatusEnergy -> Field -> Double -> Salience
+computeSalience :: SalienceWeights -> StateIntegrity -> Field -> Double -> Salience
 computeSalience w ce f contentSaliency
-  | ceScalar ce < conatusGateThreshold w =
+  | siScalar ce < stateIntegrityGateThreshold w =
       Salience
         { salienceHolisticBias = 0.0
         , salienceConfidence   = 1.0
-        , salienceDriver       = DrivenByConatusGate
+        , salienceDriver       = DrivenByStateIntegrityGate
         }
   | otherwise =
       let cs = contributions w f contentSaliency
@@ -270,7 +270,7 @@ computeSalience w ce f contentSaliency
 
 -- | Compute the aggregated self-layer verdict for a single turn.
 -- | WP-C: Compute the aggregated self-layer verdict with content saliency.
-computeSelfVerdict :: SalienceWeights -> ConatusEnergy -> Field -> Double -> SelfVerdict
+computeSelfVerdict :: SalienceWeights -> StateIntegrity -> Field -> Double -> SelfVerdict
 computeSelfVerdict w ce f contentSaliency =
   let salience = computeSalience w ce f contentSaliency
   in SelfVerdict
@@ -332,43 +332,43 @@ chooseBranch v holistic formal = case v of
 -- Phase-5.5 transitional helpers
 -- ---------------------------------------------------------------------------
 
--- | Compute a 'Salience' from a 'ConatusEnergy' and a 'Field'.
--- Uses 'defaultSalienceWeights'.  The Conatus gate is evaluated
+-- | Compute a 'Salience' from a 'StateIntegrity' and a 'Field'.
+-- Uses 'defaultSalienceWeights'.  The state-integrity gate is evaluated
 -- with the real runtime energy; there is no placeholder.
 --
 -- This is the Phase-5.5 wiring helper.  Call sites that already
--- have access to a runtime 'ConatusEnergy' (e.g. from
+-- have access to a runtime 'StateIntegrity' (e.g. from
 -- 'PrepareStatic' or 'TurnInput') should pass it here.
 -- ---------------------------------------------------------------------------
--- Phase-2.5 runtime-Conatus helpers (M2d)
+-- Phase-2.5 runtime state-integrity helpers (M2d)
 -- ---------------------------------------------------------------------------
 
--- | Compute a 'Salience' from a precomputed 'ConatusEnergy' and a
+-- | Compute a 'Salience' from a precomputed 'StateIntegrity' and a
 -- 'Field'. Uses 'defaultSalienceWeights'.
 --
 -- This is the canonical entry point for the M2d wiring: every
--- runtime call site that has access to a real 'ConatusEnergy'
+-- runtime call site that has access to a real 'StateIntegrity'
 -- (either by computing it directly from a 'SelfBlanket' or by
 -- receiving a precomputed one through 'PrepareStatic') goes
--- through this helper. The Conatus gate is now a real runtime
+-- through this helper. The state-integrity gate is now a real runtime
 -- force; under structural risk ('ceScalar' below
--- 'conatusGateThreshold') the verdict 'salienceDriver' becomes
--- 'DrivenByConatusGate' and the 5.5b\/5.5c post-processors
+-- 'stateIntegrityGateThreshold') the verdict 'salienceDriver' becomes
+-- 'DrivenByStateIntegrityGate' and the 5.5b\/5.5c post-processors
 -- automatically dispatch to 'StyleRecovery' and suppress the
 -- narrative fragment, respectively.
--- | WP-C: Compute a 'Salience' from a precomputed 'ConatusEnergy', a 'Field',
+-- | WP-C: Compute a 'Salience' from a precomputed 'StateIntegrity', a 'Field',
 -- and optional content saliency. Uses 'defaultSalienceWeights'.
-salienceFromConatusEnergy :: ConatusEnergy -> Field -> Double -> Salience
-salienceFromConatusEnergy ce f contentSaliency =
+salienceFromStateIntegrityEnergy :: StateIntegrity -> Field -> Double -> Salience
+salienceFromStateIntegrityEnergy ce f contentSaliency =
   computeSalience defaultSalienceWeights ce f contentSaliency
 
 -- | Convenience: build a 'Salience' from a precomputed
--- 'ConatusEnergy' and a single resonance signal (otherwise-empty
--- 'Field'). Used by the runtime handlers that receive the Conatus
+-- 'StateIntegrity' and a single resonance signal (otherwise-empty
+-- 'Field'). Used by the runtime handlers that receive the state-integrity
 -- via the request constructor and have resonance in scope.
-salienceFromConatusResonance :: ConatusEnergy -> Double -> Salience
-salienceFromConatusResonance ce resonance =
-  salienceFromConatusEnergy
+salienceFromStateIntegrityResonance :: StateIntegrity -> Double -> Salience
+salienceFromStateIntegrityResonance ce resonance =
+  salienceFromStateIntegrityEnergy
     ce
     (emptyField { fieldResonance = mkResonance resonance })
     0.0  -- WP-C: no content saliency
@@ -376,28 +376,28 @@ salienceFromConatusResonance ce resonance =
 -- | Compute a 'Salience' from a 'SelfBlanket', its current list
 -- of 'BlanketViolation's, and a 'Field'.
 --
--- The 'ConatusEnergy' is computed by 'computeConatusEnergy'
+-- The 'StateIntegrity' is computed by 'computeStateIntegrityEnergy'
 -- internally. Used by call sites that have direct access to the
 -- runtime 'SystemState' (and hence to a 'SelfBlanket') without
--- needing to thread Conatus through a request shape.
+-- needing to thread state-integrity through a request shape.
 -- | WP-C: Compute a 'Salience' from a 'SelfBlanket', violations, a 'Field',
 -- and optional content saliency.
 salienceFromBlanket :: SelfBlanket -> [BlanketViolation] -> Field -> Double -> Salience
 salienceFromBlanket b violations f contentSaliency =
-  salienceFromConatusEnergy (computeConatusEnergy b violations) f contentSaliency
+  salienceFromStateIntegrityEnergy (computeStateIntegrityEnergy b violations) f contentSaliency
 
--- | Predicate: does the Conatus gate fire on this energy under
+-- | Predicate: does the state-integrity gate fire on this energy under
 -- 'defaultSalienceWeights'?
 --
 -- This is the same boundary used by 'computeSalience' to decide
--- whether to short-circuit to 'DrivenByConatusGate'. Exposed so
+-- whether to short-circuit to 'DrivenByStateIntegrityGate'. Exposed so
 -- that the recovery-decision call site in
 -- 'QxFx0.Core.TurnPipeline.Route.Render' can priority-override
 -- other recovery causes when the gate fires, keeping the
 -- decision boundary single-sourced.
-conatusGateFires :: ConatusEnergy -> Bool
-conatusGateFires ce =
-  ceScalar ce < conatusGateThreshold defaultSalienceWeights
+stateIntegrityGateFires :: StateIntegrity -> Bool
+stateIntegrityGateFires ce =
+  siScalar ce < stateIntegrityGateThreshold defaultSalienceWeights
 
 -- ---------------------------------------------------------------------------
 -- Trace rendering (Phase 5.5e)
@@ -415,7 +415,7 @@ renderSalienceDriver DrivenByAtmosphere      = "atmosphere"
 renderSalienceDriver DrivenByConsolidation   = "consolidation"
 renderSalienceDriver DrivenByCounterfactual  = "counterfactual"
 renderSalienceDriver DrivenByFieldConfidence = "field_confidence"
-renderSalienceDriver DrivenByConatusGate     = "conatus_gate"
+renderSalienceDriver DrivenByStateIntegrityGate     = "conatus_gate"
 renderSalienceDriver DrivenByContentSaliency = "content_saliency"  -- WP-C
 renderSalienceDriver DrivenByDefault         = "default"
 

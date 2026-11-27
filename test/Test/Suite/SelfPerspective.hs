@@ -10,7 +10,7 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text as T
 import Test.HUnit
 
-import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+import QxFx0.Self.StateIntegrity (StateIntegrityComponents(..), StateIntegrity(..))
 import QxFx0.Self.Field (FieldConfidence(..), emptyField, fieldConfidence)
 import QxFx0.Self.Perspective
   ( applyPerspectiveDecision
@@ -26,7 +26,7 @@ import QxFx0.Types.State
   , AdaptiveDecisionRecord(..)
   , AdaptiveMutationKind(..)
   , ClaimStanceRef(..)
-  , ConatusSlice(..)
+  , StateIntegritySlice(..)
   , CounterargumentRef(..)
   , DialogueOutcomeKind(..)
   , DialogueOutcomeLearningState(..)
@@ -63,24 +63,24 @@ selfPerspectiveTests =
   , TestLabel "SelfPerspective rollback restores prior projection" testPerspectiveRollbackRestoresPriorProjection
   , TestLabel "SelfPerspective projection is explainable and safe" testPerspectiveProjectionIsExplainableAndSafe
   , TestLabel "SelfPerspective candidate is NaN-safe" testPerspectiveCandidateIsNaNSafe
-  , TestLabel "SelfPerspective Conatus ablation touches only csStability" testPerspectiveConatusStabilityAblation
+  , TestLabel "SelfPerspective Conatus ablation touches only csStability" testPerspectiveStateIntegrityStabilityAblation
   ]
 
 -- | P2 measurement hook (docs/closure/P2_ABLATION_PREREG_2026-11-18.md):
 -- the ablation must zero exactly the Conatus bonus of 'csStability' and
 -- leave every other slice field — above all 'csEnergy', which the
 -- admissibility gate reads — truthful.
-testPerspectiveConatusStabilityAblation :: Test
-testPerspectiveConatusStabilityAblation = TestCase $ do
-  let ce = ConatusEnergy 14.09 (ConatusComponents 0 0 0 0 0.0)
+testPerspectiveStateIntegrityStabilityAblation :: Test
+testPerspectiveStateIntegrityStabilityAblation = TestCase $ do
+  let ce = StateIntegrity 14.09 (StateIntegrityComponents 0 0 0 0 0.0)
       -- 'emptyField' carries confidence 1.0, where 'clampUnit' saturates
       -- the stability term; use an unsaturated field to measure it.
       field = emptyField { fieldConfidence = FieldConfidence 0.5 }
-      base = pibConatusSlice (assemblePerspectiveInputWith False emptySystemState ce False field)
-      ablated = pibConatusSlice (assemblePerspectiveInputWith True emptySystemState ce False field)
+      base = pibStateIntegritySlice (assemblePerspectiveInputWith False emptySystemState ce False field)
+      ablated = pibStateIntegritySlice (assemblePerspectiveInputWith True emptySystemState ce False field)
       expectedBonus = min 0.25 (max 0.0 (14.09 / 80.0))
-      wrapper = pibConatusSlice (assemblePerspectiveInput emptySystemState ce False field)
-      saturated = pibConatusSlice (assemblePerspectiveInputWith False emptySystemState ce False emptyField)
+      wrapper = pibStateIntegritySlice (assemblePerspectiveInput emptySystemState ce False field)
+      saturated = pibStateIntegritySlice (assemblePerspectiveInputWith False emptySystemState ce False emptyField)
   assertEqual "ablation must leave csEnergy truthful" (csEnergy base) (csEnergy ablated)
   assertEqual "ablation must leave csGateFired" (csGateFired base) (csGateFired ablated)
   assertEqual "ablation must leave csFieldConfidence" (csFieldConfidence base) (csFieldConfidence ablated)
@@ -155,7 +155,7 @@ testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
             { selfPerspectiveRegistry = registry }
         , ssDialogueOutcomeLearning = outcome
         }
-      bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)) False emptyField
+      bundle = assemblePerspectiveInput ss (StateIntegrity 10.0 (StateIntegrityComponents 0 0 0 0 0.0)) False emptyField
       candidate = opinionCore bundle
   assertEqual "matching activation scope must select the scoped profile"
     7 (pcNormativeProfileVersion candidate)
@@ -215,7 +215,7 @@ testPerspectiveProjectionIsExplainableAndSafe = TestCase $ do
         1 (ppCounterargumentCount projection)
 
 -- | Regression lock G1: 'opinionCore' must not propagate NaN or
--- Infinity from a degenerate 'ConatusSlice' into the candidate's
+-- Infinity from a degenerate 'StateIntegritySlice' into the candidate's
 -- confidence, counterargument pressure, normative alignment, or
 -- internal tension surfaces.  The NaN-safe 'clampUnit' in
 -- "QxFx0.Self.Perspective" guarantees a finite candidate at the
@@ -229,7 +229,7 @@ testPerspectiveCandidateIsNaNSafe = TestCase $ do
         defaultNormativeProfile
         []
       bundle = bundle0
-        { pibConatusSlice = (pibConatusSlice bundle0)
+        { pibStateIntegritySlice = (pibStateIntegritySlice bundle0)
             { csEnergy          = 0/0
             , csFieldConfidence = 1/0
             , csStability       = (-1)/0
@@ -270,7 +270,7 @@ mkPerspectiveBundle evidence stance counterarguments profile lineage = Perspecti
       , isIdentityClaimCount = 0
       , isTurnCount = 1
       }
-  , pibConatusSlice = ConatusSlice
+  , pibStateIntegritySlice = StateIntegritySlice
       { csEnergy = 10.0
       , csGateFired = False
       , csFieldConfidence = 1.0

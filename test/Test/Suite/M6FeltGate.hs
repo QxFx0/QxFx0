@@ -28,7 +28,7 @@ import QxFx0.Core.M6FeltGate
 import QxFx0.Runtime (RuntimeMode(..))
 import QxFx0.Types.TurnProjection (ParserStatus(..), TurnReplayTrace(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Self.Field
   ( Field(..)
@@ -301,12 +301,13 @@ passingTrace = TurnReplayTrace
   , trcDreamCandidateApplied = Nothing
   , trcPerspectiveProjection = Nothing
   , trcPerspectiveProjections = []
-  , trcConatusEnergy = ConatusEnergy 14.0 (ConatusComponents 5.6 4.2 4.2 0.0 0.0)
+  , trcConatusEnergy = StateIntegrity 14.0 (StateIntegrityComponents 5.6 4.2 4.2 0.0 0.0)
   , trcSelfDivergenceTotal = Nothing
   , trcSelfDivergencePenalty = 0.0
   , trcSelfDivergenceWindowMean = Nothing
   , trcSelfDivergencePredictionActive = False
   , trcConatusGateFired = False
+  , trcConatusContour = Nothing
   , trcField = Field
       { fieldResonance = Resonance 0.5
       , fieldAtmosphere = Atmosphere 0.0 0.5

@@ -6,7 +6,7 @@ Description : Audit 2026-10-16 (p.11) anti-rot: fail-closed clamps on persisted 
 
 Persisted JSON is a trust boundary.  'sanitizePersistedState' clamps the
 named value invariants on every successful state decode and reports each
-adjustment; 'ConatusEnergy' re-derives 'ceScalar' from the component sum
+adjustment; 'StateIntegrityEnergy' re-derives 'ceScalar' from the component sum
 in its 'FromJSON'.  These pins make a regression (silent trust of a
 corrupted store, non-finite poisoning, a broken scalar invariant) fail
 loudly.
@@ -23,10 +23,10 @@ import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import QxFx0.Bridge.StateSanitization (sanitizePersistedState)
 import QxFx0.Runtime.StateDefaults (emptySystemState)
-import QxFx0.Types.Self.Conatus
-  ( ConatusComponents(..)
-  , ConatusEnergy(..)
-  , conatusComponentSum
+import QxFx0.Types.Self.StateIntegrity
+  ( StateIntegrityComponents(..)
+  , StateIntegrity(..)
+  , stateIntegrityComponentSum
   )
 import QxFx0.Types.ShadowDivergence (ShadowVetoState(..))
 import QxFx0.Types.State (DialogueState(..))
@@ -43,7 +43,7 @@ stateSanitizationTests =
   , testUserBaselineSanitized
   , testUserDivergenceWindowSanitized
   , testCleanStateIsIdentity
-  , testConatusScalarDerivedOnDecode
+  , testStateIntegrityScalarDerivedOnDecode
   ]
 
 -- | A system state with the dialogue turn counter pinned (the
@@ -149,11 +149,11 @@ testCleanStateIsIdentity = TestLabel "p.11: a clean state is the identity" $ Tes
   assertEqual "clean state is value-unchanged" emptySystemState ss1
   assertEqual "clean state yields no notes" [] notes
 
--- | Audit p.11 (c): 'ConatusEnergy' re-derives 'ceScalar' on decode;
+-- | Audit p.11 (c): 'StateIntegrityEnergy' re-derives 'ceScalar' on decode;
 -- the key stays mandatory, the value is not trusted, and legacy
 -- four-component blobs keep their old semantics.
-testConatusScalarDerivedOnDecode :: Test
-testConatusScalarDerivedOnDecode = TestLabel "p.11: ceScalar is re-derived on decode" $ TestCase $ do
+testStateIntegrityScalarDerivedOnDecode :: Test
+testStateIntegrityScalarDerivedOnDecode = TestLabel "p.11: ceScalar is re-derived on decode" $ TestCase $ do
   let inconsistent =
         "{\"ceScalar\":99.0,\"ceComponents\":{\"ccMorphology\":1.0,\"ccIdentity\":2.0,\"ccTurns\":3.0,\"ccPenalty\":-1.0,\"ccSelfDivergence\":-0.5}}"
       consistent =
@@ -163,12 +163,12 @@ testConatusScalarDerivedOnDecode = TestLabel "p.11: ceScalar is re-derived on de
       missingScalar =
         "{\"ceComponents\":{\"ccMorphology\":1.0,\"ccIdentity\":2.0,\"ccTurns\":3.0,\"ccPenalty\":-1.0}}"
   assertEqual "inconsistent scalar is replaced by the component sum"
-    (Just 4.5) (ceScalar <$> (Aeson.decode inconsistent :: Maybe ConatusEnergy))
+    (Just 4.5) (siScalar <$> (Aeson.decode inconsistent :: Maybe StateIntegrity))
   assertEqual "consistent scalar is unchanged"
-    (Just 4.5) (ceScalar <$> (Aeson.decode consistent :: Maybe ConatusEnergy))
+    (Just 4.5) (siScalar <$> (Aeson.decode consistent :: Maybe StateIntegrity))
   assertEqual "legacy four-component blob keeps its scalar"
-    (Just 6.0) (ceScalar <$> (Aeson.decode legacy :: Maybe ConatusEnergy))
+    (Just 6.0) (siScalar <$> (Aeson.decode legacy :: Maybe StateIntegrity))
   assertEqual "the ceScalar key stays mandatory"
-    Nothing (Aeson.decode missingScalar :: Maybe ConatusEnergy)
+    Nothing (Aeson.decode missingScalar :: Maybe StateIntegrity)
   assertEqual "the component sum is the definition"
-    5.75 (conatusComponentSum (ConatusComponents 1.0 2.0 3.0 (-0.5) 0.25))
+    5.75 (stateIntegrityComponentSum (StateIntegrityComponents 1.0 2.0 3.0 (-0.5) 0.25))

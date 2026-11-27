@@ -135,7 +135,7 @@ rescueTests =
         (renderLocalRecoverySurface "ru" RecoveryLowLegitimacy StrategyExposeUncertainty "свобода" [])
       assertEqual "conatus-gate safe-recovery keeps strategy text"
         "Остановлю расширение ответа и вернусь к проверяемой части хода."
-        (renderLocalRecoverySurface "ru" RecoveryConatusGate StrategySafeRecovery "свобода" [])
+        (renderLocalRecoverySurface "ru" RecoveryStateIntegrityGate StrategySafeRecovery "свобода" [])
       assertEqual "render-blocked safe-recovery keeps strategy text"
         "Остановлю расширение ответа и вернусь к проверяемой части хода."
         (renderLocalRecoverySurface "ru" RecoveryRenderBlocked StrategySafeRecovery "свобода" [])

@@ -10,9 +10,9 @@ Replaces 2 hand-rolled modules:
 
 Pattern:
   not in-scope → admit raw;
-  conatus && !weak → lower confidence;
+  stateIntegrity && !weak → lower confidence;
   !authoritative && !weak → lower confidence;
-  conatus || !authoritative → preserve ambiguous;
+  stateIntegrity || !authoritative → preserve ambiguous;
   otherwise → admit raw.
 -}
 module QxFx0.Types.Admission.PatternLowerConfidence
@@ -25,7 +25,7 @@ import QxFx0.Types.Observability (TruthContractStatus)
 
 data LowerConfConfig input dat admitted decision = LowerConfConfig
   { lccGetTruthContract :: input -> TruthContractStatus
-  , lccConatusFired     :: input -> Bool
+  , lccStateIntegrityFired     :: input -> Bool
   , lccInScope          :: input -> dat -> Bool
   , lccAlreadyWeak      :: dat -> Bool
   , lccSoften           :: input -> dat -> dat
@@ -44,12 +44,12 @@ admitByLowerConfidence
 admitByLowerConfidence cfg inp dat
   | not (lccInScope cfg inp dat) =
       lccBuildAdmitted cfg inp dat (lccDecisionAdmit cfg)
-  | lccConatusFired cfg inp && not (lccAlreadyWeak cfg dat) =
+  | lccStateIntegrityFired cfg inp && not (lccAlreadyWeak cfg dat) =
       lccBuildAdmitted cfg inp (lccSoften cfg inp dat) (lccDecisionLower cfg)
   | not (truthContractIsAuthoritative (lccGetTruthContract cfg inp))
       && not (lccAlreadyWeak cfg dat) =
       lccBuildAdmitted cfg inp (lccSoften cfg inp dat) (lccDecisionLower cfg)
-  | lccConatusFired cfg inp || not (truthContractIsAuthoritative (lccGetTruthContract cfg inp)) =
+  | lccStateIntegrityFired cfg inp || not (truthContractIsAuthoritative (lccGetTruthContract cfg inp)) =
       lccBuildAdmitted cfg inp (lccMarkAmbiguous cfg inp dat) (lccDecisionPreserve cfg)
   | otherwise =
       lccBuildAdmitted cfg inp dat (lccDecisionAdmit cfg)

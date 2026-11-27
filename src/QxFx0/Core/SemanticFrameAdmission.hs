@@ -25,7 +25,7 @@ import qualified Data.Text as T
 
 data SemanticFrameAdmissionInput = SemanticFrameAdmissionInput
   { sfaiTruthContractStatus :: !TruthContractStatus
-  , sfaiConatusGateFired :: !Bool
+  , sfaiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data SemanticFrameAdmissionDecision
@@ -60,7 +60,7 @@ softenFrame input frame =
 
 markFrameAmbiguous :: SemanticFrameAdmissionInput -> UtteranceSemanticFrame -> UtteranceSemanticFrame
 markFrameAmbiguous input frame =
-  let reason = if sfaiConatusGateFired input then "conatus_gate" else "non_authoritative"
+  let reason = if sfaiStateIntegrityGateFired input then "conatus_gate" else "non_authoritative"
       routeHint = usfRouteHint frame
   in frame
       { usfSemanticCandidates = usfSemanticCandidates frame ++ ["semantic_frame_admission=" <> reason]
@@ -73,7 +73,7 @@ admitSemanticFrame input frame =
   where
     config = LowerConfConfig
       { lccGetTruthContract = sfaiTruthContractStatus
-      , lccConatusFired = sfaiConatusGateFired
+      , lccStateIntegrityFired = sfaiStateIntegrityGateFired
       , lccInScope = frameAdmissionInScope
       , lccAlreadyWeak = frameAlreadyWeakOrAmbiguous
       , lccSoften = softenFrame

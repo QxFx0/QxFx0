@@ -17,7 +17,7 @@ import QxFx0.Types.Admission.PatternCapClarify
 
 data EarlyFamilyAdmissionInput = EarlyFamilyAdmissionInput
   { efaiTruthContractStatus :: !TruthContractStatus
-  , efaiConatusGateFired :: !Bool
+  , efaiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data EarlyFamilyAdmissionDecision
@@ -45,7 +45,7 @@ admitEarlyFamilyRecommendation input family frame =
   where
     config = CapClarifyConfig
       { cccGetTruthContract = efaiTruthContractStatus
-      , cccConatusFired = efaiConatusGateFired
+      , cccStateIntegrityFired = efaiStateIntegrityGateFired
       , cccInScope = \_ _ -> earlyFamilyAdmissionInScope frame
       , cccAllWeak = familyAlreadyWeak
       , cccCapDat = \_ -> CMClarify

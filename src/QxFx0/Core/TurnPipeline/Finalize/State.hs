@@ -231,7 +231,7 @@ selfTuningMutationRecords turn signal comps newWeights newHeuristics oldWeights 
   where
     signalEvidence =
       [ "signal=" <> textShow signal
-      , "conatus=" <> textShow (scConatusTrend comps)
+      , "conatus=" <> textShow (scStateIntegrityTrend comps)
       , "uncertainty=" <> textShow (scUncertaintyTrend comps)
       , "loop=" <> textShow (scLoopRisk comps)
       , "branch=" <> textShow (scBranchHealthTrend comps)
@@ -329,7 +329,7 @@ calibrationMutationRecord turn decision signal comps = AdaptiveMutationRecord
   , amrEvidence =
       [ "decision=" <> renderCalibrationDecision decision
       , "signal=" <> textShow signal
-      , "conatus=" <> textShow (scConatusTrend comps)
+      , "conatus=" <> textShow (scStateIntegrityTrend comps)
       , "uncertainty=" <> textShow (scUncertaintyTrend comps)
       , "loop=" <> textShow (scLoopRisk comps)
       , "branch=" <> textShow (scBranchHealthTrend comps)
@@ -397,7 +397,7 @@ computeNextEssence essenceCommitDisabled ss ti tp =
               witness
                 defaultEssenceModulation
                 (ssTurnCount ss + 1)
-                (tiConatusEnergy ti)
+                (tiStateIntegrity ti)
                 (tiField ti)
                 (fromMaybe defaultDeliberation (tpDeliberation tp))
                 trajectory
@@ -417,7 +417,7 @@ computeNextEssence essenceCommitDisabled ss ti tp =
               witness
                 defaultEssenceModulation
                 (ssTurnCount ss + 1)
-                (tiConatusEnergy ti)
+                (tiStateIntegrity ti)
                 (tiField ti)
                 (fromMaybe defaultDeliberation (tpDeliberation tp))
                 trajectory
@@ -470,7 +470,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
           (unTurnSeq turnSeq)
           (nextEssenceRaw, rawCommitmentTrigger)
       -- Phase 7: bounded calibration signal + rooted tree maintenance.
-      -- Compute signal from conatus trend, uncertainty, loop risk,
+      -- Compute signal from state-integrity trend, uncertainty, loop risk,
       -- and branch health.  Only adapt when committed.
       (adaptedWeights, adaptedHeuristics, nextTree, calibrationSnapshots, nextCalibrationLog, adaptiveRecords) =
         case nextEssenceRaw of
@@ -544,7 +544,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       newLearningNeedState =
           detectLearningNeedWithPressure
            defaultLearningPressureConfig
-           (tiConatusEnergy ti)
+           (tiStateIntegrity ti)
            (tiField ti)
            0 -- repairCount: historical recovery tracking deferred to Phase 7
            (length (ssBlockedConcepts ss)) -- proxy: blocked concepts indicate substrate gaps
@@ -725,7 +725,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       -- Phase E: revision decisions for contradicted commitments (v3.0 pentagon)
       (revisionDecisions, mCollapse, mChallengedStanceDefense) =
         let ce = tpCommitmentEngagement tp
-            conatus = tiConatusEnergy ti
+            stateIntegrity = tiStateIntegrity ti
             topic = tiBestTopic ti
             sd = M.findWithDefault emptyStanceDefense topic (ssStanceDefenses ss)
             challengeAtoms = S.fromList $ map maText $ asAtoms $ tiAtomSet ti
@@ -738,7 +738,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
                 in case engaged of
                      [] -> ([], Nothing, Nothing)
                      _ ->
-                       let result = defendOrAdapt sd conatus challengeAtoms
+                       let result = defendOrAdapt sd stateIntegrity challengeAtoms
                            decision engagedCid =
                              case result of
                                Left _ -> RcQuarantined engagedCid ContradictionStatement
@@ -826,7 +826,7 @@ buildNextSystemState updateHistory mClaimPayload ablation ss ti ts tp ta newDrea
       -- local-recovery cause — the merged value the replay trace stamps
       -- ('trcRecoveryCause') — instead of the deliberation-only
       -- 'planRecoveryCause' (which could only ever be
-      -- 'Just RecoveryConatusGate').
+      -- 'Just RecoveryStateIntegrityGate').
       mRecoveryCause = taLocalRecoveryCause ta
       nextWithMeta = nextWithCommitments
         { ssMetacognition = runMetacognitionLoop

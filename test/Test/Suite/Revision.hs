@@ -13,7 +13,7 @@ import QxFx0.Semantic.Revision
 import QxFx0.Types.State.SemanticCommitment (CommitmentId(..), ContradictionKind(..), SemanticCommitmentStore(..), FactualClaimPayload(..), TurnSeq(..), CommitmentOrigin(..), CommitmentEngagement(..), MatchKind(..), LineageEvent(..), emptySemanticCommitmentStore)
 import qualified Data.Sequence as Seq
 import QxFx0.Types.State.System (ssSemanticCommitments)
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), emptyTrajectory)
 import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), emptyStanceDefense)
 import QxFx0.Semantic.Stance (defendOrAdapt, evidenceWeight, recoverStance, selectNearestSatisfying, selectFarthestPoint, extractUserStance, stanceSimilarity, collapseThreshold, Collapse(..))
@@ -45,9 +45,9 @@ revisionTests =
           let cid = CommitmentId 1
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "stable defense should retain" (RcRetained cid kind) rc
@@ -56,9 +56,9 @@ revisionTests =
           let cid = CommitmentId 2
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.4 }
-              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
+              stateIntegrity = StateIntegrity 3.0 (StateIntegrityComponents 0.75 0.75 0.75 0.75 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse with low conatus"
             Right rc -> assertEqual "low conatus while doubted should retain" (RcRetained cid kind) rc
@@ -67,9 +67,9 @@ revisionTests =
           let cid = CommitmentId 3
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "stable state should retain" (RcRetained cid kind) rc
@@ -78,9 +78,9 @@ revisionTests =
           let cid = CommitmentId 4
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.4, sdAttackCount = 3 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "doubted with momentum should retain" (RcRetained cid kind) rc
@@ -89,9 +89,9 @@ revisionTests =
           let cid = CommitmentId 5
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceHeld 0.5 }
-              conatus = ConatusEnergy 5.0 (ConatusComponents 1.25 1.25 1.25 1.25 0.0)
+              stateIntegrity = StateIntegrity 5.0 (StateIntegrityComponents 1.25 1.25 1.25 1.25 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "conatus at threshold should retain" (RcRetained cid kind) rc
@@ -100,9 +100,9 @@ revisionTests =
           let cid = CommitmentId 6
               kind = ContradictionStatement
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.3, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3", "atom4", "atom5"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "strong challenge while doubted should revise" (RcRevised cid kind) rc
@@ -111,9 +111,9 @@ revisionTests =
           let cid = CommitmentId 7
               kind = ContradictionScope
               sd = emptyStanceDefense { sdStance = StanceDoubted 0.3, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challengeAtoms = S.fromList ["atom1", "atom2", "atom3", "atom4", "atom5"]
-              result = revisePosition cid kind sd conatus challengeAtoms
+              result = revisePosition cid kind sd stateIntegrity challengeAtoms
           case result of
             Left _ -> assertFailure "should not collapse"
             Right rc -> assertEqual "scope contradiction with strong challenge should revise" (RcRevised cid kind) rc

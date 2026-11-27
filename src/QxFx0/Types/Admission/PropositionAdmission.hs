@@ -17,7 +17,7 @@ import qualified Data.Text as T
 
 data PropositionAdmissionInput = PropositionAdmissionInput
   { paiTruthContractStatus :: !TruthContractStatus
-  , paiConatusGateFired :: !Bool
+  , paiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data PropositionAdmissionDecision
@@ -34,17 +34,17 @@ data AdmittedPropositionFrame = AdmittedPropositionFrame
 admitPropositionFrame :: PropositionAdmissionInput -> InputPropositionFrame -> AdmittedPropositionFrame
 admitPropositionFrame input frame
   | not (frameAdmissionInScope frame) = AdmittedPropositionFrame frame PadAdmitRaw
-  | paiConatusGateFired input && not (frameAlreadyWeakOrAmbiguous frame) =
+  | paiStateIntegrityGateFired input && not (frameAlreadyWeakOrAmbiguous frame) =
       AdmittedPropositionFrame (softenFrame "conatus_gate") PadLowerConfidence
   | not (truthContractIsAuthoritative (paiTruthContractStatus input))
       && not (frameAlreadyWeakOrAmbiguous frame) =
       AdmittedPropositionFrame (softenFrame "non_authoritative") PadLowerConfidence
-  | paiConatusGateFired input || not (truthContractIsAuthoritative (paiTruthContractStatus input)) =
+  | paiStateIntegrityGateFired input || not (truthContractIsAuthoritative (paiTruthContractStatus input)) =
       AdmittedPropositionFrame (markFrameAmbiguous reasonTag) PadPreserveAmbiguous
   | otherwise = AdmittedPropositionFrame frame PadAdmitRaw
   where
     reasonTag
-      | paiConatusGateFired input = "conatus_gate"
+      | paiStateIntegrityGateFired input = "conatus_gate"
       | otherwise = "non_authoritative"
 
     softenFrame reason =

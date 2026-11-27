@@ -14,7 +14,7 @@ module QxFx0.Types.State.Perspective
   , ClaimStanceRef(..)
   , CounterargumentRef(..)
   , IdentitySlice(..)
-  , ConatusSlice(..)
+  , StateIntegritySlice(..)
   , ConflictPolicy(..)
   , NormativeProfile(..)
   , PerspectiveInputBundle(..)
@@ -101,7 +101,7 @@ data IdentitySlice = IdentitySlice
   deriving stock (Eq, Show, Generic)
   deriving anyclass (NFData, FromJSON, ToJSON)
 
-data ConatusSlice = ConatusSlice
+data StateIntegritySlice = StateIntegritySlice
   { csEnergy :: !Double
   , csGateFired :: !Bool
   , csFieldConfidence :: !Double
@@ -152,7 +152,7 @@ data PerspectiveInputBundle = PerspectiveInputBundle
   , pibEvidence :: ![EvidenceRef]
   , pibStanceSlice :: ![ClaimStanceRef]
   , pibIdentitySlice :: !IdentitySlice
-  , pibConatusSlice :: !ConatusSlice
+  , pibStateIntegritySlice :: !StateIntegritySlice
   , pibNormativeProfile :: !NormativeProfile
   , pibCounterarguments :: ![CounterargumentRef]
   , pibRevisionLineage :: ![PerspectiveRevisionRecord]

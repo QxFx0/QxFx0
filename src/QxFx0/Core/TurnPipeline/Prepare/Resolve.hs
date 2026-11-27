@@ -66,7 +66,7 @@ resolvePrepareEffects pio effectPlan = do
         ]
       scheduledPairs :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledPairs =
-        scheduleTurnEffects pio (psConatusEnergy (pepStatic effectPlan))
+        scheduleTurnEffects pio (psStateIntegrity (pepStatic effectPlan))
           [ (label, request)
           | (label, Just request) <- requestPairs
           ]
@@ -155,10 +155,10 @@ prepareRequestToTurnEffect request =
       Just (TurnReqEmbedding inputText)
     PrepareReqNixGuard concept currentLoad atomLoad ->
       Just (TurnReqNixGuard concept currentLoad atomLoad)
-    PrepareReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights ->
-      Just (TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights)
-    PrepareReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig ->
-      Just (TurnReqIntuition inputText resonance tension turnNumber conatusEnergy salienceWeights semanticConfig)
+    PrepareReqConsciousness semanticInput humanTheta resonance stateIntegrityEnergy salienceWeights ->
+      Just (TurnReqConsciousness semanticInput humanTheta resonance stateIntegrityEnergy salienceWeights)
+    PrepareReqIntuition inputText resonance tension turnNumber stateIntegrityEnergy salienceWeights semanticConfig ->
+      Just (TurnReqIntuition inputText resonance tension turnNumber stateIntegrityEnergy salienceWeights semanticConfig)
     PrepareReqApiHealth ->
       Just TurnReqApiHealth
 

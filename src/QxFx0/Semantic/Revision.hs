@@ -21,7 +21,7 @@ import qualified Data.HashMap.Strict as HashMap
 import Data.Text (Text)
 import Data.Map.Strict (Map)
 import QxFx0.Types.State.SemanticCommitment
-import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Self.StateIntegrity (StateIntegrity, siScalar)
 import QxFx0.Semantic.Space (tokenizePredicate)
 import QxFx0.Types.State.Stance (StanceDefense(..), StanceState(..), stanceConfidence, emptyStanceDefense)
 import QxFx0.Semantic.Stance (defendOrAdapt, Collapse(..))
@@ -35,7 +35,7 @@ data RevisedCommitment
   = RcRevised !CommitmentId !ContradictionKind
     -- ^ StanceDoubted + strong challenge → StanceRevised (full revision)
   | RcQuarantined !CommitmentId !ContradictionKind
-    -- ^ StanceDoubted + low conatus → Collapse (quarantine)
+    -- ^ StanceDoubted + low state integrity → Collapse (quarantine)
   | RcRetained !CommitmentId !ContradictionKind
     -- ^ Held / defended / exited-cycle transitions (StanceHeld under
     --   strong challenge steps to StanceDoubted without revision)
@@ -101,17 +101,17 @@ synthesizeResolution lemmaMap old new =
 -- - StanceHeld + weak challenge → StanceHeld → RcRetained
 -- - StanceHeld + strong challenge → StanceDoubted → RcRetained (defending)
 -- - StanceDoubted + strong challenge → StanceRevised → RcRevised
--- - StanceDoubted + low conatus → CollapseConatusExhausted → RcQuarantined
+-- - StanceDoubted + low state integrity → CollapseStateIntegrityExhausted → RcQuarantined
 -- - StanceRevised → AdversaryClassified → RcRetained (exit defense cycle)
 revisePosition
   :: CommitmentId
   -> ContradictionKind
   -> StanceDefense
-  -> ConatusEnergy
+  -> StateIntegrity
   -> Set Text  -- ^ Atoms from user's challenge
   -> Either Collapse RevisedCommitment
-revisePosition cid kind sd conatus challengeAtoms =
-  case defendOrAdapt sd conatus challengeAtoms of
+revisePosition cid kind sd stateIntegrity challengeAtoms =
+  case defendOrAdapt sd stateIntegrity challengeAtoms of
     Left collapse -> Left collapse
     Right newSd ->
       let newStance = sdStance newSd

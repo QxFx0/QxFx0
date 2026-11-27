@@ -19,7 +19,7 @@ The cycle:
 2. Generates a bounded pool of 'CalibrationCandidate's by
    perturbing 'SalienceWeights' and 'FieldHeuristics'.
 3. Evaluates each candidate against the dataset using proxy
-   metrics (conatus trend, uncertainty, repair-loop frequency,
+   metrics (state-integrity trend, uncertainty, repair-loop frequency,
    reject-rate deltas).
 4. Accepts only non-regressing candidates; the best is promoted
    with a 'CalibrationId' and rollback linkage.
@@ -281,8 +281,8 @@ data CandidateVerdict
 
 -- | Typed reject reason for telemetry and audit.
 data TrainingRejectReason
-  = TrRegressionConatus
-    -- ^ Projected conatus trend worse than baseline.
+  = TrRegressionStateIntegrity
+    -- ^ Projected state-integrity trend worse than baseline.
   | TrRegressionUncertainty
     -- ^ Projected uncertainty (oscillation) higher than baseline.
   | TrRegressionRepair
@@ -298,8 +298,8 @@ data TrainingRejectReason
 
 -- | Proxy metrics comparing candidate vs baseline on the eval subset.
 data EvaluationMetrics = EvaluationMetrics
-  { emConatusTrendDelta    :: !Double
-    -- ^ Negative = candidate improves conatus trend (need rising less fast).
+  { emStateIntegrityTrendDelta    :: !Double
+    -- ^ Negative = candidate improves the state-integrity trend (need rising less fast).
   , emUncertaintyDelta     :: !Double
     -- ^ Negative = candidate reduces need-level oscillation.
   , emRepairLoopFreqDelta  :: !Double
@@ -343,11 +343,11 @@ evaluateCandidate dataset candidate =
 -- | Baseline metrics from the eval subset using current defaults.
 computeBaselineMetrics :: [TrainingTrace] -> (Double, Double, Double, Double)
 computeBaselineMetrics traces =
-  let conatusTrend = slopeOfNeedLevels traces
+  let stateIntegrityTrend = slopeOfNeedLevels traces
       uncertainty  = oscillationOfNeedLevels traces
       repairFreq   = repairLoopProxy traces
       rejectRate   = rejectRateProxy traces
-  in (conatusTrend, uncertainty, repairFreq, rejectRate)
+  in (stateIntegrityTrend, uncertainty, repairFreq, rejectRate)
 
 computeCandidateMetrics :: CalibrationCandidate -> [TrainingTrace] -> (Double, Double, Double, Double)
 computeCandidateMetrics candidate traces =
@@ -407,9 +407,9 @@ applyAcceptancePolicy metrics traces
   -- Insufficient signal: need at least 3 eval traces.
   | length traces < 3 =
       (CandidateReject, Just TrInsufficientSignal)
-  -- Strict non-regression: conatus must not regress.
-  | emConatusTrendDelta metrics > 0.05 =
-      (CandidateReject, Just TrRegressionConatus)
+  -- Strict non-regression: state integrity must not regress.
+  | emStateIntegrityTrendDelta metrics > 0.05 =
+      (CandidateReject, Just TrRegressionStateIntegrity)
   -- Uncertainty must not increase significantly.
   | emUncertaintyDelta metrics > 0.05 =
       (CandidateReject, Just TrRegressionUncertainty)
@@ -557,7 +557,7 @@ rollbackTrainingCycle entry turn =
 -- ---------------------------------------------------------------------------
 
 renderTrainingRejectReason :: TrainingRejectReason -> Text
-renderTrainingRejectReason TrRegressionConatus     = "regression_conatus"
+renderTrainingRejectReason TrRegressionStateIntegrity     = "regression_conatus"
 renderTrainingRejectReason TrRegressionUncertainty = "regression_uncertainty"
 renderTrainingRejectReason TrRegressionRepair      = "regression_repair"
 renderTrainingRejectReason TrRegressionRejectRate  = "regression_reject_rate"

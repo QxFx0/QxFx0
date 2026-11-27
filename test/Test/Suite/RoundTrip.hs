@@ -93,7 +93,7 @@ testLocalRecoveryCauseRT = TestList
   , TestCase $ assertRoundTrip "RecoveryUnknownTopic" RecoveryUnknownTopic
   , TestCase $ assertRoundTrip "RecoveryRuntimeDegraded" RecoveryRuntimeDegraded
   , TestCase $ assertRoundTrip "RecoveryLearningNeed" RecoveryLearningNeed
-  , TestCase $ assertRoundTrip "RecoveryConatusGate" RecoveryConatusGate
+  , TestCase $ assertRoundTrip "RecoveryConatusGate" RecoveryStateIntegrityGate
   ]
 
 -- LocalRecoveryStrategy — audit C: same issue as Cause

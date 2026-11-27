@@ -27,7 +27,7 @@ import QxFx0.Learning.KnowledgeTree
   , graftFruit
   )
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..), learningNeedLevel, learningNeedPersistence)
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types
@@ -1657,7 +1657,7 @@ canonicalAuthoritativeBase ss0 =
         , kfWord = "свобода"
         , kfSource = SourceInternal
         , kfValidated = True
-        , kfConatusDelta = 0.6
+        , kfStateIntegrityDelta = 0.6
         , kfPredictiveDelta = 0.4
         , kfGraftedTurn = Nothing
         , kfObservedTurn = 1
@@ -1707,21 +1707,21 @@ canonicalAuthoritativeBase ss0 =
                 ]
             }
         }
-  in applyPerspectiveOperator stateWithEvidence positiveConatus False emptyField
+  in applyPerspectiveOperator stateWithEvidence positiveStateIntegrity False emptyField
 
 assembledAuthoritativeBase :: SystemState -> SystemState
 assembledAuthoritativeBase ss0 =
   (canonicalAuthoritativeBase ss0)
     { ssTruthContractStatus = AssembledSurfacePreserved }
 
-positiveConatus :: ConatusEnergy
-positiveConatus = ConatusEnergy
-  { ceScalar = 10.0
-  , ceComponents = ConatusComponents
-      { ccMorphology = 0.0
-      , ccIdentity = 0.0
-      , ccTurns = 10.0
-      , ccPenalty = 0.0
-      , ccSelfDivergence = 0.0
+positiveStateIntegrity :: StateIntegrity
+positiveStateIntegrity = StateIntegrity
+  { siScalar = 10.0
+  , siComponents = StateIntegrityComponents
+      { sicMorphology = 0.0
+      , sicIdentity = 0.0
+      , sicTurns = 10.0
+      , sicPenalty = 0.0
+      , sicSelfDivergence = 0.0
       }
 }

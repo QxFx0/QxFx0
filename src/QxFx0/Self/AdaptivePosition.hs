@@ -9,8 +9,8 @@ Description : canonical — FMAR Phase-2 — 8D adaptive state position over Fie
 
 The position of the system in the space FMAR (Field-Modulated Adaptive
 Routing) reasons over: the five-component 'Field', a three-component
-spectral encoding of the current 'MeaningState', and the scalar Conatus
-energy used by the downstream Conatus gate.
+spectral encoding of the current 'MeaningState', and the scalar state-integrity
+energy used by the downstream state-integrity gate.
 
 The spectral encoding maps each band to @[0,1]@ by its enumeration
 position. It is deliberately a /minor/ contributor: three bands give
@@ -55,13 +55,13 @@ data SpectralEncoding = SpectralEncoding
     deriving anyclass (NFData, ToJSON, FromJSON)
 
 -- | The system's position in the 8D adaptive space: 'Field' (5) +
--- 'SpectralEncoding' (3), plus the scalar Conatus energy carried for the
--- downstream Conatus gate (not itself a distance dimension).
+-- 'SpectralEncoding' (3), plus the scalar state-integrity energy carried for the
+-- downstream state-integrity gate (not itself a distance dimension).
 data AdaptivePosition = AdaptivePosition
   { apField         :: !Field
   , apSpectral      :: !SpectralEncoding
-  , apConatusEnergy :: !Double
-    -- ^ @ceScalar@; consulted by the Conatus gate, not by 'fieldDistance'.
+  , apStateIntegrityEnergy :: !Double
+    -- ^ @siScalar@; consulted by the state-integrity gate, not by 'fieldDistance'.
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
 
@@ -71,7 +71,7 @@ emptyAdaptivePosition =
   AdaptivePosition
     { apField         = emptyField
     , apSpectral      = SpectralEncoding 0.0 0.0 0.0
-    , apConatusEnergy = 0.0
+    , apStateIntegrityEnergy = 0.0
     }
 
 -- | Project a 'MeaningState' into its spectral coordinates. Each band is

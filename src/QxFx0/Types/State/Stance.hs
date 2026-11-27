@@ -179,11 +179,11 @@ isClassified _ = False
 
 -- | Policy for structural collapse.
 --
--- When conatus energy falls below the threshold while stance is Doubted,
+-- When state-integrity energy falls below the threshold while stance is Doubted,
 -- the system initiates collapse (Essence reset).
 data CollapsePolicy = CollapsePolicy
-  { cpConatusFloor :: !Double
-    -- ^ Conatus energy threshold for collapse.
+  { cpStateIntegrityFloor :: !Double
+    -- ^ state-integrity energy threshold for collapse.
     --   Default: 5.0 (matches revisePosition threshold).
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData, ToJSON, FromJSON)
@@ -191,7 +191,7 @@ data CollapsePolicy = CollapsePolicy
 -- | Default collapse policy.
 defaultCollapsePolicy :: CollapsePolicy
 defaultCollapsePolicy = CollapsePolicy
-  { cpConatusFloor = 5.0
+  { cpStateIntegrityFloor = 5.0
   }
 
 -- | Policy for confidence recovery.

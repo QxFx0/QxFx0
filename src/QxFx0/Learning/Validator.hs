@@ -48,7 +48,7 @@ data KnowledgeFruitPayload = KnowledgeFruitPayload
   , kfpDefinition     :: !Text
   , kfpMorphology     :: !(Maybe MorphologyPayload)
   , kfpSource         :: !KnowledgeSource
-  , kfpConatusDelta   :: !Double
+  , kfpStateIntegrityDelta   :: !Double
   , kfpPredictiveDelta:: !Double
   }
   deriving stock (Eq, Show, Generic)

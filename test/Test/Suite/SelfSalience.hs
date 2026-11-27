@@ -16,8 +16,8 @@ Verifies, by QuickCheck, the laws asserted in
     Counterfactual ⇒ no decrease in bias toward Holistic;
     more Consolidation / FieldConfidence ⇒ no increase in bias
     toward Holistic);
-  * the Conatus gate fires when @ceScalar < conatusGateThreshold@
-    and returns 'DrivenByConatusGate';
+  * the Conatus gate fires when @siScalar < stateIntegrityGateThreshold@
+    and returns 'DrivenByStateIntegrityGate';
   * 'salienceVerdict' produces 'Tied' exactly inside the
     @[0.5 − t, 0.5 + t]@ dead band;
   * 'chooseBranch' dispatches 'PreferHolistic' to the holistic
@@ -44,9 +44,9 @@ import QxFx0.Self.Adjunction
   ( Formal (..)
   , Holistic (..)
   )
-import QxFx0.Self.Conatus
-  ( ConatusComponents (..)
-  , ConatusEnergy (..)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents (..)
+  , StateIntegrity (..)
   )
 import QxFx0.Self.Field
   ( Atmosphere (..)
@@ -66,7 +66,7 @@ import QxFx0.Self.Salience
   , adaptSalienceWeights
   , chooseBranch
   , computeSalience
-  , conatusGateFires
+  , stateIntegrityGateFires
   , defaultSalienceWeights
   , salienceVerdict
   )
@@ -97,9 +97,9 @@ selfSalienceTests =
 
     -- Conatus gate
   , TestLabel "Conatus gate fires when ceScalar < threshold" $
-      quickCheckProperty "Conatus gate" propConatusGate
+      quickCheckProperty "Conatus gate" propStateIntegrityGate
   , TestLabel "Conatus gate yields DrivenByConatusGate driver" $
-      quickCheckProperty "Conatus gate driver" propConatusGateDriver
+      quickCheckProperty "Conatus gate driver" propStateIntegrityGateDriver
 
     -- Verdict band
   , TestLabel "salienceVerdict produces Tied inside the dead band" $
@@ -123,19 +123,19 @@ selfSalienceTests =
 
     -- Phase-7 lifeness gates (structural calibration infrastructure)
   , TestLabel "Conatus gate fires exactly when predicate says so" $
-      quickCheckProperty "gate predicate equivalence" propConatusGateFiresExactlyWhenPredicate
+      quickCheckProperty "gate predicate equivalence" propStateIntegrityGateFiresExactlyWhenPredicate
   , TestLabel "Conatus gate bias is exactly 0.0" $
-      quickCheckProperty "gate bias zero" propConatusGateBiasIsZero
+      quickCheckProperty "gate bias zero" propStateIntegrityGateBiasIsZero
   , TestLabel "Conatus gate confidence is exactly 1.0" $
-      quickCheckProperty "gate confidence one" propConatusGateConfidenceIsOne
+      quickCheckProperty "gate confidence one" propStateIntegrityGateConfidenceIsOne
   , TestLabel "bias is non-decreasing in Atmosphere arousal" $
       quickCheckProperty "monotone in Atmosphere arousal" propMonotoneAtmosphereArousal
   , TestLabel "Atmosphere valence does not affect salience" $
       quickCheckProperty "valence irrelevant" propAtmosphereValenceIrrelevant
   , TestLabel "Field is ignored when Conatus gate fires" $
-      quickCheckProperty "field ignored under gate" propFieldIgnoredWhenConatusGateFires
+      quickCheckProperty "field ignored under gate" propFieldIgnoredWhenStateIntegrityGateFires
   , TestLabel "healthy Conatus confidence is in [0,1]" $
-      quickCheckProperty "healthy confidence range" propHealthyConatusConfidenceRange
+      quickCheckProperty "healthy confidence range" propHealthyStateIntegrityConfidenceRange
 
     -- Phase-B bounded post-commitment adaptation
   , TestLabel "adaptSalienceWeights signal=0 is identity" $
@@ -187,38 +187,38 @@ arbitraryField = do
         }
   pure scaffold { fieldConfidence = deriveFieldConfidence scaffold }
 
--- | A 'ConatusEnergy' whose @ceScalar@ is drawn from a wide
+-- | A 'StateIntegrityEnergy' whose @siScalar@ is drawn from a wide
 -- positive range so the Conatus gate (default threshold @0.0@) is
 -- not tripped. Components are placeholders; @computeSalience@
--- only reads @ceScalar@.
-arbitraryHealthyConatus :: Gen ConatusEnergy
-arbitraryHealthyConatus = do
+-- only reads @siScalar@.
+arbitraryHealthyStateIntegrity :: Gen StateIntegrity
+arbitraryHealthyStateIntegrity = do
   s <- choose (0.5, 5.0)
-  pure (placeholderConatus s)
+  pure (placeholderStateIntegrity s)
 
--- | A 'ConatusEnergy' whose @ceScalar@ is below @0.0@ so the
+-- | A 'StateIntegrityEnergy' whose @siScalar@ is below @0.0@ so the
 -- default Conatus gate trips.
-arbitraryUnhealthyConatus :: Gen ConatusEnergy
-arbitraryUnhealthyConatus = do
+arbitraryUnhealthyStateIntegrity :: Gen StateIntegrity
+arbitraryUnhealthyStateIntegrity = do
   s <- choose (-5.0, -0.001)
-  pure (placeholderConatus s)
+  pure (placeholderStateIntegrity s)
 
--- | A 'ConatusEnergy' whose @ceScalar@ spans both sides of the
+-- | A 'StateIntegrityEnergy' whose @siScalar@ spans both sides of the
 -- default threshold, for priority / boundary tests.
-arbitraryConatus :: Gen ConatusEnergy
-arbitraryConatus = do
+arbitraryStateIntegrity :: Gen StateIntegrity
+arbitraryStateIntegrity = do
   s <- choose (-5.0, 5.0)
-  pure (placeholderConatus s)
+  pure (placeholderStateIntegrity s)
 
-placeholderConatus :: Double -> ConatusEnergy
-placeholderConatus s = ConatusEnergy
-  { ceScalar     = s
-  , ceComponents = ConatusComponents
-      { ccMorphology = 0.0
-      , ccIdentity   = 0.0
-      , ccTurns      = 0.0
-      , ccPenalty    = 0.0
-      , ccSelfDivergence = 0.0
+placeholderStateIntegrity :: Double -> StateIntegrity
+placeholderStateIntegrity s = StateIntegrity
+  { siScalar     = s
+  , siComponents = StateIntegrityComponents
+      { sicMorphology = 0.0
+      , sicIdentity   = 0.0
+      , sicTurns      = 0.0
+      , sicPenalty    = 0.0
+      , sicSelfDivergence = 0.0
       }
 }
 
@@ -251,21 +251,21 @@ isFinite x = not (isNaN x) && not (isInfinite x)
 
 propTotality :: Property
 propTotality =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let s = computeSalience defaultSalienceWeights ce f 0.0
     in isFinite (salienceHolisticBias s) && isFinite (salienceConfidence s)
 
 propBiasRange :: Property
 propBiasRange =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let b = salienceHolisticBias (computeSalience defaultSalienceWeights ce f 0.0)
     in b >= 0.0 && b <= 1.0
 
 propConfidenceRange :: Property
 propConfidenceRange =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let c = salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0)
     in c >= 0.0 && c <= 1.0 + 1e-12
@@ -282,7 +282,7 @@ propConfidenceRange =
 
 propMonotoneResonance :: Property
 propMonotoneResonance =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
@@ -293,7 +293,7 @@ propMonotoneResonance =
 
 propAntiMonotoneConsolidation :: Property
 propAntiMonotoneConsolidation =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
@@ -304,7 +304,7 @@ propAntiMonotoneConsolidation =
 
 propMonotoneCounterfactual :: Property
 propMonotoneCounterfactual =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
@@ -315,7 +315,7 @@ propMonotoneCounterfactual =
 
 propAntiMonotoneFieldConfidence :: Property
 propAntiMonotoneFieldConfidence =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
@@ -328,20 +328,20 @@ propAntiMonotoneFieldConfidence =
 -- Conatus gate
 -- ---------------------------------------------------------------------------
 
-propConatusGate :: Property
-propConatusGate =
-  forAll arbitraryUnhealthyConatus $ \ce ->
+propStateIntegrityGate :: Property
+propStateIntegrityGate =
+  forAll arbitraryUnhealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let s = computeSalience defaultSalienceWeights ce f 0.0
     in salienceHolisticBias s == 0.0
        && salienceConfidence s == 1.0
 
-propConatusGateDriver :: Property
-propConatusGateDriver =
-  forAll arbitraryUnhealthyConatus $ \ce ->
+propStateIntegrityGateDriver :: Property
+propStateIntegrityGateDriver =
+  forAll arbitraryUnhealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     salienceDriver (computeSalience defaultSalienceWeights ce f 0.0)
-      == DrivenByConatusGate
+      == DrivenByStateIntegrityGate
 
 -- ---------------------------------------------------------------------------
 -- Verdict band
@@ -440,7 +440,7 @@ propDispatchTied =
 
 propDeterminism :: Property
 propDeterminism =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let s1 = computeSalience defaultSalienceWeights ce f 0.0
         s2 = computeSalience defaultSalienceWeights ce f 0.0
@@ -450,29 +450,29 @@ propDeterminism =
 -- Phase-7 lifeness gates (structural calibration infrastructure)
 -- ---------------------------------------------------------------------------
 
--- | The 'conatusGateFires' predicate and the resulting driver tag
+-- | The 'stateIntegrityGateFires' predicate and the resulting driver tag
 -- are in exact bijection.
-propConatusGateFiresExactlyWhenPredicate :: Property
-propConatusGateFiresExactlyWhenPredicate =
-  forAll arbitraryConatus $ \ce ->
+propStateIntegrityGateFiresExactlyWhenPredicate :: Property
+propStateIntegrityGateFiresExactlyWhenPredicate =
+  forAll arbitraryStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let s = computeSalience defaultSalienceWeights ce f 0.0
-        gateFired = conatusGateFires ce
-        driverIsConatus = salienceDriver s == DrivenByConatusGate
-    in gateFired == driverIsConatus
+        gateFired = stateIntegrityGateFires ce
+        driverIsStateIntegrity = salienceDriver s == DrivenByStateIntegrityGate
+    in gateFired == driverIsStateIntegrity
 
 -- | When the Conatus gate fires the bias is clamped to exactly 0.0.
-propConatusGateBiasIsZero :: Property
-propConatusGateBiasIsZero =
-  forAll arbitraryUnhealthyConatus $ \ce ->
+propStateIntegrityGateBiasIsZero :: Property
+propStateIntegrityGateBiasIsZero =
+  forAll arbitraryUnhealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     salienceHolisticBias (computeSalience defaultSalienceWeights ce f 0.0) == 0.0
 
 -- | When the Conatus gate fires the confidence is clamped to
 -- exactly 1.0.
-propConatusGateConfidenceIsOne :: Property
-propConatusGateConfidenceIsOne =
-  forAll arbitraryUnhealthyConatus $ \ce ->
+propStateIntegrityGateConfidenceIsOne :: Property
+propStateIntegrityGateConfidenceIsOne =
+  forAll arbitraryUnhealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0) == 1.0
 
@@ -480,7 +480,7 @@ propConatusGateConfidenceIsOne =
 -- (holding everything else fixed) does not decrease bias.
 propMonotoneAtmosphereArousal :: Property
 propMonotoneAtmosphereArousal =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryUnitDouble $ \lo ->
   forAll (choose (0.0, 1.0)) $ \delta ->
@@ -494,7 +494,7 @@ propMonotoneAtmosphereArousal =
 -- unchanged.
 propAtmosphereValenceIrrelevant :: Property
 propAtmosphereValenceIrrelevant =
-  forAll arbitraryHealthyConatus $ \ce ->
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
   forAll arbitraryValenceDouble $ \v1 ->
   forAll arbitraryValenceDouble $ \v2 ->
@@ -506,18 +506,18 @@ propAtmosphereValenceIrrelevant =
 
 -- | When the Conatus gate fires the field is completely ignored:
 -- two different fields produce the identical Salience.
-propFieldIgnoredWhenConatusGateFires :: Property
-propFieldIgnoredWhenConatusGateFires =
-  forAll arbitraryUnhealthyConatus $ \ce ->
+propFieldIgnoredWhenStateIntegrityGateFires :: Property
+propFieldIgnoredWhenStateIntegrityGateFires =
+  forAll arbitraryUnhealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f1 ->
   forAll arbitraryField $ \f2 ->
     computeSalience defaultSalienceWeights ce f1 0.0
       == computeSalience defaultSalienceWeights ce f2 0.0
 
 -- | For healthy Conatus energy the confidence is always in [0,1].
-propHealthyConatusConfidenceRange :: Property
-propHealthyConatusConfidenceRange =
-  forAll arbitraryHealthyConatus $ \ce ->
+propHealthyStateIntegrityConfidenceRange :: Property
+propHealthyStateIntegrityConfidenceRange =
+  forAll arbitraryHealthyStateIntegrity $ \ce ->
   forAll arbitraryField $ \f ->
     let c = salienceConfidence (computeSalience defaultSalienceWeights ce f 0.0)
     in c >= 0.0 && c <= 1.0 + 1e-12

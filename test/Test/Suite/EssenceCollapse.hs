@@ -31,7 +31,7 @@ import Test.HUnit (Test (..), assertBool, assertEqual)
 
 import qualified Data.Sequence as Seq
 
-import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+import QxFx0.Self.StateIntegrity (StateIntegrity (..), StateIntegrityComponents (..))
 import QxFx0.Core.TurnPipeline.Finalize.State (supersedeCommitmentOnCollapse)
 import QxFx0.Self.Deliberation
   ( Agreement (..)
@@ -99,7 +99,7 @@ testTotalOnUncommitted = do
     EssenceUncommitted resetTraj -> do
       assertEqual "angst cleared" 0.0 (etAngstLevel resetTraj)
       assertEqual "witnesses cleared" 0 (Seq.length (etWitnesses resetTraj))
-      assertEqual "conatus floor restored" 1.0 (etConatusFloor resetTraj)
+      assertEqual "conatus floor restored" 1.0 (etStateIntegrityFloor resetTraj)
     _ -> pure ()
   assertEqual "event turn is the collapse turn" 7 (ereTurn resetEvent)
   assertEqual "event carries previous angst" 0.9 (erePreviousAngst resetEvent)
@@ -193,7 +193,7 @@ testCollapseSupersedesCommitment = do
     (EssenceUncommitted resetTraj, Just ev) -> do
       assertEqual "reset clears angst" 0.0 (etAngstLevel resetTraj)
       assertEqual "reset clears witnesses" 0 (Seq.length (etWitnesses resetTraj))
-      assertEqual "reset restores the conatus floor" 1.0 (etConatusFloor resetTraj)
+      assertEqual "reset restores the conatus floor" 1.0 (etStateIntegrityFloor resetTraj)
       assertEqual "event turn is the collapse turn" 9 (ereTurn ev)
       assertEqual "event carries the previous angst" 0.8 (erePreviousAngst ev)
       assertEqual "event carries the previous witness count" 1 (erePreviousWitnessCount ev)
@@ -263,10 +263,10 @@ foldWitness
 foldWitness n em step seed =
   foldl (\t i -> step em i t) seed [1 .. n]
 
-healthyEnergy :: ConatusEnergy
-healthyEnergy = ConatusEnergy
-  { ceScalar = 14.0
-  , ceComponents = ConatusComponents 3.0 3.0 3.0 3.0 1.0
+healthyEnergy :: StateIntegrity
+healthyEnergy = StateIntegrity
+  { siScalar = 14.0
+  , siComponents = StateIntegrityComponents 3.0 3.0 3.0 3.0 1.0
   }
 
 defaultCommitment :: EssenceCommitment
@@ -284,6 +284,6 @@ mkWitness turn = EssenceWitness
   , ewReconcileRule = RuleHolisticAdvantage
   , ewAgreement = DivergeMultiple
   , ewDivergence = 0.6
-  , ewConatusScalar = 14.0
+  , ewStateIntegrityScalar = 14.0
   , ewFieldSignature = fieldSignature defaultEssenceModulation emptyField
   }

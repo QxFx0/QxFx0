@@ -18,7 +18,7 @@ import QxFx0.Types.User.R5 (UserR5Trace(..), r5EncoderVersion)
 import QxFx0.Types.Semantic.OntologicalAxis (neutralOntologicalVector)
 import QxFx0.Types.Self.Essence (EssenceResetEvent(..))
 import QxFx0.Types.Recovery (LocalRecoveryCause(..), LocalRecoveryStrategy(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Types.State.SemanticCommitment (MatchKind(..))
 import QxFx0.Self.Field
   ( Field(..)
@@ -44,10 +44,10 @@ traceAnalysisTests =
   , TestLabel "TraceAnalysis: Recovery no trigger" testRecoveryNoTrigger
   , TestLabel "TraceAnalysis: Recovery with cause" testRecoveryWithCause
   , TestLabel "TraceAnalysis: evidence without cause flags anomaly" testRecoveryEvidenceWithoutCause
-  , TestLabel "TraceAnalysis: Conatus healthy" testConatusHealthy
-  , TestLabel "TraceAnalysis: Conatus degraded" testConatusDegraded
-  , TestLabel "TraceAnalysis: Conatus production scale no false excessive" testConatusProductionScaleNoFalseExcessive
-  , TestLabel "TraceAnalysis: Conatus excessive above ceiling" testConatusExcessive
+  , TestLabel "TraceAnalysis: Conatus healthy" testStateIntegrityHealthy
+  , TestLabel "TraceAnalysis: Conatus degraded" testStateIntegrityDegraded
+  , TestLabel "TraceAnalysis: Conatus production scale no false excessive" testStateIntegrityProductionScaleNoFalseExcessive
+  , TestLabel "TraceAnalysis: Conatus excessive above ceiling" testStateIntegrityExcessive
   , TestLabel "TraceAnalysis: Field balanced" testFieldBalanced
   , TestLabel "TraceAnalysis: Essence witnessing" testEssenceWitnessing
   , TestLabel "TraceAnalysis: Full analysis" testFullAnalysis
@@ -171,12 +171,13 @@ minimalTrace = TurnReplayTrace
   , trcDreamCandidateApplied = Nothing
   , trcPerspectiveProjection = Nothing
   , trcPerspectiveProjections = []
-  , trcConatusEnergy = ConatusEnergy 14.0 (ConatusComponents 5.6 4.2 4.2 0.0 0.0)
+  , trcConatusEnergy = StateIntegrity 14.0 (StateIntegrityComponents 5.6 4.2 4.2 0.0 0.0)
   , trcSelfDivergenceTotal = Nothing
   , trcSelfDivergencePenalty = 0.0
   , trcSelfDivergenceWindowMean = Nothing
   , trcSelfDivergencePredictionActive = False
   , trcConatusGateFired = False
+  , trcConatusContour = Nothing
   , trcField = Field
       { fieldResonance = Resonance 0.5
       , fieldAtmosphere = Atmosphere 0.0 0.5
@@ -273,39 +274,39 @@ testRecoveryEvidenceWithoutCause = TestCase $ do
   assertEqual "evidence without a cause must be flagged"
     (Just "evidence_without_cause") (raAnomaly analysis)
 
-testConatusHealthy :: Test
-testConatusHealthy = TestCase $ do
+testStateIntegrityHealthy :: Test
+testStateIntegrityHealthy = TestCase $ do
   let trace = minimalTrace
-  let analysis = analyzeConatusDynamics trace
+  let analysis = analyzeStateIntegrityDynamics trace
   assertEqual "Healthy energy" "healthy" (caEnergyTrend analysis)
   assertEqual "No anomaly" Nothing (caAnomaly analysis)
 
-testConatusDegraded :: Test
-testConatusDegraded = TestCase $ do
+testStateIntegrityDegraded :: Test
+testStateIntegrityDegraded = TestCase $ do
   let trace = minimalTrace
-        { trcConatusEnergy = ConatusEnergy 0.2 (ConatusComponents 0.1 0.05 0.05 0.0 0.0)
+        { trcConatusEnergy = StateIntegrity 0.2 (StateIntegrityComponents 0.1 0.05 0.05 0.0 0.0)
         }
-  let analysis = analyzeConatusDynamics trace
+  let analysis = analyzeStateIntegrityDynamics trace
   assertEqual "Degraded energy" "degraded" (caEnergyTrend analysis)
 
--- | Audit: production log-scale ceScalar (~14-15) must NOT be flagged as
--- 'excessive_conatus_energy'.  The embedded bar of 30.0 sits above the
+-- | Audit: production log-scale siScalar (~14-15) must NOT be flagged as
+-- 'excessive_stateIntegrity_energy'.  The embedded bar of 30.0 sits above the
 -- healthy band; the lower bar is single-sourced from lowEnergyThreshold.
-testConatusProductionScaleNoFalseExcessive :: Test
-testConatusProductionScaleNoFalseExcessive = TestCase $ do
+testStateIntegrityProductionScaleNoFalseExcessive :: Test
+testStateIntegrityProductionScaleNoFalseExcessive = TestCase $ do
   let trace = minimalTrace
-        { trcConatusEnergy = ConatusEnergy 14.0 (ConatusComponents 6.0 4.0 4.0 0.0 0.0)
+        { trcConatusEnergy = StateIntegrity 14.0 (StateIntegrityComponents 6.0 4.0 4.0 0.0 0.0)
         }
-  let analysis = analyzeConatusDynamics trace
+  let analysis = analyzeStateIntegrityDynamics trace
   assertEqual "Production-scale energy is healthy" "healthy" (caEnergyTrend analysis)
   assertEqual "Production-scale energy is not an anomaly" Nothing (caAnomaly analysis)
 
-testConatusExcessive :: Test
-testConatusExcessive = TestCase $ do
+testStateIntegrityExcessive :: Test
+testStateIntegrityExcessive = TestCase $ do
   let trace = minimalTrace
-        { trcConatusEnergy = ConatusEnergy 31.0 (ConatusComponents 10.0 10.0 10.0 1.0 0.0)
+        { trcConatusEnergy = StateIntegrity 31.0 (StateIntegrityComponents 10.0 10.0 10.0 1.0 0.0)
         }
-  let analysis = analyzeConatusDynamics trace
+  let analysis = analyzeStateIntegrityDynamics trace
   assertEqual "Excessive energy trend" "healthy" (caEnergyTrend analysis)
   assertEqual "Excessive energy anomaly"
     (Just "excessive_conatus_energy") (caAnomaly analysis)

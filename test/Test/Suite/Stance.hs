@@ -10,7 +10,7 @@ import QxFx0.Types.State.Stance
 import QxFx0.Semantic.Stance
 import QxFx0.Semantic.Intent.Features (SemanticFeatures(..))
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 
 stanceTests :: [Test]
 stanceTests =
@@ -37,9 +37,9 @@ stanceTests =
   , TestLabel "defendOrAdapt" $ TestList
       [ TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceHeld 0.8 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e"]
-              result = defendOrAdapt sd conatus challenge
+              result = defendOrAdapt sd stateIntegrity challenge
           case result of
             Left _ -> assertFailure "should not collapse"
             Right sd' -> assertBool "should remain Held or transition to Doubted"
@@ -50,18 +50,18 @@ stanceTests =
 
       , TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceDoubted 0.4 }
-              conatus = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
+              stateIntegrity = StateIntegrity 3.0 (StateIntegrityComponents 0.75 0.75 0.75 0.75 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e"]
-              result = defendOrAdapt sd conatus challenge
+              result = defendOrAdapt sd stateIntegrity challenge
           case result of
-            Left CollapseConatusExhausted -> return ()
+            Left CollapseStateIntegrityExhausted -> return ()
             _ -> assertFailure "should collapse due to low conatus"
 
       , TestCase $ do
           let sd = emptyStanceDefense { sdStance = StanceDoubted 0.4, sdAttackCount = 5 }
-              conatus = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+              stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
               challenge = S.fromList ["a", "b", "c", "d", "e", "f"]
-              result = defendOrAdapt sd conatus challenge
+              result = defendOrAdapt sd stateIntegrity challenge
           case result of
             Left _ -> assertFailure "should not collapse"
             Right sd' -> assertBool "should revise with strong challenge"

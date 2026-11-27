@@ -39,7 +39,7 @@ import QxFx0.Types.Domain (CanonicalMoveFamily(..))
 import QxFx0.Types.PropositionType (PropositionType(..))
 import QxFx0.Semantic.Space.Types (SemanticSpace(..))
 import QxFx0.Self.Essence (Essence(..), EssenceTrajectory(..), EssenceResetEvent(..), collapseEssenceAt)
-import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Self.StateIntegrity (StateIntegrity, siScalar)
 import QxFx0.Types.State.SelfState (SelfState(..))
 
 -- | Detect anomalies in priority order: Collapse > Temporal > Unclassifiable > AntiConatus
@@ -103,12 +103,12 @@ detectSelfReferentialCollapse ss ti =
 
 -- | Check if move triggers anti-conatus choice
 -- Triggered when: stanceConfidence > anomalyAntiConatusConfidence ∧ ¬stanceConsistent ∧ angst > anomalyAntiConatusAngst ∧ conatus < anomalyAntiConatusEnergy
-antiConatusMove :: StanceState -> ConatusEnergy -> EssenceTrajectory -> CanonicalMoveFamily -> Bool
-antiConatusMove stance conatus traj _family =
+antiConatusMove :: StanceState -> StateIntegrity -> EssenceTrajectory -> CanonicalMoveFamily -> Bool
+antiConatusMove stance stateIntegrity traj _family =
   let conf = stanceConfidence stance
       consistent = stanceConsistent stance
       angst = etAngstLevel traj
-      energy = ceScalar conatus
+      energy = siScalar stateIntegrity
   in conf > anomalyAntiConatusConfidence && not consistent && angst > anomalyAntiConatusAngst && energy < anomalyAntiConatusEnergy
 
 -- | Detect AntiConatusChoice anomaly (Anomaly-2)
@@ -123,14 +123,14 @@ detectAntiConatusChoice ss ti =
       traj = case essence of
                EssenceUncommitted t -> t
                EssenceCommitted t _ -> t
-      conatus = tiConatusEnergy ti
+      stateIntegrity = tiStateIntegrity ti
       family = tiRecommendedFamily ti
   in case mStance of
        Just stance ->
-         if antiConatusMove stance conatus traj family
+         if antiConatusMove stance stateIntegrity traj family
          then let turnSeq = TurnSeq (ssTurnCount ss)
                   conf = stanceConfidence stance
-                  energy = ceScalar conatus
+                  energy = siScalar stateIntegrity
                in Just $ withoutStateEffect $ mkAntiConatus
                     conf
                     energy

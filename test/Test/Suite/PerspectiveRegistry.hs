@@ -18,7 +18,7 @@ import QxFx0.Self.Perspective
   )
 import QxFx0.Types.State
   ( ClaimStanceRef(..)
-  , ConatusSlice(..)
+  , StateIntegritySlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
   , EvidenceRef(..)
@@ -241,7 +241,7 @@ mkPerspectiveBundle scope lineage = PerspectiveInputBundle
       , isIdentityClaimCount = 0
       , isTurnCount = 1
       }
-  , pibConatusSlice = ConatusSlice
+  , pibStateIntegritySlice = StateIntegritySlice
       { csEnergy = 10.0
       , csGateFired = False
       , csFieldConfidence = 1.0

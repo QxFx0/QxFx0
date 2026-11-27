@@ -12,7 +12,7 @@ Description : Phase II — corpus-driven training dataset extraction.
 
 Extracts a 'TrainingDataset' from the SQLite @turn_quality@ table,
 including the @replay_trace_json@ blob.  The replay trace supplies the
-historical 'Field' and 'ConatusEnergy' snapshots; the observed pipeline
+historical 'Field' and 'StateIntegrity' snapshots; the observed pipeline
 outcome (owner family and decision disposition) comes from
 @turn_quality@ columns directly.
 
@@ -56,9 +56,9 @@ import QxFx0.Learning.TrainingCycle
   , TrainingTrace(..)
   , DatasetStats(..)
   )
-import QxFx0.Self.Conatus
-  ( ConatusComponents(..)
-  , ConatusEnergy(..)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents(..)
+  , StateIntegrity(..)
   )
 import QxFx0.Self.Field
   ( Atmosphere(..)
@@ -88,7 +88,7 @@ data CorpusTrace = CorpusTrace
   , ctObservedDisposition :: !DecisionDisposition
   , ctDivergence          :: !Bool
   , ctField               :: !Field
-  , ctConatusEnergy       :: !ConatusEnergy
+  , ctStateIntegrityEnergy       :: !StateIntegrity
   , ctMoodArousal         :: !Double
   , ctContentSaliency     :: !Double
   } deriving stock (Eq, Show, Generic)
@@ -99,20 +99,20 @@ data CorpusTrace = CorpusTrace
 -- keeps extraction robust against schema drift.
 data ReplayTraceSummary = ReplayTraceSummary
   { rtsField           :: !Field
-  , rtsConatusEnergy   :: !ConatusEnergy
+  , rtsStateIntegrityEnergy   :: !StateIntegrity
   , rtsMoodArousal     :: !(Maybe Double)
   , rtsContentSaliency :: !(Maybe Double)
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (ToJSON)
 
-emptyConatusEnergy :: ConatusEnergy
-emptyConatusEnergy = ConatusEnergy 0.0 (ConatusComponents 0.0 0.0 0.0 0.0 0.0)
+emptyStateIntegrityEnergy :: StateIntegrity
+emptyStateIntegrityEnergy = StateIntegrity 0.0 (StateIntegrityComponents 0.0 0.0 0.0 0.0 0.0)
 
 instance FromJSON ReplayTraceSummary where
   parseJSON = withObject "ReplayTraceSummary" $ \o ->
     ReplayTraceSummary
       <$> o .:? "trcField" .!= emptyField
-      <*> o .:? "trcConatusEnergy" .!= emptyConatusEnergy
+      <*> o .:? "trcConatusEnergy" .!= emptyStateIntegrityEnergy
       <*> o .:? "trcMoodArousal"
       <*> o .:? "trcContentSaliency"
 
@@ -201,7 +201,7 @@ corpusRowToTrace row = do
   disposition <- parseDisposition (crDispositionText row)
   summary <- parseReplayTraceSummary (crReplayJson row)
   let field = rtsField summary
-      energy = rtsConatusEnergy summary
+      energy = rtsStateIntegrityEnergy summary
       mood = fromMaybe 0.5 (rtsMoodArousal summary)
       saliency = fromMaybe 0.0 (rtsContentSaliency summary)
   pure CorpusTrace
@@ -211,7 +211,7 @@ corpusRowToTrace row = do
     , ctObservedDisposition = disposition
     , ctDivergence = crDivergence row /= 0
     , ctField = field
-    , ctConatusEnergy = energy
+    , ctStateIntegrityEnergy = energy
     , ctMoodArousal = mood
     , ctContentSaliency = saliency
     }
@@ -256,9 +256,9 @@ parseReplayTraceSummary txt =
 corpusTraceToTrainingTrace :: CorpusTrace -> TrainingTrace
 corpusTraceToTrainingTrace ct =
   let field = ctField ct
-      energy = ctConatusEnergy ct
+      energy = ctStateIntegrityEnergy ct
       comps = fieldToSignalComponents field
-      signal = clampRange (-1.0) 1.0 (ceScalar energy / 5.0)
+      signal = clampRange (-1.0) 1.0 (siScalar energy / 5.0)
   in TrainingTrace
        { ttTurn = ctTurn ct
        , ttSignalComponents = comps
@@ -278,7 +278,7 @@ clampUnit = clampRange 0.0 1.0
 fieldToSignalComponents :: Field -> SignalComponents
 fieldToSignalComponents f =
   SignalComponents
-    { scConatusTrend      = unResonance (fieldResonance f) - 0.5
+    { scStateIntegrityTrend      = unResonance (fieldResonance f) - 0.5
     , scUncertaintyTrend  = unCounterfactual (fieldCounterfactual f) - 0.5
     , scLoopRisk          = atmosphereArousal (fieldAtmosphere f) - 0.5
     , scBranchHealthTrend = unFieldConfidence (fieldConfidence f) - 0.5

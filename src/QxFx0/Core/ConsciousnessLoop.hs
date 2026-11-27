@@ -117,7 +117,7 @@ runConsciousnessLoop loop semanticInput humanTheta resonance =
 -- on this channel.
 --
 -- Behaviour at neutral salience ('salienceConfidence' \u2265 the
--- threshold and 'salienceDriver' /= 'DrivenByConatusGate') is
+-- threshold and 'salienceDriver' /= 'DrivenByStateIntegrityGate') is
 -- identity, so any call site that does not yet supply rich Field
 -- signals observes no behaviour change.
 runConsciousnessLoopWithSalience
@@ -153,13 +153,13 @@ doubtSuppressionThreshold = 0.75
 
 -- | WP-D: compute a doubt score in @[0,1]@ from the salience verdict. Doubt is
 -- the complement of decisiveness (1 - confidence), amplified when the leading
--- driver is ambiguity (counterfactual spread) and forced high under a Conatus
+-- driver is ambiguity (counterfactual spread) and forced high under a state-integrity
 -- gate (structural threat). This is the living producer of 'clDoubtScore'.
 computeDoubt :: Salience -> Double
 computeDoubt salience =
   let base = 1.0 - clamp01 (salienceConfidence salience)
   in clamp01 $ case salienceDriver salience of
-       DrivenByConatusGate    -> max base 0.9
+       DrivenByStateIntegrityGate    -> max base 0.9
        DrivenByCounterfactual -> min 1.0 (base + 0.2)
        _                      -> base
   where
@@ -172,7 +172,7 @@ computeDoubt salience =
 -- The threshold is conservative: only configurations where the
 -- salience drivers are strongly dispersed (no clear winner among
 -- the five drivers) suppress the narrative. At neutral signals
--- ('emptyField' + placeholder Conatus), 'salienceConfidence' is
+-- ('emptyField' + placeholder state-integrity), 'salienceConfidence' is
 -- @1.0@ and the threshold is never tripped. See the doc on
 -- 'QxFx0.Self.Salience.computeConfidence' for the dispersion
 -- semantics.
@@ -183,7 +183,7 @@ narrativeConfidenceThreshold = 0.25
 --
 -- Decision rule (matches ADR-0010 \u00a74 and \u00a75):
 --
---   * 'DrivenByConatusGate' (structural risk) overrides every
+--   * 'DrivenByStateIntegrityGate' (structural risk) overrides every
 --     other verdict and suppresses the narrative entirely. Under
 --     structural risk, the controller refuses to let the
 --     consciousness narrative pollute the prompt.
@@ -201,7 +201,7 @@ narrativeConfidenceThreshold = 0.25
 applySalienceToNarrativeFragment :: Salience -> Text -> Text
 applySalienceToNarrativeFragment salience fragment =
   case salienceDriver salience of
-    DrivenByConatusGate -> T.empty
+    DrivenByStateIntegrityGate -> T.empty
     _
       | salienceConfidence salience < narrativeConfidenceThreshold -> T.empty
       | otherwise                                                   -> fragment

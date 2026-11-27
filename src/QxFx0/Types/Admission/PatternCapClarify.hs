@@ -9,7 +9,7 @@ InterpretationAdmission is left hand-rolled (4th constructor + frame mutation).
 
 Logic:
   not in-scope → admit raw;
-  authoritative && !conatus → admit raw;
+  authoritative && !stateIntegrity → admit raw;
   all weak → preserve;
   otherwise → cap to CMClarify.
 -}
@@ -23,7 +23,7 @@ import QxFx0.Types.Observability (TruthContractStatus)
 
 data CapClarifyConfig input dat admitted decision = CapClarifyConfig
   { cccGetTruthContract :: input -> TruthContractStatus
-  , cccConatusFired     :: input -> Bool
+  , cccStateIntegrityFired     :: input -> Bool
   , cccInScope          :: input -> dat -> Bool
   , cccAllWeak          :: dat -> Bool
   , cccCapDat           :: dat -> dat
@@ -42,7 +42,7 @@ admitByCapClarify cfg inp dat
   | not (cccInScope cfg inp dat) =
       cccBuildAdmitted cfg inp dat dat (cccDecisionAdmit cfg)
   | truthContractIsAuthoritative (cccGetTruthContract cfg inp)
-      && not (cccConatusFired cfg inp) =
+      && not (cccStateIntegrityFired cfg inp) =
       cccBuildAdmitted cfg inp dat dat (cccDecisionAdmit cfg)
   | cccAllWeak cfg dat =
       cccBuildAdmitted cfg inp dat dat (cccDecisionPreserve cfg)

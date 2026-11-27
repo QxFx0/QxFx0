@@ -23,7 +23,7 @@ import QxFx0.Learning.Guardrails (emptyGuardrailState)
 import QxFx0.Learning.KnowledgeTree (emptyKnowledgeTree)
 import QxFx0.Learning.Need (emptyLearningNeedState)
 import QxFx0.Memory.Episodic (EpisodicStore(..), emptyIndex)
-import QxFx0.Self.Conatus (defaultConatusWeights)
+import QxFx0.Self.StateIntegrity (defaultStateIntegrityWeights)
 import QxFx0.Self.Essence (emptyEssence)
 import QxFx0.Self.FamilyTargets (familyTargets)
 import QxFx0.Self.Field (defaultFieldHeuristics)
@@ -82,7 +82,7 @@ instance ToJSON SelfState where
   toJSON selfState = object
     [ "selfSalienceWeights" .= selfSalienceWeights selfState
     , "selfFieldHeuristics" .= selfFieldHeuristics selfState
-    , "selfConatusWeights" .= selfConatusWeights selfState
+    , "selfConatusWeights" .= selfStateIntegrityWeights selfState
     , "selfFamilyTargets" .= selfFamilyTargets selfState
     , "selfPerspectiveRegistry" .= selfPerspectiveRegistry selfState
     , "selfEssence" .= selfEssence selfState
@@ -96,7 +96,7 @@ instance FromJSON SelfState where
   parseJSON = withObject "SelfState" $ \o -> SelfState
     <$> o .:? "selfSalienceWeights" .!= defaultSalienceWeights
     <*> o .:? "selfFieldHeuristics" .!= defaultFieldHeuristics
-    <*> o .:? "selfConatusWeights" .!= defaultConatusWeights
+    <*> o .:? "selfConatusWeights" .!= defaultStateIntegrityWeights
     <*> o .:? "selfFamilyTargets" .!= familyTargets
     <*> o .:? "selfPerspectiveRegistry" .!= emptyPerspectiveRegistry
     <*> o .:? "selfEssence" .!= emptyEssence
@@ -109,7 +109,7 @@ emptySelfState :: SelfState
 emptySelfState = SelfState
   { selfSalienceWeights = defaultSalienceWeights
   , selfFieldHeuristics = defaultFieldHeuristics
-  , selfConatusWeights = defaultConatusWeights
+  , selfStateIntegrityWeights = defaultStateIntegrityWeights
   , selfFamilyTargets = familyTargets
   , selfPerspectiveRegistry = emptyPerspectiveRegistry
   , selfEssence = emptyEssence
@@ -241,7 +241,7 @@ instance FromJSON SystemState where
       Nothing -> SelfState
         <$> o .:? "salienceWeights" .!= defaultSalienceWeights
         <*> o .:? "fieldHeuristics" .!= defaultFieldHeuristics
-        <*> pure defaultConatusWeights <*> pure familyTargets
+        <*> pure defaultStateIntegrityWeights <*> pure familyTargets
         <*> pure emptyPerspectiveRegistry <*> o .:? "essence" .!= emptyEssence
         <*> pure Nothing <*> pure Nothing <*> pure [] <*> pure Nothing
     SystemState dialogue identity semantic

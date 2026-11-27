@@ -82,7 +82,7 @@ import QxFx0.Types.TurnProjection
   , decodePersistedReplayTrace
   )
 import QxFx0.Core.PipelineIO (mkReplayPipelineIO, checkPipelineApiHealth)
-import QxFx0.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+import QxFx0.Self.StateIntegrity (StateIntegrityComponents(..), StateIntegrity(..))
 import QxFx0.Self.Essence
   ( CommitmentTrigger(..)
   , Essence(..)
@@ -1628,12 +1628,13 @@ fixtureReplayTrace sessionId parserConfidence parserStatus parserDegradationReas
     , trcArtifactManifest = Just (ArtifactManifest Nothing Nothing Nothing Nothing Nothing Nothing "fixture_manifest")
     , trcReplayProvenanceStatus = ReplayProvenanceComplete
     , trcDerivationTags = []
-    , trcConatusEnergy = positiveConatus
+    , trcConatusEnergy = positiveStateIntegrity
     , trcSelfDivergenceTotal = Nothing
     , trcSelfDivergencePenalty = 0.0
     , trcSelfDivergenceWindowMean = Nothing
     , trcSelfDivergencePredictionActive = False
     , trcConatusGateFired = False
+    , trcConatusContour = Nothing
     , trcField = emptyField
     , trcSalienceDriver = "default"
     , trcSalienceHolisticBias = 0.5
@@ -1752,7 +1753,7 @@ authoritativeGovernedState ss0 =
         , kfWord = "свобода"
         , kfSource = SourceInternal
         , kfValidated = True
-        , kfConatusDelta = 0.6
+        , kfStateIntegrityDelta = 0.6
         , kfPredictiveDelta = 0.4
         , kfGraftedTurn = Nothing
         , kfObservedTurn = 1
@@ -1802,16 +1803,16 @@ authoritativeGovernedState ss0 =
                 ]
             }
         }
-  in applyPerspectiveOperator stateWithEvidence positiveConatus False emptyField
+  in applyPerspectiveOperator stateWithEvidence positiveStateIntegrity False emptyField
 
-positiveConatus :: ConatusEnergy
-positiveConatus = ConatusEnergy
-  { ceScalar = 10.0
-  , ceComponents = ConatusComponents
-      { ccMorphology = 0.0
-      , ccIdentity = 0.0
-      , ccTurns = 10.0
-      , ccPenalty = 0.0
-      , ccSelfDivergence = 0.0
+positiveStateIntegrity :: StateIntegrity
+positiveStateIntegrity = StateIntegrity
+  { siScalar = 10.0
+  , siComponents = StateIntegrityComponents
+      { sicMorphology = 0.0
+      , sicIdentity = 0.0
+      , sicTurns = 10.0
+      , sicPenalty = 0.0
+      , sicSelfDivergence = 0.0
       }
 }

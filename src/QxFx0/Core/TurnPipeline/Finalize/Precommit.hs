@@ -65,13 +65,13 @@ import QxFx0.Types.State.SelfState (SelfState(..))
 -- read 'QXFX0_ABLATE_CONATUS_STABILITY' once per turn.  'Nothing' / any
 -- value other than @"1"@ means the ablation is inactive, so the default
 -- turn is byte-identical to the pre-hook runtime.
-readConatusStabilityAblation :: PipelineIO -> IO Bool
-readConatusStabilityAblation pipelineIO = do
-  result <- resolveTurnEffect pipelineIO (TurnReqReadEnv conatusStabilityAblationEnvVar)
+readStateIntegrityStabilityAblation :: PipelineIO -> IO Bool
+readStateIntegrityStabilityAblation pipelineIO = do
+  result <- resolveTurnEffect pipelineIO (TurnReqReadEnv stateIntegrityStabilityAblationEnvVar)
   pure (case result of TurnResReadEnv (Just "1") -> True; _ -> False)
 
-conatusStabilityAblationEnvVar :: Text
-conatusStabilityAblationEnvVar = "QXFX0_ABLATE_CONATUS_STABILITY"
+stateIntegrityStabilityAblationEnvVar :: Text
+stateIntegrityStabilityAblationEnvVar = "QXFX0_ABLATE_CONATUS_STABILITY"
 
 planFinalizePrecommit :: SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan
 planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts =
@@ -105,7 +105,7 @@ planFinalizePrecommit systemState turnInput _turnSignals turnPlan turnArtifacts 
     in FinalizePrecommitPlan
         { fppStatic = static
         , fppCapturedCurrentTime = tiStartTime turnInput
-        , fppConatusEnergy = tiConatusEnergy turnInput
+        , fppStateIntegrity = tiStateIntegrity turnInput
         , fppIntrospectionRequest = FinalizeReqSemanticIntrospectionEnv
         }
 
@@ -113,13 +113,13 @@ resolveFinalizePrecommit :: PipelineIO -> FinalizePrecommitPlan -> IO FinalizePr
 resolveFinalizePrecommit pipelineIO plan = do
   let scheduledRequests :: [(PipelineEffectLabel, TurnEffectRequest)]
       scheduledRequests =
-        scheduleTurnEffects pipelineIO (fppConatusEnergy plan)
+        scheduleTurnEffects pipelineIO (fppStateIntegrity plan)
           [ (PelSemanticIntrospection, TurnReqSemanticIntrospectionEnv)
           , (PelWarnMorphology, TurnReqReadEnv "QXFX0_WARN_MORPHOLOGY_FALLBACK")
           , (PelFmarMode, TurnReqReadEnv "QXFX0_FMAR")
           , (PelFeedbackLoop, TurnReqReadEnv "QXFX0_FEEDBACK_LOOP")
           ]
-  conatusStabilityAblated <- readConatusStabilityAblation pipelineIO
+  stateIntegrityStabilityAblated <- readStateIntegrityStabilityAblation pipelineIO
   resolved <- forConcurrently scheduledRequests $ \(label, request) -> do
     result <- resolveTurnEffect pipelineIO request
     pure (label, result)
@@ -150,7 +150,7 @@ resolveFinalizePrecommit pipelineIO plan = do
       , fprWarnMorphologyFallbackEnabled = warnMorphologyFallbackEnabled
       , fprFmarMode = fmarMode
       , fprFeedbackLoopActive = feedbackLoopActive
-      , fprConatusStabilityAblated = conatusStabilityAblated
+      , fprStateIntegrityStabilityAblated = stateIntegrityStabilityAblated
       }
 
 buildFinalizePrecommit :: (Text -> Seq Text -> Seq Text) -> (AuthoritySurface -> IO (Maybe FactualClaimPayload)) -> ControlAAblation -> SystemState -> TurnInput -> TurnSignals -> TurnPlan -> TurnArtifacts -> FinalizePrecommitPlan -> FinalizePrecommitResults -> IO FinalizePrecommitBundle
@@ -192,7 +192,7 @@ buildFinalizePrecommit updateHistory parseAuthSurface ablation systemState turnI
       -- ADR-0032: record dialogue outcome, speech-policy pressure, and
       -- belief stance after base/external learning state has settled.
       nextSystemState3 = applyDialogueDevelopment systemState nextSystemState2 turnInput turnPlan turnArtifacts
-      nextSystemState = applyPerspectiveOperatorWith (fprConatusStabilityAblated precommitResults) nextSystemState3 (tiConatusEnergy turnInput) (tiConatusGateFired turnInput) (tiField turnInput)
+      nextSystemState = applyPerspectiveOperatorWith (fprStateIntegrityStabilityAblated precommitResults) nextSystemState3 (tiStateIntegrity turnInput) (tiStateIntegrityGateFired turnInput) (tiField turnInput)
   let guardStatus = tdGuardStatus (taDecision turnArtifacts)
   evidenceAdmissibility <- classifyEvidenceIO guardStatus
   when (evidenceAdmissibility == EvidenceInadmissible) $

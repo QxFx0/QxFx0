@@ -75,10 +75,10 @@ import QxFx0.Core.TurnRender
   , snapshotIdentitySignal
   )
 import QxFx0.Core.TopicTransition (geodesicRouter)
-import QxFx0.Self.Conatus (ConatusGradient(..), ceScalar, computeConatusGradientWith)
+import QxFx0.Self.StateIntegrity (StateIntegrityGradient(..), siScalar, computeStateIntegrityGradientWith)
 import QxFx0.Self.SelfDivergence (sustainedDivergenceExceeds, windowMeanDivergence)
 import QxFx0.Types.Self.SelfDivergence (SelfDivergenceTuning(..), defaultSelfDivergenceTuning)
-import QxFx0.Types.State.SelfState (selfConatusWeights, selfDivergenceWindow)
+import QxFx0.Types.State.SelfState (selfStateIntegrityWeights, selfDivergenceWindow)
 import QxFx0.Types.State.DialogueDevelopment (DialogueThread(..))
 import QxFx0.Learning.Need (LearningNeed(..), LearningNeedState(..))
 import QxFx0.Learning.Loop (legacyExternalLearningEnabled)
@@ -94,7 +94,7 @@ import QxFx0.Types.ExternalQuery (ExternalQueryError(..), ExternalQueryResponse)
 import qualified QxFx0.Learning.Guardrails as Guardrails
 import QxFx0.Self.Blanket (computeSelfBlanket)
 import QxFx0.Self.Deliberation (planRecoveryCause, delibReconciled, pickHigherSeverity)
--- import QxFx0.Self.Salience (conatusGateFires)  -- M6.1: replaced by tiConatusGateFired
+-- import QxFx0.Self.Salience (stateIntegrityGateFires)  -- M6.1: replaced by tiStateIntegrityGateFired
 import QxFx0.Semantic.Morphology (hasKnownMorphologyForm)
 import QxFx0.Learning.KnowledgeTree (isTermKnownInKnowledgeTree)
 import QxFx0.Semantic.Stance (selectFarthestPoint)
@@ -707,7 +707,7 @@ resolveRenderEffects pio effectPlan = do
   let scheduledRequests
         | not legacyExternalLearningEnabled = []
         | otherwise =
-            scheduleTurnEffects pio (tiConatusEnergy (repTurnInput effectPlan))
+            scheduleTurnEffects pio (tiStateIntegrity (repTurnInput effectPlan))
               (  [ (PelRequest, TurnReqExternalQuery tool need queryText)
                  | Just (tool, need, queryText) <- [repExternalQueryRequest effectPlan]
                  ]
@@ -1066,13 +1066,13 @@ buildTurnArtifacts ss ti _ts tp effectPlan effectResults =
       -- that future hemispheric proposals (Package D and beyond)
       -- cannot silently downgrade a more severe local cause.
       -- Today this is semantically equivalent because the only
-      -- deliberation-produced cause is RecoveryConatusGate
+      -- deliberation-produced cause is RecoveryStateIntegrityGate
       -- (severity 100, dominates everything).
       delibRecoveryCause = tpDeliberation tp >>= planRecoveryCause . delibReconciled
       finalRecoveryCause = pickHigherSeverity delibRecoveryCause recoveryCause
       -- Audit 2026-09-15: strategy/evidence come only from the local plan,
       -- which carries no strategy for a deliberation-won cause.  Attributing
-      -- the local strategy to a deliberation cause (e.g. cause=ConatusGate
+      -- the local strategy to a deliberation cause (e.g. cause=StateIntegrityGate
       -- + strategy=ask_clarification) lies in the trace — surface the
       -- mismatch explicitly instead of emitting a coherent-looking lie.
       delibCauseWon = delibRecoveryCause == finalRecoveryCause
@@ -1310,50 +1310,50 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
           <> if hasCandidateSplit
             then ["candidate_families=" <> renderCandidateFamilies candidateFamilies]
             else []
-      -- Phase 2.5 (M2d) + Phase 6 (M6): the Conatus gate is the
+      -- Phase 2.5 (M2d) + Phase 6 (M6): the state-integrity gate is the
       -- highest-priority recovery driver. When the runtime
-      -- Conatus energy drops below 'conatusGateThreshold' (see
+      -- state-integrity energy drops below 'stateIntegrityGateThreshold' (see
       -- 'QxFx0.Self.Salience.defaultSalienceWeights'), the system
       -- is in structural risk and 'StrategySafeRecovery' is forced
       -- regardless of shadow / parser / legitimacy / runtime-mode
-      -- signals. The cause is tagged 'RecoveryConatusGate' — a
+      -- signals. The cause is tagged 'RecoveryStateIntegrityGate' — a
       -- dedicated 'LocalRecoveryCause' variant introduced together
       -- with this guard so the trace and the JSON schema can
-      -- distinguish a structural-Conatus event from an
+      -- distinguish a structural state-integrity event from an
       -- environmental 'RecoveryRuntimeDegraded' event.
       --
       -- M6: the energy and the violation count are read straight
       -- from 'TurnInput', where the Prepare stage stored them
-      -- (see 'QxFx0.Core.TurnPipeline.Effects.psConatusEnergy'
+      -- (see 'QxFx0.Core.TurnPipeline.Effects.psStateIntegrity'
       -- and 'psBlanketViolationCount'). This is the
-      -- single-source-of-truth for the pre-turn Conatus snapshot;
+      -- single-source-of-truth for the pre-turn state-integrity snapshot;
       -- the previous local 'computeSelfBlanket' \/
-      -- 'checkInitialBlanket' \/ 'computeConatusEnergy' triple has
+      -- 'checkInitialBlanket' \/ 'computeStateIntegrityEnergy' triple has
       -- been removed to eliminate the duplicate computation.
-      conatusEnergy     = tiConatusEnergy ti
-      conatusViolationCount = tiBlanketViolationCount ti
-      conatusEvidence =
+      stateIntegrityEnergy     = tiStateIntegrity ti
+      stateIntegrityViolationCount = tiBlanketViolationCount ti
+      stateIntegrityEvidence =
         [ "conatus_gate_fired"
-        , "conatus_energy=" <> T.pack (show (ceScalar conatusEnergy))
-        , "blanket_violations=" <> T.pack (show conatusViolationCount)
+        , "conatus_energy=" <> T.pack (show (siScalar stateIntegrityEnergy))
+        , "blanket_violations=" <> T.pack (show stateIntegrityViolationCount)
         ]
       candidate =
         case () of
           _
-            | tiConatusGateFired ti ->
-                let gradient = computeConatusGradientWith
-                      (selfConatusWeights (ssSelfState ss))
+            | tiStateIntegrityGateFired ti ->
+                let gradient = computeStateIntegrityGradientWith
+                      (selfStateIntegrityWeights (ssSelfState ss))
                       (computeSelfBlanket ss)
-                    strategy = selectConatusRecoveryStrategy gradient
+                    strategy = selectStateIntegrityRecoveryStrategy gradient
                     evidence =
-                      conatusEvidence
-                        <> [ "conatus_gradient_m=" <> T.pack (show (cgMorphology gradient))
-                           , "conatus_gradient_c=" <> T.pack (show (cgIdentity gradient))
-                           , "conatus_gradient_t=" <> T.pack (show (cgTurns gradient))
+                      stateIntegrityEvidence
+                        <> [ "conatus_gradient_m=" <> T.pack (show (sigMorphology gradient))
+                           , "conatus_gradient_c=" <> T.pack (show (sigIdentity gradient))
+                           , "conatus_gradient_t=" <> T.pack (show (sigTurns gradient))
                            , "conatus_strategy=" <> renderLocalRecoveryStrategy strategy
                            ]
                  in Just
-                      ( RecoveryConatusGate
+                      ( RecoveryStateIntegrityGate
                       , strategy
                       , evidence
                       )
@@ -1365,7 +1365,7 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
             -- morphism: the window mean must exceed 'sdtThreshold'
             -- with at least one history sample.  Slotted at severity
             -- 90 — above learning needs, below the structural
-            -- Conatus gate (100) — so the gate still wins when both
+            -- state-integrity gate (100) — so the gate still wins when both
             -- fire on the same turn.
             | sustainedDivergenceExceeds
                 defaultSelfDivergenceTuning
@@ -1468,18 +1468,18 @@ buildLocalRecoveryPlan runtimeMode LocalRecoveryEnabled ss ti tp morphologyWarni
             })
          candidate
 
--- | WP1 (GAP1): map the Conatus gradient to a recovery strategy.
+-- | WP1 (GAP1): map the state-integrity gradient to a recovery strategy.
 -- The component with the strictly largest partial derivative is
--- the axis that yields the highest marginal gain in Conatus energy
+-- the axis that yields the highest marginal gain in state-integrity energy
 -- and therefore determines the recovery direction.
 -- If two or more components tie for the maximum (degenerate gradient),
 -- fall back to 'StrategySafeRecovery'.
-selectConatusRecoveryStrategy :: ConatusGradient -> LocalRecoveryStrategy
-selectConatusRecoveryStrategy g =
+selectStateIntegrityRecoveryStrategy :: StateIntegrityGradient -> LocalRecoveryStrategy
+selectStateIntegrityRecoveryStrategy g =
   let comps =
-        [ (cgMorphology g, StrategyMorphologyExpansion)
-        , (cgIdentity   g, StrategyIdentityReinforcement)
-        , (cgTurns      g, StrategyTemporalDeepening)
+        [ (sigMorphology g, StrategyMorphologyExpansion)
+        , (sigIdentity   g, StrategyIdentityReinforcement)
+        , (sigTurns      g, StrategyTemporalDeepening)
         ]
       sorted = L.sortBy (\(a, _) (b, _) -> compare b a) comps
    in case sorted of

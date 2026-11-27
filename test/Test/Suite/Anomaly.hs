@@ -57,7 +57,7 @@ import QxFx0.Types (InputPropositionFrame(..), emptyInputPropositionFrame)
 import QxFx0.Types.State.SelfState (SelfState(..))
 import QxFx0.Self.Salience (SalienceDriver(..), adaptSalienceWeights)
 import QxFx0.Self.Deliberation (ReconcileRule(..), Agreement(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Semantic.ContentSelector.Types (emptyContentSelector)
 import QxFx0.Self.Field (Counterfactual(..), Field(..), adaptFieldHeuristics, emptyField)
 import Test.Support.TurnPipelineFixtures
@@ -231,7 +231,7 @@ testSelfReferentialCollapseProductionPath =
     routeCounts <- newIORef (0 :: Int, 0 :: Int)
     let traj = emptyTrajectory
           { etAngstLevel = 0.95
-          , etConatusFloor = 4.0
+          , etStateIntegrityFloor = 4.0
           }
         selfState = emptySelfState { selfEssence = EssenceUncommitted traj }
         ss0 = emptySystemState
@@ -260,7 +260,7 @@ testSelfReferentialCollapseProductionPath =
               EssenceUncommitted t -> t
               EssenceCommitted t _ -> t
         assertEqual "planned reset must clear angst" 0.0 (etAngstLevel resetTrajectory)
-        assertEqual "planned reset must restore the conatus floor" 1.0 (etConatusFloor resetTrajectory)
+        assertEqual "planned reset must restore the conatus floor" 1.0 (etStateIntegrityFloor resetTrajectory)
         assertEqual "reset event must retain previous angst" 0.95 (erePreviousAngst resetEvent)
         assertEqual "BD2 reset event turn is the collapse turn" 0 (ereTurn resetEvent)
       Nothing -> assertFailure "self-referential anomaly must carry a typed reset effect"
@@ -269,7 +269,7 @@ testSelfReferentialCollapseProductionPath =
     case selfEssence (ssSelfState (fpbNextSs bundle)) of
       EssenceUncommitted resetTrajectory -> do
         assertEqual "finalize must apply the planned reset trajectory" 0.0 (etAngstLevel resetTrajectory)
-        assertEqual "finalize must not witness over the planned reset" 1.0 (etConatusFloor resetTrajectory)
+        assertEqual "finalize must not witness over the planned reset" 1.0 (etStateIntegrityFloor resetTrajectory)
       EssenceCommitted{} -> assertFailure "collapse turn must remain EssenceUncommitted"
 
 -- Helper: create test witness
@@ -280,7 +280,7 @@ testWitness turn = EssenceWitness
   , ewReconcileRule = RuleAgreement
   , ewAgreement = Agree
   , ewDivergence = 0.2
-  , ewConatusScalar = 10.0
+  , ewStateIntegrityScalar = 10.0
   , ewFieldSignature = testFieldSignature
   }
 
@@ -298,38 +298,38 @@ testAntiConatusChoiceTrigger :: Assertion
 testAntiConatusChoiceTrigger = do
   -- Test 1: High confidence + inconsistent stance (Doubted with high conf) + high angst + low conatus should trigger
   let stance1 = StanceDoubted 0.8  -- Inconsistent: state says weakened, confidence says strong
-      conatus1 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)  -- Low conatus (< 5.0)
+      stateIntegrity1 = StateIntegrity 3.0 (StateIntegrityComponents 1.0 1.0 1.0 0.0 0.0)  -- Low conatus (< 5.0)
       traj1 = emptyTrajectory { etAngstLevel = 0.9 }  -- High angst (> 0.8)
   assertBool "should trigger for high confidence + inconsistent + high angst + low conatus"
-    (antiConatusMove stance1 conatus1 traj1 undefined)
+    (antiConatusMove stance1 stateIntegrity1 traj1 undefined)
 
   -- Test 2: High confidence but consistent stance (StanceHeld with high conf) should not trigger
   let stance2 = StanceHeld 0.8  -- Consistent: state and confidence match
-      conatus2 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
+      stateIntegrity2 = StateIntegrity 3.0 (StateIntegrityComponents 1.0 1.0 1.0 0.0 0.0)
       traj2 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for consistent stance"
-    (not $ antiConatusMove stance2 conatus2 traj2 undefined)
+    (not $ antiConatusMove stance2 stateIntegrity2 traj2 undefined)
 
   -- Test 3: Low confidence should not trigger
   let stance3 = StanceDoubted 0.5
-      conatus3 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
+      stateIntegrity3 = StateIntegrity 3.0 (StateIntegrityComponents 1.0 1.0 1.0 0.0 0.0)
       traj3 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for low confidence"
-    (not $ antiConatusMove stance3 conatus3 traj3 undefined)
+    (not $ antiConatusMove stance3 stateIntegrity3 traj3 undefined)
 
   -- Test 4: High conatus should not trigger
   let stance4 = StanceDoubted 0.8
-      conatus4 = ConatusEnergy 7.0 (ConatusComponents 2.0 2.0 2.0 1.0 0.0)  -- High conatus (>= 5.0)
+      stateIntegrity4 = StateIntegrity 7.0 (StateIntegrityComponents 2.0 2.0 2.0 1.0 0.0)  -- High conatus (>= 5.0)
       traj4 = emptyTrajectory { etAngstLevel = 0.9 }
   assertBool "should not trigger for high conatus"
-    (not $ antiConatusMove stance4 conatus4 traj4 undefined)
+    (not $ antiConatusMove stance4 stateIntegrity4 traj4 undefined)
 
   -- Test 5: Low angst should not trigger
   let stance5 = StanceDoubted 0.8
-      conatus5 = ConatusEnergy 3.0 (ConatusComponents 1.0 1.0 1.0 0.0 0.0)
+      stateIntegrity5 = StateIntegrity 3.0 (StateIntegrityComponents 1.0 1.0 1.0 0.0 0.0)
       traj5 = emptyTrajectory { etAngstLevel = 0.5 }  -- Low angst (<= 0.8)
   assertBool "should not trigger for low angst"
-    (not $ antiConatusMove stance5 conatus5 traj5 undefined)
+    (not $ antiConatusMove stance5 stateIntegrity5 traj5 undefined)
 
 -- | Test rendering of Unclassifiable anomaly
 testRenderUnclassifiable :: Assertion
@@ -421,7 +421,7 @@ testFinalizePersistsStanceTransitions =
     let ti = ti0
           { tiBestTopic = topic
           , tiAtomSet = strongChallengeAtoms
-          , tiConatusEnergy = ConatusEnergy 10.0 (ConatusComponents 2.5 2.5 2.5 2.5 0.0)
+          , tiStateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0)
           }
         tp = tp0
           { tpCommitmentEngagement = CommitmentEngagement [cid] True ContradictedStrong }
@@ -465,7 +465,7 @@ testFinalizeCollapsePreservesAdaptiveSelfState =
     let ti = ti0
           { tiBestTopic = topic
           , tiAtomSet = strongChallengeAtoms
-          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
+          , tiStateIntegrity = StateIntegrity 3.0 (StateIntegrityComponents 0.75 0.75 0.75 0.75 0.0)
           , tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 }
           }
         tp = tp0
@@ -479,7 +479,7 @@ testFinalizeCollapsePreservesAdaptiveSelfState =
       EssenceUncommitted trajectory -> do
         assertEqual "collapse must clear the newly computed trajectory" Seq.empty (etWitnesses trajectory)
         assertEqual "collapse must reset angst" 0.0 (etAngstLevel trajectory)
-        assertEqual "collapse must reset conatus floor" 1.0 (etConatusFloor trajectory)
+        assertEqual "collapse must reset conatus floor" 1.0 (etStateIntegrityFloor trajectory)
     case ssCalibrationSnapshots nextSs of
       snapshot : _ -> do
         assertEqual "collapse fixture must exercise adaptive calibration" CdApplySignal (csDecision snapshot)
@@ -517,7 +517,7 @@ testFinalizeCollapseSupersedesCommitment =
           { tiEssence = EssenceUncommitted preCommitTrajectory
           , tiBestTopic = topic
           , tiAtomSet = strongChallengeAtoms
-          , tiConatusEnergy = ConatusEnergy 3.0 (ConatusComponents 0.75 0.75 0.75 0.75 0.0)
+          , tiStateIntegrity = StateIntegrity 3.0 (StateIntegrityComponents 0.75 0.75 0.75 0.75 0.0)
           , tiField = (tiField ti0) { fieldCounterfactual = Counterfactual 1.0 }
           }
         tp = tp0

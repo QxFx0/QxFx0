@@ -51,7 +51,7 @@ three call sites currently using salience-based priority switching.
 Six rules apply in priority order; the first that matches becomes
 'dtRule' on the returned trace:
 
-1.  'RuleConatusOverride' — if @'salienceDriver' = 'DrivenByConatusGate'@
+1.  'RuleStateIntegrityOverride' — if @'salienceDriver' = 'DrivenByStateIntegrityGate'@
     the formal proposal is forced into a recovery shape regardless
     of the holistic proposal.
 2.  'RuleAgreement' — if both proposals match field-for-field
@@ -66,7 +66,7 @@ Six rules apply in priority order; the first that matches becomes
 5.  'RuleTiedFallback' — formal proposal wins as the safe default
     (matches ADR-0010 §5).
 
-In every non-Conatus rule, 'planRecoveryCause' is determined by
+In every non-state-integrity rule, 'planRecoveryCause' is determined by
 'pickHigherSeverity' across both proposals — recovery is never
 silenced by a high-bias holistic proposal.
 
@@ -267,7 +267,7 @@ formalProposal = Formal
 -- | Total order on 'LocalRecoveryCause' used to merge two
 -- proposals\' 'planRecoveryCause' fields.
 --
--- 'Nothing' is the floor (severity @0@); a structural-Conatus
+-- 'Nothing' is the floor (severity @0@); a structural state-integrity
 -- event is the ceiling. This ordering is the single source of
 -- truth for B.3.5 (\"recovery is never silenced\"): the proposal
 -- with higher severity wins on the recovery axis regardless of
@@ -286,7 +286,7 @@ recoveryCauseSeverity (Just RecoveryRuntimeDegraded)     = 70
 recoveryCauseSeverity (Just RecoveryRenderBlocked)       = 80
 recoveryCauseSeverity (Just RecoveryLearningNeed)        = 85
 recoveryCauseSeverity (Just RecoverySelfDivergence)      = 90
-recoveryCauseSeverity (Just RecoveryConatusGate)         = 100
+recoveryCauseSeverity (Just RecoveryStateIntegrityGate)         = 100
 
 -- | Pick the higher-severity recovery proposal per
 -- 'recoveryCauseSeverity'. Ties favour the left argument so the
@@ -304,7 +304,7 @@ pickHigherSeverity a b
 -- ---------------------------------------------------------------------------
 
 -- | A placeholder 'Deliberation' used when a turn did not run
--- 'reconcile' (e.g. Conatus-gated early exit).  Fields mirror what a
+-- 'reconcile' (e.g. state-integrity gated early exit).  Fields mirror what a
 -- real 'reconcile' of two identical proposals would emit: agreement
 -- with zero divergence under 'RuleAgreement', so that 'witness'
 -- decays angst exactly as on a genuine agreement turn (audit
@@ -338,7 +338,7 @@ defaultDeliberation = Deliberation
 -- Rule priority (first match wins; see module-level overview for
 -- the rationale):
 --
---   1.  'RuleConatusOverride' on @'salienceDriver' = 'DrivenByConatusGate'@.
+--   1.  'RuleStateIntegrityOverride' on @'salienceDriver' = 'DrivenByStateIntegrityGate'@.
 --   2.  'RuleAgreement' on field-for-field equality (modulo
 --       'planConfidence').
 --   3.  'RuleSalienceLead' when @'salienceConfidence' >
@@ -349,8 +349,8 @@ defaultDeliberation = Deliberation
 --       the safe default (ADR-0010 §5).
 --
 -- The recovery axis is always merged via 'pickHigherSeverity',
--- regardless of which rule fires (except 'RuleConatusOverride',
--- which forces 'Just' 'RecoveryConatusGate' wholesale).
+-- regardless of which rule fires (except 'RuleStateIntegrityOverride',
+-- which forces 'Just' 'RecoveryStateIntegrityGate' wholesale).
 reconcile
   :: Maybe (Plan -> Bool)   -- ^ Phase 10: optional courtesy predicate.
                               -- When 'RuleTiedFallback' fires and this is
@@ -383,14 +383,14 @@ reconcile mCourtesy salience hp fp fd =
         , delibTrace      = mkTrace rule
         }
    in case driver of
-        DrivenByConatusGate ->
-          let conatusPlan = fPlan
+        DrivenByStateIntegrityGate ->
+          let stateIntegrityPlan = fPlan
                 { planRenderStyle   = StyleRecovery
-                , planRecoveryCause = Just RecoveryConatusGate
+                , planRecoveryCause = Just RecoveryStateIntegrityGate
                 , planNarrativeTone = NarrativeRecovery
                 , planConfidence    = 1.0
                 }
-           in mkResult conatusPlan RuleConatusOverride
+           in mkResult stateIntegrityPlan RuleStateIntegrityOverride
 
         _ | plansEqualModConfidence hPlan fPlan ->
               let agreedPlan = hPlan
@@ -444,7 +444,7 @@ renderAgreement DivergeMultiple   = "diverge_multiple"
 -- set; trace-stable.
 renderReconcileRule :: ReconcileRule -> Text
 renderReconcileRule RuleAgreement         = "agreement"
-renderReconcileRule RuleConatusOverride   = "conatus_override"
+renderReconcileRule RuleStateIntegrityOverride   = "conatus_override"
 renderReconcileRule RuleSalienceLead      = "salience_lead"
 renderReconcileRule RuleHolisticAdvantage = "holistic_advantage"
 renderReconcileRule RuleFormalAdvantage   = "formal_advantage"

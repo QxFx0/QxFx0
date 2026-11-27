@@ -12,8 +12,17 @@ module QxFx0.Types.Self.Salience
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson
+  ( FromJSON(..)
+  , Options(..)
+  , ToJSON(..)
+  , defaultOptions
+  , genericParseJSON
+  , genericToJSON
+  )
 import GHC.Generics (Generic)
+
+import QxFx0.Internal.WireCompat (legacyConatusLabel)
 
 data SalienceDriver
   = DrivenByResonance
@@ -21,11 +30,22 @@ data SalienceDriver
   | DrivenByConsolidation
   | DrivenByCounterfactual
   | DrivenByFieldConfidence
-  | DrivenByConatusGate
+  | DrivenByStateIntegrityGate
   | DrivenByContentSaliency
   | DrivenByDefault
   deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): the constructor tag is a persisted wire value
+-- (inside @selfEssence@ witnesses), so it keeps the historical
+-- @DrivenByConatusGate@ spelling.
+instance ToJSON SalienceDriver where
+  toJSON = genericToJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
+
+instance FromJSON SalienceDriver where
+  parseJSON = genericParseJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
 
 data Salience = Salience
   { salienceHolisticBias :: !Double
@@ -51,11 +71,21 @@ data SalienceWeights = SalienceWeights
   , weightCounterfactual  :: !Double
   , weightFieldConfidence :: !Double
   , weightContentSaliency :: !Double
-  , conatusGateThreshold  :: !Double
+  , stateIntegrityGateThreshold  :: !Double
   , verdictThreshold      :: !Double
   , sigmoidTemperature    :: !Double
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
+    deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): persisted as @selfSalienceWeights@; the threshold
+-- key keeps its historical @conatusGateThreshold@ spelling.
+instance ToJSON SalienceWeights where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
+
+instance FromJSON SalienceWeights where
+  parseJSON = genericParseJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
 
 data SalienceModulation = SalienceModulation
   { smModulationHolisticBiasFloor :: !Double

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {-|
-Module      : Test.Suite.ConatusGate
+Module      : Test.Suite.StateIntegrityGate
 Description : Anti-rot tests for P1 Conatus Gate integration.
 
 Property tests verifying that low Conatus energy restricts family
@@ -13,36 +13,36 @@ These tests close the gap between Conatus computation (which was
 already traced) and routing behaviour (which previously ignored the
 signal). If the wire is disconnected, these tests fail.
 -}
-module Test.Suite.ConatusGate
-  ( conatusGateTests
+module Test.Suite.StateIntegrityGate
+  ( stateIntegrityGateTests
   ) where
 
 import Test.HUnit (Test (..), assertBool)
 
-import QxFx0.Core.TurnRouting (applyConatusGateRestriction)
-import QxFx0.Self.Conatus
-  ( ConatusComponents (..)
-  , ConatusEnergy (..)
-  , ConatusWeights (..)
-  , computeConatusEnergyWith
+import QxFx0.Core.TurnRouting (applyStateIntegrityGateRestriction)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents (..)
+  , StateIntegrity (..)
+  , StateIntegrityWeights (..)
+  , computeStateIntegrityEnergyWith
   , lowEnergyThreshold
   )
 import QxFx0.Self.Types (SelfBlanket (..))
 import QxFx0.Types (CanonicalMoveFamily (..))
 
--- | Helper: construct a ConatusEnergy with a specific scalar value.
+-- | Helper: construct a StateIntegrity with a specific scalar value.
 -- Used to test the threshold boundary without needing to construct
 -- complex blankets.
-mkConatusEnergy :: Double -> ConatusEnergy
-mkConatusEnergy scalar =
-  ConatusEnergy
-    { ceScalar = scalar
-    , ceComponents = ConatusComponents
-        { ccMorphology = scalar
-        , ccIdentity = 0
-        , ccTurns = 0
-        , ccPenalty = 0
-        , ccSelfDivergence = 0.0
+mkStateIntegrityEnergy :: Double -> StateIntegrity
+mkStateIntegrityEnergy scalar =
+  StateIntegrity
+    { siScalar = scalar
+    , siComponents = StateIntegrityComponents
+        { sicMorphology = scalar
+        , sicIdentity = 0
+        , sicTurns = 0
+        , sicPenalty = 0
+        , sicSelfDivergence = 0.0
         }
 }
 
@@ -94,32 +94,32 @@ highRiskFamilies = [CMConfront, CMHypothesis, CMDistinguish]
 isRestorative :: CanonicalMoveFamily -> Bool
 isRestorative f = f `elem` restorativeFamilies
 
-conatusGateTests :: [Test]
-conatusGateTests =
+stateIntegrityGateTests :: [Test]
+stateIntegrityGateTests =
   [ TestLabel "low energy restricts CMConfront to CMContact" $
       TestCase $ do
-        let restricted = applyConatusGateRestriction CMConfront
+        let restricted = applyStateIntegrityGateRestriction CMConfront
         assertBool
           ("CMConfront should map to CMContact at low energy, got " <> show restricted)
           (restricted == CMContact)
 
   , TestLabel "low energy restricts CMHypothesis to CMAnchor" $
       TestCase $ do
-        let restricted = applyConatusGateRestriction CMHypothesis
+        let restricted = applyStateIntegrityGateRestriction CMHypothesis
         assertBool
           ("CMHypothesis should map to CMAnchor at low energy, got " <> show restricted)
           (restricted == CMAnchor)
 
   , TestLabel "low energy restricts CMDistinguish to CMRepair" $
       TestCase $ do
-        let restricted = applyConatusGateRestriction CMDistinguish
+        let restricted = applyStateIntegrityGateRestriction CMDistinguish
         assertBool
           ("CMDistinguish should map to CMRepair at low energy, got " <> show restricted)
           (restricted == CMRepair)
 
   , TestLabel "low energy preserves restorative families" $
       TestCase $ do
-        let results = [(f, applyConatusGateRestriction f) | f <- restorativeFamilies]
+        let results = [(f, applyStateIntegrityGateRestriction f) | f <- restorativeFamilies]
             allPreserved = all (\(orig, res) -> orig == res) results
         assertBool
           ("Restorative families should be unchanged at low energy: " <> show results)
@@ -129,7 +129,7 @@ conatusGateTests =
       TestCase $ do
         -- CMClarify, CMGround, CMDeepen are not high-risk, should pass through
         let safeFamilies = [CMClarify, CMGround, CMDeepen]
-            results = [(f, applyConatusGateRestriction f) | f <- safeFamilies]
+            results = [(f, applyStateIntegrityGateRestriction f) | f <- safeFamilies]
             allPreserved = all (\(orig, res) -> orig == res) results
         assertBool
           ("Safe non-restorative families should be unchanged: " <> show results)
@@ -137,7 +137,7 @@ conatusGateTests =
 
   , TestLabel "property: all high-risk families map to restorative" $
       TestCase $ do
-        let results = [(f, applyConatusGateRestriction f) | f <- highRiskFamilies]
+        let results = [(f, applyStateIntegrityGateRestriction f) | f <- highRiskFamilies]
             allRestorative = all (\(_, res) -> isRestorative res) results
         assertBool
           ("All high-risk families must map to restorative families: " <> show results)
@@ -145,31 +145,31 @@ conatusGateTests =
 
   , TestLabel "property: low energy blanket is below threshold" $
       TestCase $ do
-        let ce = computeConatusEnergyWith
-                   (ConatusWeights 1.0 0.5 0.25 10.0)
+        let ce = computeStateIntegrityEnergyWith
+                   (StateIntegrityWeights 1.0 0.5 0.25 10.0)
                    lowEnergyBlanket
                    []
         assertBool
           ("Low energy blanket must be below threshold: scalar="
-            <> show (ceScalar ce) <> " threshold=" <> show lowEnergyThreshold)
-          (ceScalar ce < lowEnergyThreshold)
+            <> show (siScalar ce) <> " threshold=" <> show lowEnergyThreshold)
+          (siScalar ce < lowEnergyThreshold)
 
   , TestLabel "property: high energy blanket is above threshold" $
       TestCase $ do
-        let ce = computeConatusEnergyWith
-                   (ConatusWeights 1.0 0.5 0.25 10.0)
+        let ce = computeStateIntegrityEnergyWith
+                   (StateIntegrityWeights 1.0 0.5 0.25 10.0)
                    highEnergyBlanket
                    []
         assertBool
           ("High energy blanket must be above threshold: scalar="
-            <> show (ceScalar ce) <> " threshold=" <> show lowEnergyThreshold)
-          (ceScalar ce >= lowEnergyThreshold)
+            <> show (siScalar ce) <> " threshold=" <> show lowEnergyThreshold)
+          (siScalar ce >= lowEnergyThreshold)
 
   , TestLabel "property: restriction is idempotent" $
       TestCase $ do
         -- Applying restriction twice should give same result as once
-        let results = [(f, applyConatusGateRestriction f,
-                        applyConatusGateRestriction (applyConatusGateRestriction f))
+        let results = [(f, applyStateIntegrityGateRestriction f,
+                        applyStateIntegrityGateRestriction (applyStateIntegrityGateRestriction f))
                       | f <- allFamilies]
             allIdempotent = all (\(_, once, twice) -> once == twice) results
         assertBool
@@ -185,7 +185,7 @@ conatusGateTests =
   , TestLabel "anti-rot: applyConatusGateRestriction is total on all families" $
       TestCase $ do
         -- This test ensures the function doesn't crash on any family
-        let results = [(f, applyConatusGateRestriction f) | f <- allFamilies]
+        let results = [(f, applyStateIntegrityGateRestriction f) | f <- allFamilies]
             allDefined = length results == length allFamilies
         assertBool
           ("Restriction must be defined for all families: " <> show results)

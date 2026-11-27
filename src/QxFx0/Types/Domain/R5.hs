@@ -141,7 +141,7 @@ instance FromJSON R5Verdict where
 -- 'QxFx0.Self.MeaningDirective' re-exports it under the Self-layer name.
 data MeaningDirective = MeaningDirective
   { mdFamily            :: !CanonicalMoveFamily
-    -- ^ Final family after FMAR + Conatus gate + rescue.
+    -- ^ Final family after FMAR + state-integrity gate + rescue.
   , mdDetectorFamily    :: !CanonicalMoveFamily
     -- ^ Keyword-detector recommendation (shadow-mode comparison baseline).
   , mdFieldDelta        :: !Field
@@ -150,10 +150,10 @@ data MeaningDirective = MeaningDirective
   , mdClause            :: !ClauseForm
   , mdLayer             :: !SemanticLayer
   , mdWarranted         :: !WarrantedMoveMode
-  , mdConatusGateOk     :: !Bool
-    -- ^ Did the Conatus gate permit the FMAR choice (True) or veto it (False)?
+  , mdStateIntegrityGateOk     :: !Bool
+    -- ^ Did the state-integrity gate permit the FMAR choice (True) or veto it (False)?
   , mdRescueUsed        :: !Bool
-    -- ^ Was the Conatus-rescue selection invoked?
+    -- ^ Was the state-integrity-rescue selection invoked?
   , mdFieldDistance     :: !Double
     -- ^ Distance from current position to the chosen family's target Field.
   , mdAbstractionBudget :: !Int

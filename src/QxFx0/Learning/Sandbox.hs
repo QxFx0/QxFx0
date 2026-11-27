@@ -12,15 +12,15 @@ Before a 'KnowledgeFruitPayload' is promoted to the live
 'KnowledgeTree', the sandbox projects its impact onto a *copy* of the
 relevant state slice and computes delta metrics:
 
-- Conatus trend (improvement vs. degradation)
+- State-integrity trend (improvement vs. degradation)
 - Uncertainty / counterfactual trend
 - Repair-loop frequency over a simulated window
 
 Acceptance rule (fail-closed):
-- derive locally authoritative conatus / predictive deltas from
+- derive locally authoritative state-integrity / predictive deltas from
   validated content plus current learning-need state
 - 'SandboxAccept' if the authoritative net score stays non-regressive
-- 'SandboxReject' if projected conatus drops below safety floor
+- 'SandboxReject' if projected state integrity drops below safety floor
   or net score is clearly negative.
 
 The sandbox is intentionally lightweight: it does NOT run a full
@@ -62,14 +62,14 @@ data SandboxResult
 
 -- | Metrics captured during sandbox projection.
 data SandboxMetrics = SandboxMetrics
-  { sbConatusTrend      :: !Double
-    -- ^ Projected conatus trend after applying fruit delta.
+  { sbStateIntegrityTrend      :: !Double
+    -- ^ Projected state-integrity trend after applying fruit delta.
   , sbUncertaintyTrend  :: !Double
     -- ^ Projected uncertainty (counterfactual) trend.
   , sbRepairLoopFreq    :: !Double
     -- ^ Estimated repair-loop frequency over simulated window.
   , sbNetScore          :: !Double
-    -- ^ Weighted composite of locally authoritative conatus/predictive deltas.
+    -- ^ Weighted composite of locally authoritative state-integrity/predictive deltas.
   , sbWindowSize        :: !Int
     -- ^ Simulated window turns (N).
   }
@@ -80,14 +80,14 @@ data SandboxMetrics = SandboxMetrics
 -- and current runtime need state. Remote self-reported benefit values are
 -- parsed for compatibility, but they do not decide admission.
 data AdmissionAuthorityDeltas = AdmissionAuthorityDeltas
-  { aadConatusDelta :: !Double
+  { aadStateIntegrityDelta :: !Double
   , aadPredictiveDelta :: !Double
   } deriving stock (Eq, Show, Generic)
     deriving anyclass (NFData)
 
 -- | Human-readable reject reason for telemetry and audit.
 data SandboxRejectReason
-  = SbrDegradingConatus
+  = SbrDegradingStateIntegrity
   | SbrRisingUncertainty
   | SbrHighRepairLoopRisk
   | SbrNegativeNetScore
@@ -100,7 +100,7 @@ data SandboxConfig = SandboxConfig
   { scWindowSize        :: !Int
     -- ^ History window for trend projection (default 5).
   , scSafetyFloor       :: !Double
-    -- ^ Minimum acceptable projected conatus trend (default -0.3).
+    -- ^ Minimum acceptable projected state-integrity trend (default -0.3).
   , scMinNetScore       :: !Double
     -- ^ Minimum weighted composite for non-regression (default -0.05).
   , scMaxUncertaintyIncrease :: !Double
@@ -118,9 +118,9 @@ defaultSandboxConfig = SandboxConfig
   , scMaxUncertaintyIncrease = 0.20
   }
 
--- | Safety floor for projected conatus trend.
-conatusSafetyFloor :: Double
-conatusSafetyFloor = -0.3
+-- | Safety floor for the projected state-integrity trend.
+stateIntegritySafetyFloor :: Double
+stateIntegritySafetyFloor = -0.3
 
 -- | Minimum net score for non-regression acceptance.
 minNetScore :: Double
@@ -137,27 +137,27 @@ runSandboxGate = runSandboxGateWithConfig defaultSandboxConfig
 -- | Run the sandbox gate with explicit configuration.
 --
 -- Acceptance policy (fail-closed):
--- 1. Strict non-regression: projected conatus >= safetyFloor AND netScore >= minNetScore.
+-- 1. Strict non-regression: projected state integrity >= safetyFloor AND netScore >= minNetScore.
 -- 2. Bounded uncertainty increase: if the projected uncertainty rises too far
 --    above the current baseline, reject with 'SbrRisingUncertainty'.
 runSandboxGateWithConfig :: SandboxConfig -> SystemState -> KnowledgeFruitPayload -> SandboxResult
 runSandboxGateWithConfig cfg ss payload =
   let needState = ssLearningNeedState ss
       authorityDeltas = deriveAdmissionAuthorityDeltas ss payload
-      -- Current conatus trend from the last 3 history points (or 0 if insufficient)
-      currentConatusTrend = conatusTrendFromHistory (lnsHistory needState)
+      -- Current state-integrity trend from the last 3 history points (or 0 if insufficient)
+      currentStateIntegrityTrend = stateIntegrityTrendFromHistory (lnsHistory needState)
       -- Current uncertainty proxy: amplitude of history oscillation
       currentUncertainty  = historyOscillationWithWindow (scWindowSize cfg) (lnsHistory needState)
       -- Projected values after applying locally authoritative deltas.
-      projectedConatus  = currentConatusTrend + aadConatusDelta authorityDeltas
+      projectedStateIntegrity  = currentStateIntegrityTrend + aadStateIntegrityDelta authorityDeltas
       projectedUncertainty = max 0 (currentUncertainty - aadPredictiveDelta authorityDeltas)
       -- Repair-loop frequency proxy: how often history levels exceed a soft threshold
       loopFreq            = repairLoopProxyWithWindow (scWindowSize cfg) (lnsHistory needState)
       -- Net score: weighted composite of locally authoritative deltas.
-      netScore            = 0.5 * aadConatusDelta authorityDeltas + 0.5 * aadPredictiveDelta authorityDeltas
+      netScore            = 0.5 * aadStateIntegrityDelta authorityDeltas + 0.5 * aadPredictiveDelta authorityDeltas
 
       metrics = SandboxMetrics
-        { sbConatusTrend     = projectedConatus
+        { sbStateIntegrityTrend     = projectedStateIntegrity
         , sbUncertaintyTrend = projectedUncertainty
         , sbRepairLoopFreq   = loopFreq
         , sbNetScore         = netScore
@@ -166,9 +166,9 @@ runSandboxGateWithConfig cfg ss payload =
 
       effectiveMinScore = scMinNetScore cfg
 
-  -- Reject if projected conatus is at or below safety floor (non-regression criterion)
-  in if projectedConatus <= scSafetyFloor cfg
-       then SandboxReject metrics SbrDegradingConatus
+  -- Reject if projected state integrity is at or below the safety floor (non-regression criterion)
+  in if projectedStateIntegrity <= scSafetyFloor cfg
+       then SandboxReject metrics SbrDegradingStateIntegrity
       else if projectedUncertainty > currentUncertainty + scMaxUncertaintyIncrease cfg
         then SandboxReject metrics SbrRisingUncertainty
       else if netScore < effectiveMinScore
@@ -182,7 +182,7 @@ runSandboxGateWithConfig cfg ss payload =
 deriveAdmissionAuthorityDeltas :: SystemState -> KnowledgeFruitPayload -> AdmissionAuthorityDeltas
 deriveAdmissionAuthorityDeltas ss payload =
   AdmissionAuthorityDeltas
-    { aadConatusDelta = clampRange (-0.35) 0.40 conatusDelta
+    { aadStateIntegrityDelta = clampRange (-0.35) 0.40 stateIntegrityDelta
     , aadPredictiveDelta = clampRange (-0.40) 0.50 predictiveDelta
     }
   where
@@ -191,7 +191,7 @@ deriveAdmissionAuthorityDeltas ss payload =
     needAlignmentScore = learningNeedAlignmentScore (lnsCurrentNeed (ssLearningNeedState ss))
     weakDefinitionPenalty = if definitionScore < 0.25 then 1.0 else 0.0
 
-    conatusDelta =
+    stateIntegrityDelta =
       0.20 * definitionScore
       + 0.05 * morphologyScore
       + 0.05 * needAlignmentScore
@@ -234,9 +234,9 @@ clampRange lo hi x
   | isNaN x || isInfinite x = 0.0
   | otherwise = max lo (min hi x)
 
--- | Compute conatus trend as average slope over last 3 points.
-conatusTrendFromHistory :: [(Int, Double)] -> Double
-conatusTrendFromHistory hist =
+-- | Compute the state-integrity trend as average slope over the last 3 points.
+stateIntegrityTrendFromHistory :: [(Int, Double)] -> Double
+stateIntegrityTrendFromHistory hist =
   case reverse hist of
     (_, y2) : (_, y1) : (_, y0) : _ -> ((y2 - y1) + (y1 - y0)) / 2.0
     _ -> 0.0
@@ -256,7 +256,7 @@ repairLoopProxyWithWindow configuredWindow hist =
   in count / total
 
 renderSandboxRejectReason :: SandboxRejectReason -> Text
-renderSandboxRejectReason SbrDegradingConatus     = "degrading_conatus"
+renderSandboxRejectReason SbrDegradingStateIntegrity     = "degrading_conatus"
 renderSandboxRejectReason SbrRisingUncertainty    = "rising_uncertainty"
 renderSandboxRejectReason SbrHighRepairLoopRisk   = "high_repair_loop_risk"
 renderSandboxRejectReason SbrNegativeNetScore     = "negative_net_score"

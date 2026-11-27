@@ -18,7 +18,7 @@ import QxFx0.Types.Admission.PatternCapClarify
 
 data SemanticLogicAdmissionInput = SemanticLogicAdmissionInput
   { slaiTruthContractStatus :: !TruthContractStatus
-  , slaiConatusGateFired :: !Bool
+  , slaiStateIntegrityGateFired :: !Bool
   , slaiFrame :: !InputPropositionFrame
   } deriving stock (Eq, Show)
 
@@ -51,7 +51,7 @@ admitSemanticLogicWeighting input rawFamilies =
   where
     config = CapClarifyConfig
       { cccGetTruthContract = slaiTruthContractStatus
-      , cccConatusFired = slaiConatusGateFired
+      , cccStateIntegrityFired = slaiStateIntegrityGateFired
       , cccInScope = \inp _ -> weightingAdmissionInScope (slaiFrame inp)
       , cccAllWeak = \dat -> case dat of
           ((fam, _):_) -> familyAlreadyWeak fam

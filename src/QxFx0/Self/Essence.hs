@@ -84,7 +84,7 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Numeric (showHex)
 
-import QxFx0.Self.Conatus (ConatusEnergy (..))
+import QxFx0.Self.StateIntegrity (StateIntegrity (..))
 import QxFx0.Self.Deliberation
   ( Agreement (..)
   , Deliberation (..)
@@ -154,7 +154,8 @@ fieldSignature em f = FieldSignature
 -- (subject matched by substring against 8 subjects
 -- ["я", "ты", "qxfx0", "система", "i", "you", "myself", "yourself"]
 -- — see QxFx0.Core.TurnPipeline.Route.Anomaly — ∧ angst > 0.9),
--- it performs a structural reset: clears witnesses, resets angst and conatus floor.
+-- it performs a structural reset: clears witnesses, resets angst and the
+-- state-integrity floor.
 --
 -- The reset is replay-visible via 'EssenceResetEvent', making the loss
 -- observable in traces. This is "losing what you've been through", not
@@ -169,7 +170,7 @@ collapseEssence turn traj =
       resetTraj = traj
         { etWitnesses    = Seq.empty
         , etAngstLevel   = 0.0
-        , etConatusFloor = 1.0  -- Reset to initial floor
+        , etStateIntegrityFloor = 1.0  -- Reset to initial floor
         }
   in (resetTraj, resetEvent)
 
@@ -198,7 +199,7 @@ collapseEssenceAt turn essence =
 -- ---------------------------------------------------------------------------
 
 -- | Original Phase 9 defaults, kept for backward-compat regression
--- locks.  Note: @emConatusStructuralFloor = 0.5@ was a unit-mismatch
+-- locks.  Note: @emStateIntegrityStructuralFloor = 0.5@ was a unit-mismatch
 -- error (calibrated against @arbitraryUnitDouble@ generators in
 -- 'Test.Suite.SelfEssence', not the production runtime where
 -- 'ceScalar' lives in log-scale [~5, ~20+]).  See ADR-0012 §15.1.
@@ -208,11 +209,11 @@ phase9EssenceModulation = EssenceModulation
   , emAngstAccrualRate            = 0.05
   , emAngstDecayRate              = 0.02
   , emAngstAccrualDivergenceFloor = 0.5
-  , emConatusFloorWindow          = 8
+  , emStateIntegrityFloorWindow          = 8
   -- Was 0.5 ([0,1]-scale bug against log-scale 'ceScalar', WP-F):
   -- the base record now carries the corrected 7.0 directly so no
   -- future caller can reintroduce the mismatch via this default.
-  , emConatusStructuralFloor      = 7.0
+  , emStateIntegrityStructuralFloor      = 7.0
   , emTrajectoryCapacity          = 32
   , emBandLowEdge                 = 0.33
   , emBandHighEdge                = 0.67
@@ -222,8 +223,8 @@ phase9EssenceModulation = EssenceModulation
 
 -- | Calibrated defaults (post-Phase 10 §4).
 --
--- * @emConatusStructuralFloor@ is 7.0 in the base record itself to
---   match the production codomain of 'computeConatusEnergy'
+-- * @emStateIntegrityStructuralFloor@ is 7.0 in the base record itself to
+--   match the production codomain of 'computeStateIntegrityEnergy'
 --   (log-scale unbounded, healthy range ~14-15).  See ADR-0012 §15.1.
 -- * Angst-side parameters remain at Phase 9 values because the
 --   synthetic long-session corpus could not reliably produce
@@ -242,13 +243,13 @@ emptyEssence :: Essence
 emptyEssence = EssenceUncommitted emptyTrajectory
 
 -- | The carrier-empty trajectory. @etAngstLevel = 0@,
--- @etConatusFloor = 1@ (so the floor only descends with witnessed
+-- @etStateIntegrityFloor = 1@ (so the floor only descends with witnessed
 -- evidence), capacity from 'defaultEssenceModulation'.
 emptyTrajectory :: EssenceTrajectory
 emptyTrajectory = EssenceTrajectory
   { etWitnesses    = Seq.empty
   , etAngstLevel   = 0.0
-  , etConatusFloor = 1.0
+  , etStateIntegrityFloor = 1.0
   , etCapacity     = emTrajectoryCapacity defaultEssenceModulation
   }
 
@@ -263,7 +264,7 @@ emptyTrajectory = EssenceTrajectory
 -- 1. Append a new 'EssenceWitness' to 'etWitnesses', truncating
 --    the front to keep length ≤ 'etCapacity'.
 -- 2. Update 'etAngstLevel':
---      * RuleConatusOverride       → no change.
+--      * RuleStateIntegrityOverride       → no change.
 --      * FullAgreement, divergence 0 → decay by 'emAngstDecayRate'.
 --      * RuleHolisticAdvantage/RuleFormalAdvantage with
 --        divergence ≥ 'emAngstAccrualDivergenceFloor'
@@ -272,11 +273,11 @@ emptyTrajectory = EssenceTrajectory
 --        sub-floor divergence)
 --                              → no change.
 --    Clamp to @[0, 1]@.
--- 3. Update 'etConatusFloor' to @min etConatusFloor ceScalar@.
+-- 3. Update 'etStateIntegrityFloor' to @min etStateIntegrityFloor siScalar@.
 witness
   :: EssenceModulation
   -> Int          -- turn ordinal
-  -> ConatusEnergy
+  -> StateIntegrity
   -> Field
   -> Deliberation
   -> EssenceTrajectory
@@ -289,12 +290,12 @@ witness em turnOrdinal ce field deliberation traj =
         , ewReconcileRule   = dtRule (delibTrace deliberation)
         , ewAgreement       = dtAgreement (delibTrace deliberation)
         , ewDivergence      = dtDivergence (delibTrace deliberation)
-        , ewConatusScalar   = ceScalar ce
+        , ewStateIntegrityScalar   = siScalar ce
         , ewFieldSignature  = sig
         }
       newWitnesses = trimSeq (etCapacity traj) (etWitnesses traj Seq.|> witness_)
       newAngst = clampUnit $ case dtRule (delibTrace deliberation) of
-        RuleConatusOverride -> etAngstLevel traj
+        RuleStateIntegrityOverride -> etAngstLevel traj
         RuleAgreement
           | dtDivergence (delibTrace deliberation) == 0.0
           -> max 0.0 (etAngstLevel traj - emAngstDecayRate em)
@@ -305,11 +306,11 @@ witness em turnOrdinal ce field deliberation traj =
           | dtDivergence (delibTrace deliberation) >= emAngstAccrualDivergenceFloor em
           -> min 1.0 (etAngstLevel traj + emAngstAccrualRate em)
         _ -> etAngstLevel traj
-      newFloor = min (etConatusFloor traj) (ceScalar ce)
+      newFloor = min (etStateIntegrityFloor traj) (siScalar ce)
   in traj
        { etWitnesses    = newWitnesses
        , etAngstLevel   = newAngst
-       , etConatusFloor = newFloor
+       , etStateIntegrityFloor = newFloor
        }
   where
     trimSeq cap sq
@@ -320,26 +321,26 @@ witness em turnOrdinal ce field deliberation traj =
 
 -- | Returns 'Just' when the trajectory has crossed a commitment
 -- threshold. Priority: 'TriggerAngstThreshold' over
--- 'TriggerConatusErosion' (see §0 Q2 of the spec).
+-- 'TriggerStateIntegrityErosion' (see §0 Q2 of the spec).
 --
--- Conatus erosion triggers when *every one* of the last
--- 'emConatusFloorWindow' witnessed turns has 'ewConatusScalar'
--- below 'emConatusStructuralFloor' (true sliding window, Phase 10).
--- The 'etConatusFloor' field is retained for diagnostics and trace
+-- state-integrity erosion triggers when *every one* of the last
+-- 'emStateIntegrityFloorWindow' witnessed turns has 'ewStateIntegrityScalar'
+-- below 'emStateIntegrityStructuralFloor' (true sliding window, Phase 10).
+-- The 'etStateIntegrityFloor' field is retained for diagnostics and trace
 -- but is no longer the trigger signal.
 shouldCommit :: EssenceModulation -> EssenceTrajectory -> Maybe CommitmentTrigger
 shouldCommit em traj =
   let angstFires = etAngstLevel traj >= emAngstCommitmentThreshold em
-      window     = emConatusFloorWindow em
+      window     = emStateIntegrityFloorWindow em
       ws         = etWitnesses traj
       lastN      = Seq.drop (max 0 (Seq.length ws - window)) ws
       enoughWits = Seq.length lastN >= window
       allSubFloor =
         enoughWits
-          && all (\w -> ewConatusScalar w < emConatusStructuralFloor em) lastN
+          && all (\w -> ewStateIntegrityScalar w < emStateIntegrityStructuralFloor em) lastN
   in case (angstFires, allSubFloor) of
        (True,  _)    -> Just TriggerAngstThreshold
-       (False, True) -> Just TriggerConatusErosion
+       (False, True) -> Just TriggerStateIntegrityErosion
        _             -> Nothing
 
 -- | Deterministic mode extraction.  Never returns
@@ -508,7 +509,7 @@ renderEssenceMode = \case
 renderCommitmentTrigger :: CommitmentTrigger -> Text
 renderCommitmentTrigger = \case
   TriggerAngstThreshold -> "angst_threshold"
-  TriggerConatusErosion -> "conatus_erosion"
+  TriggerStateIntegrityErosion -> "conatus_erosion"
 
 -- ---------------------------------------------------------------------------
 -- Internal helpers

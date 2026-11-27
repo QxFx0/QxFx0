@@ -14,10 +14,10 @@ is too far (in 'fieldDistance') from the recommended family's target Field —
 i.e. when the system's state does not match the state in which that family
 is authentic.
 
-FMAR does NOT subsume the Conatus gate. This module computes the
-Field-modulated choice; the downstream Conatus gate (in
+FMAR does NOT subsume the state-integrity gate. This module computes the
+Field-modulated choice; the downstream state-integrity gate (in
 @QxFx0.Core.TurnRouting.Cascade@) may still veto a risky family, in which
-case 'fmarSelectFamilyRescue' picks the closest Conatus-permitted family.
+case 'fmarSelectFamilyRescue' picks the closest state-integrity-permitted family.
 The wiring of both into the live pipeline (behind @QXFX0_FMAR@) is Phase 7.
 
 Pure: no IO, no runtime state.
@@ -40,7 +40,7 @@ import QxFx0.Self.AdaptivePosition
   , SpectralEncoding
   , encodeMeaningState
   )
-import QxFx0.Self.Conatus (ConatusEnergy (..))
+import QxFx0.Self.StateIntegrity (StateIntegrity (..))
 import QxFx0.Self.Field
   ( Atmosphere (..)
   , Counterfactual (..)
@@ -63,12 +63,12 @@ import QxFx0.Types.Observability (MeaningState (..))
 -- 2. If the current position is within 'fmarDistanceThreshold' of the
 --    recommended family's target Field, keep the recommendation.
 -- 3. Otherwise, search for the closest /viable/ family — one whose
---    @ftMinConatus@ is satisfied by the position's energy and whose
+--    @ftMinStateIntegrity@ is satisfied by the position's energy and whose
 --    @ftMaxCounterfactual@ admits the position's current counterfactual.
 -- 4. If no family is viable, fall back to 'CMContact'.
 --
--- This function does not apply the Conatus gate's hard veto; that is a
--- separate downstream step. It only uses @ftMinConatus@ as a /viability/
+-- This function does not apply the state-integrity gate's hard veto; that is a
+-- separate downstream step. It only uses @ftMinStateIntegrity@ as a /viability/
 -- filter when searching for an override, so FMAR never proposes a family
 -- the system plainly lacks the energy to sustain.
 fmarSelectFamily
@@ -86,7 +86,7 @@ fmarSelectFamily pos recommended targets =
     curCounterfactual = unCounterfactual (fieldCounterfactual (apField pos))
 
     viable t =
-      ftMinConatus t <= apConatusEnergy pos
+      ftMinStateIntegrity t <= apStateIntegrityEnergy pos
         && ftMaxCounterfactual t >= curCounterfactual
 
     viableTargets = filter viable targets
@@ -111,13 +111,13 @@ fmarSeed baseSeed delta =
 
 -- | FMAR Phase-7: compute the 8D 'AdaptivePosition' from the three
 -- signals already present in the Prepare phase — 'Field', 'MeaningState',
--- and 'ConatusEnergy'. Pure; no IO.
-computeAdaptivePosition :: Field -> MeaningState -> ConatusEnergy -> AdaptivePosition
+-- and 'StateIntegrity'. Pure; no IO.
+computeAdaptivePosition :: Field -> MeaningState -> StateIntegrity -> AdaptivePosition
 computeAdaptivePosition field ms ce =
   AdaptivePosition
     { apField         = field
     , apSpectral      = encodeMeaningState ms
-    , apConatusEnergy = ceScalar ce
+    , apStateIntegrityEnergy = siScalar ce
     }
 
 -- | Parse a @QXFX0_FMAR@ value into an 'FmarMode'. Unset (@Nothing@),

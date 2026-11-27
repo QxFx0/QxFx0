@@ -51,7 +51,7 @@ import GHC.Generics (Generic)
 -- @sdtWindow >= 1@.
 data SelfDivergenceTuning = SelfDivergenceTuning
   { sdtScaling :: !Double
-    -- ^ Fraction of the current Conatus energy deducted per unit of
+    -- ^ Fraction of the current state-integrity energy deducted per unit of
     --   out-of-envelope divergence: @penaltyShare = sdtScaling * total@.
     --   Absolute value is energy-scale dependent (~log-scale 14-15), so
     --   a fraction, not a flat constant (avoids the WP-F unit mismatch).

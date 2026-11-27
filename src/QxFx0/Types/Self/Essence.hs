@@ -19,13 +19,22 @@ module QxFx0.Types.Self.Essence
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON(..), ToJSON(..), Value(..))
+import Data.Aeson
+  ( FromJSON(..)
+  , Options(..)
+  , ToJSON(..)
+  , Value(..)
+  , defaultOptions
+  , genericParseJSON
+  , genericToJSON
+  )
 import Data.Aeson.Types (typeMismatch)
 import Data.Sequence (Seq)
 import Data.Text (Text)
 import qualified Data.Text as T
 import GHC.Generics (Generic)
 
+import QxFx0.Internal.WireCompat (legacyConatusLabel)
 import QxFx0.Types.Decision.Enums.Render (RenderStyle)
 import QxFx0.Types.Domain.R5 (CanonicalMoveFamily)
 import QxFx0.Types.Self.Deliberation (Agreement, NarrativeTone, ReconcileRule)
@@ -40,10 +49,20 @@ data Essence
 data EssenceTrajectory = EssenceTrajectory
   { etWitnesses    :: !(Seq EssenceWitness)
   , etAngstLevel   :: !Double
-  , etConatusFloor :: !Double
+  , etStateIntegrityFloor :: !Double
   , etCapacity     :: !Int
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
+    deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): persisted as @selfEssence@; the floor key keeps
+-- its historical @etConatusFloor@ spelling.
+instance ToJSON EssenceTrajectory where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
+
+instance FromJSON EssenceTrajectory where
+  parseJSON = genericParseJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
 
 data EssenceWitness = EssenceWitness
   { ewTurnOrdinal    :: !Int
@@ -51,10 +70,20 @@ data EssenceWitness = EssenceWitness
   , ewReconcileRule  :: !ReconcileRule
   , ewAgreement      :: !Agreement
   , ewDivergence     :: !Double
-  , ewConatusScalar  :: !Double
+  , ewStateIntegrityScalar  :: !Double
   , ewFieldSignature :: !FieldSignature
   } deriving stock (Eq, Show, Generic)
-    deriving anyclass (NFData, ToJSON, FromJSON)
+    deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): persisted as @selfEssence@; the scalar key keeps
+-- its historical @ewConatusScalar@ spelling.
+instance ToJSON EssenceWitness where
+  toJSON = genericToJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
+
+instance FromJSON EssenceWitness where
+  parseJSON = genericParseJSON defaultOptions
+    { fieldLabelModifier = legacyConatusLabel }
 
 data FieldSignature = FieldSignature
   { fsResonance      :: !FieldBand
@@ -81,9 +110,20 @@ data EssenceMode
   deriving stock (Eq, Show, Bounded, Enum, Generic)
   deriving anyclass (NFData, ToJSON, FromJSON)
 
-data CommitmentTrigger = TriggerAngstThreshold | TriggerConatusErosion
+data CommitmentTrigger = TriggerAngstThreshold | TriggerStateIntegrityErosion
   deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): the constructor tag is a persisted wire value
+-- (inside @selfEssence@ commitments), so it keeps the historical
+-- @TriggerConatusErosion@ spelling.
+instance ToJSON CommitmentTrigger where
+  toJSON = genericToJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
+
+instance FromJSON CommitmentTrigger where
+  parseJSON = genericParseJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
 
 newtype TrajectoryHash = TrajectoryHash { unTrajectoryHash :: Text }
   deriving stock (Eq, Show, Generic)
@@ -131,8 +171,8 @@ data EssenceModulation = EssenceModulation
   , emAngstAccrualRate            :: !Double
   , emAngstDecayRate              :: !Double
   , emAngstAccrualDivergenceFloor :: !Double
-  , emConatusFloorWindow          :: !Int
-  , emConatusStructuralFloor      :: !Double
+  , emStateIntegrityFloorWindow          :: !Int
+  , emStateIntegrityStructuralFloor      :: !Double
   , emTrajectoryCapacity          :: !Int
   , emBandLowEdge                 :: !Double
   , emBandHighEdge                :: !Double

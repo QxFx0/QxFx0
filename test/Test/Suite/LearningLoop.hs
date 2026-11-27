@@ -51,7 +51,7 @@ import QxFx0.Learning.Need
   , LearningPressureConfig(..)
   , renderLearningNeed
   )
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Field (emptyField, Field(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Self.Perspective
   ( applyPerspectiveDecision
@@ -89,7 +89,7 @@ import QxFx0.Types.State
   ( ssMorphology
   , ClaimStanceRef(..)
   , ConflictPolicy(..)
-  , ConatusSlice(..)
+  , StateIntegritySlice(..)
   , CounterargumentRef(..)
   , EndorsedPerspective(..)
   , EvidenceRef(..)
@@ -191,7 +191,7 @@ learningLoopTests =
    , testSandboxRejectsDegrading
    , testSandboxAcceptsImproving
    , testInflatedRemotePredictiveDeltaDoesNotForceAcceptance
-   , testInflatedRemoteConatusDeltaDoesNotForceAcceptance
+   , testInflatedRemoteStateIntegrityDeltaDoesNotForceAcceptance
    , testLocalAuthorityDeltasDriveSandboxVerdict
    , testLegacyLearningStepDisabled
    , testLegacyExternalLearningApplyDisabled
@@ -449,7 +449,7 @@ mkFruit prop src valid cDelta pDelta =
     , kfWord = ""
     , kfSource = src
     , kfValidated = valid
-    , kfConatusDelta = cDelta
+    , kfStateIntegrityDelta = cDelta
     , kfPredictiveDelta = pDelta
     , kfGraftedTurn = Nothing
     , kfObservedTurn = 1
@@ -577,7 +577,7 @@ testValidatorRejectsJunk = TestCase $ do
         , kfpDefinition = ""
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.1
+        , kfpStateIntegrityDelta = 0.1
         , kfpPredictiveDelta = 0.1
         }
       morph = MorphologyData M.empty M.empty M.empty M.empty
@@ -625,13 +625,13 @@ testSandboxRejectsDegrading = TestCase $ do
         , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 999.0
+        , kfpStateIntegrityDelta = 999.0
         , kfpPredictiveDelta = 999.0
         }
       result = runSandboxGate ss payload
   case result of
     SandboxReject _ SbrNegativeNetScore -> pure ()
-    SandboxReject _ SbrDegradingConatus -> pure ()
+    SandboxReject _ SbrDegradingStateIntegrity -> pure ()
     _ -> assertFailure "sandbox must reject degrading proposal"
 
 -- | WP5: sandbox accepts a proposal with positive deltas.
@@ -644,7 +644,7 @@ testSandboxAcceptsImproving = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.0
+        , kfpStateIntegrityDelta = 0.0
         , kfpPredictiveDelta = 0.0
         }
       result = runSandboxGate ss payload
@@ -662,7 +662,7 @@ testInflatedRemotePredictiveDeltaDoesNotForceAcceptance = TestCase $ do
         , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.0
+        , kfpStateIntegrityDelta = 0.0
         , kfpPredictiveDelta = 999.0
         }
       result = runSandboxGate ss payload
@@ -670,8 +670,8 @@ testInflatedRemotePredictiveDeltaDoesNotForceAcceptance = TestCase $ do
     SandboxReject _ _ -> pure ()
     _ -> assertFailure "inflated remote predictive delta must not force sandbox acceptance"
 
-testInflatedRemoteConatusDeltaDoesNotForceAcceptance :: Test
-testInflatedRemoteConatusDeltaDoesNotForceAcceptance = TestCase $ do
+testInflatedRemoteStateIntegrityDeltaDoesNotForceAcceptance :: Test
+testInflatedRemoteStateIntegrityDeltaDoesNotForceAcceptance = TestCase $ do
   let ss = emptySystemState
             { ssLearningNeedState = emptyLearningNeedState { lnsCurrentNeed = NeedNone } }
       payload = KnowledgeFruitPayload
@@ -680,7 +680,7 @@ testInflatedRemoteConatusDeltaDoesNotForceAcceptance = TestCase $ do
         , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 999.0
+        , kfpStateIntegrityDelta = 999.0
         , kfpPredictiveDelta = 0.0
         }
       result = runSandboxGate ss payload
@@ -698,7 +698,7 @@ testLocalAuthorityDeltasDriveSandboxVerdict = TestCase $ do
         , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 999.0
+        , kfpStateIntegrityDelta = 999.0
         , kfpPredictiveDelta = 999.0
         }
       strongPayload = KnowledgeFruitPayload
@@ -707,7 +707,7 @@ testLocalAuthorityDeltasDriveSandboxVerdict = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Just (MorphologyPayload (Just "feminine") (Just "first") (Just (M.fromList [("nom", "strong"), ("gen", "stronga"), ("prep", "stronge")])) )
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.0
+        , kfpStateIntegrityDelta = 0.0
         , kfpPredictiveDelta = 0.0
         }
       weakAuthority = deriveAdmissionAuthorityDeltas ss0 weakPayload
@@ -715,7 +715,7 @@ testLocalAuthorityDeltasDriveSandboxVerdict = TestCase $ do
   assertBool "weak payload must derive negative local predictive authority despite inflated remote claims"
     (aadPredictiveDelta weakAuthority < 0.0)
   assertBool "strong payload must derive positive local authority without remote self-scoring"
-    (aadConatusDelta strongAuthority > 0.0 && aadPredictiveDelta strongAuthority > 0.0)
+    (aadStateIntegrityDelta strongAuthority > 0.0 && aadPredictiveDelta strongAuthority > 0.0)
   case runSandboxGate ss0 strongPayload of
     SandboxAccept _ -> pure ()
     _ -> assertFailure "locally strong payload should pass even with zero remote claims"
@@ -894,7 +894,7 @@ testValidatorRejectsSemanticallyEmpty = TestCase $ do
         , kfpDefinition = "a thing is a thing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.1
+        , kfpStateIntegrityDelta = 0.1
         , kfpPredictiveDelta = 0.1
         }
       morph = MorphologyData M.empty M.empty M.empty M.empty
@@ -913,7 +913,7 @@ testValidatorRejectsSchemaMismatch = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Just emptyCaseMorph
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.1
+        , kfpStateIntegrityDelta = 0.1
         , kfpPredictiveDelta = 0.1
         }
       morph = MorphologyData M.empty M.empty M.empty M.empty
@@ -932,7 +932,7 @@ testSandboxConfigRespectsSafetyFloor = TestCase $ do
         , kfpDefinition = "short weak signal"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 999.0
+        , kfpStateIntegrityDelta = 999.0
         , kfpPredictiveDelta = 999.0
         }
       strictCfg = defaultSandboxConfig { scSafetyFloor = 0.0 }
@@ -955,7 +955,7 @@ testSandboxConfigAcceptsImprovement = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.5
+        , kfpStateIntegrityDelta = 0.5
         , kfpPredictiveDelta = 0.3
         }
       result = runSandboxGateWithConfig defaultSandboxConfig ss payload
@@ -977,7 +977,7 @@ testCalibrationSnapshotBoundedness = TestCase $ do
     (signal <= 1.0)
   assertBool "components must be bounded"
     (all (\x -> x >= -1.0 && x <= 1.0)
-      [scConatusTrend comps, scUncertaintyTrend comps,
+      [scStateIntegrityTrend comps, scUncertaintyTrend comps,
        scLoopRisk comps, scBranchHealthTrend comps])
 
 -- | WP4: gated apply blocks low-confidence signals.
@@ -1086,7 +1086,7 @@ testRealPathMiniEvalScenario4 = TestCase $ do
         , kfpDefinition = "печатное издание с переплётом и страницами"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.1
+        , kfpStateIntegrityDelta = 0.1
         , kfpPredictiveDelta = 0.1
         }
       -- Pre-populate morphology with "книга" in nominative
@@ -1488,7 +1488,7 @@ testPerspectiveActivationScopeSelectsMatchingNormativeProfile = TestCase $ do
             { selfPerspectiveRegistry = registry }
         , ssDialogueOutcomeLearning = outcome
         }
-      bundle = assemblePerspectiveInput ss (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)) False emptyField
+      bundle = assemblePerspectiveInput ss (StateIntegrity 10.0 (StateIntegrityComponents 0 0 0 0 0.0)) False emptyField
       candidate = opinionCore bundle
   assertEqual "matching activation scope must select the scoped profile"
     7 (pcNormativeProfileVersion candidate)
@@ -1585,7 +1585,7 @@ mkPerspectiveBundleForScopeWith scope evidence stance counterarguments profile l
       , isIdentityClaimCount = 0
       , isTurnCount = 1
       }
-  , pibConatusSlice = ConatusSlice
+  , pibStateIntegritySlice = StateIntegritySlice
       { csEnergy = 10.0
       , csGateFired = False
       , csFieldConfidence = 1.0
@@ -1664,15 +1664,15 @@ testDedupBlocksExternalQueryForKnownTreeTerm = TestCase $ do
 -- WP4: conatus delta derived from state (not payload)
 -- ============================================================
 
-testConatusDeltaDerivedFromStateNotPayload :: Test
-testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
+testStateIntegrityDeltaDerivedFromStateNotPayload :: Test
+testStateIntegrityDeltaDerivedFromStateNotPayload = TestCase $ do
   let payload = KnowledgeFruitPayload
         { kfpProposition = "test"
         , kfpWord = "test"
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.99   -- payload claims huge delta
+        , kfpStateIntegrityDelta = 0.99   -- payload claims huge delta
         , kfpPredictiveDelta = 0.5
         }
       ss0 = emptySystemState
@@ -1695,9 +1695,9 @@ testConatusDeltaDerivedFromStateNotPayload = TestCase $ do
         []    -> error "testLearningQueryIntegration: expected non-empty fruits in knowledge tree"
         (f:_) -> f
   assertBool "conatus delta must NOT be the payload's 0.99"
-    (abs (kfConatusDelta fruit - 0.99) > 0.1)
+    (abs (kfStateIntegrityDelta fruit - 0.99) > 0.1)
   assertBool "conatus delta must be small and positive (tree growth proxy)"
-    (kfConatusDelta fruit > 0.0 && kfConatusDelta fruit < 0.05)
+    (kfStateIntegrityDelta fruit > 0.0 && kfStateIntegrityDelta fruit < 0.05)
 
 testStoredFruitDoesNotPersistRemotePredictiveAuthority :: Test
 testStoredFruitDoesNotPersistRemotePredictiveAuthority = TestCase $ do
@@ -1707,7 +1707,7 @@ testStoredFruitDoesNotPersistRemotePredictiveAuthority = TestCase $ do
         , kfpDefinition = "a good definition that is long enough for testing"
         , kfpMorphology = Nothing
         , kfpSource = SourceLLM
-        , kfpConatusDelta = 0.01
+        , kfpStateIntegrityDelta = 0.01
         , kfpPredictiveDelta = 999.0
         }
       ss0 = emptySystemState
@@ -1756,7 +1756,7 @@ runNeedStep :: LearningPressureConfig -> LearningNeedState -> Int -> Bool -> Int
 runNeedStep cfg old turn isUnknown grafts =
   detectLearningNeedWithPressure
     cfg
-    (ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0))
+    (StateIntegrity 10.0 (StateIntegrityComponents 0 0 0 0 0.0))
     emptyField
     0       -- repairCount
     0       -- unknownTopicCount (legacy)
@@ -1797,10 +1797,10 @@ testLearningPressureIgnoresWhenGraftsGrowing = TestCase $ do
 
 testLearningPressureBackwardCompatWrapper :: Test
 testLearningPressureBackwardCompatWrapper = TestCase $ do
-  let conatus = ConatusEnergy 10.0 (ConatusComponents 0 0 0 0 0.0)
+  let stateIntegrity = StateIntegrity 10.0 (StateIntegrityComponents 0 0 0 0 0.0)
       old = emptyLearningNeedState
-      new = detectLearningNeed conatus emptyField 0 0 1 old
-      newWP = detectLearningNeedWithPressure defaultLearningPressureConfig conatus emptyField 0 0 1 old False 0
+      new = detectLearningNeed stateIntegrity emptyField 0 0 1 old
+      newWP = detectLearningNeedWithPressure defaultLearningPressureConfig stateIntegrity emptyField 0 0 1 old False 0
   assertEqual "backward-compat wrapper must match pressure version with empty signals"
     new newWP
 
@@ -1861,7 +1861,7 @@ mkFruitWithWord word prop src valid cDelta pDelta =
     , kfWord = word
     , kfSource = src
     , kfValidated = valid
-    , kfConatusDelta = cDelta
+    , kfStateIntegrityDelta = cDelta
     , kfPredictiveDelta = pDelta
     , kfGraftedTurn = Nothing
     , kfObservedTurn = 1

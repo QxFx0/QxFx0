@@ -7,7 +7,7 @@ Description : canonical - deterministic self-divergence contour (A-slice).
 Implements the A0 concept: "awareness, in the deterministic sense, is
 the ability to predict one's own next state and notice the mismatch."
 
-    predict -> witness -> diff -> allergen -> Conatus
+    predict -> witness -> diff -> allergen -> state integrity
 
 One turn, one measurement 'SelfDivergenceE'.  All morphisms are pure,
 total, and deterministic; identical inputs yield identical outputs
@@ -23,7 +23,7 @@ distance beyond the envelope, not the raw delta:
 * only out-of-envelope excess counts (max 0 (|delta| - envelope));
 * axes are combined with an L2 norm clamped to [0,1].
 
-The optional Conatus penalty applies only when the total divergence
+The optional state-integrity penalty applies only when the total divergence
 exceeds 'sdtThreshold' and is a /fraction/ of the current energy
 (energy-scale aware, avoiding the WP-F absolute-value unit mismatch).
 -}
@@ -37,7 +37,7 @@ module QxFx0.Self.SelfDivergence
   , clampUnit
   ) where
 
-import QxFx0.Types.Self.Conatus (ConatusComponents(..), ConatusEnergy(..))
+import QxFx0.Types.Self.StateIntegrity (StateIntegrityComponents(..), StateIntegrity(..))
 import QxFx0.Types.Self.Essence (EssenceModulation(..))
 import QxFx0.Types.Self.Field
   ( Atmosphere(..)
@@ -150,34 +150,34 @@ measureDivergence sp f actualAngst =
 l2 :: [Double] -> Double
 l2 xs = sqrt (sum (map (\x -> x * x) xs))
 
--- | Apply the self-consistency penalty to a 'ConatusEnergy':
+-- | Apply the self-consistency penalty to a 'StateIntegrity':
 -- only when the total divergence exceeds 'sdtThreshold', and as a
 -- /fraction/ of the current scalar (energy-scale aware).  The pure
 -- penalty share (negative) is returned alongside for trace/observer
 -- alignment; the caller decides how to surface it (A2 wires it into
--- the 'ConatusComponents' divergence channel).
+-- the 'StateIntegrityComponents' divergence channel).
 --
--- The penalty lands in the @ccSelfDivergence@ component and the
--- scalar is kept equal to the component sum (invariant: @ceScalar ==
+-- The penalty lands in the @sicSelfDivergence@ component and the
+-- scalar is kept equal to the component sum (invariant: @siScalar ==
 -- sum of all five components@).
 --
 -- Deterministic: same inputs, same penalty.
 selfConsistencyPenalty
   :: SelfDivergenceTuning
   -> SelfDivergenceE
-  -> ConatusEnergy
-  -> (ConatusEnergy, Double)
+  -> StateIntegrity
+  -> (StateIntegrity, Double)
 selfConsistencyPenalty tuning divE ce
   | sdeTotalDivergence divE <= sdtThreshold tuning = (ce, 0.0)
   | otherwise =
       let share = sdtScaling tuning * sdeTotalDivergence divE
-          baseScalar = ceScalar ce
+          baseScalar = siScalar ce
           penalty = negate (share * baseScalar)
-          comps' = (ceComponents ce)
-            { ccSelfDivergence = penalty }
+          comps' = (siComponents ce)
+            { sicSelfDivergence = penalty }
           adjusted = ce
-            { ceScalar = baseScalar + penalty
-            , ceComponents = comps'
+            { siScalar = baseScalar + penalty
+            , siComponents = comps'
             }
       in (adjusted, penalty)
 

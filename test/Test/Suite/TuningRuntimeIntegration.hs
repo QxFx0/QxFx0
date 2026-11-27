@@ -36,7 +36,7 @@ import QxFx0.Self.Salience
   ( SalienceWeights(..)
   , defaultSalienceWeights
   )
-import QxFx0.Self.Conatus (ConatusWeights(..), defaultConatusWeights)
+import QxFx0.Self.StateIntegrity (StateIntegrityWeights(..), defaultStateIntegrityWeights)
 import QxFx0.Self.FamilyTargets (FamilyTarget, familyTargets)
 import QxFx0.Runtime.Session.SelfConfig
   ( SelfBootstrapConfig(..)
@@ -47,7 +47,7 @@ import QxFx0.Runtime.Session.SelfConfig
   )
 import QxFx0.Runtime.StateDefaults (emptySelfState)
 import QxFx0.Types.State.SelfState
-  ( selfConatusWeights
+  ( selfStateIntegrityWeights
   , selfFamilyTargets
   , selfFieldHeuristics
   , selfSalienceWeights
@@ -84,7 +84,7 @@ builtinSalienceWeights = SalienceWeights
   , weightCounterfactual  = 0.75
   , weightFieldConfidence = 0.5
   , weightContentSaliency = 0.6
-  , conatusGateThreshold  = 0.0
+  , stateIntegrityGateThreshold  = 0.0
   , verdictThreshold      = 0.05
   , sigmoidTemperature    = 1.0
   }
@@ -115,7 +115,7 @@ tunedSalienceWeights = SalienceWeights
   , weightCounterfactual  = 0.8
   , weightFieldConfidence = 0.55
   , weightContentSaliency = 0.65
-  , conatusGateThreshold  = 0.05
+  , stateIntegrityGateThreshold  = 0.05
   , verdictThreshold      = 0.06
   , sigmoidTemperature    = 1.1
   }
@@ -173,19 +173,19 @@ testTunedFieldAffectsRuntime = TestCase $ withTunedFiles $ do
 
 testLoadedTunablesInjectIntoState :: Test
 testLoadedTunablesInjectIntoState = TestCase $ do
-  let tunedConatus = defaultConatusWeights { cwMorphology = 1.5 }
+  let tunedStateIntegrity = defaultStateIntegrityWeights { siwMorphology = 1.5 }
       tunedTargets :: [FamilyTarget]
       tunedTargets = take 3 familyTargets
       config = SelfBootstrapConfig
         { sbcSalienceWeights = tunedSalienceWeights
         , sbcFieldHeuristics = tunedFieldHeuristics
-        , sbcConatusWeights = tunedConatus
+        , sbcStateIntegrityWeights = tunedStateIntegrity
         , sbcFamilyTargets = tunedTargets
         }
       injected = applySelfBootstrapConfig config emptySelfState
   assertEqual "salience injected" tunedSalienceWeights (selfSalienceWeights injected)
   assertEqual "field injected" tunedFieldHeuristics (selfFieldHeuristics injected)
-  assertEqual "conatus injected" tunedConatus (selfConatusWeights injected)
+  assertEqual "conatus injected" tunedStateIntegrity (selfStateIntegrityWeights injected)
   assertEqual "family targets injected" tunedTargets (selfFamilyTargets injected)
 
 testInstalledDataBootstrapLoad :: Test
@@ -193,7 +193,7 @@ testInstalledDataBootstrapLoad = TestCase $ do
   dataRoot <- freshTestPath "qxfx0-self-config-data"
   isolatedCwd <- freshTestPath "qxfx0-self-config-cwd"
   let configDir = dataRoot </> "resources" </> "config"
-      tunedConatus = defaultConatusWeights { cwMorphology = 1.75 }
+      tunedStateIntegrity = defaultStateIntegrityWeights { siwMorphology = 1.75 }
       tunedTargets = take 4 familyTargets
       cleanup = do
         removeDirIfExists isolatedCwd
@@ -208,7 +208,7 @@ testInstalledDataBootstrapLoad = TestCase $ do
       BL.writeFile (configDir </> "field_heuristics.json")
         (Aeson.encode tunedFieldHeuristics)
       BL.writeFile (configDir </> "conatus_weights.json")
-        (Aeson.encode tunedConatus)
+        (Aeson.encode tunedStateIntegrity)
       BL.writeFile (configDir </> "family_targets.json")
         (Aeson.encode tunedTargets))
     cleanup
@@ -220,22 +220,22 @@ testInstalledDataBootstrapLoad = TestCase $ do
         assertEqual "malformed installed tuned field falls back to installed base"
           tunedFieldHeuristics (sbcFieldHeuristics loaded)
         assertEqual "installed conatus loaded"
-          tunedConatus (sbcConatusWeights loaded)
+          tunedStateIntegrity (sbcStateIntegrityWeights loaded)
         assertEqual "installed family targets loaded"
           tunedTargets (sbcFamilyTargets loaded))
 
 testFreshAndRestoredSelfStateSemantics :: Test
 testFreshAndRestoredSelfStateSemantics = TestCase $ do
-  let loadedConatus = defaultConatusWeights { cwMorphology = 1.5 }
-      persistedConatus = defaultConatusWeights { cwMorphology = 2.5 }
+  let loadedStateIntegrity = defaultStateIntegrityWeights { siwMorphology = 1.5 }
+      persistedStateIntegrity = defaultStateIntegrityWeights { siwMorphology = 2.5 }
       config = SelfBootstrapConfig
         { sbcSalienceWeights = tunedSalienceWeights
         , sbcFieldHeuristics = tunedFieldHeuristics
-        , sbcConatusWeights = loadedConatus
+        , sbcStateIntegrityWeights = loadedStateIntegrity
         , sbcFamilyTargets = take 3 familyTargets
         }
       persisted = emptySelfState
-        { selfConatusWeights = persistedConatus
+        { selfStateIntegrityWeights = persistedStateIntegrity
         , selfFamilyTargets = take 2 familyTargets
         }
       fresh = bootstrapSelfState config Nothing
@@ -248,7 +248,7 @@ testFreshAndRestoredSelfStateSemantics = TestCase $ do
 testSelfStateJsonCompatibility :: Test
 testSelfStateJsonCompatibility = TestCase $ do
   let custom = emptySelfState
-        { selfConatusWeights = defaultConatusWeights { cwMorphology = 1.5 }
+        { selfStateIntegrityWeights = defaultStateIntegrityWeights { siwMorphology = 1.5 }
         , selfFamilyTargets = take 3 familyTargets
         }
   case Aeson.eitherDecode (Aeson.encode custom) of
@@ -261,8 +261,8 @@ testSelfStateJsonCompatibility = TestCase $ do
   case Aeson.fromJSON legacyValue of
     Aeson.Error err -> assertFailure ("legacy SelfState JSON failed to decode: " <> err)
     Aeson.Success decoded -> do
-      assertEqual "legacy JSON defaults conatus" defaultConatusWeights
-        (selfConatusWeights decoded)
+      assertEqual "legacy JSON defaults conatus" defaultStateIntegrityWeights
+        (selfStateIntegrityWeights decoded)
       assertEqual "legacy JSON defaults family targets" familyTargets
         (selfFamilyTargets decoded)
 

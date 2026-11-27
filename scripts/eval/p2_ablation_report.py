@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""P2 Conatus-consumer ablation report (read-only).
+"""P2 state-integrity-consumer ablation report (read-only).
 
 Pre-registration: docs/closure/P2_ABLATION_PREREG_2026-11-18.md
 
@@ -15,7 +15,7 @@ and reports, per the pre-registration's bars:
   P2-5 trace identity per turn (every JSON path, not a summary flag)
   P4   final PerspectiveRegistry identity per session
   P6   dead self-divergence channel census
-  P7   threshold-reachability census against every Conatus consumer
+  P7   threshold-reachability census against every state-integrity consumer
 
 It opens both databases `mode=ro`, writes nothing except the optional
 `--json` report, and pins every threshold against the Haskell source so
@@ -43,38 +43,38 @@ IGNORED_PATHS = {
 }
 
 THRESHOLD_SOURCES = {
-    "conatusGateThreshold": (
+    "stateIntegrityGateThreshold": (
         "src/QxFx0/Self/Salience.hs",
-        r"conatusGateThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)",
+        r"stateIntegrityGateThreshold\s*=\s*([0-9]+(?:\.[0-9]+)?)",
     ),
-    "cpConatusFloor": (
+    "cpStateIntegrityFloor": (
         "src/QxFx0/Types/State/Stance.hs",
-        r"cpConatusFloor\s*=\s*([0-9]+(?:\.[0-9]+)?)",
+        r"cpStateIntegrityFloor\s*=\s*([0-9]+(?:\.[0-9]+)?)",
     ),
-    "conatusLowEnergy": (
-        "src/QxFx0/Types/Thresholds/Conatus.hs",
-        r"conatusLowEnergy\s*=\s*([0-9]+(?:\.[0-9]+)?)",
+    "stateIntegrityLowEnergy": (
+        "src/QxFx0/Types/Thresholds/StateIntegrity.hs",
+        r"stateIntegrityLowEnergy\s*=\s*([0-9]+(?:\.[0-9]+)?)",
     ),
     "anomalyAntiConatusEnergy": (
         "src/QxFx0/Types/Thresholds/Anomaly.hs",
         r"anomalyAntiConatusEnergy\s*=\s*([0-9]+(?:\.[0-9]+)?)",
     ),
-    "emConatusStructuralFloor": (
+    "emStateIntegrityStructuralFloor": (
         "src/QxFx0/Self/Essence.hs",
-        r"emConatusStructuralFloor\s*=\s*([0-9]+(?:\.[0-9]+)?)",
+        r"emStateIntegrityStructuralFloor\s*=\s*([0-9]+(?:\.[0-9]+)?)",
     ),
 }
 
 LADDER_SOURCE = ("src/QxFx0/Core/PipelineIO/Internal.hs",
-                 r"ceScalar conatus < ([0-9]+(?:\.[0-9]+)?)")
+                 r"siScalar stateIntegrity < ([0-9]+(?:\.[0-9]+)?)")
 FAMILY_SOURCE = "resources/config/family_targets.json"
 
 EXPECTED = {
-    "conatusGateThreshold": 0.0,
-    "cpConatusFloor": 5.0,
-    "conatusLowEnergy": 3.0,
+    "stateIntegrityGateThreshold": 0.0,
+    "cpStateIntegrityFloor": 5.0,
+    "stateIntegrityLowEnergy": 3.0,
     "anomalyAntiConatusEnergy": 5.0,
-    "emConatusStructuralFloor": 7.0,
+    "emStateIntegrityStructuralFloor": 7.0,
     "familyMinConatusMax": 3.0,
     "ladder": [0.0, 0.5],
 }
@@ -91,7 +91,7 @@ def strip_line_comments(text):
 
 
 def pin_thresholds(root):
-    """Read every Conatus threshold from its canonical source.
+    """Read every state-integrity threshold from its canonical source.
 
     Fails loudly when a value moved: the census must measure the
     constants the runtime actually uses.
@@ -111,7 +111,7 @@ def pin_thresholds(root):
     text = strip_line_comments((root / LADDER_SOURCE[0]).read_text(encoding="utf-8"))
     ladder = sorted({float(x) for x in re.findall(LADDER_SOURCE[1], text)})
     if not ladder:
-        raise SystemExit("pin: no Conatus priority ladder in Internal.hs")
+        raise SystemExit("pin: no state-integrity priority ladder in Internal.hs")
     values["ladder"] = ladder
 
     families = json.loads((root / FAMILY_SOURCE).read_text(encoding="utf-8"))
@@ -254,7 +254,7 @@ def thread_count(registry):
 
 
 def load_states(db_path, run_id):
-    """Final registry + the Conatus slice recorded in the governance payload.
+    """Final registry + the state-integrity slice recorded in the governance payload.
 
     The governance event stores 'ppPerspectiveInput', so the ablation is
     visible in the persisted audit history even when no perspective thread
@@ -300,13 +300,13 @@ def scalar(trace):
 def census(baseline_db, run_id, pins):
     """Dead-channel and threshold-reachability census over one arm."""
     thresholds = {
-        "salience_gate": pins["conatusGateThreshold"],
-        "stance_floor": pins["cpConatusFloor"],
-        "routing_low_energy": pins["conatusLowEnergy"],
+        "salience_gate": pins["stateIntegrityGateThreshold"],
+        "stance_floor": pins["cpStateIntegrityFloor"],
+        "routing_low_energy": pins["stateIntegrityLowEnergy"],
         "priority_ladder_lo": pins["ladder"][0],
         "priority_ladder_hi": pins["ladder"][1],
         "family_target_min": pins["familyMinConatusMax"],
-        "essence_structural_floor": pins["emConatusStructuralFloor"],
+        "essence_structural_floor": pins["emStateIntegrityStructuralFloor"],
         "anomaly_anti_conatus": pins["anomalyAntiConatusEnergy"],
     }
     reachable = {name: 0 for name in thresholds}
@@ -314,7 +314,7 @@ def census(baseline_db, run_id, pins):
     dead = {"turns": 0, "prediction_active": 0, "total_non_null": 0,
             "window_non_null": 0, "penalty_nonzero": 0}
     # 'shouldCommit' fires conatus erosion only when *every one* of the
-    # last 'emConatusFloorWindow' (8) witnesses is below the floor, so a
+    # last 'emStateIntegrityFloorWindow' (8) witnesses is below the floor, so a
     # per-turn count is an upper bound.  Track the real window too.
     floor_window = 8
     windows = {}
@@ -342,7 +342,7 @@ def census(baseline_db, run_id, pins):
         window = (windows.get(dialogue, []) + [value])[-floor_window:]
         windows[dialogue] = window
         if len(window) == floor_window and all(
-                v < pins["emConatusStructuralFloor"] for v in window):
+                v < pins["emStateIntegrityStructuralFloor"] for v in window):
             essence_window_fires += 1
     energies.sort()
     stats = {}
@@ -353,7 +353,7 @@ def census(baseline_db, run_id, pins):
             "min": energies[0],
             "median": energies[n // 2],
             "max": energies[-1],
-            "above_essence_floor": sum(1 for e in energies if e >= pins["emConatusStructuralFloor"]),
+            "above_essence_floor": sum(1 for e in energies if e >= pins["emStateIntegrityStructuralFloor"]),
         }
     return {"thresholds": thresholds, "reachable": reachable,
             "energies": stats, "dead_channel": dead,
@@ -506,12 +506,12 @@ def _fake_pins(root, drift=None):
         path.parent.mkdir(parents=True, exist_ok=True)
         # A historical note quoting an old value must not be read as a
         # second definition (WP-F records 0.5 next to the live 7.0).
-        note = "-- historical note: {} = 0.5\n".format(name) if name == "emConatusStructuralFloor" else ""
+        note = "-- historical note: {} = 0.5\n".format(name) if name == "emStateIntegrityStructuralFloor" else ""
         path.write_text(f"{note}{name} = {value}\n", encoding="utf-8")
     ladder = EXPECTED["ladder"] if drift is None or drift[0] != "ladder" else drift[1]
     path = root / LADDER_SOURCE[0]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(f"| ceScalar conatus < {v} = 100" for v in ladder) + "\n",
+    path.write_text("\n".join(f"| siScalar stateIntegrity < {v} = 100" for v in ladder) + "\n",
                     encoding="utf-8")
     path = root / FAMILY_SOURCE
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -553,7 +553,7 @@ def self_test():
         _write_arm(tmp, "abl-run", prompts, base_traces, base_surface, registry)
 
         pins = pin_thresholds(tmp / "pin")
-        check("pins read from source", pins["conatusGateThreshold"] == 0.0
+        check("pins read from source", pins["stateIntegrityGateThreshold"] == 0.0
               and pins["familyMinConatusMax"] == 3.0 and pins["ladder"] == [0.0, 0.5])
 
         rep = build_report(tmp / "base-run", tmp / "abl-run", pins)
@@ -647,7 +647,7 @@ def self_test():
                   ["census_baseline"]["reachable"].values()))
 
         # Pin drift must fail loudly.
-        _fake_pins(tmp / "pin-drift", drift=("conatusGateThreshold", 0.1))
+        _fake_pins(tmp / "pin-drift", drift=("stateIntegrityGateThreshold", 0.1))
         try:
             pin_thresholds(tmp / "pin-drift")
             check("pin drift fails", False)

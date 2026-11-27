@@ -17,7 +17,7 @@ Verifies, by QuickCheck and HUnit, the laws asserted in
   * 'shouldCommit' is monotone once fired (vacuously true for
     most random trajectories under default thresholds);
   * trigger priority: 'TriggerAngstThreshold' beats
-    'TriggerConatusErosion' when both fire simultaneously;
+    'TriggerStateIntegrityErosion' when both fire simultaneously;
   * 'emptyEssence' has the expected structural shape;
   * 'fieldSignature' is total on every well-formed 'Field'.
 -}
@@ -45,7 +45,7 @@ import qualified Data.Sequence as Seq
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Self.Conatus (ConatusEnergy (..), ConatusComponents (..))
+import QxFx0.Self.StateIntegrity (StateIntegrity (..), StateIntegrityComponents (..))
 import QxFx0.Self.Deliberation
   ( Agreement (..)
   , Deliberation (..)
@@ -113,15 +113,15 @@ selfEssenceTests =
     -- [0,1] 'arbitraryUnitDouble' scale.  Regression lock for ADR-0012 §15.1.
   , TestLabel "WP-F: conatus structural floor is in production log-scale (unit-guard)" $
       TestCase $ do
-        let floorV = emConatusStructuralFloor defaultEssenceModulation
+        let floorV = emStateIntegrityStructuralFloor defaultEssenceModulation
         assertBool
-          ( "emConatusStructuralFloor must be > 1.0 (log-scale); got "
+          ( "emStateIntegrityStructuralFloor must be > 1.0 (log-scale); got "
               ++ show floorV
               ++ " — a value in [0,1] means the arbitraryUnitDouble "
               ++ "unit-mismatch bug has regressed" )
           (floorV > 1.0)
         assertBool
-          ( "emConatusStructuralFloor must sit below the healthy ceScalar "
+          ( "emStateIntegrityStructuralFloor must sit below the healthy ceScalar "
               ++ "band (~14-15) to stay a meaningful sub-floor; got "
               ++ show floorV )
           (floorV < 14.0)
@@ -132,10 +132,10 @@ selfEssenceTests =
   , TestLabel "WP-F: phase9 base record carries the live floor (no 0.5 trap)" $
       TestCase $ do
         assertEqual "phase9 base floor pinned at the live log-scale value"
-          (7.0 :: Double) (emConatusStructuralFloor phase9EssenceModulation)
+          (7.0 :: Double) (emStateIntegrityStructuralFloor phase9EssenceModulation)
         assertEqual "live default floor identical to the base record"
-          (emConatusStructuralFloor phase9EssenceModulation)
-          (emConatusStructuralFloor defaultEssenceModulation)
+          (emStateIntegrityStructuralFloor phase9EssenceModulation)
+          (emStateIntegrityStructuralFloor defaultEssenceModulation)
 
     -- WP-F (R-F3) — explicit Deferred contract: the angst-side parameters are
     -- NOT calibrated against the production runtime (ADR-0012 §15.2,
@@ -199,14 +199,14 @@ arbitrarySalienceDriver = elements
   , DrivenByConsolidation
   , DrivenByCounterfactual
   , DrivenByFieldConfidence
-  , DrivenByConatusGate
+  , DrivenByStateIntegrityGate
   , DrivenByDefault
   ]
 
 arbitraryReconcileRule :: Gen ReconcileRule
 arbitraryReconcileRule = elements
   [ RuleAgreement
-  , RuleConatusOverride
+  , RuleStateIntegrityOverride
   , RuleSalienceLead
   , RuleHolisticAdvantage
   , RuleFormalAdvantage
@@ -249,12 +249,12 @@ arbitraryPlan = do
   conf <- arbitraryUnitDouble
   pure $ defaultPlan { planConfidence = conf }
 
-arbitraryConatusEnergy :: Gen ConatusEnergy
-arbitraryConatusEnergy = do
+arbitraryStateIntegrityEnergy :: Gen StateIntegrity
+arbitraryStateIntegrityEnergy = do
   s <- arbitraryUnitDouble
-  pure $ ConatusEnergy
-    { ceScalar     = s
-    , ceComponents = ConatusComponents 0 0 0 0 0.0
+  pure $ StateIntegrity
+    { siScalar     = s
+    , siComponents = StateIntegrityComponents 0 0 0 0 0.0
     }
 
 arbitraryEssenceWitness :: Gen EssenceWitness
@@ -272,7 +272,7 @@ arbitraryEssenceWitness = do
     , ewReconcileRule   = rule
     , ewAgreement       = agr
     , ewDivergence      = divg
-    , ewConatusScalar   = cscalar
+    , ewStateIntegrityScalar   = cscalar
     , ewFieldSignature  = sig
     }
 
@@ -285,7 +285,7 @@ arbitraryEssenceTrajectory = do
   pure $ EssenceTrajectory
     { etWitnesses    = Seq.fromList witnesses
     , etAngstLevel   = angst
-    , etConatusFloor = floor_
+    , etStateIntegrityFloor = floor_
     , etCapacity     = emTrajectoryCapacity defaultEssenceModulation
     }
 
@@ -306,7 +306,7 @@ propAngstDecaysUnderAgreement :: Property
 propAngstDecaysUnderAgreement =
   forAll arbitraryEssenceTrajectory $ \traj ->
     forAll arbitraryField $ \fd ->
-    forAll arbitraryConatusEnergy $ \ce ->
+    forAll arbitraryStateIntegrityEnergy $ \ce ->
     let deliberation = (defaultDeliberation :: Deliberation)
           { delibTrace = (delibTrace defaultDeliberation)
               { dtAgreement  = Agree
@@ -325,7 +325,7 @@ propAngstAccruesUnderDivergence =
   forAll arbitraryEssenceTrajectory $ \traj ->
     etAngstLevel traj < 1.0 ==>  -- only meaningful when there is room to accrue
     forAll arbitraryField $ \fd ->
-    forAll arbitraryConatusEnergy $ \ce ->
+    forAll arbitraryStateIntegrityEnergy $ \ce ->
     forAll (choose (0.5, 1.0)) $ \divg ->
     forAll (elements [RuleHolisticAdvantage, RuleFormalAdvantage]) $ \rule ->
     let deliberation = (defaultDeliberation :: Deliberation)
@@ -346,7 +346,7 @@ propShouldCommitMonotone :: Property
 propShouldCommitMonotone =
   forAll arbitraryEssenceTrajectory $ \traj ->
     forAll arbitraryField $ \fd ->
-    forAll arbitraryConatusEnergy $ \ce ->
+    forAll arbitraryStateIntegrityEnergy $ \ce ->
     forAll arbitraryDeliberation $ \delib ->
     let m0 = shouldCommit defaultEssenceModulation traj
         traj' = witness defaultEssenceModulation 1 ce fd delib traj
@@ -363,7 +363,7 @@ propTriggerPriorityAngst =
   let traj = EssenceTrajectory
         { etWitnesses    = Seq.fromList (replicate 8 (emptyWitness 1))
         , etAngstLevel   = 0.80
-        , etConatusFloor = 0.40
+        , etStateIntegrityFloor = 0.40
         , etCapacity     = emTrajectoryCapacity defaultEssenceModulation
         }
   in property (shouldCommit defaultEssenceModulation traj == Just TriggerAngstThreshold)
@@ -375,7 +375,7 @@ emptyWitness n = EssenceWitness
   , ewReconcileRule   = RuleSalienceLead
   , ewAgreement       = Agree
   , ewDivergence      = 0.0
-  , ewConatusScalar   = 1.0
+  , ewStateIntegrityScalar   = 1.0
   , ewFieldSignature  = fieldSignature defaultEssenceModulation emptyField
   }
 
@@ -390,7 +390,7 @@ testEmptyEssenceShape = do
     EssenceUncommitted t -> do
       assertEqual "emptyEssence witnesses" Seq.empty (etWitnesses t)
       assertEqual "emptyEssence angst" 0.0 (etAngstLevel t)
-      assertEqual "emptyEssence floor" 1.0 (etConatusFloor t)
+      assertEqual "emptyEssence floor" 1.0 (etStateIntegrityFloor t)
       assertEqual "emptyEssence capacity"
         (emTrajectoryCapacity defaultEssenceModulation)
         (etCapacity t)

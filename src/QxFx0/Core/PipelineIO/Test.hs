@@ -28,7 +28,7 @@ import QxFx0.Core.PipelineIO.Internal
   , PipelineRuntimeMode(..)
   , ShadowPolicy(..)
   , TurnEffectInterpreter
-  , defaultConatusPrior
+  , defaultStateIntegrityPrior
   )
 import QxFx0.Core.TurnPipeline.Effects
   ( TurnEffectRequest(..)
@@ -109,7 +109,7 @@ mkTestPipelineIO cfg =
       , pioModifyIntuition = \f -> modifyMVar intuitionState $ \st -> do
           (st', result) <- f st
           pure (st', result)
-      , pioConatusPrior = defaultConatusPrior
+      , pioStateIntegrityPrior = defaultStateIntegrityPrior
       , pioParseAuthoritySurface = pure . parseAuthoritySurfacePattern
       }
 {-# NOINLINE mkTestPipelineIO #-}
@@ -121,15 +121,15 @@ defaultTestInterpreter request =
       TurnResEmbedding <$> textToEmbeddingResult inputText
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard (Unavailable "nix_unavailable_default_test_pipeline"))
-    TurnReqConsciousness semanticInput humanTheta resonance conatusEnergy salienceWeights -> do
+    TurnReqConsciousness semanticInput humanTheta resonance stateIntegrityEnergy salienceWeights -> do
       let contentSaliency = 0.0  -- WP-C: default for test interpreter
-          salience = computeSalience salienceWeights conatusEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
+          salience = computeSalience salienceWeights stateIntegrityEnergy (emptyField { fieldResonance = mkResonance resonance }) contentSaliency
           (nextLoop, fragment) =
             runConsciousnessLoopWithSalience salience initialLoop semanticInput humanTheta resonance
           nextNarrative = clLastNarrative nextLoop
           nextFragment = if T.null fragment then Nothing else Just fragment
       pure (TurnResConsciousness nextLoop nextNarrative nextFragment)
-    TurnReqIntuition _inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
+    TurnReqIntuition _inputText resonance tension turnNumber _stateIntegrityEnergy _salienceWeights _semanticConfig -> do
       let (mFlash, intuitive') = checkIntuition resonance tension turnNumber defaultIntuitiveState
       pure (TurnResIntuition mFlash (effectivePosterior intuitive') intuitive')
     TurnReqApiHealth ->

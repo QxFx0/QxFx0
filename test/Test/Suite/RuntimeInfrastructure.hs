@@ -81,7 +81,7 @@ import qualified QxFx0.Bridge.NixGuard as NixGuard
 -- import QxFx0.Internal.Process (resolveTrustedExecutable)  -- REMOVED: dead code module
 import QxFx0.Resources (computeReadinessMode, assessResourceReadiness, loadMorphologyData, ReadinessStatus(..), ReadinessComponent(..), ReadinessMode(..))
 import QxFx0.ExceptionPolicy (QxFx0Exception(..), RuntimeInitErrorDetails(..), SQLiteErrorDetails(..), PersistenceErrorDetails(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Self.Perspective (applyPerspectiveOperator)
 import QxFx0.Types.State.SelfState (SelfState(..))
@@ -1941,14 +1941,14 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcEpisodicEncoding = []
                  , trcEpisodicRetrieval = Nothing
                  , trcEpisodicForgetting = (0, Nothing)
-                 , trcConatusEnergy = ConatusEnergy
-                     { ceScalar = 0.0
-                     , ceComponents = ConatusComponents
-                         { ccMorphology = 0.0
-                         , ccIdentity   = 0.0
-                         , ccTurns      = 0.0
-                         , ccPenalty    = 0.0
-                         , ccSelfDivergence = 0.0
+                 , trcConatusEnergy = StateIntegrity
+                     { siScalar = 0.0
+                     , siComponents = StateIntegrityComponents
+                         { sicMorphology = 0.0
+                         , sicIdentity   = 0.0
+                         , sicTurns      = 0.0
+                         , sicPenalty    = 0.0
+                         , sicSelfDivergence = 0.0
                          }
 }
                  , trcSelfDivergenceTotal = Nothing
@@ -1956,6 +1956,7 @@ testSaveStateWithProjectionFailureRollsBackTransaction = TestCase $ do
                  , trcSelfDivergenceWindowMean = Nothing
                  , trcSelfDivergencePredictionActive = False
                  , trcConatusGateFired = False
+                 , trcConatusContour = Nothing
                  , trcField = emptyField
                  , trcIdentityClaims = []
                  , trcRegimeVersion = 1
@@ -2556,14 +2557,14 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcEpisodicEncoding = []
                  , trcEpisodicRetrieval = Nothing
                  , trcEpisodicForgetting = (0, Nothing)
-                 , trcConatusEnergy = ConatusEnergy
-                     { ceScalar = 0.0
-                     , ceComponents = ConatusComponents
-                         { ccMorphology = 0.0
-                         , ccIdentity   = 0.0
-                         , ccTurns      = 0.0
-                         , ccPenalty    = 0.0
-                         , ccSelfDivergence = 0.0
+                 , trcConatusEnergy = StateIntegrity
+                     { siScalar = 0.0
+                     , siComponents = StateIntegrityComponents
+                         { sicMorphology = 0.0
+                         , sicIdentity   = 0.0
+                         , sicTurns      = 0.0
+                         , sicPenalty    = 0.0
+                         , sicSelfDivergence = 0.0
                          }
 }
                  , trcSelfDivergenceTotal = Nothing
@@ -2571,6 +2572,7 @@ testSaveStateWithDivergencePersistsShadowLog = TestCase $ do
                  , trcSelfDivergenceWindowMean = Nothing
                  , trcSelfDivergencePredictionActive = False
                  , trcConatusGateFired = False
+                 , trcConatusContour = Nothing
                  , trcField = emptyField
                  , trcIdentityClaims = []
                  , trcRegimeVersion = 1
@@ -2923,7 +2925,7 @@ authoritativeGovernedState ss0 =
         , kfWord = "свобода"
         , kfSource = SourceInternal
         , kfValidated = True
-        , kfConatusDelta = 0.6
+        , kfStateIntegrityDelta = 0.6
         , kfPredictiveDelta = 0.4
         , kfGraftedTurn = Nothing
         , kfObservedTurn = 1
@@ -2973,22 +2975,22 @@ authoritativeGovernedState ss0 =
                 ]
             }
         }
-  in applyPerspectiveOperator stateWithEvidence positiveConatus False emptyField
+  in applyPerspectiveOperator stateWithEvidence positiveStateIntegrity False emptyField
 
 assembledGovernedState :: SystemState -> SystemState
 assembledGovernedState ss0 =
   (authoritativeGovernedState ss0)
     { ssTruthContractStatus = AssembledSurfacePreserved }
 
-positiveConatus :: ConatusEnergy
-positiveConatus = ConatusEnergy
-  { ceScalar = 10.0
-  , ceComponents = ConatusComponents
-      { ccMorphology = 0.0
-      , ccIdentity = 0.0
-      , ccTurns = 10.0
-      , ccPenalty = 0.0
-      , ccSelfDivergence = 0.0
+positiveStateIntegrity :: StateIntegrity
+positiveStateIntegrity = StateIntegrity
+  { siScalar = 10.0
+  , siComponents = StateIntegrityComponents
+      { sicMorphology = 0.0
+      , sicIdentity = 0.0
+      , sicTurns = 10.0
+      , sicPenalty = 0.0
+      , sicSelfDivergence = 0.0
       }
 }
 

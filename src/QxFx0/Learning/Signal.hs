@@ -12,7 +12,7 @@ Replaces the hardcoded @signal = 0.0@ in
 'buildNextSystemState' with an explainable, bounded composite
 computed from:
 
-1. Conatus trend (from 'LearningNeedState' history slope),
+1. State-integrity trend (from 'LearningNeedState' history slope),
 2. Field uncertainty trend (counterfactual trajectory),
 3. Repair-loop risk (frequency of recovery over a window),
 4. Branch health trend (from 'KnowledgeTree').
@@ -40,7 +40,7 @@ import QxFx0.Types.Learning.Signal
 
 emptySignalComponents :: SignalComponents
 emptySignalComponents = SignalComponents
-  { scConatusTrend = 0.0
+  { scStateIntegrityTrend = 0.0
   , scUncertaintyTrend = 0.0
   , scLoopRisk = 0.0
   , scBranchHealthTrend = 0.0
@@ -51,7 +51,7 @@ defaultSignalPipelineConfig = SignalPipelineConfig
   { spcMinConfidence      = 0.15
   , spcApplyRateLimit     = 1
   , spcApplyWindow        = 5
-  , spcConatusWeight      = 0.30
+  , spcStateIntegrityWeight      = 0.30
   , spcUncertaintyWeight  = 0.30
   , spcLoopRiskWeight     = 0.20
   , spcBranchHealthWeight = 0.20
@@ -87,7 +87,7 @@ applyCalibrationGated cfg signal snapshots =
 --
 -- @
 -- signal = clamp [-1,1] (
---     0.30 * conatusTrend
+--     0.30 * stateIntegrityTrend
 --   + 0.30 * uncertaintyTrend
 --   + 0.20 * loopRisk
 --   + 0.20 * (-branchHealthTrend)   -- decaying tree pushes signal up
@@ -95,7 +95,7 @@ applyCalibrationGated cfg signal snapshots =
 -- @
 --
 -- Rationale:
--- * Conatus and uncertainty each get 30 % because they are the most
+-- * state-integrity and uncertainty each get 30 % because they are the most
 --   direct indicators of structural drift.
 -- * Loop risk gets 20 % as a lagging but robust proxy.
 -- * Branch health gets 20 % with inverted sign: a decaying
@@ -109,8 +109,8 @@ computeCalibrationSignal
   -> KnowledgeTree
   -> (CalibrationSignal, SignalComponents)
 computeCalibrationSignal needState counterfactual loopCount windowSize tree =
-  let       -- 1. Conatus trend: slope over recent 3 points
-      conatusTrend = case lnsHistory needState of
+  let       -- 1. State-integrity trend: slope over recent 3 points
+      stateIntegrityTrend = case lnsHistory needState of
         (_, y2) : (_, y1) : (_, y0) : _ ->
           let avgSlope = ((y2 - y1) + (y1 - y0)) / 2.0
           in clampUnit (avgSlope * 5.0)  -- scale: 0.2 level diff -> 1.0
@@ -134,14 +134,14 @@ computeCalibrationSignal needState counterfactual loopCount windowSize tree =
           else clampUnit (-avgHealth * 2.0)
 
       comps = SignalComponents
-        { scConatusTrend = conatusTrend
+        { scStateIntegrityTrend = stateIntegrityTrend
         , scUncertaintyTrend = uncertaintyTrend
         , scLoopRisk = loopRisk
         , scBranchHealthTrend = branchHealthTrend'
         }
 
       rawSignal =
-          0.30 * conatusTrend
+          0.30 * stateIntegrityTrend
         + 0.30 * uncertaintyTrend
         + 0.20 * loopRisk
         + 0.20 * branchHealthTrend'

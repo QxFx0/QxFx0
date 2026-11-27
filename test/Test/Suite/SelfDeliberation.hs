@@ -7,7 +7,7 @@ Description : Property tests for the Phase-8 deliberation framework.
 
 Verifies, by QuickCheck, the laws asserted in ADR-0011:
 
-  * 'RuleConatusOverride' always forces formal plan with recovery;
+  * 'RuleStateIntegrityOverride' always forces formal plan with recovery;
   * 'RuleAgreement' is idempotent and sets confidence to max;
   * recovery is never silenced ('pickHigherSeverity' wins);
   * 'RuleTiedFallback' always returns the formal plan;
@@ -70,7 +70,7 @@ import Test.Support.QuickCheckConfig (qcArgs)
 selfDeliberationTests :: [Test]
 selfDeliberationTests =
   [ TestLabel "Conatus override forces formal plan with recovery" $
-      quickCheckProperty "propConatusOverridesEverything" propConatusOverridesEverything
+      quickCheckProperty "propStateIntegrityOverridesEverything" propStateIntegrityOverridesEverything
   , TestLabel "Agreement rule is idempotent and picks max confidence" $
       quickCheckProperty "propAgreementIsIdempotent" propAgreementIsIdempotent
   , TestLabel "Recovery is never silenced" $
@@ -95,8 +95,8 @@ selfDeliberationTests =
           (Just RecoverySelfDivergence)
           (pickHigherSeverity (Just RecoveryLearningNeed) (Just RecoverySelfDivergence))
         assertEqual "Conatus gate over self-divergence"
-          (Just RecoveryConatusGate)
-          (pickHigherSeverity (Just RecoverySelfDivergence) (Just RecoveryConatusGate))
+          (Just RecoveryStateIntegrityGate)
+          (pickHigherSeverity (Just RecoverySelfDivergence) (Just RecoveryStateIntegrityGate))
         assertEqual "self-divergence beats shadow divergence"
           (Just RecoverySelfDivergence)
           (pickHigherSeverity (Just RecoveryShadowDivergence) (Just RecoverySelfDivergence))
@@ -142,7 +142,7 @@ arbitraryPlan = do
                       , StyleClinical, StyleCautious, StyleRecovery, StyleStandard]
   mCause  <- elements [Nothing, Just RecoveryLowLegitimacy
                       , Just RecoveryParserLowConfidence
-                      , Just RecoveryConatusGate]
+                      , Just RecoveryStateIntegrityGate]
   tone    <- elements [NarrativeNeutral, NarrativeWarm, NarrativeFormal
                       , NarrativeTerse, NarrativeRecovery]
   conf    <- choose (0.0, 1.0)
@@ -164,7 +164,7 @@ arbitrarySalience = do
     , DrivenByConsolidation
     , DrivenByCounterfactual
     , DrivenByFieldConfidence
-    , DrivenByConatusGate
+    , DrivenByStateIntegrityGate
     , DrivenByDefault
     ]
   pure $ Salience
@@ -173,11 +173,11 @@ arbitrarySalience = do
     , salienceDriver       = driver
     }
 
--- | Same as 'arbitrarySalience' but excluding 'DrivenByConatusGate',
--- which forces 'RuleConatusOverride' regardless of the proposal
+-- | Same as 'arbitrarySalience' but excluding 'DrivenByStateIntegrityGate',
+-- which forces 'RuleStateIntegrityOverride' regardless of the proposal
 -- shape. Used by properties that test non-override behaviour.
-arbitraryNonConatusSalience :: Gen Salience
-arbitraryNonConatusSalience = do
+arbitraryNonStateIntegritySalience :: Gen Salience
+arbitraryNonStateIntegritySalience = do
   bias  <- choose (0.0, 1.0)
   conf  <- choose (0.0, 1.0)
   driver <- elements
@@ -199,33 +199,33 @@ arbitraryNonConatusSalience = do
 -- ---------------------------------------------------------------------------
 
 -- B.6.1
-propConatusOverridesEverything :: Property
-propConatusOverridesEverything =
+propStateIntegrityOverridesEverything :: Property
+propStateIntegrityOverridesEverything =
   forAll arbitraryPlan $ \hPlan ->
   forAll arbitraryPlan $ \fPlan ->
   forAll arbitraryField $ \fd ->
   forAll arbitrarySalience $ \salience ->
-    let conatusSalience = salience { salienceDriver = DrivenByConatusGate }
+    let stateIntegritySalience = salience { salienceDriver = DrivenByStateIntegrityGate }
         hp = holisticProposal hPlan fd
         fp = formalProposal (\_ -> fPlan)
-        d  = reconcile Nothing conatusSalience hp fp fd
+        d  = reconcile Nothing stateIntegritySalience hp fp fd
         r  = delibReconciled d
         t  = delibTrace d
      in planRenderStyle r == StyleRecovery
-        && planRecoveryCause r == Just RecoveryConatusGate
+        && planRecoveryCause r == Just RecoveryStateIntegrityGate
         && planNarrativeTone r == NarrativeRecovery
         && planConfidence r == 1.0
-        && dtRule t == RuleConatusOverride
+        && dtRule t == RuleStateIntegrityOverride
 
 -- B.6.2 — when both proposals are identical and the salience
--- driver is not 'DrivenByConatusGate' (which legitimately
+-- driver is not 'DrivenByStateIntegrityGate' (which legitimately
 -- rewrites the plan into recovery shape), 'reconcile' returns
 -- the same plan and tags 'RuleAgreement' with 'Agree'.
 propAgreementIsIdempotent :: Property
 propAgreementIsIdempotent =
   forAll arbitraryPlan $ \plan ->
   forAll arbitraryField $ \fd ->
-  forAll arbitraryNonConatusSalience $ \salience ->
+  forAll arbitraryNonStateIntegritySalience $ \salience ->
     let hp = holisticProposal plan fd
         fp = formalProposal (\_ -> plan)
         d  = reconcile Nothing salience hp fp fd
@@ -307,7 +307,7 @@ propRenderAgreementTotal =
 -- Extra: renderReconcileRule is total (no pattern-match failure)
 propRenderReconcileRuleTotal :: Property
 propRenderReconcileRuleTotal =
-  forAll (elements [RuleAgreement, RuleConatusOverride, RuleSalienceLead
+  forAll (elements [RuleAgreement, RuleStateIntegrityOverride, RuleSalienceLead
                    , RuleHolisticAdvantage, RuleFormalAdvantage, RuleTiedFallback]) $ \rule ->
     let txt = renderReconcileRule rule
      in not (T.null txt)

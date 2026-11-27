@@ -27,7 +27,7 @@ import System.Directory (removeFile)
 import Test.HUnit (Test (..), assertBool, assertEqual, assertFailure)
 
 import QxFx0.Runtime.Session.SelfConfig (loadConfigOrBuiltinIO)
-import QxFx0.Self.Conatus (ConatusWeights (..), defaultConatusWeights)
+import QxFx0.Self.StateIntegrity (StateIntegrityWeights (..), defaultStateIntegrityWeights)
 import QxFx0.Self.FamilyTargets (FamilyTarget (..), familyTargets)
 import QxFx0.Self.Field (FieldHeuristics (..), defaultFieldHeuristics)
 import QxFx0.Self.Salience (SalienceWeights (..), defaultSalienceWeights)
@@ -100,7 +100,7 @@ configExternalizeTests =
   -- EC-0 round-trip
   [ roundTripTest "SalienceWeights" defaultSalienceWeights
   , roundTripTest "FieldHeuristics" defaultFieldHeuristics
-  , roundTripTest "ConatusWeights" defaultConatusWeights
+  , roundTripTest "ConatusWeights" defaultStateIntegrityWeights
   , roundTripTest "FamilyTargets" familyTargets
   ]
   -- EC-1 loader
@@ -118,11 +118,11 @@ configExternalizeTests =
   , externalizeModifiedTest "field-modified" defaultFieldHeuristics
       "/tmp/test_config_externalize_field_modified.json"
       (defaultFieldHeuristics { fhNarrativeWindowSize = 10 })
-  , externalizeAbsentTest "conatus-absent" defaultConatusWeights
+  , externalizeAbsentTest "conatus-absent" defaultStateIntegrityWeights
       "/tmp/test_config_externalize_conatus_absent.json"
-  , externalizeModifiedTest "conatus-modified" defaultConatusWeights
+  , externalizeModifiedTest "conatus-modified" defaultStateIntegrityWeights
       "/tmp/test_config_externalize_conatus_modified.json"
-      (defaultConatusWeights { cwMorphology = 2.0 })
+      (defaultStateIntegrityWeights { siwMorphology = 2.0 })
   , externalizeAbsentTest "family-absent" familyTargets
       "/tmp/test_config_externalize_family_absent.json"
   , externalizeModifiedTest "family-modified" familyTargets

@@ -6,7 +6,7 @@ module QxFx0.Core.TurnRouting.Cascade
   ( runFamilyCascade
   , applyPrincipledFamily
   , applyGuardGating
-  , applyConatusGateRestriction
+  , applyStateIntegrityGateRestriction
   , buildGuardReport
   , commitmentFamilyHint
   ) where
@@ -32,7 +32,7 @@ import QxFx0.Core.TurnRouting.Types
   ( FamilyCascade(..)
   , RoutingPhase(..)
   )
-import QxFx0.Self.Conatus (ConatusEnergy(..), lowEnergyThreshold)
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), lowEnergyThreshold)
 import QxFx0.Semantic.Markers (challengeMarkers, containsAnyOf)
 import QxFx0.Self.Salience
   ( Salience(..)
@@ -63,8 +63,8 @@ commitmentFamilyHint ce
   | otherwise         = Nothing
 
 runFamilyCascade :: RoutingPhase -> SystemState -> UserState -> InputPropositionFrame -> AtomSet -> [Text] -> Text
-                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> ConatusEnergy -> Double -> [EpisodicEvent] -> CommitmentEngagement -> FamilyCascade
-runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history input narrative intuitionPosterior isNixBlocked salience conatusEnergy doubt retrievedEpisodes commitmentEngagement =
+                 -> Maybe ConsciousnessNarrative -> Double -> Bool -> Salience -> StateIntegrity -> Double -> [EpisodicEvent] -> CommitmentEngagement -> FamilyCascade
+runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _history input narrative intuitionPosterior isNixBlocked salience stateIntegrityEnergy doubt retrievedEpisodes commitmentEngagement =
   let parserLockedFamily =
         if (hasChallengeMarker input
               || ipfPropositionType frame `elem` [ConfrontQ, MisunderstandingReport, RepairSignal]
@@ -96,17 +96,17 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
           Nothing -> applyPrincipledFamilyModulated salienceGuardDivergenceEnabled salience rpPrincipledModeResult familyAfterIntuition
       guardReportPre = buildGuardReport (ssLastGuardReport systemState) (ssEgo systemState) rpPreEgo
       familyAfterGuard = applyGuardGatingModulated salienceGuardDivergenceEnabled salience guardReportPre familyAfterPrincipled
-      -- P1 Conatus Gate: when energy is low, restrict to restorative families.
+      -- P1 state-integrity gate: when energy is low, restrict to restorative families.
       -- Low energy (< lowEnergyThreshold) prohibits high-risk families
       -- (CMConfront, CMHypothesis, CMDistinguish) and allows only restorative
       -- families (CMContact, CMAnchor, CMRepair). This implements the
       -- self-preservation routing constraint specified in ADR-0045.
-      familyAfterConatusGate =
+      familyAfterStateIntegrityGate =
         case parserLockedFamily of
           Just parserFamily -> parserFamily
           Nothing ->
-            if ceScalar conatusEnergy < lowEnergyThreshold
-              then applyConatusGateRestriction familyAfterGuard
+            if siScalar stateIntegrityEnergy < lowEnergyThreshold
+              then applyStateIntegrityGateRestriction familyAfterGuard
               else familyAfterGuard
       -- WP-D + WP-B R-B3: doubt-driven family override with episodic memory check.
       -- When doubt is high (≥ threshold) and the doubt loop is active, prefer
@@ -121,7 +121,7 @@ runFamilyCascade RoutingPhase{..} systemState _nextUserState frame _atomSet _his
                              && not (episodicRecallActive && hasRecentSystemDecision retrievedEpisodes)
             in if shouldClarify
               then CMClarify
-              else familyAfterConatusGate
+              else familyAfterStateIntegrityGate
       familyCascade = fromMaybe familyAfterDoubt (antiStuck (ssConsecutiveReflect systemState) rpPreEgo familyAfterDoubt)
       -- Guard Blocked no longer forces CMRepair. Instead, the cascaded
       -- family is preserved; the guard block is recorded in the trace
@@ -163,7 +163,7 @@ applyPrincipledFamily mode family =
 -- When the controller strongly prefers Holistic (above
 -- 'smModulationHolisticBiasFloor'), principled constraints are
 -- relaxed so intuition/narrative signals retain more influence.
--- Conatus-gate events force the strict formal path.
+-- state-integrity gate events force the strict formal path.
 --
 -- Threshold sourced from 'defaultSalienceModulation'; Phase 7
 -- calibration goes through that single record rather than this
@@ -171,7 +171,7 @@ applyPrincipledFamily mode family =
 applyPrincipledFamilyModulated :: Bool -> Salience -> Maybe PrincipledMode -> CanonicalMoveFamily -> CanonicalMoveFamily
 applyPrincipledFamilyModulated salienceGuardDivergenceEnabled salience mode family =
   case salienceDriver salience of
-    DrivenByConatusGate -> applyPrincipledFamily mode family
+    DrivenByStateIntegrityGate -> applyPrincipledFamily mode family
     _ | salienceGuardDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation -> family
     _ -> applyPrincipledFamily mode family
 
@@ -194,28 +194,28 @@ applyGuardGating guardReport family
 -- | Salience-modulated guard gating.
 -- Holistic-preferring turns (above
 -- 'smModulationHolisticBiasFloor') keep all families except
--- agency-collapse (which is always repaired).  Formal/Conatus
+-- agency-collapse (which is always repaired).  Formal/state-integrity
 -- turns apply the full guard cascade.
 --
 -- Threshold sourced from 'defaultSalienceModulation'.
 applyGuardGatingModulated :: Bool -> Salience -> IdentityGuardReport -> CanonicalMoveFamily -> CanonicalMoveFamily
 applyGuardGatingModulated salienceGuardDivergenceEnabled salience guard family
-  | salienceDriver salience == DrivenByConatusGate = applyGuardGating guard family
+  | salienceDriver salience == DrivenByStateIntegrityGate = applyGuardGating guard family
   | salienceGuardDivergenceEnabled && salienceHolisticBias salience > smModulationHolisticBiasFloor defaultSalienceModulation =
       if GuardAgencyCollapse `elem` igrWarnings guard then CMRepair else family
   | otherwise = applyGuardGating guard family
 
--- | Apply Conatus gate restriction: when energy is low, map high-risk
+-- | Apply state-integrity gate restriction: when energy is low, map high-risk
 -- families to restorative alternatives. This is the core P1 integration
--- that closes the gap between Conatus computation and routing behaviour.
+-- that closes the gap between state-integrity computation and routing behaviour.
 --
 -- Mapping:
 -- * CMConfront → CMContact (restorative engagement)
 -- * CMHypothesis → CMAnchor (grounding in established facts)
 -- * CMDistinguish → CMRepair (structural recovery)
 -- * All other families → unchanged (already safe or restorative)
-applyConatusGateRestriction :: CanonicalMoveFamily -> CanonicalMoveFamily
-applyConatusGateRestriction family =
+applyStateIntegrityGateRestriction :: CanonicalMoveFamily -> CanonicalMoveFamily
+applyStateIntegrityGateRestriction family =
   case family of
     CMConfront    -> CMContact
     CMHypothesis  -> CMAnchor

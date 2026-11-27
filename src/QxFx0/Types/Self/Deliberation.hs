@@ -12,9 +12,17 @@ module QxFx0.Types.Self.Deliberation
   ) where
 
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON, ToJSON)
+import Data.Aeson
+  ( FromJSON(..)
+  , Options(..)
+  , ToJSON(..)
+  , defaultOptions
+  , genericParseJSON
+  , genericToJSON
+  )
 import GHC.Generics (Generic)
 
+import QxFx0.Internal.WireCompat (legacyConatusLabel)
 import QxFx0.Types.Decision.Enums.Render (RenderStyle)
 import QxFx0.Types.Domain.R5 (CanonicalMoveFamily)
 import QxFx0.Types.Recovery (LocalRecoveryCause)
@@ -49,13 +57,24 @@ data Agreement
 
 data ReconcileRule
   = RuleAgreement
-  | RuleConatusOverride
+  | RuleStateIntegrityOverride
   | RuleSalienceLead
   | RuleHolisticAdvantage
   | RuleFormalAdvantage
   | RuleTiedFallback
   deriving stock (Eq, Show, Bounded, Enum, Generic)
-  deriving anyclass (NFData, ToJSON, FromJSON)
+  deriving anyclass (NFData)
+
+-- | P4 (2026-11-23): the constructor tag is a persisted wire value
+-- (inside @selfEssence@ witnesses), so it keeps the historical
+-- @RuleConatusOverride@ spelling.
+instance ToJSON ReconcileRule where
+  toJSON = genericToJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
+
+instance FromJSON ReconcileRule where
+  parseJSON = genericParseJSON defaultOptions
+    { constructorTagModifier = legacyConatusLabel }
 
 data DeliberationTrace = DeliberationTrace
   { dtAgreement      :: !Agreement

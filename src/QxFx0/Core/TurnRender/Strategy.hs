@@ -110,9 +110,9 @@ renderStyleFromDecisionWithSalience salienceWeights salience field strategy mode
 --
 -- Decision rule (matches ADR-0010 §4 and §5):
 --
---   * 'DrivenByConatusGate' (structural risk) overrides every
+--   * 'DrivenByStateIntegrityGate' (structural risk) overrides every
 --     other verdict and forces 'StyleRecovery'. This is the strict
---     reading of the Conatus-gate priority discipline.
+--     reading of the state-integrity gate priority discipline.
 --   * 'PreferFormal' verdict leans neutral and warm picks toward
 --     formal/contract-respecting variants.
 --   * 'PreferHolistic' verdict leans neutral and direct picks
@@ -127,7 +127,7 @@ renderStyleFromDecisionWithSalience salienceWeights salience field strategy mode
 applySalienceToStyle :: SalienceWeights -> Salience -> Field -> RenderStyle -> RenderStyle
 applySalienceToStyle salienceWeights salience field baseStyle =
   case salienceDriver salience of
-    DrivenByConatusGate -> StyleRecovery
+    DrivenByStateIntegrityGate -> StyleRecovery
     _ ->
       chooseBranch
         (salienceVerdict salienceWeights salience)

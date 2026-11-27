@@ -16,7 +16,7 @@ import qualified Data.Map.Strict as M
 
 data SenseVectorAdmissionInput = SenseVectorAdmissionInput
   { svaiTruthContractStatus :: !TruthContractStatus
-  , svaiConatusGateFired :: !Bool
+  , svaiStateIntegrityGateFired :: !Bool
   } deriving stock (Eq, Show)
 
 data SenseVectorAdmissionDecision
@@ -33,12 +33,12 @@ data AdmittedSenseVector = AdmittedSenseVector
 admitSenseVector :: SenseVectorAdmissionInput -> SenseVector -> AdmittedSenseVector
 admitSenseVector input vec
   | not (vectorAdmissionInScope vec) = AdmittedSenseVector vec SvdAdmitRaw
-  | svaiConatusGateFired input && not (vectorAlreadyWeakOrAmbiguous vec) =
+  | svaiStateIntegrityGateFired input && not (vectorAlreadyWeakOrAmbiguous vec) =
       AdmittedSenseVector (softenVector vec) SvdDampenClarify
   | not (truthContractIsAuthoritative (svaiTruthContractStatus input))
       && not (vectorAlreadyWeakOrAmbiguous vec) =
       AdmittedSenseVector (softenVector vec) SvdDampenClarify
-  | svaiConatusGateFired input || not (truthContractIsAuthoritative (svaiTruthContractStatus input)) =
+  | svaiStateIntegrityGateFired input || not (truthContractIsAuthoritative (svaiTruthContractStatus input)) =
       AdmittedSenseVector vec SvdPreserveAmbiguous
   | otherwise = AdmittedSenseVector vec SvdAdmitRaw
 

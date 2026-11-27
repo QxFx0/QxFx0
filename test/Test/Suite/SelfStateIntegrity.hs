@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {-|
-Module      : Test.Suite.SelfConatus
+Module      : Test.Suite.SelfStateIntegrity
 Description : Unit tests for the Phase-2 Conatus functional.
 
-Pure tests over 'QxFx0.Self.Conatus.computeConatusEnergy' and
-'QxFx0.Self.Conatus.computeConatusGradient', exercising the formal
+Pure tests over 'QxFx0.Self.StateIntegrity.computeStateIntegrityEnergy' and
+'QxFx0.Self.StateIntegrity.computeStateIntegrityGradient', exercising the formal
 properties asserted in @docs\/THEORY.md@ §4.2 and elaborated in the
-Haddock for 'QxFx0.Self.Conatus':
+Haddock for 'QxFx0.Self.StateIntegrity':
 
  * monotonicity in each blanket axis,
  * exact violation-penalty arithmetic,
@@ -16,23 +16,23 @@ Haddock for 'QxFx0.Self.Conatus':
  * well-definedness at the degenerate \((0, 0, 0)\) blanket,
  * normalisation properties.
 -}
-module Test.Suite.SelfConatus
-  ( selfConatusTests
+module Test.Suite.SelfStateIntegrity
+  ( selfStateIntegrityTests
   ) where
 
 import Test.HUnit (Test (..), assertBool, assertFailure)
 
-import QxFx0.Self.Conatus
-  ( ConatusComponents (..)
-  , ConatusEnergy (..)
-  , ConatusGradient (..)
-  , ConatusWeights (..)
-  , computeConatusEnergy
-  , computeConatusEnergyWith
-  , computeConatusGradient
-  , computeConatusGradientWith
-  , conatusViolationPenalty
-  , defaultConatusWeights
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents (..)
+  , StateIntegrity (..)
+  , StateIntegrityGradient (..)
+  , StateIntegrityWeights (..)
+  , computeStateIntegrityEnergy
+  , computeStateIntegrityEnergyWith
+  , computeStateIntegrityGradient
+  , computeStateIntegrityGradientWith
+  , stateIntegrityViolationPenalty
+  , defaultStateIntegrityWeights
   , gradientMagnitude
   , gradientNormalize
   )
@@ -60,27 +60,27 @@ baseBlanket = SelfBlanket
   , sbTurnCount           = 5
   }
 
-selfConatusTests :: [Test]
-selfConatusTests =
+selfStateIntegrityTests :: [Test]
+selfStateIntegrityTests =
   [ TestLabel "scalar equals sum of components (no violations)" $
       TestCase $ do
-        let ce    = computeConatusEnergy baseBlanket []
-            comps = ceComponents ce
-            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps + ccSelfDivergence comps
+        let ce    = computeStateIntegrityEnergy baseBlanket []
+            comps = siComponents ce
+            sumC  = sicMorphology comps + sicIdentity comps + sicTurns comps + sicPenalty comps + sicSelfDivergence comps
         assertBool
-          ("scalar/component disagreement: scalar=" <> show (ceScalar ce)
+          ("scalar/component disagreement: scalar=" <> show (siScalar ce)
             <> " sum=" <> show sumC)
-          (approxEqual eps (ceScalar ce) sumC)
+          (approxEqual eps (siScalar ce) sumC)
 
   , TestLabel "scalar equals sum of components (with violations)" $
       TestCase $ do
         let vs    = [BlanketEmptySession, BlanketTurnRegressed 3 1]
-            ce    = computeConatusEnergy baseBlanket vs
-            comps = ceComponents ce
-            sumC  = ccMorphology comps + ccIdentity comps + ccTurns comps + ccPenalty comps + ccSelfDivergence comps
+            ce    = computeStateIntegrityEnergy baseBlanket vs
+            comps = siComponents ce
+            sumC  = sicMorphology comps + sicIdentity comps + sicTurns comps + sicPenalty comps + sicSelfDivergence comps
         assertBool
           "scalar must equal sum of all five components in the presence of violations"
-          (approxEqual eps (ceScalar ce) sumC)
+          (approxEqual eps (siScalar ce) sumC)
 
   , TestLabel "degenerate blanket (0,0,0) gives zero smooth scalar" $
       TestCase $ do
@@ -89,76 +89,76 @@ selfConatusTests =
               , sbIdentityClaimsCount = 0
               , sbTurnCount           = 0
               }
-            ce = computeConatusEnergy degenerate []
+            ce = computeStateIntegrityEnergy degenerate []
         assertBool
-          ("degenerate scalar must equal 0, got " <> show (ceScalar ce))
-          (approxEqual eps (ceScalar ce) 0)
+          ("degenerate scalar must equal 0, got " <> show (siScalar ce))
+          (approxEqual eps (siScalar ce) 0)
 
   , TestLabel "scalar is monotone in morphology size" $
       TestCase $ do
         let smaller = baseBlanket { sbMorphologyTotalSize = 10 }
             larger  = baseBlanket { sbMorphologyTotalSize = 100 }
-            ceS     = computeConatusEnergy smaller []
-            ceL     = computeConatusEnergy larger  []
+            ceS     = computeStateIntegrityEnergy smaller []
+            ceL     = computeStateIntegrityEnergy larger  []
         assertBool
           "more morphology => greater Conatus"
-          (ceScalar ceL > ceScalar ceS)
+          (siScalar ceL > siScalar ceS)
 
   , TestLabel "scalar is monotone in identity claims count" $
       TestCase $ do
         let smaller = baseBlanket { sbIdentityClaimsCount = 0 }
             larger  = baseBlanket { sbIdentityClaimsCount = 20 }
-            ceS     = computeConatusEnergy smaller []
-            ceL     = computeConatusEnergy larger  []
+            ceS     = computeStateIntegrityEnergy smaller []
+            ceL     = computeStateIntegrityEnergy larger  []
         assertBool
           "more identity claims => greater Conatus"
-          (ceScalar ceL > ceScalar ceS)
+          (siScalar ceL > siScalar ceS)
 
   , TestLabel "scalar is monotone in turn count" $
       TestCase $ do
         let smaller = baseBlanket { sbTurnCount = 1 }
             larger  = baseBlanket { sbTurnCount = 200 }
-            ceS     = computeConatusEnergy smaller []
-            ceL     = computeConatusEnergy larger  []
+            ceS     = computeStateIntegrityEnergy smaller []
+            ceL     = computeStateIntegrityEnergy larger  []
         assertBool
           "more turns => greater Conatus"
-          (ceScalar ceL > ceScalar ceS)
+          (siScalar ceL > siScalar ceS)
 
   , TestLabel "each violation drops scalar by exactly the violation weight" $
       TestCase $ do
-        let clean      = computeConatusEnergy baseBlanket []
-            withOne    = computeConatusEnergy baseBlanket [BlanketEmptySession]
-            withTwo    = computeConatusEnergy baseBlanket
+        let clean      = computeStateIntegrityEnergy baseBlanket []
+            withOne    = computeStateIntegrityEnergy baseBlanket [BlanketEmptySession]
+            withTwo    = computeStateIntegrityEnergy baseBlanket
                           [BlanketEmptySession, BlanketEmptyMorphology]
-            withThree  = computeConatusEnergy baseBlanket
+            withThree  = computeStateIntegrityEnergy baseBlanket
                           [ BlanketEmptySession
                           , BlanketEmptyMorphology
                           , BlanketTurnRegressed 4 2
                           ]
-            lam        = cwViolation defaultConatusWeights
+            lam        = siwViolation defaultStateIntegrityWeights
         assertBool "one violation drops scalar by lambda"
-          (approxEqual eps (ceScalar clean - ceScalar withOne) lam)
+          (approxEqual eps (siScalar clean - siScalar withOne) lam)
         assertBool "two violations drop scalar by 2*lambda"
-          (approxEqual eps (ceScalar clean - ceScalar withTwo) (2 * lam))
+          (approxEqual eps (siScalar clean - siScalar withTwo) (2 * lam))
         assertBool "three violations drop scalar by 3*lambda"
-          (approxEqual eps (ceScalar clean - ceScalar withThree) (3 * lam))
+          (approxEqual eps (siScalar clean - siScalar withThree) (3 * lam))
 
   , TestLabel "violation penalty helper matches inline computation" $
       TestCase $ do
         let vs   = [BlanketEmptySession, BlanketIdentityErased 5 3]
-            comp = ceComponents (computeConatusEnergy baseBlanket vs)
-            via  = conatusViolationPenalty defaultConatusWeights vs
+            comp = siComponents (computeStateIntegrityEnergy baseBlanket vs)
+            via  = stateIntegrityViolationPenalty defaultStateIntegrityWeights vs
         assertBool
           "conatusViolationPenalty must agree with ccPenalty"
-          (approxEqual eps via (ccPenalty comp))
+          (approxEqual eps via (sicPenalty comp))
 
   , TestLabel "violations do not affect gradient" $
       TestCase $ do
-        let g  = computeConatusGradient baseBlanket
+        let g  = computeStateIntegrityGradient baseBlanket
             -- Gradient does not take violations; this test
             -- documents the structural invariant that the gradient
             -- depends only on the blanket axes.
-            allPositive = cgMorphology g > 0 && cgIdentity g > 0 && cgTurns g > 0
+            allPositive = sigMorphology g > 0 && sigIdentity g > 0 && sigTurns g > 0
         assertBool
           "all gradient components must be strictly positive on a non-degenerate blanket"
           allPositive
@@ -170,31 +170,31 @@ selfConatusTests =
               , sbIdentityClaimsCount = 0
               , sbTurnCount           = 0
               }
-            g = computeConatusGradient degenerate
+            g = computeStateIntegrityGradient degenerate
         assertBool
           "even the degenerate blanket has a strictly positive gradient (no recovery direction missing)"
-          (cgMorphology g > 0 && cgIdentity g > 0 && cgTurns g > 0)
+          (sigMorphology g > 0 && sigIdentity g > 0 && sigTurns g > 0)
 
   , TestLabel "gradient exhibits diminishing returns in each axis" $
       TestCase $ do
         let small    = baseBlanket { sbMorphologyTotalSize = 1 }
             large    = baseBlanket { sbMorphologyTotalSize = 1000 }
-            gSmall   = computeConatusGradient small
-            gLarge   = computeConatusGradient large
+            gSmall   = computeStateIntegrityGradient small
+            gLarge   = computeStateIntegrityGradient large
         assertBool
           "gradient w.r.t. morphology must decrease as morphology grows"
-          (cgMorphology gSmall > cgMorphology gLarge)
+          (sigMorphology gSmall > sigMorphology gLarge)
 
   , TestLabel "gradient magnitude is strictly positive" $
       TestCase $ do
-        let g = computeConatusGradient baseBlanket
+        let g = computeStateIntegrityGradient baseBlanket
         assertBool
           "magnitude must be > 0 for any reachable blanket under default weights"
           (gradientMagnitude g > 0)
 
   , TestLabel "gradientNormalize produces a unit-magnitude vector" $
       TestCase $ do
-        let g = computeConatusGradient baseBlanket
+        let g = computeStateIntegrityGradient baseBlanket
         case gradientNormalize g of
           Nothing ->
             assertFailure
@@ -207,8 +207,8 @@ selfConatusTests =
 
   , TestLabel "gradientNormalize returns Nothing on a zero gradient" $
       TestCase $ do
-        let zeroWeights = ConatusWeights 0 0 0 0
-            g           = computeConatusGradientWith zeroWeights baseBlanket
+        let zeroWeights = StateIntegrityWeights 0 0 0 0
+            g           = computeStateIntegrityGradientWith zeroWeights baseBlanket
         case gradientNormalize g of
           Nothing -> pure ()
           Just _  ->
@@ -220,17 +220,17 @@ selfConatusTests =
         -- double the scalar of a violation-free blanket. This
         -- documents the linearity-in-weights property the recovery
         -- driver will eventually depend on.
-        let w     = defaultConatusWeights
-            w2    = ConatusWeights
-                      (2 * cwMorphology w)
-                      (2 * cwIdentity   w)
-                      (2 * cwTurns      w)
+        let w     = defaultStateIntegrityWeights
+            w2    = StateIntegrityWeights
+                      (2 * siwMorphology w)
+                      (2 * siwIdentity   w)
+                      (2 * siwTurns      w)
                       0
-            wZeroPen = w { cwViolation = 0 }
-            ce1   = computeConatusEnergyWith wZeroPen baseBlanket []
-            ce2   = computeConatusEnergyWith w2       baseBlanket []
+            wZeroPen = w { siwViolation = 0 }
+            ce1   = computeStateIntegrityEnergyWith wZeroPen baseBlanket []
+            ce2   = computeStateIntegrityEnergyWith w2       baseBlanket []
         assertBool
           ("doubled smooth weights must double the scalar; got "
-            <> show (ceScalar ce1) <> " and " <> show (ceScalar ce2))
-          (approxEqual 1e-9 (ceScalar ce2) (2 * ceScalar ce1))
+            <> show (siScalar ce1) <> " and " <> show (siScalar ce2))
+          (approxEqual 1e-9 (siScalar ce2) (2 * siScalar ce1))
   ]

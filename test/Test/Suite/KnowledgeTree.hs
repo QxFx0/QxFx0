@@ -43,7 +43,7 @@ testStoredDeltasClampedOnDeserialize = TestCase $ do
       assertBool "predictiveDelta must be clamped to <= 0.50 on deserialize"
         (kfPredictiveDelta fruit <= 0.50)
       assertBool "conatusDelta must be clamped to <= 0.40 on deserialize"
-        (kfConatusDelta fruit <= 0.40)
+        (kfStateIntegrityDelta fruit <= 0.40)
       assertBool "authoritativeNetDelta must not reflect the inflated 999.0 claim"
         (authoritativeNetDelta fruit <= 0.90)
 
@@ -233,7 +233,7 @@ mkFruit prop word src valid cDelta pDelta =
     , kfWord = word
     , kfSource = src
     , kfValidated = valid
-    , kfConatusDelta = cDelta
+    , kfStateIntegrityDelta = cDelta
     , kfPredictiveDelta = pDelta
     , kfGraftedTurn = Nothing
     , kfObservedTurn = 1

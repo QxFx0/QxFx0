@@ -44,6 +44,14 @@ The 3 GAPs (Conatus, Field, Identity) are
 
 ## 2. Conatus
 
+> **2026-11-23 (P4).** The Haskell module is now
+> `QxFx0.Self.StateIntegrity` (types `StateIntegrity`,
+> `StateIntegrityComponents`; scalar `siScalar`). Every **wire** name in
+> this section is frozen and unchanged. `Conatus` survives only as the
+> trace-only `trcConatusContour` (`TRACE_SCHEMA.md` §15), which no
+> decision reads. Contract:
+> `docs/closure/P4_STATE_INTEGRITY_PREREG_2026-11-23.md`.
+
 **Module:** `QxFx0.Self.Conatus`
 **Type:** `ConatusEnergy` (data) and
   `ConatusComponents` (data, in `Conatus.hs`)

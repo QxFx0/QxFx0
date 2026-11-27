@@ -644,12 +644,12 @@ familyAdmissionTests =
         , ipfRegisterHint = Neutral
         }
       outOfScopeFrame = baseFrame { ipfPropositionType = PlainAssert }
-      nonConatusVerdict = SelfVerdict
+      nonStateIntegrityVerdict = SelfVerdict
         { svSalience = Salience 0.0 1.0 DrivenByDefault
         , svVerdict = PreferFormal 0.0
         }
-      conatusVerdict = SelfVerdict
-        { svSalience = Salience 0.0 1.0 DrivenByConatusGate
+      stateIntegrityVerdict = SelfVerdict
+        { svSalience = Salience 0.0 1.0 DrivenByStateIntegrityGate
         , svVerdict = PreferFormal 0.0
         }
       run input family frame = admitFamilyCrystallization input family frame
@@ -657,19 +657,19 @@ familyAdmissionTests =
   [ TestLabel "Family: out-of-scope -> FadAdmitRaw, family unchanged" $ TestCase $
       assertEqual "out-of-scope reverts to AdmitRaw"
         (AdmittedFamily strongFamily FadAdmitRaw)
-        (run (FamilyAdmissionInput authoritative nonConatusVerdict) strongFamily outOfScopeFrame)
+        (run (FamilyAdmissionInput authoritative nonStateIntegrityVerdict) strongFamily outOfScopeFrame)
   , TestLabel "Family: non-auth + in-scope + strong -> FadCapClarify, family→CMClarify" $ TestCase $
       assertEqual "non-auth+scope+strong -> CapClarify"
         (AdmittedFamily CMClarify FadCapClarify)
-        (run (FamilyAdmissionInput nonAuthoritative nonConatusVerdict) strongFamily baseFrame)
+        (run (FamilyAdmissionInput nonAuthoritative nonStateIntegrityVerdict) strongFamily baseFrame)
   , TestLabel "Family: non-auth + in-scope + weak -> FadPreserveAmbiguous, family unchanged" $ TestCase $
       assertEqual "non-auth+scope+weak -> PreserveAmbiguous"
         (AdmittedFamily weakFamily FadPreserveAmbiguous)
-        (run (FamilyAdmissionInput nonAuthoritative nonConatusVerdict) weakFamily baseFrame)
+        (run (FamilyAdmissionInput nonAuthoritative nonStateIntegrityVerdict) weakFamily baseFrame)
   , TestLabel "Family: conatus + in-scope + strong -> FadCapClarify" $ TestCase $
       assertEqual "conatus+scope+strong -> CapClarify"
         (AdmittedFamily CMClarify FadCapClarify)
-        (run (FamilyAdmissionInput authoritative conatusVerdict) strongFamily baseFrame)
+        (run (FamilyAdmissionInput authoritative stateIntegrityVerdict) strongFamily baseFrame)
   ]
 
 semanticLogicAdmissionTests :: [Test]

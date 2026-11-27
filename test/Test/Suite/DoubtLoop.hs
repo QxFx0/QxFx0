@@ -68,7 +68,7 @@ doubtLoopTests =
   , TestLabel "WP-D: Conatus gate forces high doubt" $
       TestCase $
         assertBool "conatus gate => doubt >= 0.9"
-          (computeDoubt (mkSalience 0.8 DrivenByConatusGate) >= 0.9)
+          (computeDoubt (mkSalience 0.8 DrivenByStateIntegrityGate) >= 0.9)
 
     -- Counterfactual (ambiguity) driver amplifies doubt above the base.
   , TestLabel "WP-D: counterfactual driver amplifies doubt" $

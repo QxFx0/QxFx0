@@ -55,7 +55,7 @@ import Data.Ord (comparing, Down(..))
 import QxFx0.Types.State.Stance
 import QxFx0.Types.State.SemanticCommitment (TurnSeq(..))
 import QxFx0.Semantic.Space.Types (SemanticSpace(..))
-import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Self.StateIntegrity (StateIntegrity, siScalar)
 import QxFx0.Semantic.ContentSelector.Types (ContentSelector(..))
 import QxFx0.Semantic.Content (SemanticPredicate(..))
 import QxFx0.Self.Field (Field(..))
@@ -63,8 +63,8 @@ import QxFx0.Semantic.Intent.Features (SemanticFeatures(..))
 
 -- | Collapse reason when defense fails.
 data Collapse
-  = CollapseConatusExhausted
-    -- ^ Conatus energy fell below threshold while stance was Doubted
+  = CollapseStateIntegrityExhausted
+    -- ^ state-integrity energy fell below threshold while stance was Doubted
   | CollapseAdversaryClassified
     -- ^ User classified as static (not changing position)
   | CollapseEssenceRupture
@@ -73,7 +73,7 @@ data Collapse
 
 -- | Human-readable collapse reason.
 collapseReason :: Collapse -> Text
-collapseReason CollapseConatusExhausted = "conatus energy exhausted while defending"
+collapseReason CollapseStateIntegrityExhausted = "conatus energy exhausted while defending"
 collapseReason CollapseAdversaryClassified = "adversary classified as static"
 collapseReason CollapseEssenceRupture = "essence integrity compromised"
 
@@ -124,7 +124,7 @@ stanceSimilarity a b =
 --
 -- NOTE (audit 2026-09-15): this helper is pinned by
 -- 'Test.Suite.Stance' but is NOT consumed by 'defendOrAdapt' — the
--- production collapse path keys off 'cpConatusFloor' and the
+-- production collapse path keys off 'cpStateIntegrityFloor' and the
 -- AdversaryClassified state instead.  Do not wire it back in without
 -- a pentagon-spec change.
 collapseThreshold :: Double -> Int
@@ -141,20 +141,20 @@ collapseThreshold confidence =
 -- * StanceHeld + strong challenge → StanceDoubted
 -- * StanceDoubted + weak challenge → StanceDoubted (defend)
 -- * StanceDoubted + strong challenge → StanceRevised
--- * StanceDoubted + low conatus → Collapse
+-- * StanceDoubted + low state integrity → Collapse
 -- * StanceRevised → AdversaryClassified (if user not changing)
 -- * AdversaryClassified → Collapse (if continue attacking)
 defendOrAdapt
   :: StanceDefense
-  -> ConatusEnergy
+  -> StateIntegrity
   -> Set.Set Text
   -- ^ Atoms from user's challenge
   -> Either Collapse StanceDefense
-defendOrAdapt sd conatus challengeAtoms =
+defendOrAdapt sd stateIntegrity challengeAtoms =
   let weight = evidenceWeight sd challengeAtoms
       stance = sdStance sd
-      conatusScalar = ceScalar conatus
-      conatusFloor = cpConatusFloor (sdCollapsePolicy sd)
+      stateIntegrityScalar = siScalar stateIntegrity
+      stateIntegrityFloor = cpStateIntegrityFloor (sdCollapsePolicy sd)
   in case stance of
     StanceHeld conf ->
       if weight < 0.88
@@ -173,9 +173,9 @@ defendOrAdapt sd conatus challengeAtoms =
             }
 
     StanceDoubted conf ->
-      if conatusScalar < conatusFloor
-        then -- Low conatus: collapse
-          Left CollapseConatusExhausted
+      if stateIntegrityScalar < stateIntegrityFloor
+        then -- Low state integrity: collapse
+          Left CollapseStateIntegrityExhausted
        else if weight < 0.88
           then -- Strong challenge: revise
             Right $ sd

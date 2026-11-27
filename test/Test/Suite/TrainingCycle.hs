@@ -243,8 +243,8 @@ testDatasetStatsAccuracy = TestCase $ do
 -- | 10. Reject reasons are typed and renderable.
 testRejectReasonsTyped :: Test
 testRejectReasonsTyped = TestCase $ do
-  assertEqual "TrRegressionConatus renders correctly"
-    "regression_conatus" (renderTrainingRejectReason TrRegressionConatus)
+  assertEqual "TrRegressionStateIntegrity renders correctly"
+    "regression_conatus" (renderTrainingRejectReason TrRegressionStateIntegrity)
   assertEqual "TrRegressionUncertainty renders correctly"
     "regression_uncertainty" (renderTrainingRejectReason TrRegressionUncertainty)
   assertEqual "TrRegressionRepair renders correctly"

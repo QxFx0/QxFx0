@@ -42,11 +42,11 @@ data LocalRecoveryCause
   | RecoveryUnknownTopic
   | RecoveryRuntimeDegraded
   | RecoveryLearningNeed
-  | RecoveryConatusGate
-    -- ^ Phase 2.5 (M2d): the runtime Conatus energy dropped
-    --   below 'conatusGateThreshold' indicating structural risk.
+  | RecoveryStateIntegrityGate
+    -- ^ Phase 2.5 (M2d): the runtime state-integrity energy dropped
+    --   below 'stateIntegrityGateThreshold' indicating structural risk.
     --   Triggered exclusively by
-    --   'QxFx0.Self.Salience.conatusGateFires' in
+    --   'QxFx0.Self.Salience.stateIntegrityGateFires' in
     --   'QxFx0.Core.TurnPipeline.Route.Render.buildLocalRecoveryPlan'.
     --   Distinct from 'RecoveryRuntimeDegraded' (which means
     --   the runtime mode itself is degraded for environmental
@@ -59,7 +59,7 @@ data LocalRecoveryCause
     --   'SelfState.selfDivergenceWindow' inside
     --   'QxFx0.Core.TurnPipeline.Rout.Render.buildLocalRecoveryPlan'.
     --   Distinct from 'RecoveryShadowDivergence' (which the
-    --   shadow runtime produces) and from 'RecoveryConatusGate'
+    --   shadow runtime produces) and from 'RecoveryStateIntegrityGate'
     --   (which fires on energy, not on self-consistency).
   deriving stock (Eq, Show, Generic, Bounded, Enum)
 
@@ -81,13 +81,13 @@ data LocalRecoveryStrategy
   | StrategyExposeUncertainty
   | StrategySafeRecovery
   | StrategyMorphologyExpansion
-    -- ^ WP1 (GAP1): Conatus-gradient recovery — morphology component
+    -- ^ WP1 (GAP1): state-integrity gradient recovery — morphology component
     --   (∂m) is dominant; system should expand morphological substrate.
   | StrategyIdentityReinforcement
-    -- ^ WP1 (GAP1): Conatus-gradient recovery — identity component
+    -- ^ WP1 (GAP1): state-integrity gradient recovery — identity component
     --   (∂c) is dominant; system should reinforce identity claims.
   | StrategyTemporalDeepening
-    -- ^ WP1 (GAP1): Conatus-gradient recovery — temporal component
+    -- ^ WP1 (GAP1): state-integrity gradient recovery — temporal component
     --   (∂t) is dominant; system should deepen temporal continuity.
   | StrategyRequestCalibration
     -- ^ WP3: learning-driven recovery — salience weights need
@@ -130,7 +130,7 @@ renderLocalRecoveryCause RecoveryRenderBlocked = "render_blocked"
 renderLocalRecoveryCause RecoveryUnknownTopic = "unknown_topic"
 renderLocalRecoveryCause RecoveryRuntimeDegraded = "runtime_degraded"
 renderLocalRecoveryCause RecoveryLearningNeed = "learning_need"
-renderLocalRecoveryCause RecoveryConatusGate = "conatus_gate"
+renderLocalRecoveryCause RecoveryStateIntegrityGate = "conatus_gate"
 renderLocalRecoveryCause RecoverySelfDivergence = "self_divergence"
 
 renderLocalRecoveryStrategy :: LocalRecoveryStrategy -> Text

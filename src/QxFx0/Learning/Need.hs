@@ -39,7 +39,7 @@ module QxFx0.Learning.Need
 import Data.Text (Text)
 import qualified Data.Text as T
 
-import QxFx0.Self.Conatus (ConatusEnergy, ceScalar)
+import QxFx0.Self.StateIntegrity (StateIntegrity, siScalar)
 import QxFx0.Self.Field (Field(..), FieldConfidence(..), Consolidation(..), Counterfactual(..))
 import QxFx0.Self.Salience (Salience(..), salienceHolisticBias)
 import QxFx0.Types.Learning.Need
@@ -80,9 +80,9 @@ maxHistoryLength :: Int
 maxHistoryLength = 20
 
 -- | Backward-compatible wrapper: delegates to 'detectLearningNeedWithPressure'
--- with empty pressure signals (keeps old conatus-based lexicon heuristic).
+-- with empty pressure signals (keeps the old state-integrity lexicon heuristic).
 detectLearningNeed
-  :: ConatusEnergy
+  :: StateIntegrity
   -> Field
   -> Int
      -- ^ Number of repair-loop recoveries in the last 10 turns.
@@ -92,10 +92,10 @@ detectLearningNeed
      -- ^ Current turn count.
   -> LearningNeedState
   -> LearningNeedState
-detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount oldState =
+detectLearningNeed stateIntegrityEnergy field repairCount unknownTopicCount turnCount oldState =
   detectLearningNeedWithPressure
     defaultLearningPressureConfig
-    conatusEnergy
+    stateIntegrityEnergy
     field
     repairCount
     unknownTopicCount
@@ -107,7 +107,7 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
 -- | WP6.1: Detect a learning need with separate learning-pressure signals.
 --
 -- 'NeedLexiconExtension' is now driven by learning-pressure signals
--- (unknown-topic window count, graft stagnation) instead of the Conatus
+-- (unknown-topic window count, graft stagnation) instead of the state-integrity
 -- scalar floor.  This decouples substrate-learning from structural
 -- health so that a large, healthy morphology does not permanently
 -- suppress lexicon extension.
@@ -115,12 +115,12 @@ detectLearningNeed conatusEnergy field repairCount unknownTopicCount turnCount o
 -- Rules (priority order):
 -- 1. 'NeedLexiconExtension' — learning-pressure signals indicate
 --    substrate gap (unknown mentions in window + graft stagnation).
--- 2. 'NeedSalienceCalibration' — unchanged (Conatus + field signals).
+-- 2. 'NeedSalienceCalibration' — unchanged (state-integrity + field signals).
 -- 3. 'NeedKeywordEnrichment' — unchanged (field signals).
 -- 4. Otherwise 'NeedNone'.
 detectLearningNeedWithPressure
   :: LearningPressureConfig
-  -> ConatusEnergy
+  -> StateIntegrity
   -> Field
   -> Int
   -> Int
@@ -129,7 +129,7 @@ detectLearningNeedWithPressure
   -> Bool        -- ^ Is the current topic unknown (not in morphology/tree)?
   -> Int         -- ^ Current ktGraftedCount (for stagnation detection).
   -> LearningNeedState
-detectLearningNeedWithPressure cfg conatusEnergy field _repairCount unknownTopicCount turnCount oldState isTopicUnknown currentGraftedCount =
+detectLearningNeedWithPressure cfg stateIntegrityEnergy field _repairCount unknownTopicCount turnCount oldState isTopicUnknown currentGraftedCount =
   let -- Window management
       windowSize = lpcWindowSize cfg
       windowExpired = turnCount - lnsWindowStartTurn oldState > windowSize
@@ -148,13 +148,13 @@ detectLearningNeedWithPressure cfg conatusEnergy field _repairCount unknownTopic
                      && graftsInWindow == 0
                      && newUnknownCount >= lpcMinUnknownCount cfg
 
-      -- WP6.1: Lexicon-extension heuristic — learning pressure, NOT conatus floor
+      -- WP6.1: Lexicon-extension heuristic — learning pressure, NOT the state-integrity floor
       lexiconLevel =
         if newUnknownCount >= lpcMinUnknownCount cfg && stagnation
            then 0.7 + 0.05 * fromIntegral (min 5 newUnknownCount)
            else 0.0
 
-      -- Salience-calibration heuristic: unchanged (Conatus + field)
+      -- Salience-calibration heuristic: unchanged (state-integrity + field)
       salienceLevel =
         let conf = unFieldConfidence (fieldConfidence field)
             cf   = unCounterfactual (fieldCounterfactual field)

@@ -16,7 +16,7 @@ Pins the pure morphisms of @QxFx0.Self.SelfDivergence@:
     as a negative /fraction/ of the energy (log-scale aware, WP-F
     unit-mismatch guard);
   * the fired penalty preserves the five-component invariant
-    @ceScalar == sum of components@;
+    @siScalar == sum of components@;
   * 'windowMeanDivergence' is the exact arithmetic mean and is 0 on
     empty windows.
   * 'sustainedDivergenceExceeds' (C-slice CD trigger) is False on
@@ -41,9 +41,9 @@ import Test.QuickCheck
 import Test.QuickCheck.Test (isSuccess)
 import Test.Support.QuickCheckConfig (qcArgs)
 
-import QxFx0.Self.Conatus
-  ( ConatusEnergy (..)
-  , ConatusComponents (..)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrity (..)
+  , StateIntegrityComponents (..)
   )
 import QxFx0.Self.Essence
   ( EssenceModulation (..)
@@ -174,7 +174,7 @@ selfDivergenceTests =
           (sustainedDivergenceExceeds tuning sustainedWindow)
     -- A->B coupling (audit): the self-consistency penalty feeds
     -- 'ceScalar', which 'Essence.shouldCommit' reads through the
-    -- 'TriggerConatusErosion' window (last-8 witnesses below the
+    -- 'TriggerStateIntegrityErosion' window (last-8 witnesses below the
     -- structural floor).  The penalty is a small /fraction/ of the
     -- scalar, so a healthy production scalar stays above the floor and
     -- the penalty alone never fabricates an erosion signal.
@@ -262,7 +262,7 @@ propPenaltyGatedByThreshold =
     property $
       let divE = emptySelfDivergenceE { sdeTotalDivergence = total }
           (ce', pShare) = selfConsistencyPenalty tuning divE baseEnergy
-      in (pShare == 0.0 && ceScalar ce' == ceScalar baseEnergy)
+      in (pShare == 0.0 && siScalar ce' == siScalar baseEnergy)
            == (total <= sdtThreshold tuning)
 
 propPenaltyPreservesInvariant :: Property
@@ -271,12 +271,12 @@ propPenaltyPreservesInvariant =
     property $
       let divE = emptySelfDivergenceE { sdeTotalDivergence = total }
           (ce', pShare) = selfConsistencyPenalty tuning divE baseEnergy
-          comps = ceComponents ce'
-          sumC = ccMorphology comps + ccIdentity comps + ccTurns comps
-                   + ccPenalty comps + ccSelfDivergence comps
+          comps = siComponents ce'
+          sumC = sicMorphology comps + sicIdentity comps + sicTurns comps
+                   + sicPenalty comps + sicSelfDivergence comps
       in pShare <= 0.0
-           && approxEqual (ceScalar ce') sumC
-           && approxEqual (ceScalar ce') (ceScalar baseEnergy + pShare)
+           && approxEqual (siScalar ce') sumC
+           && approxEqual (siScalar ce') (siScalar baseEnergy + pShare)
            && (pShare < 0.0) == (total > sdtThreshold tuning)
 
 -- ---------------------------------------------------------------------------
@@ -285,26 +285,26 @@ propPenaltyPreservesInvariant =
 
 -- | A healthy production scalar (~14, well above the structural floor
 -- 7.0) penalised at maximum divergence stays above the floor, so the
--- penalty alone cannot trip 'TriggerConatusErosion'.
+-- penalty alone cannot trip 'TriggerStateIntegrityErosion'.
 testHealthyPenaltyNoErosion :: IO ()
 testHealthyPenaltyNoErosion = do
-  let healthy = ConatusEnergy
-        { ceScalar = 14.5
-        , ceComponents = ConatusComponents 3.0 3.0 3.0 4.0 1.5
+  let healthy = StateIntegrity
+        { siScalar = 14.5
+        , siComponents = StateIntegrityComponents 3.0 3.0 3.0 4.0 1.5
         }
       (adjusted, _) =
         selfConsistencyPenalty tuning
           (emptySelfDivergenceE { sdeTotalDivergence = 1.0 })  -- max divergence
           healthy
-      floorValue = emConatusStructuralFloor defaultEssenceModulation
+      floorValue = emStateIntegrityStructuralFloor defaultEssenceModulation
       traj = emptyTrajectory
         { etWitnesses =
-            Seq.fromList (replicate 8 (mkErosionWitness (ceScalar adjusted)))
+            Seq.fromList (replicate 8 (mkErosionWitness (siScalar adjusted)))
         }
   assertBool
     ("penalty must keep a healthy scalar above the structural floor; got "
-      ++ show (ceScalar adjusted))
-    (ceScalar adjusted > floorValue)
+      ++ show (siScalar adjusted))
+    (siScalar adjusted > floorValue)
   assertEqual "penalty must not fabricate an erosion signal"
     Nothing (shouldCommit defaultEssenceModulation traj)
 
@@ -315,16 +315,16 @@ testGenuinelySubFloorWindowFiresErosion = do
   let traj = emptyTrajectory
         { etWitnesses = Seq.fromList (replicate 8 (mkErosionWitness 5.0)) }
   case shouldCommit defaultEssenceModulation traj of
-    Just TriggerConatusErosion -> pure ()
+    Just TriggerStateIntegrityErosion -> pure ()
     other -> assertFailure
       ("expected Just TriggerConatusErosion on a 5.0 window, got "
         ++ show other)
 
 -- | One sub-floor witness against an otherwise healthy window must NOT
--- fire erosion (window requires the full 'emConatusFloorWindow').
+-- fire erosion (window requires the full 'emStateIntegrityFloorWindow').
 testSubFloorWindowRequiresFullWindow :: IO ()
 testSubFloorWindowRequiresFullWindow = do
-  let window = emConatusFloorWindow em
+  let window = emStateIntegrityFloorWindow em
       traj = emptyTrajectory
         { etWitnesses = Seq.fromList (replicate (window - 1) (mkErosionWitness 5.0)) }
   assertEqual "short sub-floor window must not fire erosion"
@@ -340,7 +340,7 @@ mkErosionWitness scalar = EssenceWitness
   , ewReconcileRule  = RuleAgreement
   , ewAgreement      = Agree
   , ewDivergence     = 0.0
-  , ewConatusScalar  = scalar
+  , ewStateIntegrityScalar  = scalar
   , ewFieldSignature = fieldSignature defaultEssenceModulation emptyField
   }
 
@@ -353,12 +353,12 @@ tuning = defaultSelfDivergenceTuning
 highDivergence :: Double
 highDivergence = min 1.0 (sdtThreshold tuning + 0.15)
 
--- Production log-scale band: ceScalar ~ 10 like the live runtime
+-- Production log-scale band: siScalar ~ 10 like the live runtime
 -- (WP-F guard: penalty is a fraction of this, not a unit flat value).
-baseEnergy :: ConatusEnergy
-baseEnergy = ConatusEnergy
-  { ceScalar = 10.0
-  , ceComponents = ConatusComponents 2.5 2.5 2.5 2.5 0.0
+baseEnergy :: StateIntegrity
+baseEnergy = StateIntegrity
+  { siScalar = 10.0
+  , siComponents = StateIntegrityComponents 2.5 2.5 2.5 2.5 0.0
   }
 
 mkField

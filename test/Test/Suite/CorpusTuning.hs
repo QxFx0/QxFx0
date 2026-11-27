@@ -46,9 +46,9 @@ import QxFx0.Learning.Tuning
   , runCorpusTuning
   , selectBestCandidate
   )
-import QxFx0.Self.Conatus
-  ( ConatusComponents(..)
-  , ConatusEnergy(..)
+import QxFx0.Self.StateIntegrity
+  ( StateIntegrityComponents(..)
+  , StateIntegrity(..)
   )
 import QxFx0.Self.Field
   ( Atmosphere(..)
@@ -190,7 +190,7 @@ testFieldToSignalComponents = TestCase $ do
         , fieldCounterfactual = Counterfactual 0.3
         }
       comps = fieldToSignalComponents f
-  assertApprox "conatus trend centred on 0.5" 1e-10 0.2 (scConatusTrend comps)
+  assertApprox "conatus trend centred on 0.5" 1e-10 0.2 (scStateIntegrityTrend comps)
   assertApprox "uncertainty trend centred on 0.5" 1e-10 (-0.2) (scUncertaintyTrend comps)
   assertApprox "loop risk from arousal" 1e-10 0.1 (scLoopRisk comps)
   assertApprox "branch health from confidence" 1e-10 0.3 (scBranchHealthTrend comps)

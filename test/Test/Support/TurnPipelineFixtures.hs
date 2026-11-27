@@ -200,10 +200,10 @@ testProtocolInterpreter request =
       TurnResEmbedding <$> Emb.textToEmbeddingResult inputText
     TurnReqNixGuard _ _ _ ->
       pure (TurnResNixGuard Allowed)
-    TurnReqConsciousness semanticInput humanTheta resonance _conatusEnergy _salienceWeights -> do
+    TurnReqConsciousness semanticInput humanTheta resonance _stateIntegrityEnergy _salienceWeights -> do
       let (loop1, fragment) = CLoop.runConsciousnessLoop CLoop.initialLoop semanticInput humanTheta resonance
       pure (TurnResConsciousness loop1 (CLoop.clLastNarrative loop1) (if T.null fragment then Nothing else Just fragment))
-    TurnReqIntuition inputText resonance tension turnNumber _conatusEnergy _salienceWeights _semanticConfig -> do
+    TurnReqIntuition inputText resonance tension turnNumber _stateIntegrityEnergy _salienceWeights _semanticConfig -> do
       let (mFlash, intuitionState) =
             Intuition.checkIntuitionWithInput inputText resonance tension turnNumber Intuition.defaultIntuitiveState
       pure (TurnResIntuition mFlash (Intuition.effectivePosterior intuitionState) intuitionState)

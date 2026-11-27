@@ -19,7 +19,7 @@ import qualified QxFx0.Core.Guard as Guard
 import QxFx0.Core.ConsciousnessLoop (ConsciousnessLoop, ResponseObservation)
 import QxFx0.Core.FMAR (FmarMode(..))
 import QxFx0.Types.RuntimeMode (RuntimeMode(..))
-import QxFx0.Self.Conatus (ConatusEnergy)
+import QxFx0.Self.StateIntegrity (StateIntegrity)
 import QxFx0.Self.Essence (CommitmentTrigger, EssenceViolation)
 import QxFx0.Types
 
@@ -38,7 +38,7 @@ data FinalizePrecommitRequest
 data FinalizePrecommitPlan = FinalizePrecommitPlan
   { fppStatic :: !FinalizeStatic
   , fppCapturedCurrentTime :: !UTCTime
-  , fppConatusEnergy :: !ConatusEnergy
+  , fppStateIntegrity :: !StateIntegrity
   , fppIntrospectionRequest :: !FinalizePrecommitRequest
   } deriving stock (Eq, Show)
 
@@ -54,11 +54,11 @@ data FinalizePrecommitResults = FinalizePrecommitResults
     --   Carried to trace so that 'trcFmarMode' can disambiguate shadow
     --   vs live override.
   , fprFeedbackLoopActive :: !Bool
-  , fprConatusStabilityAblated :: !Bool
+  , fprStateIntegrityStabilityAblated :: !Bool
     -- ^ P2 measurement hook: @QXFX0_ABLATE_CONATUS_STABILITY@ was
-    --   @\"1\"@ this turn.  Removes the Conatus contribution from the
+    --   @\"1\"@ this turn.  Removes the state-integrity contribution from the
     --   perspective @csStability@ term only; the recorded
-    --   'trcConatusEnergy' keeps the true scalar.  Default-off, so the
+    --   'trcStateIntegrityEnergy' keeps the true scalar.  Default-off, so the
     --   unset turn is byte-identical to the pre-hook runtime.
     --   See docs/closure/P2_ABLATION_PREREG_2026-11-18.md.
   } deriving stock (Eq, Show)

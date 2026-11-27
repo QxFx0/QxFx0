@@ -33,7 +33,7 @@ import QxFx0.Core.PipelineIO
   , checkPipelineApiHealth
   )
 import QxFx0.Runtime (RuntimeMode(..))
-import QxFx0.Self.Conatus (ConatusEnergy(..), ConatusComponents(..))
+import QxFx0.Self.StateIntegrity (StateIntegrity(..), StateIntegrityComponents(..))
 import QxFx0.Self.Field (emptyField)
 import QxFx0.Types.CognitiveSignals (emptyCognitiveSignals)
 import QxFx0.Types.Decision (DecisionDisposition(..), LegitimacyReason(..), ShadowStatus(..))
@@ -168,12 +168,13 @@ minimalReplayTraceWith apiHealthy mCurrentTime requestId =
     , trcDreamCandidateApplied = Nothing
     , trcPerspectiveProjection = Nothing
     , trcPerspectiveProjections = []
-    , trcConatusEnergy = ConatusEnergy 0.0 (ConatusComponents 0.0 0.0 0.0 0.0 0.0)
+    , trcConatusEnergy = StateIntegrity 0.0 (StateIntegrityComponents 0.0 0.0 0.0 0.0 0.0)
     , trcSelfDivergenceTotal = Nothing
     , trcSelfDivergencePenalty = 0.0
     , trcSelfDivergenceWindowMean = Nothing
     , trcSelfDivergencePredictionActive = False
     , trcConatusGateFired = False
+    , trcConatusContour = Nothing
     , trcField = emptyField
     , trcIdentityClaims = []
     , trcEpisodicEncoding = []

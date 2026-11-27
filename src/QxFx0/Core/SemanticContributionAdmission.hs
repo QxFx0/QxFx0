@@ -18,7 +18,7 @@ import QxFx0.Types.Admission.PatternCapClarify
 
 data SemanticContributionAdmissionInput = SemanticContributionAdmissionInput
   { scaiTruthContractStatus :: !TruthContractStatus
-  , scaiConatusGateFired :: !Bool
+  , scaiStateIntegrityGateFired :: !Bool
   , scaiFrame :: !InputPropositionFrame
   } deriving stock (Eq, Show)
 
@@ -55,7 +55,7 @@ admitSemanticContributions input rawFamilies =
   where
     config = CapClarifyConfig
       { cccGetTruthContract = scaiTruthContractStatus
-      , cccConatusFired = scaiConatusGateFired
+      , cccStateIntegrityFired = scaiStateIntegrityGateFired
       , cccInScope = \inp _ -> contributionAdmissionInScope (scaiFrame inp)
       , cccAllWeak = all (familyAlreadyWeak . fst)
       , cccCapDat = softenContributions

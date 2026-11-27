@@ -111,7 +111,7 @@ for p in params:
 # match "field = <number>" with an optional leading "{" or
 # "," (or no prefix, for record updates) and an optional trailing
 # "}" (single-line record updates like
-# `phase9EssenceModulation { emConatusStructuralFloor = 7.0 }` —
+# `phase9EssenceModulation { emStateIntegrityStructuralFloor = 7.0 }` —
 # without this the checker reads the compat binding, not production).
 # a record has a leading "{"; subsequent fields have a
 # leading ",". Record updates look like

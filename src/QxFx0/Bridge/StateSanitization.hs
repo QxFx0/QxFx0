@@ -7,7 +7,7 @@ must not silently drive the runtime.  'sanitizePersistedState' clamps
 the value invariants the named vectors can violate, returns the
 adjustments as notes (logged at load — visible, never silent), and is
 otherwise the identity.  The trace-side invariant ('ceScalar') is
-re-derived in 'ConatusEnergy''s 'FromJSON' instead, because the scalar
+re-derived in 'StateIntegrity''s 'FromJSON' instead, because the scalar
 is a derived quantity, not a clamped one.
 -}
 module QxFx0.Bridge.StateSanitization
