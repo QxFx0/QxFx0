@@ -49,6 +49,18 @@ KNOWN_RENAMES: Dict[str, str] = {
     "QxFx0.Lexicon.Morphology": "QxFx0.Semantic.Morphology",
 }
 
+# Old module names that the P4 decision (2026-11-23) deliberately keeps in
+# historical documents: ADRs, dated closure reports, the spec logs, the
+# rename table in the prereg/result, and live docs that describe the rename.
+# These modules did exist; they were renamed to StateIntegrity, and the
+# documents record the old name on purpose.  New documents must use the new
+# name; this set only covers the exact historical spellings.
+HISTORICAL_RENAMES: Set[str] = {
+    "QxFx0.Self.Conatus",
+    "QxFx0.Types.Self.Conatus",
+    "QxFx0.Types.Thresholds.Conatus",
+}
+
 # References that are intentionally not expected to exist in src/ (design
 # placeholders, future modules, regex prefixes, etc.).
 ALLOWED_MISSING: Set[str] = {
@@ -157,6 +169,10 @@ def main() -> int:
             # even if they also appear in the known-renames map.
             if is_intentional(text, start, end):
                 intentional.append((rel_file, line, token, "INTENTIONAL (removed/never-created)"))
+                continue
+
+            if candidate in HISTORICAL_RENAMES:
+                intentional.append((rel_file, line, token, "INTENTIONAL (historical name kept)"))
                 continue
 
             if candidate in KNOWN_RENAMES:

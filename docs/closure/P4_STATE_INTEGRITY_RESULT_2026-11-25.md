@@ -219,6 +219,36 @@ Left as-is deliberately: `Semantic/Stance.hs:76` collapse reason
 input), and the JSON error-context labels (`withObject "StateIntegrity…"`),
 which are exception text, not keys.
 
+### 4.6 CI docs gate: `scripts/check_doc_module_paths.py` (failed on the first push, fixed)
+
+The first pushed tip `176b476` failed **CI Core Contract** at the
+`Check docs module paths` step: 18 references to `QxFx0.Self.Conatus` in
+historical documents (`THEORY.md`, ADRs 0010/0045, the calibration report,
+`CONTOUR_INDEX.md`, `TRACE_SCHEMA.md`, the trace-gap log, the two effect/
+essence specs, and the rename table in the prereg/result) were reported
+`STALE (unresolved)`. The rename decision keeps the old name in exactly
+those documents, so the gate was taught the exception rather than the
+record being edited.
+
+A new `HISTORICAL_RENAMES` set covers the three pre-rename module paths
+(`QxFx0.Self.Conatus`, `QxFx0.Types.Self.Conatus`,
+`QxFx0.Types.Thresholds.Conatus`) and reports them
+`INTENTIONAL (historical name kept)`; new documents must use
+`StateIntegrity`, and any other missing module still fails.
+
+Verification: the full `docs/` scan is **rc=0** and accepts 23 historical
+references (18 `Self.Conatus` + 2 `Types.Self.Conatus` + 3
+`Types.Thresholds.Conatus`; the five `Types.*` spellings were previously
+accepted silently by the longest-prefix heuristic, not by an explicit
+decision). Red check: a temp doc with a nonexistent module under the self
+tree (`Self.NonexistentModule`, no `QxFx0.` prefix so this sentence itself
+is not a reference) is **rc=1** `STALE (unresolved)`; a temp doc with only
+the old `Conatus` path is **rc=0**.
+
+This gate runs in CI only — it is not part of `check_architecture.sh`, which
+is why the local B7 run was green. That is a verification-scope miss of this
+landing, recorded here rather than hidden.
+
 ---
 
 ## 5. Measurement — 200-turn contour census (P4-B)
@@ -331,7 +361,7 @@ direct rename-only evidence.
 | B4 | unit / fast / property / integration green | PASS (§7.3) |
 | B5 | 200-turn census C1–C6 measured and reported | PASS (§5; C3 is a reported miss) |
 | B6 | matrix 10/10 exit 0, tree byte-identical start→end | PASS (§7.4) |
-| B7 | `check_architecture.sh` green, including rule [24] and [25] | PASS (incl. `trace_equivalence.py` self-test) |
+| B7 | `check_architecture.sh` green, including rule [24] and [25] | PASS locally; the CI docs gate failed on `176b476` and is green after the §4.6 follow-up |
 
 ### 7.1 Build
 
@@ -381,6 +411,14 @@ content hash over every tracked + untracked non-ignored file plus
 `git status --porcelain`: `eb56f413…` before and after — **byte-identical**.
 The tree was frozen for the whole window; `cabal build all -j2` (§7.1) ran
 before it started.
+
+### 7.5 CI
+
+First push `176b476` (2026-11-27T08:52Z): **CI Fast green**; **CI Core
+Contract red** at `Check docs module paths` — 18 historical
+`QxFx0.Self.Conatus` references (§4.6). The fix is the follow-up commit on
+top of `176b476`; the re-run IDs are recorded in `AGENTS.md` once green.
+This landing is not closed until both CI runs are green.
 
 ---
 
