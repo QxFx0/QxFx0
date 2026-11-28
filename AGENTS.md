@@ -1473,4 +1473,9 @@ re-observe before treating as real).
   repointed so the codomain gate is now green (it was red on `88389c2`).
   Matrix `matrix-20261126`, 10/10 exit 0, **4 493** cases, tree
   byte-identical start→end (`eb56f413…`, content hash); the two P4
-  suites also ran 25/25 through the main core selector.
+  suites also ran 25/25 through the main core selector. CI on the first
+  tip `176b476`: CI Fast `45969051150` green, CI Core Contract
+  `45969050990` red at the docs-module gate (18 historical
+  `QxFx0.Self.Conatus` references); fixed in `b6f4dc6`
+  (`HISTORICAL_RENAMES` allowance, red-checked), re-run CI Core Contract
+  `45972666308` and CI Fast `45972666321` both green.

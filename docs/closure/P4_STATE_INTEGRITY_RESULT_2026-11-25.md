@@ -414,11 +414,13 @@ before it started.
 
 ### 7.5 CI
 
-First push `176b476` (2026-11-27T08:52Z): **CI Fast green**; **CI Core
-Contract red** at `Check docs module paths` — 18 historical
-`QxFx0.Self.Conatus` references (§4.6). The fix is the follow-up commit on
-top of `176b476`; the re-run IDs are recorded in `AGENTS.md` once green.
-This landing is not closed until both CI runs are green.
+First push `176b476` (2026-11-27T08:52Z): **CI Fast green**
+(`45969051150`); **CI Core Contract red** (`45969050990`) at `Check docs
+module paths` — 18 historical `QxFx0.Self.Conatus` references (§4.6).
+Fixed in `b6f4dc6`; re-run **CI Core Contract `45972666308`** and **CI Fast
+`45972666321`** are both **green** (2026-11-27T10:51:59Z and
+09:30:29Z). This landing is closed on the CI side; the run URLs are
+recorded in `AGENTS.md`.
 
 ---
 
