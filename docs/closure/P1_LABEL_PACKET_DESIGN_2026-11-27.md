@@ -1,14 +1,14 @@
 # P1 — label packet design (DRAFT, 2026-11-27)
 
 - **Status**: **DRAFT — not pre-registered.** On 2026-11-27 the owner chose the
-  corpus (**B: fresh strict-mode capture**, §2). The rubric, threshold, kappa
-  gate, context window and rater identity are still **OPEN** (§8). No packet
-  has been generated, no rater has been named, and no number in this document
-  is a measurement.
+  corpus (**B: fresh strict-mode capture**, §2). The capture and the packet are
+  **done** (2026-11-28); the rubric, threshold, kappa gate, context window and
+  rater identity are still **OPEN** (§8). No rater has been named and no label
+  exists yet; no number in this document is a quality measurement.
 - **Plan line this implements**: P1 needs a human rater, blind 0–4 labels on
   ≥ 200 turns, and a two-rater subset of ≥ 50 with kappa and adjudication.
 - **What this document is**: the packet/rubric design that has to be signed
-  before the packet is built. It deliberately does not choose the rubric
+  before the packet is rated. It deliberately does not choose the rubric
   anchors, the pass threshold or the rater on the owner's behalf.
 - **What this document is not**: evidence, a quality claim, an M6-FELT claim,
   or the 500-prompt gate. The 500-prompt gate stays **BLOCKED** (500 labeled
@@ -41,8 +41,35 @@ The owner chose option B on 2026-11-27: re-run the existing 200-turn corpus in
 (`p2-def-01` turn 1) on HEAD `b6f4dc6`, own DB
 `reports/eval_runs/p1-strict-smoke-20261127/`, **68.6 s** wall, 1/1 turn
 persisted, 1/1 regime record, 0 hard-trigger Protocol B, encoder `[2]`.
-Extrapolated cost for 200 turns: **≈ 3.8 h**. The smoke is a precondition
-check, not P1 evidence.
+The smoke was a precondition check, not P1 evidence.
+
+**Capture (measured 2026-11-28)**: run `p1-strict-20261128` on HEAD
+`b5c2ee9`, clean tree (`git_dirty_files=0`), binary `63b62802…`, corpus
+`49b6d6c3…`. **200/200** turns, **200/200** regime records, 0 missing,
+0 hard-trigger Protocol B, 0 contour exits, 0 moves, encoder `[2]`,
+180 residual + 180 window samples, residual mean 0.049, max 0.160,
+window max 0.134. Wall time **1 h 51 min** (09:16:45 → 11:07:33 UTC);
+latency min 22.9 s, median 23.3 s, mean 33.2 s, max 273.5 s (the first
+turn after a machine reboot — cold start, not steady state). Surfaces
+55–508 chars, none empty, **0** availability banners. The earlier
+≈ 3.8 h extrapolation was pessimistic because the smoke paid a cold
+bootstrap and the first capture turn paid a reboot cold start.
+
+**Strict vs degraded (measured difference, not a defect)**: the degraded P2
+capture of the same corpus produced 2 contour exits and 4 moves; the strict
+capture produced **0 and 0**. The mode changes the regime's own readings, so
+the P1 packet is drawn from a calmer trajectory than the P2/P4 evidence. This
+does not invalidate the packet, but it must be stated in the result: a rater
+sees no move-layer lines in this packet.
+
+**Packet (built 2026-11-28, gitignored)**: `reports/eval_runs/p1-packet-20261128/`
+— `packet.jsonl` 200 JSONL rows, `key.tsv` 200 rows, seed `20261128`,
+sha256 `a485365dfb5dd2d37a4367164d84cb3a8de99b00700bcedffc44deeb19eb1a99`.
+Verified: packet keys are exactly `id/prompt/response` (no dialogue, turn,
+arc or family), ids are a bijection with the key, prompt/response are
+verbatim, 200 unique prompts, arc counts match the corpus
+(calm 60, negative 40, oscillation 20, decoy 20, practical/challenge/terse/
+recovery/pileup/move 10 each).
 
 Why not A (the existing degraded capture): 151/200 turns carry a
 `runtime_degraded` recovery cause and the surface ends with the availability
@@ -134,9 +161,11 @@ adequacy label:
    gate (P1-D4), context (P1-D5), rater and adjudicator (P1-D6).
 2. Freeze the tree; record HEAD and the binary sha256 (the driver does this
    itself in `meta.env`).
-3. Capture B (≈ 3.8 h); the driver gate must show 200/200 turns, 200/200
-   regime records, 0 hard-trigger Protocol B.
-4. Build the packet + key; record the packet sha256 and the shuffle seed.
+3. Capture B — **DONE 2026-11-28** (`p1-strict-20261128`): 200/200 turns,
+   200/200 regime records, 0 hard-trigger Protocol B, 0 contour exits; packet
+   `p1-packet-20261128` built with seed `20261128`.
+4. Build the packet + key — **DONE 2026-11-28**; packet sha256 and seed
+   recorded in §2.
 5. Rater 1 and rater 2 score independently; no discussion.
 6. Run `p1_score.py`; publish the result doc with kappa, CI and adjudications.
 7. Non-claims: this calibrates a rater and a rubric; it does not pass the

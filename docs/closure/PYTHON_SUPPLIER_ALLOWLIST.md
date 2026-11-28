@@ -30,14 +30,15 @@ empty, every entry carries:
 
 ## 1. The allowlist
 
-**Status 2026-11-25:** §1 is no longer empty. Fifteen eval-only tools are
+**Status 2026-11-28:** §1 is no longer empty. Seventeen eval-only tools are
 registered below: the five pre-existing pilot tools plus
 `scripts/eval/prompt_frame_500.py`, `scripts/eval/gf_slot_gap.py`,
 `scripts/eval/gf_slot_realizability.py`,
 `scripts/eval/user_regime_report.py`, `scripts/eval/m7_compare.py`,
 `scripts/eval/r5_predict.py`, `scripts/eval/p2_ablation_report.py`,
-`scripts/eval/render_snapshots.py`, `scripts/eval/p4_contour_census.py`
-and `scripts/eval/trace_equivalence.py`. They are
+`scripts/eval/render_snapshots.py`, `scripts/eval/p4_contour_census.py`,
+`scripts/eval/trace_equivalence.py`, `scripts/eval/p1_packet.py` and
+`scripts/eval/p1_score.py`. They are
 quarantined by
 `scripts/eval/NON_AUTHORITY.txt`, carry `--self-test` (enforced by
 `scripts/check_architecture.sh` rule [24]), and are not on any authority
@@ -62,8 +63,10 @@ closure-plan pass.
 | `scripts/eval/p4_contour_census.py` | `eval-only` | Read-only census of the P4 trace-only `trcConatusContour` sub-record over a capture run: presence, blanket invariants, committed essence, recovery events per cause, crisis-pack availability and the hard-trigger Protocol B regression guard; opens the DB `mode=ro`, writes no artifact unless `--json` is given, and reports observations only (the contour is not read by any decision); self-tested (12 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the contour census is ported to Haskell or the P4 contour is retired. |
 | `scripts/eval/p2_ablation_report.py` | `eval-only` | Compares the two P2 capture arms (baseline vs `QXFX0_ABLATE_CONATUS_STABILITY=1`) path by path over the persisted replay trace, the rendered surface and the final `PerspectiveRegistry`, and censuses the Conatus threshold consumers and the dead self-divergence channel; pins every threshold against the Haskell source (a moved constant aborts the report instead of silently measuring a different number); opens both DBs `mode=ro`, writes no artifact unless `--json` is given; flags a vacuous registry bar when both arms persist zero threads; self-tested (19 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the Conatus-consumer ablation is ported to Haskell or the P2 corpus is retired. |
 | `scripts/eval/render_snapshots.py` | `eval-only` | Freezes the strict-mode rendered surface of a fixed 11-turn corpus (fixed state per session, substrate disabled via a missing `QXFX0_BRAIN_KB_PATH`) so a reader can judge adequacy and a landing can see an unintended surface change; read-only on the runtime, writes only its own work directory and (with `--write`) the dated snapshot file; self-tested (19 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the render-snapshot check is ported to Haskell or the golden corpus is retired. |
+| `scripts/eval/p1_packet.py` | `eval-only` | Builds the blind P1 rating packet from a capture's `results.jsonl`: seeded shuffle, ids assigned after the shuffle, the packet carries only `id/prompt/response` (optional prior-turn context), the dialogue/turn/arc key is written separately and never shipped; writes `packet.jsonl`, `key.tsv` and `packet.sha256` into an operator-chosen directory; read-only on the capture; self-tested (12 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the P1 packet build is ported to Haskell or the P1 packet is retired. |
+| `scripts/eval/p1_score.py` | `eval-only` | Scores the P1 packet with quadratic weighted Cohen's kappa on 0–4 labels, a seeded bootstrap 95% CI, exact agreement, the confusion matrix and the absolute-difference ≥ 2 adjudication list; refuses to print kappa when the double-rated subset is below 50 or a rater is missing; reads the key and two label files, writes nothing; self-tested (15 cases). | PENDING (Haskell eval harness) | PENDING | Deleted when the P1 scoring path is ported to Haskell or the P1 packet is retired. |
 
-**Empty allowlist remains the closure goal.** The thirteen entries above are
+**Empty allowlist remains the closure goal.** The seventeen entries above are
 open retentions; they must be reviewed at every closure-plan pass.
 
 ## 2. The pre-closure inventory (transition reference)
